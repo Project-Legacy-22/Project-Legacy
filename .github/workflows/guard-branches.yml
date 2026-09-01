@@ -17,9 +17,13 @@ on:
   push:
     branches: [main, dev]
 
+# Le jeton du workflow n a que les droits declares ici. Lister les pull requests
+# associees a un commit releve de pull-requests, pas de contents : sans cette
+# ligne, l appel repond 403 et le garde-fou ne verifie rien.
 permissions:
   contents: read
   issues: write
+  pull-requests: read
 
 jobs:
   verifier-origine:
@@ -33,7 +37,11 @@ jobs:
         run: |
           set -euo pipefail
           branche="${GITHUB_REF_NAME}"
-          json="$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/pulls")"
+          if ! json="$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/pulls" 2>&1)"; then
+            echo "::error::Impossible d interroger l API des pull requests : $json"
+            echo "Verifier le bloc permissions du workflow." >&2
+            exit 1
+          fi
           count="$(printf '%s' "$json" | jq 'length')"
           head="$(printf '%s' "$json" | jq -r '.[0].head.ref // ""')"
 
