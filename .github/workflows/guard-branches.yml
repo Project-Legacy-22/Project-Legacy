@@ -1,0 +1,88 @@
+# Garde-fou des branches integrees.
+#
+# Le depot est prive sur un plan gratuit : ni la protection de branche ni les
+# rulesets ne sont disponibles, rien ne peut refuser un push direct. Ce workflow
+# ne l empeche pas, il le rend visible et trace. Un contournement laisse une
+# execution rouge et une issue ouverte au nom de son auteur.
+#
+# Il verifie deux choses :
+#   dev  ne recoit que des pull requests
+#   main ne recoit que des pull requests venant de dev
+#
+# A retirer le jour ou une regle serveur devient disponible.
+
+name: guard-branches
+
+on:
+  push:
+    branches: [main, dev]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  verifier-origine:
+    name: Origine du commit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Identifier la pull request associee
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          branche="${GITHUB_REF_NAME}"
+          json="$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/pulls")"
+          count="$(printf '%s' "$json" | jq 'length')"
+          head="$(printf '%s' "$json" | jq -r '.[0].head.ref // ""')"
+
+          {
+            echo "count=$count"
+            echo "head=$head"
+            echo "branche=$branche"
+          } >> "$GITHUB_OUTPUT"
+
+          if [ "$count" -eq 0 ]; then
+            echo "raison=Commit pousse directement sur \`$branche\`, sans pull request." >> "$GITHUB_OUTPUT"
+            echo "::error::Commit pousse directement sur $branche, sans pull request."
+            exit 0
+          fi
+
+          if [ "$branche" = "main" ] && [ "$head" != "dev" ]; then
+            echo "raison=La pull request vers \`main\` vient de \`$head\` et non de \`dev\`. Seule une livraison depuis \`dev\` peut atteindre \`main\`." >> "$GITHUB_OUTPUT"
+            echo "::error::main ne peut recevoir que des pull requests venant de dev (recu : $head)."
+            exit 0
+          fi
+
+          echo "raison=" >> "$GITHUB_OUTPUT"
+          echo "Origine conforme : pull request depuis $head."
+
+      - name: Ouvrir une issue de suivi
+        if: steps.pr.outputs.raison != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          sha="${{ github.sha }}"
+          gh issue create \
+            --repo "${{ github.repository }}" \
+            --title "Convention de branche contournee sur ${{ steps.pr.outputs.branche }} : ${sha:0:7}" \
+            --body "${{ steps.pr.outputs.raison }}
+
+Commit : ${sha}
+Auteur du push : @${{ github.actor }}
+Message : ${{ github.event.head_commit.message }}
+
+Le flux attendu est : branche de travail, puis pull request vers \`dev\`, puis livraison de \`dev\` vers \`main\`.
+
+Le depot etant prive sur un plan gratuit, aucune regle serveur ne peut refuser ce push. La convention repose sur le hook \`pre-push\` local et sur cette detection.
+
+A faire :
+- [ ] Expliquer pourquoi le flux a ete contourne
+- [ ] Verifier que le hook local est installe : le script d installation de l equipe
+- [ ] Si le changement doit etre revu, ouvrir une pull request de suivi"
+
+      - name: Echouer
+        if: steps.pr.outputs.raison != ''
+        run: exit 1
