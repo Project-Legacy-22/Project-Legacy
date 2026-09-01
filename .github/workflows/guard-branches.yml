@@ -5,9 +5,13 @@
 # ne l empeche pas, il le rend visible et trace. Un contournement laisse une
 # execution rouge et une issue ouverte au nom de son auteur.
 #
-# Il verifie deux choses :
-#   dev  ne recoit que des pull requests
-#   main ne recoit que des pull requests venant de dev
+# Deux invariants, verifies differemment :
+#   dev  ne recoit que des commits issus d une pull request qui le cible.
+#   main ne recoit que du contenu deja present dans dev. C est l invariant reel :
+#        inspecter la branche source d une pull request est fragile, un commit
+#        pouvant appartenir a plusieurs pull requests. On verifie donc que le
+#        commit est bien un ancetre de dev, ce qui est vrai d une livraison et
+#        faux de tout raccourci.
 #
 # A retirer le jour ou une regle serveur devient disponible.
 
@@ -28,48 +32,60 @@ permissions:
 jobs:
   verifier-origine:
     name: Origine du commit
+    # Creer ou supprimer une branche n est pas un push de contenu : il n y a
+    # rien a verifier, et le commit appartient deja a une branche existante.
+    if: github.event.created == false && github.event.deleted == false
     runs-on: ubuntu-latest
     steps:
-      - name: Identifier la pull request associee
+      - name: Verifier l invariant de la branche
         id: pr
         env:
           GH_TOKEN: ${{ github.token }}
+          DEPOT: ${{ github.repository }}
+          SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
           branche="${GITHUB_REF_NAME}"
-          if ! json="$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/pulls" 2>&1)"; then
+          echo "branche=$branche" >> "$GITHUB_OUTPUT"
+
+          if [ "$branche" = "main" ]; then
+            # Tout ce qui arrive sur main doit deja exister dans dev.
+            if ! cmp="$(gh api "repos/$DEPOT/compare/dev...$SHA" --jq .status 2>&1)"; then
+              echo "::error::Comparaison avec dev impossible : $cmp"
+              exit 1
+            fi
+            case "$cmp" in
+              identical|behind)
+                echo "raison=" >> "$GITHUB_OUTPUT"
+                echo "Origine conforme : le commit est deja present dans dev ($cmp)." ;;
+              *)
+                echo "raison=Le commit est arrive sur \`main\` sans passer par \`dev\` (comparaison : $cmp). Seule une livraison depuis \`dev\` peut atteindre \`main\`." >> "$GITHUB_OUTPUT"
+                echo "::error::main a recu du contenu absent de dev (comparaison : $cmp)." ;;
+            esac
+            exit 0
+          fi
+
+          # dev : au moins une pull request fermee sur cette branche doit
+          # contenir le commit.
+          if ! json="$(gh api "repos/$DEPOT/commits/$SHA/pulls" 2>&1)"; then
             echo "::error::Impossible d interroger l API des pull requests : $json"
             echo "Verifier le bloc permissions du workflow." >&2
             exit 1
           fi
-          count="$(printf '%s' "$json" | jq 'length')"
-          head="$(printf '%s' "$json" | jq -r '.[0].head.ref // ""')"
-
-          {
-            echo "count=$count"
-            echo "head=$head"
-            echo "branche=$branche"
-          } >> "$GITHUB_OUTPUT"
-
-          if [ "$count" -eq 0 ]; then
-            echo "raison=Commit pousse directement sur \`$branche\`, sans pull request." >> "$GITHUB_OUTPUT"
-            echo "::error::Commit pousse directement sur $branche, sans pull request."
-            exit 0
+          count="$(printf '%s' "$json" | jq '[.[] | select(.base.ref == "dev")] | length')"
+          if [ "$count" -gt 0 ]; then
+            echo "raison=" >> "$GITHUB_OUTPUT"
+            echo "Origine conforme : pull request vers dev."
+          else
+            echo "raison=Commit pousse directement sur \`dev\`, sans pull request." >> "$GITHUB_OUTPUT"
+            echo "::error::Commit pousse directement sur dev, sans pull request."
           fi
-
-          if [ "$branche" = "main" ] && [ "$head" != "dev" ]; then
-            echo "raison=La pull request vers \`main\` vient de \`$head\` et non de \`dev\`. Seule une livraison depuis \`dev\` peut atteindre \`main\`." >> "$GITHUB_OUTPUT"
-            echo "::error::main ne peut recevoir que des pull requests venant de dev (recu : $head)."
-            exit 0
-          fi
-
-          echo "raison=" >> "$GITHUB_OUTPUT"
-          echo "Origine conforme : pull request depuis $head."
 
       - name: Ouvrir une issue de suivi
         if: steps.pr.outputs.raison != ''
         env:
           GH_TOKEN: ${{ github.token }}
+          DEPOT: ${{ github.repository }}
           RAISON: ${{ steps.pr.outputs.raison }}
           BRANCHE: ${{ steps.pr.outputs.branche }}
           ACTEUR: ${{ github.actor }}
@@ -84,7 +100,7 @@ jobs:
             printf '%s\n\n' "$RAISON"
             printf 'Commit : %s\n' "$SHA"
             printf 'Auteur du push : @%s\n' "$ACTEUR"
-            printf 'Message : %s\n\n' "$MESSAGE"
+            printf 'Message : %s\n\n' "${MESSAGE%%$'\n'*}"
             printf 'Le flux attendu est : branche de travail, puis pull request vers dev, puis livraison de dev vers main.\n\n'
             printf 'Le depot etant prive sur un plan gratuit, aucune regle serveur ne peut refuser ce push. La convention repose sur le hook pre-push local et sur cette detection.\n\n'
             printf 'A faire :\n'
@@ -93,10 +109,9 @@ jobs:
             printf -- '- [ ] Si le changement doit etre revu, ouvrir une pull request de suivi\n'
           } > corps-issue.md
           gh issue create \
-            --repo "${{ github.repository }}" \
+            --repo "$DEPOT" \
             --title "Convention de branche contournee sur $BRANCHE : ${SHA:0:7}" \
             --body-file corps-issue.md
-
       - name: Echouer
         if: steps.pr.outputs.raison != ''
         run: exit 1
