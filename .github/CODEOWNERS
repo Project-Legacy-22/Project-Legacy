@@ -1,0 +1,31 @@
+# Couche 3 : demande de relecture automatique.
+#
+# Sans protection de branche, ce fichier n impose rien : il demande la relecture
+# de la bonne personne des l ouverture de la pull request. C est ce qui fait
+# tenir l ownership des modules decrit dans les standards d architecture de l equipe.
+#
+# A mettre a jour a chaque changement d owner, en debut de sprint.
+#
+# Format : <chemin>  @login1 @login2
+
+# Par defaut, l equipe entiere est proprietaire, tant que l ownership par module
+# n est pas fige (decision D-01). L assignation tournante configuree sur l equipe
+# designe un seul relecteur par pull request : personne ne recoit six demandes.
+*                           @Project-Legacy-22/equipe
+
+# Contrats partages : toute modification est prioritaire en relecture.
+# packages/contracts/        @owner-contrats
+
+# packages/core/auth/        @owner-auth
+# packages/core/tasks/       @owner-tasks
+# packages/core/projects/    @owner-projects
+# packages/core/notifications/ @owner-notifications
+# packages/infra/            @owner-infra
+# apps/web/                  @owner-front
+
+# Configuration racine et chaine de livraison : un seul arbitre.
+# /package.json              @owner-ci
+# /tsconfig.json             @owner-ci
+# /.github/workflows/        @owner-ci
+# /Dockerfile                @owner-ci
+# /compose.yaml              @owner-ci

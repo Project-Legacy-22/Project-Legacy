@@ -1,0 +1,31 @@
+# Dependances
+node_modules/
+
+# Artefacts de build
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# Tests et couverture
+coverage/
+.nyc_output/
+
+# Environnement local
+.env
+.env.*
+!.env.example
+
+# Base de donnees locale
+*.sqlite
+*.sqlite3
+*.db
+
+# Journaux
+*.log
+npm-debug.log*
+logs/
+
+# Fichiers systeme
+.DS_Store
+Thumbs.db
