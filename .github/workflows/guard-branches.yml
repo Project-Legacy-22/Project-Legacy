@@ -62,26 +62,32 @@ jobs:
         if: steps.pr.outputs.raison != ''
         env:
           GH_TOKEN: ${{ github.token }}
+          RAISON: ${{ steps.pr.outputs.raison }}
+          BRANCHE: ${{ steps.pr.outputs.branche }}
+          ACTEUR: ${{ github.actor }}
+          MESSAGE: ${{ github.event.head_commit.message }}
+          SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          sha="${{ github.sha }}"
+          # Le contenu passe par des variables d environnement plutot que par
+          # une interpolation directe : un message de commit contenant des
+          # guillemets casserait la commande, et pourrait y injecter du shell.
+          {
+            printf '%s\n\n' "$RAISON"
+            printf 'Commit : %s\n' "$SHA"
+            printf 'Auteur du push : @%s\n' "$ACTEUR"
+            printf 'Message : %s\n\n' "$MESSAGE"
+            printf 'Le flux attendu est : branche de travail, puis pull request vers dev, puis livraison de dev vers main.\n\n'
+            printf 'Le depot etant prive sur un plan gratuit, aucune regle serveur ne peut refuser ce push. La convention repose sur le hook pre-push local et sur cette detection.\n\n'
+            printf 'A faire :\n'
+            printf -- '- [ ] Expliquer pourquoi le flux a ete contourne\n'
+            printf -- '- [ ] Verifier que le hook local est installe, avec le script d installation de l equipe\n'
+            printf -- '- [ ] Si le changement doit etre revu, ouvrir une pull request de suivi\n'
+          } > corps-issue.md
           gh issue create \
             --repo "${{ github.repository }}" \
-            --title "Convention de branche contournee sur ${{ steps.pr.outputs.branche }} : ${sha:0:7}" \
-            --body "${{ steps.pr.outputs.raison }}
-
-Commit : ${sha}
-Auteur du push : @${{ github.actor }}
-Message : ${{ github.event.head_commit.message }}
-
-Le flux attendu est : branche de travail, puis pull request vers \`dev\`, puis livraison de \`dev\` vers \`main\`.
-
-Le depot etant prive sur un plan gratuit, aucune regle serveur ne peut refuser ce push. La convention repose sur le hook \`pre-push\` local et sur cette detection.
-
-A faire :
-- [ ] Expliquer pourquoi le flux a ete contourne
-- [ ] Verifier que le hook local est installe : le script d installation de l equipe
-- [ ] Si le changement doit etre revu, ouvrir une pull request de suivi"
+            --title "Convention de branche contournee sur $BRANCHE : ${SHA:0:7}" \
+            --body-file corps-issue.md
 
       - name: Echouer
         if: steps.pr.outputs.raison != ''
