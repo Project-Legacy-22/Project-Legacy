@@ -26,7 +26,9 @@ export default defineConfig({
         ],
         coverage: {
             provider: 'v8',
-            reporter: ['text', 'html'],
+            // text pour la console, html pour l inspection locale,
+            // json-summary pour le resume publie sur la pull request par la CI.
+            reporter: ['text', 'html', 'json-summary'],
             // Un seuil ne s active qu une fois franchissable : le rendre
             // bloquant avant d avoir livre de quoi le franchir arreterait toute
             // l equipe, y compris les PR qui apportent les tests manquants.
