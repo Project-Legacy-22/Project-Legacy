@@ -1,18 +1,16 @@
 import { Router } from 'express';
 import type { RequestHandler } from 'express';
+import { CreateItemBody, UpdateItemBody, ItemIdParams } from '@legacy/contracts';
 
 import type { ItemUseCases } from '../../composition-root.js';
 
 // Routes translate HTTP into use-case calls and back. They hold no rule of
-// their own and never reach the database. Every rejected promise is forwarded
-// to next(), so a failure becomes a response instead of a hanging request.
+// their own and never reach the database.
 //
-// The body is declared as unknown fields and narrowed by hand here; a schema at
-// the boundary replaces this in the next step. `completed` keeps the original
-// truthiness test so a nominal request behaves exactly as before.
-type Body = Record<string, unknown>;
-type ItemParams = { id: string };
-
+// Nothing reaches a use case before a schema has vouched for it: an invalid
+// body or a malformed id is handed to next(), which the error middleware turns
+// into a 400. The domain still enforces its own invariants -- a rule that only
+// lives at the boundary is a rule the domain cannot guarantee.
 export function itemsRouter(useCases: ItemUseCases): Router {
     const router = Router();
 
@@ -23,30 +21,35 @@ export function itemsRouter(useCases: ItemUseCases): Router {
             .catch(next);
     };
 
-    const add: RequestHandler<Record<string, never>, unknown, Body> = (req, res, next) => {
-        const { name } = req.body;
+    const add: RequestHandler = (req, res, next) => {
+        const body = CreateItemBody.safeParse(req.body);
+        if (!body.success) return next(body.error);
 
         useCases
-            .addItem(typeof name === 'string' ? name : '')
+            .addItem(body.data.name)
             .then(item => res.send(item))
             .catch(next);
     };
 
-    const change: RequestHandler<ItemParams, unknown, Body> = (req, res, next) => {
-        const { name, completed } = req.body;
+    const change: RequestHandler = (req, res, next) => {
+        const params = ItemIdParams.safeParse(req.params);
+        if (!params.success) return next(params.error);
+
+        const body = UpdateItemBody.safeParse(req.body);
+        if (!body.success) return next(body.error);
 
         useCases
-            .changeItem(req.params.id, {
-                name: typeof name === 'string' ? name : '',
-                completed: Boolean(completed),
-            })
+            .changeItem(params.data.id, body.data)
             .then(item => res.send(item))
             .catch(next);
     };
 
-    const remove: RequestHandler<ItemParams> = (req, res, next) => {
+    const remove: RequestHandler = (req, res, next) => {
+        const params = ItemIdParams.safeParse(req.params);
+        if (!params.success) return next(params.error);
+
         useCases
-            .removeItem(req.params.id)
+            .removeItem(params.data.id)
             .then(() => res.sendStatus(200))
             .catch(next);
     };

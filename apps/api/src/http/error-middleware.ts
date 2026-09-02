@@ -1,3 +1,4 @@
+import { ZodError } from 'zod';
 import { DomainError } from '@legacy/core-items';
 import type { ErrorRequestHandler } from 'express';
 
@@ -15,25 +16,45 @@ interface ProblemDetails {
     traceId: string;
 }
 
+// Only the field paths and the reason are reported, never the value that was
+// submitted: an error body must not echo back what a user typed.
+function describe(error: ZodError): string {
+    return error.issues.map(issue => `${issue.path.join('.') || 'body'}: ${issue.message}`).join('; ');
+}
+
+function toProblem(error: unknown): Omit<ProblemDetails, 'instance' | 'traceId'> {
+    if (error instanceof ZodError) {
+        return {
+            type: 'validation_error',
+            title: 'ValidationError',
+            status: 400,
+            detail: describe(error),
+        };
+    }
+
+    if (error instanceof DomainError) {
+        return {
+            type: error.code,
+            title: error.name,
+            status: error.httpStatus,
+            detail: error.message,
+        };
+    }
+
+    return {
+        type: 'internal_error',
+        title: 'InternalError',
+        status: 500,
+        detail: 'The request could not be processed.',
+    };
+}
+
 export const translateErrors: ErrorRequestHandler = (error, req, res, _next) => {
-    const problem: ProblemDetails =
-        error instanceof DomainError
-            ? {
-                  type: error.code,
-                  title: error.name,
-                  status: error.httpStatus,
-                  detail: error.message,
-                  instance: req.originalUrl,
-                  traceId: res.locals.traceId,
-              }
-            : {
-                  type: 'internal_error',
-                  title: 'InternalError',
-                  status: 500,
-                  detail: 'The request could not be processed.',
-                  instance: req.originalUrl,
-                  traceId: res.locals.traceId,
-              };
+    const problem: ProblemDetails = {
+        ...toProblem(error),
+        instance: req.originalUrl,
+        traceId: res.locals.traceId,
+    };
 
     res.status(problem.status).json(problem);
 };

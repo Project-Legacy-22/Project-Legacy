@@ -9,6 +9,7 @@
   },
   "workspaces": [
     "apps/api",
+    "packages/contracts",
     "packages/infra",
     "packages/core/items"
   ],

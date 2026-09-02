@@ -1,8 +1,17 @@
 {
   "files": [],
   "references": [
-    { "path": "packages/core/items" },
-    { "path": "packages/infra" },
-    { "path": "apps/api" }
+    {
+      "path": "packages/contracts"
+    },
+    {
+      "path": "packages/core/items"
+    },
+    {
+      "path": "packages/infra"
+    },
+    {
+      "path": "apps/api"
+    }
   ]
 }
