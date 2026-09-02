@@ -1,0 +1,16 @@
+# Contexte de build : ce qui n a pas a etre envoye au demon Docker, ni pour
+# alourdir l image, ni pour finir dedans par accident.
+node_modules
+**/node_modules
+**/dist
+coverage
+.git
+.github
+docs
+spec
+.env
+.env.*
+*.db
+*.sqlite
+*.sqlite3
+.DS_Store

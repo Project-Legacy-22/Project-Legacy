@@ -141,3 +141,58 @@ jobs:
       # cas, l image publiee servirait une page vide sans que rien n echoue.
       - name: Verifier que le front est bien dans la sortie de l API
         run: test -f apps/api/dist/static/index.html
+
+  image:
+    name: Image Docker
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: verifier
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Construite a chaque pull request, jamais publiee ici. Ne la construire
+      # qu au moment de la livraison laisserait un Dockerfile casse passer
+      # inapercu jusqu a la prochaine mise en production.
+      - name: Construire l image sans la publier
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: legacy-todo:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Une image qui se construit mais ne demarre pas ne prouve rien.
+      - name: Verifier qu elle demarre et repond
+        run: |
+          set -euo pipefail
+          docker run -d --name verif -p 3000:3000 \
+            -e SQLITE_DB_LOCATION=/tmp/todo.db legacy-todo:ci
+          for tentative in $(seq 1 20); do
+            if curl -fsS -o /dev/null http://127.0.0.1:3000/items; then
+              echo "L API repond apres $tentative tentative(s)."
+              break
+            fi
+            if [ "$tentative" -eq 20 ]; then
+              echo "::error::L image n a pas repondu en vingt secondes."
+              docker logs verif
+              exit 1
+            fi
+            sleep 1
+          done
+          curl -fsS -o /dev/null http://127.0.0.1:3000/ \
+            || { echo "::error::Le front n est pas servi par l image."; exit 1; }
+          docker rm -f verif >/dev/null
+
+      - name: Verifier qu elle ne tourne pas en root
+        run: |
+          set -euo pipefail
+          utilisateur="$(docker image inspect legacy-todo:ci --format '{{.Config.User}}')"
+          if [ -z "$utilisateur" ] || [ "$utilisateur" = "root" ]; then
+            echo "::error::L image tourne en root (utilisateur : '$utilisateur')."
+            exit 1
+          fi
+          echo "Utilisateur de l image : $utilisateur"
