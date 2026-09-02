@@ -1,5 +1,6 @@
 import { ZodError } from 'zod';
 import { DomainError } from '@legacy/core-items';
+import type { Logger } from '@legacy/infra';
 import type { ErrorRequestHandler } from 'express';
 
 // The single point where a failure becomes an HTTP response. No route sets an
@@ -49,12 +50,22 @@ function toProblem(error: unknown): Omit<ProblemDetails, 'instance' | 'traceId'>
     };
 }
 
-export const translateErrors: ErrorRequestHandler = (error, req, res, _next) => {
-    const problem: ProblemDetails = {
-        ...toProblem(error),
-        instance: req.originalUrl,
-        traceId: res.locals.traceId,
-    };
+export function translateErrors(logger: Logger): ErrorRequestHandler {
+    return (error, req, res, _next) => {
+        const problem: ProblemDetails = {
+            ...toProblem(error),
+            instance: req.originalUrl,
+            traceId: res.locals.traceId,
+        };
 
-    res.status(problem.status).json(problem);
-};
+        // An expected refusal is not an incident: only a failure we did not
+        // model is worth waking someone up for, and only it carries the cause.
+        if (problem.status >= 500) {
+            logger.error({ err: error, traceId: problem.traceId }, 'unhandled failure');
+        } else {
+            logger.warn({ type: problem.type, status: problem.status, traceId: problem.traceId });
+        }
+
+        res.status(problem.status).json(problem);
+    };
+}

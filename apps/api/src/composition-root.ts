@@ -1,6 +1,6 @@
 import { v4 as uuid } from 'uuid';
-import { createSqliteItemStore, createMysqlItemStore } from '@legacy/infra';
-import type { ItemStore } from '@legacy/infra';
+import { createSqliteItemStore, createMysqlItemStore, createLogger } from '@legacy/infra';
+import type { ItemStore, Logger } from '@legacy/infra';
 import { makeListItems, makeAddItem, makeChangeItem, makeRemoveItem } from '@legacy/core-items';
 
 import type { Config, PersistenceConfig } from './config.js';
@@ -25,14 +25,17 @@ export interface ItemUseCases {
 
 export interface Application {
     useCases: ItemUseCases;
+    logger: Logger;
     start(): Promise<void>;
     stop(): Promise<void>;
 }
 
 export function compose(config: Config): Application {
     const store = createItemStore(config.persistence);
+    const logger = createLogger();
 
     return {
+        logger,
         useCases: {
             listItems: makeListItems(store),
             addItem: makeAddItem({ repository: store, newId: uuid }),
