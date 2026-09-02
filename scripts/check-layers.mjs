@@ -59,6 +59,29 @@ const RULES = [
         bare: [/^@legacy\/(contracts|core-items)$/, /^node:/, /^(express|zod|uuid)$/],
         local: /^\.\.?\//,
     },
+    {
+        name: 'web tests use only browser dependencies and test tools',
+        match: /^apps\/web\/src\/.*\.test\.tsx?$/,
+        bare: [
+            /^@legacy\/contracts$/,
+            /^react(?:\/.*)?$/,
+            /^react-dom(?:\/.*)?$/,
+            /^(axe-core|vitest)$/,
+        ],
+        local: /^\.\.?\//,
+    },
+    {
+        name: 'web production code depends only on contracts and browser libraries',
+        match: /^apps\/web\/src\//,
+        bare: [/^@legacy\/contracts$/, /^react(?:\/.*)?$/, /^react-dom(?:\/.*)?$/],
+        local: /^\.\.?\//,
+    },
+    {
+        name: 'web build configuration uses only its declared build tools',
+        match: /^apps\/web\/(vite|vitest)\.config\.ts$/,
+        bare: [/^@vitejs\/plugin-react$/, /^vite$/, /^vitest\/config$/],
+        local: /^\.\.?\//,
+    },
 ];
 
 function sourceFiles(dir) {
@@ -71,7 +94,7 @@ function sourceFiles(dir) {
         // script protects: it legitimately imports its test runner as a bare
         // specifier (forbidden for e.g. domain/, which may import nothing)
         // and reaches into test/ for fakes and builders.
-        else if (entry.endsWith('.ts') && !entry.endsWith('.test.ts')) found.push(full);
+        else if (/\.tsx?$/.test(entry) && !/\.test\.tsx?$/.test(entry)) found.push(full);
     }
     return found;
 }

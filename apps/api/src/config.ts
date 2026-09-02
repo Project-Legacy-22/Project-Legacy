@@ -53,8 +53,8 @@ function readPersistence(env: NodeJS.ProcessEnv): PersistenceConfig {
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     return {
         port: 3000,
-        // The build copies src/static next to the compiled output, so this
-        // resolves to src/static under tsx and dist/static under node.
+        // Vite writes its production bundle next to the compiled API output.
+        // During development the web app is served separately by Vite.
         staticDir: path.join(import.meta.dirname, 'static'),
         persistence: readPersistence(env),
     };

@@ -8,15 +8,29 @@ export default defineConfig({
         conditions: ['development'],
     },
     test: {
-        include: ['apps/**/*.test.ts', 'packages/**/*.test.ts'],
-        environment: 'node',
+        // Two runtimes, one command, one coverage report. Splitting `test` into
+        // a Node run and a web run would produce two partial reports, and any
+        // threshold read from either would be meaningless.
+        projects: [
+            {
+                extends: true,
+                test: {
+                    name: 'node',
+                    include: ['apps/api/**/*.test.ts', 'packages/**/*.test.ts'],
+                    environment: 'node',
+                },
+            },
+            // Referenced by directory so apps/web keeps owning its own runtime
+            // setup: jsdom, mock clearing, and whatever its Vite config adds.
+            './apps/web',
+        ],
         coverage: {
             provider: 'v8',
             reporter: ['text', 'html'],
             reportsDirectory: 'coverage',
-            include: ['apps/**/src/**/*.ts', 'packages/**/src/**/*.ts'],
+            include: ['apps/**/src/**/*.{ts,tsx}', 'packages/**/src/**/*.ts'],
             exclude: [
-                '**/*.test.ts',
+                '**/*.test.{ts,tsx}',
                 '**/test/**',
                 // Composition root and config only wire things together; a
                 // domain rule tested through them would be an integration

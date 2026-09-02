@@ -1,0 +1,141 @@
+.add-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 14px;
+}
+
+.form-field {
+    min-width: 0;
+}
+
+label {
+    display: block;
+    margin-bottom: 6px;
+    color: #172033;
+    font-weight: 750;
+}
+
+.field-help,
+.field-error {
+    margin-bottom: 8px;
+    color: #465568;
+    font-size: 0.875rem;
+    line-height: 1.45;
+}
+
+.field-error {
+    margin: 8px 0 0;
+    color: #8a1c16;
+    font-weight: 700;
+}
+
+input {
+    width: 100%;
+    min-height: 46px;
+    padding: 10px 12px;
+    border: 2px solid #65768a;
+    border-radius: 6px;
+    color: #172033;
+    background: #ffffff;
+}
+
+input:hover:not(:disabled) {
+    border-color: #34465a;
+}
+
+input[aria-invalid="true"] {
+    border-color: #a5241c;
+}
+
+.button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 16px;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    font-weight: 750;
+    line-height: 1.2;
+    cursor: pointer;
+    transition:
+        background-color 140ms ease,
+        border-color 140ms ease,
+        color 140ms ease,
+        filter 100ms ease;
+}
+
+.button:active:not(:disabled) {
+    filter: brightness(0.88);
+}
+
+.button-primary {
+    color: #ffffff;
+    background: #0f7169;
+}
+
+.button-primary:hover:not(:disabled) {
+    background: #0b5c56;
+}
+
+.button-secondary {
+    border-color: #47736d;
+    color: #184f49;
+    background: #ffffff;
+}
+
+.button-secondary:hover:not(:disabled) {
+    border-color: #184f49;
+    background: #e9f6f3;
+}
+
+.button-danger {
+    border-color: #b4534d;
+    color: #8a1c16;
+    background: #ffffff;
+}
+
+.button-danger:hover:not(:disabled) {
+    border-color: #8a1c16;
+    background: #fff1f0;
+}
+
+.button:disabled,
+input:disabled {
+    cursor: not-allowed;
+    opacity: 0.62;
+}
+
+.status-message,
+.empty-message {
+    margin-bottom: 0;
+    padding: 18px;
+    border: 1px dashed #8798a8;
+    border-radius: 8px;
+    color: #39495c;
+    background: #f7f9fb;
+    text-align: center;
+}
+
+.error-message {
+    padding: 14px;
+    border: 1px solid #d89a96;
+    border-radius: 8px;
+    color: #751912;
+    background: #fff1f0;
+}
+
+.error-message p {
+    margin-bottom: 12px;
+}
+
+.action-error {
+    margin: 0;
+}
+
+@media (max-width: 620px) {
+    .add-form .button-primary,
+    .item-actions .button {
+        flex: 1;
+    }
+}
