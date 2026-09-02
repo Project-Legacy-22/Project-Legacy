@@ -50,7 +50,20 @@ jobs:
 
           if [ "$branche" = "main" ]; then
             # Tout ce qui arrive sur main doit deja exister dans dev.
-            if ! cmp="$(gh api "repos/$DEPOT/compare/dev...$SHA" --jq .status 2>&1)"; then
+            #
+            # Une livraison est un commit de fusion : lui-meme n existe pas
+            # dans dev, mais son second parent est la tete de dev au moment du
+            # merge. C est donc ce parent qu il faut comparer. Comparer le
+            # commit de fusion signalerait chaque livraison comme un
+            # contournement, et un garde-fou qui crie a tort finit ignore.
+            parents="$(gh api "repos/$DEPOT/commits/$SHA" --jq '[.parents[].sha] | join(" ")')"
+            candidat="$SHA"
+            if [ "$(printf '%s' "$parents" | wc -w | tr -d ' ')" -ge 2 ]; then
+              candidat="$(printf '%s' "$parents" | awk '{print $2}')"
+              echo "Commit de fusion : comparaison sur son second parent $candidat."
+            fi
+
+            if ! cmp="$(gh api "repos/$DEPOT/compare/dev...$candidat" --jq .status 2>&1)"; then
               echo "::error::Comparaison avec dev impossible : $cmp"
               exit 1
             fi
