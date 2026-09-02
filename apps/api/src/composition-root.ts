@@ -1,6 +1,7 @@
 import { v4 as uuid } from 'uuid';
 import { createSqliteItemStore, createMysqlItemStore, createLogger } from '@legacy/infra';
-import type { ItemStore, Logger } from '@legacy/infra';
+import type { ItemStore } from '@legacy/infra';
+import type { Logger } from '@legacy/contracts';
 import { makeListItems, makeAddItem, makeChangeItem, makeRemoveItem } from '@legacy/core-items';
 
 import type { Config, PersistenceConfig } from './config.js';

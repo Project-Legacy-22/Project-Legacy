@@ -1,6 +1,6 @@
 import { ZodError } from 'zod';
 import { DomainError } from '@legacy/core-items';
-import type { Logger } from '@legacy/infra';
+import type { Logger } from '@legacy/contracts';
 import type { ErrorRequestHandler } from 'express';
 
 // The single point where a failure becomes an HTTP response. No route sets an

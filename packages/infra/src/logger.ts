@@ -1,7 +1,5 @@
 import { pino } from 'pino';
-import type { Logger } from 'pino';
-
-export type { Logger };
+import type { Logger } from '@legacy/contracts';
 
 // Structured JSON logging. Two rules govern what may be written, both from the
 // team's code standards: identifiers are fine, content is not.

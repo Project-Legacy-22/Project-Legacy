@@ -1,6 +1,6 @@
 import express from 'express';
 import type { Express } from 'express';
-import type { Logger } from '@legacy/infra';
+import type { Logger } from '@legacy/contracts';
 
 import type { Config } from '../config.js';
 import type { ItemUseCases } from '../composition-root.js';

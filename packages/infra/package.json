@@ -11,6 +11,7 @@
     }
   },
   "dependencies": {
+    "@legacy/contracts": "*",
     "@legacy/core-items": "*",
     "mysql2": "^3.16.1",
     "pino": "^10.3.1",

@@ -1,4 +1,4 @@
-import type { Logger } from '@legacy/infra';
+import type { Logger } from '@legacy/contracts';
 import type { RequestHandler } from 'express';
 
 // One line per request, written when the response is done so it can carry the
