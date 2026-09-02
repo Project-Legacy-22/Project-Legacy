@@ -7,9 +7,9 @@ export interface ItemsContentProps {
     items: readonly ItemDto[];
     loadState: ItemsLoadState;
     pendingItemIds: ReadonlySet<string>;
-    onToggle(item: ItemDto): Promise<void>;
-    onRemove(item: ItemDto): Promise<boolean>;
-    onRetry(): void;
+    onToggle: (item: ItemDto) => Promise<void>;
+    onRemove: (item: ItemDto) => Promise<boolean>;
+    onRetry: () => void;
 }
 
 export function ItemsContent({

@@ -10,8 +10,10 @@ interface AddItemFormState {
     name: string;
     validationError: string | null;
     describedBy: string;
-    handleChange(event: ChangeEvent<HTMLInputElement>): void;
-    handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void>;
+    handleChange: (event: ChangeEvent<HTMLInputElement>) => void;
+    // Le DOM ignore la valeur renvoyee par un gestionnaire de soumission :
+    // la declarer void plutot que Promise<void> dit la verite a l appelant.
+    handleSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }
 
 export function useAddItemForm(
@@ -26,7 +28,7 @@ export function useAddItemForm(
         if (validationError !== null) setValidationError(null);
     };
 
-    const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    const submit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         const candidate = CreateItemBody.safeParse({ name });
 
@@ -53,6 +55,10 @@ export function useAddItemForm(
 
     const describedBy =
         validationError === null ? 'item-name-help' : 'item-name-help item-name-error';
+
+    const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+        void submit(event);
+    };
 
     return { inputRef, name, validationError, describedBy, handleChange, handleSubmit };
 }

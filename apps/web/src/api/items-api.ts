@@ -6,10 +6,10 @@ import { labels } from '../labels';
 export type { ItemDto } from '@legacy/contracts';
 
 export interface ItemsApi {
-    listItems(signal: AbortSignal): Promise<readonly ItemDto[]>;
-    createItem(body: CreateItemBody): Promise<ItemDto>;
-    updateItem(id: string, body: UpdateItemBody): Promise<ItemDto>;
-    deleteItem(id: string): Promise<void>;
+    listItems: (signal: AbortSignal) => Promise<readonly ItemDto[]>;
+    createItem: (body: CreateItemBody) => Promise<ItemDto>;
+    updateItem: (id: string, body: UpdateItemBody) => Promise<ItemDto>;
+    deleteItem: (id: string) => Promise<void>;
 }
 
 export class ApiError extends Error {

@@ -12,10 +12,10 @@ export interface TodoPageProps {
     feedback: ItemActionFeedback;
     isAdding: boolean;
     pendingItemIds: ReadonlySet<string>;
-    onAdd(name: string): Promise<AddItemResult>;
-    onToggle(item: ItemDto): Promise<void>;
-    onRemove(item: ItemDto): Promise<boolean>;
-    onRetry(): void;
+    onAdd: (name: string) => Promise<AddItemResult>;
+    onToggle: (item: ItemDto) => Promise<void>;
+    onRemove: (item: ItemDto) => Promise<boolean>;
+    onRetry: () => void;
 }
 
 export function TodoPage(props: TodoPageProps) {

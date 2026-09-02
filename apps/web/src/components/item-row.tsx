@@ -6,8 +6,8 @@ import { labels } from '../labels';
 export interface ItemRowProps {
     item: ItemDto;
     isPending: boolean;
-    onToggle(item: ItemDto): Promise<void>;
-    onRemove(item: ItemDto): Promise<boolean>;
+    onToggle: (item: ItemDto) => Promise<void>;
+    onRemove: (item: ItemDto) => Promise<boolean>;
 }
 
 function toggleAriaLabel(item: ItemDto, name: string): string {

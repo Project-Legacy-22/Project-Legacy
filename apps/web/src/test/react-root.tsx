@@ -4,8 +4,8 @@ import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 
 export interface ReactTestRoot {
-    render(node: ReactNode): Promise<void>;
-    unmount(): Promise<void>;
+    render: (node: ReactNode) => Promise<void>;
+    unmount: () => Promise<void>;
 }
 
 export function createReactTestRoot(): ReactTestRoot {

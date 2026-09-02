@@ -14,7 +14,7 @@ import { anItem } from './test/builders/item-builder';
 
 interface Deferred<T> {
     promise: Promise<T>;
-    resolve(value: T): void;
+    resolve: (value: T) => void;
 }
 
 const firstItem = anItem({

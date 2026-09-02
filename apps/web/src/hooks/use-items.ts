@@ -11,10 +11,10 @@ export interface ItemsState {
     feedback: ItemActionFeedback;
     isAdding: boolean;
     pendingItemIds: ReadonlySet<string>;
-    addItem(name: string): Promise<AddItemResult>;
+    addItem: (name: string) => Promise<AddItemResult>;
     toggleItem: ReturnType<typeof useItemActions>['toggleItem'];
     removeItem: ReturnType<typeof useItemActions>['removeItem'];
-    retry(): void;
+    retry: () => void;
 }
 
 export function useItems(api: ItemsApi): ItemsState {

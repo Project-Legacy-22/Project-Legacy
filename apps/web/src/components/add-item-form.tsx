@@ -7,7 +7,7 @@ import type { AddItemResult } from '../hooks/use-items';
 export interface AddItemFormProps {
     isAdding: boolean;
     isDisabled: boolean;
-    onAdd(name: string): Promise<AddItemResult>;
+    onAdd: (name: string) => Promise<AddItemResult>;
 }
 
 export function AddItemForm({ isAdding, isDisabled, onAdd }: AddItemFormProps) {
