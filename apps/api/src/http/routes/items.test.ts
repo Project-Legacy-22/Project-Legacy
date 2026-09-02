@@ -261,6 +261,26 @@ describe('items API', () => {
         });
     });
 
+    describe('identifiant de trace', () => {
+        // Le middleware garantit la presence de l identifiant. S il etait
+        // oublie, propager `undefined` jusque dans un journal rendrait tout
+        // signalement d utilisateur intracable : l acces echoue donc bruyamment.
+        it('echoue clairement si le middleware de trace n est pas monte', async () => {
+            const { traceIdOf } = await import('../trace.js');
+
+            expect(() => traceIdOf({ locals: {} } as never)).toThrow(/withTraceId/);
+        });
+
+        it('donne le meme identifiant a la reponse et aux lignes journalisees', async () => {
+            const response = await harness.request('/items', json('POST', {}));
+            const problem = (await response.json()) as { traceId: string };
+
+            expect(problem.traceId).toMatch(
+                /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+            );
+        });
+    });
+
     describe('journalisation', () => {
         it('ne journalise jamais le nom d un item', async () => {
             await harness.request('/items', json('POST', { name: 'Acheter du pain' }));
