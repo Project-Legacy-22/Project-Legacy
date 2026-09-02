@@ -1,4 +1,5 @@
 import { pino } from 'pino';
+import type { DestinationStream } from 'pino';
 import type { Logger } from '@legacy/contracts';
 
 // Structured JSON logging. Two rules govern what may be written, both from the
@@ -15,12 +16,20 @@ const REDACTED = [
     '*.password',
 ];
 
-export function createLogger(level: string = process.env.LOG_LEVEL ?? 'info'): Logger {
-    return pino({
+// The destination is a parameter so a test can read back what was written and
+// assert that redaction actually happened. Left undefined, pino writes to
+// stdout exactly as before.
+export function createLogger(
+    level: string = process.env.LOG_LEVEL ?? 'info',
+    destination?: DestinationStream,
+): Logger {
+    const options = {
         level,
         redact: { paths: REDACTED, censor: '[redacted]' },
         formatters: {
-            level: label => ({ level: label }),
+            level: (label: string) => ({ level: label }),
         },
-    });
+    };
+
+    return destination === undefined ? pino(options) : pino(options, destination);
 }
