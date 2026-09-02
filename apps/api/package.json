@@ -1,0 +1,12 @@
+{
+  "name": "@legacy/api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@legacy/core-items": "*",
+    "@legacy/infra": "*",
+    "express": "^5.2.1",
+    "uuid": "^13.0.0"
+  }
+}
