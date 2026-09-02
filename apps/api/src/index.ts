@@ -20,7 +20,9 @@ application
     });
 
 const gracefulShutdown = (): void => {
-    application
+    // A signal handler cannot be awaited by its caller: the chain is
+    // deliberately unhandled past this point, not forgotten.
+    void application
         .stop()
         .catch((err: unknown) => {
             // Reported rather than swallowed: a driver that fails to close is a

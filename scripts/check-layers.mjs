@@ -67,7 +67,11 @@ function sourceFiles(dir) {
         if (entry === 'node_modules' || entry === 'dist' || entry === 'static') continue;
         const full = join(dir, entry);
         if (statSync(full).isDirectory()) found.push(...sourceFiles(full));
-        else if (entry.endsWith('.ts')) found.push(full);
+        // A test file is not part of the production dependency graph this
+        // script protects: it legitimately imports its test runner as a bare
+        // specifier (forbidden for e.g. domain/, which may import nothing)
+        // and reaches into test/ for fakes and builders.
+        else if (entry.endsWith('.ts') && !entry.endsWith('.test.ts')) found.push(full);
     }
     return found;
 }
@@ -81,6 +85,21 @@ function specifiers(content) {
     return [...content.matchAll(SPECIFIER)].map(m => m[1] ?? m[2]).filter(s => s !== undefined);
 }
 
+function fileViolations(path, content, rule) {
+    const found = [];
+
+    for (const specifier of specifiers(content)) {
+        const isRelative = specifier.startsWith('.');
+        const allowed = isRelative
+            ? rule.local.test(specifier)
+            : rule.bare.some(pattern => pattern.test(specifier));
+
+        if (!allowed) found.push({ path, specifier, rule: rule.name });
+    }
+
+    return found;
+}
+
 const violations = [];
 
 for (const dir of ['apps', 'packages']) {
@@ -89,16 +108,7 @@ for (const dir of ['apps', 'packages']) {
         const rule = RULES.find(r => r.match.test(path));
         if (!rule) continue;
 
-        for (const specifier of specifiers(readFileSync(file, 'utf8'))) {
-            const isRelative = specifier.startsWith('.');
-            const allowed = isRelative
-                ? rule.local.test(specifier)
-                : rule.bare.some(pattern => pattern.test(specifier));
-
-            if (!allowed) {
-                violations.push({ path, specifier, rule: rule.name });
-            }
-        }
+        violations.push(...fileViolations(path, readFileSync(file, 'utf8'), rule));
     }
 }
 
