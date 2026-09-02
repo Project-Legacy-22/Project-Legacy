@@ -12,9 +12,13 @@
     "declarationMap": false,
     "noEmit": true
   },
+  // apps/web is excluded on purpose: it resolves modules the way a bundler
+  // does, so its imports carry no file extension, which this config's NodeNext
+  // resolution rejects. Its own tsconfig covers its tests, and `npm run
+  // typecheck` runs it in the same command.
   "include": [
-    "apps/**/*.test.ts",
-    "apps/**/test/**/*.ts",
+    "apps/api/**/*.test.ts",
+    "apps/api/**/test/**/*.ts",
     "packages/**/*.test.ts",
     "packages/**/test/**/*.ts"
   ]
