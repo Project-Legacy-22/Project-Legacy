@@ -1,0 +1,133 @@
+# Publication de l image sur GitHub Container Registry, a chaque livraison sur
+# main.
+#
+# Les verifications ne sont pas reecrites ici : le workflow ci est appele tel
+# quel. Une image ne peut donc pas etre publiee sans elles, par construction et
+# non par convention.
+
+name: image
+
+on:
+  push:
+    branches: [main]
+  # Permet de republier une image sans nouveau commit, par exemple apres une
+  # correction du registre.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: image-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verifier:
+    name: Verifications
+    uses: ./.github/workflows/ci.yml
+
+  publier:
+    name: Publier sur GHCR
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: verifier
+    permissions:
+      # write, et non read : la publication cree aussi une release.
+      contents: write
+      packages: write
+      # Necessaires a l attestation de provenance.
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: S authentifier aupres du registre
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Les etiquettes OCI rattachent l image a sa source, sa licence et sa
+      # date de construction. Le tag sha-<court> est celui qu on cite en revue :
+      # il remonte au commit exact.
+      - name: Calculer les tags et les etiquettes
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=sha,prefix=sha-,format=short
+            type=raw,value=latest
+          labels: |
+            org.opencontainers.image.title=Legacy 22
+            org.opencontainers.image.description=API et interface Kanban servies sur le meme port
+
+      - name: Construire et publier
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Le cache est partage avec le job image de ci : l image a deja ete
+          # construite sur la pull request, seules les couches modifiees sont
+          # reconstruites ici.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Rattache l image au commit et au workflow qui l ont produite, de facon
+      # verifiable. Sa disponibilite depend de l offre du compte : son echec ne
+      # doit pas empecher une publication par ailleurs valide, mais il est
+      # visible dans l execution et suivi par l issue #92.
+      - name: Attester la provenance
+        continue-on-error: true
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-name: ghcr.io/${{ github.repository }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+
+      # Une release par livraison : elle donne un point de reference cite en
+      # revue, et ses notes listent les items livres sans travail manuel.
+      - name: Publier la release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="v$(date -u +%Y.%m.%d)-$(echo "${{ github.sha }}" | cut -c1-7)"
+          gh release create "$tag" \
+            --target "${{ github.sha }}" \
+            --title "$tag" \
+            --generate-notes \
+            --notes-start-tag "$(gh release list --limit 1 --json tagName --jq '.[0].tagName // ""')" \
+            || gh release create "$tag" --target "${{ github.sha }}" --title "$tag" --generate-notes
+          {
+            echo '## Release'
+            echo
+            echo "Tag : \`$tag\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Resumer la publication
+        run: |
+          set -euo pipefail
+          {
+            echo '## Image publiee'
+            echo
+            echo '| Champ | Valeur |'
+            echo '|---|---|'
+            echo "| Registre | ghcr.io/${{ github.repository }} |"
+            echo "| Empreinte | \`${{ steps.build.outputs.digest }}\` |"
+            echo "| Commit | ${{ github.sha }} |"
+            echo
+            echo '### Executer cette image'
+            echo
+            echo '```bash'
+            echo "docker run --rm -p 3000:3000 \\\\"
+            echo "  -e SQLITE_DB_LOCATION=/tmp/todo.db \\\\"
+            echo "  ghcr.io/${{ github.repository }}:sha-$(echo '${{ github.sha }}' | cut -c1-7)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

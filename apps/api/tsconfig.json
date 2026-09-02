@@ -1,0 +1,29 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "tsBuildInfoFile": "dist/tsconfig.tsbuildinfo"
+  },
+  "include": [
+    "src"
+  ],
+  // Les tests vivent a cote du code qu ils exercent mais restent hors du build :
+  // ils atteignent test/ pour leurs doubles, donc en dehors du rootDir qu un
+  // projet composite impose. tsconfig.test.json les type-verifie separement,
+  // exactement comme pour les packages du domaine.
+  "exclude": [
+    "src/**/*.test.ts"
+  ],
+  "references": [
+    {
+      "path": "../../packages/contracts"
+    },
+    {
+      "path": "../../packages/core/items"
+    },
+    {
+      "path": "../../packages/infra"
+    }
+  ]
+}

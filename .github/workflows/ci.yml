@@ -1,0 +1,200 @@
+# Verifications executees sur chaque pull request vers dev et sur chaque push
+# sur dev. Egalement appelable par un autre workflow (workflow_call), ce dont
+# se sert la publication d image : elle ne republie pas les verifications, elle
+# les reutilise, si bien qu une image ne peut pas etre publiee sans elles.
+#
+# L ordre des jobs n est pas cosmetique. Le lint typé exige que les projets
+# TypeScript soient construits : sans `tsc --build` prealable il rapporte des
+# centaines d erreurs de resolution. `typecheck` construit, donc il passe
+# d abord, et son echec evite de payer les tests.
+
+name: ci
+
+on:
+  # Toute pull request est verifiee, quelle que soit sa cible. Filtrer sur dev
+  # laisserait une pull request empilee sur une autre sans aucune verification,
+  # ce qui est precisement le moment ou l on en a le plus besoin.
+  pull_request:
+  push:
+    branches: [dev]
+  workflow_call:
+
+# Le jeton n a que les droits declares ici. Aucun job n ecrit sur le depot.
+permissions:
+  contents: read
+
+# Un push sur une branche annule l execution precedente de la meme branche. A
+# six, sans cela, la file s allonge et le quota mensuel d Actions part en
+# executions deja perimees. Jamais sur dev : chaque commit integre doit avoir
+# ete verifie.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # Reduit le bruit de npm dans les journaux sans masquer les erreurs.
+  npm_config_fund: 'false'
+  npm_config_audit: 'false'
+
+jobs:
+  verifier:
+    name: Types et style
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Installer les dependances
+        run: npm ci
+
+      - name: Verifier les types et les frontieres de couches
+        run: npm run typecheck
+
+      - name: Analyser le style
+        run: npm run lint
+
+  tester:
+    name: Tests et couverture
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: verifier
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Installer les dependances
+        run: npm ci
+
+      # Les tests d integration (EN-25) auront besoin de Supabase local et de
+      # Redis. Les demarrer des maintenant couterait des minutes d Actions pour
+      # rien : aucun test ne les utilise encore. Le point d accroche est ici.
+      #
+      # - name: Demarrer les services
+      #   run: npx supabase start
+
+      - name: Executer les tests
+        run: npm test
+
+      # Sans checks obligatoires, que le plan du depot ne permet pas, le
+      # resume est ce qui rend le verdict lisible depuis la pull request sans
+      # ouvrir les journaux.
+      - name: Publier le resume de couverture
+        if: always()
+        run: |
+          set -euo pipefail
+          {
+            echo '## Couverture'
+            echo
+            if [ -f coverage/coverage-summary.json ]; then
+              node --input-type=module -e "
+                import { readFileSync } from 'node:fs';
+                const total = JSON.parse(readFileSync('coverage/coverage-summary.json', 'utf8')).total;
+                console.log('| Mesure | Couvert | Total | % |');
+                console.log('|---|---|---|---|');
+                // branchesTrue est une mesure interne de v8, sans interet ici.
+                for (const nom of ['lines', 'statements', 'functions', 'branches']) {
+                  const valeur = total[nom];
+                  console.log(\`| \${nom} | \${valeur.covered} | \${valeur.total} | \${valeur.pct} % |\`);
+                }
+              "
+            else
+              echo 'Aucun rapport produit : les tests ont echoue avant la mesure.'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Conserver le rapport detaille
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: couverture
+          path: coverage/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  construire:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: verifier
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Installer les dependances
+        run: npm ci
+
+      - name: Construire l API et le front
+        run: npm run build
+
+      # Le front est ecrit par Vite dans la sortie de l API : si ce n est pas le
+      # cas, l image publiee servirait une page vide sans que rien n echoue.
+      - name: Verifier que le front est bien dans la sortie de l API
+        run: test -f apps/api/dist/static/index.html
+
+  image:
+    name: Image Docker
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: verifier
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      # Construite a chaque pull request, jamais publiee ici. Ne la construire
+      # qu au moment de la livraison laisserait un Dockerfile casse passer
+      # inapercu jusqu a la prochaine mise en production.
+      - name: Construire l image sans la publier
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: false
+          load: true
+          tags: legacy-todo:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Une image qui se construit mais ne demarre pas ne prouve rien.
+      - name: Verifier qu elle demarre et repond
+        run: |
+          set -euo pipefail
+          docker run -d --name verif -p 3000:3000 \
+            -e SQLITE_DB_LOCATION=/tmp/todo.db legacy-todo:ci
+          for tentative in $(seq 1 20); do
+            if curl -fsS -o /dev/null http://127.0.0.1:3000/items; then
+              echo "L API repond apres $tentative tentative(s)."
+              break
+            fi
+            if [ "$tentative" -eq 20 ]; then
+              echo "::error::L image n a pas repondu en vingt secondes."
+              docker logs verif
+              exit 1
+            fi
+            sleep 1
+          done
+          curl -fsS -o /dev/null http://127.0.0.1:3000/ \
+            || { echo "::error::Le front n est pas servi par l image."; exit 1; }
+          docker rm -f verif >/dev/null
+
+      - name: Verifier qu elle ne tourne pas en root
+        run: |
+          set -euo pipefail
+          utilisateur="$(docker image inspect legacy-todo:ci --format '{{.Config.User}}')"
+          if [ -z "$utilisateur" ] || [ "$utilisateur" = "root" ]; then
+            echo "::error::L image tourne en root (utilisateur : '$utilisateur')."
+            exit 1
+          fi
+          echo "Utilisateur de l image : $utilisateur"

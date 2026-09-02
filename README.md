@@ -1,5 +1,142 @@
-# Getting started
+# Legacy 22
 
-This repository is a sample application for users following the getting started guide at https://docs.docker.com/get-started/.
+Legacy 22 reprend l'application TodoList de `docker/getting-started-app` pour la faire évoluer
+vers une application Kanban maintenable. Le dépôt utilise TypeScript et des workspaces npm.
 
-The application is based on the application from the getting started tutorial at https://github.com/docker/getting-started
+## Commandes
+
+| Commande | Ce qu'elle fait |
+|---|---|
+| `npm run lint` | analyse statique sur tout le dépôt, `apps/web` compris |
+| `npm run typecheck` | types de la production et des tests, workspace web, puis contrôle des frontières de couches |
+| `npm test` | tous les tests, Node et front, avec un rapport de couverture unique dans `coverage/` |
+| `npm run dev` | API et serveur Vite en développement |
+| `npm run build` | build de production, front écrit dans `apps/api/dist/static` |
+
+## Prérequis
+
+- Node.js 20.19, ou Node.js 22.12 et versions ultérieures
+- npm avec prise en charge des workspaces
+
+## Organisation
+
+```text
+apps/
+├── api/                 API Express et composition de l'application
+└── web/                 Interface React construite avec Vite
+packages/
+├── contracts/           Schémas et types partagés aux frontières
+├── core/items/          Domaine et cas d'usage des éléments
+└── infra/               Adaptateurs de persistance et journalisation
+```
+
+Le front utilise les contrats de `packages/contracts` pour valider les réponses de l'API.
+Il ne dépend pas directement des modules du domaine ou de l'infrastructure.
+
+## Installation
+
+Installer exactement les dépendances du lockfile :
+
+```bash
+npm ci
+```
+
+## Développement
+
+Démarrer l'API et le serveur Vite avec une base SQLite locale :
+
+```bash
+SQLITE_DB_LOCATION=./todo.db npm run dev
+```
+
+- Front avec rechargement à chaud : http://localhost:5173
+- API : http://localhost:3000
+- Les requêtes `/items` du front sont transmises à l'API par le proxy Vite.
+
+`SQLITE_DB_LOCATION` est nécessaire en local pour éviter le chemin utilisé par l'image de
+production. Le fichier `todo.db` créé par cette commande ne doit pas être versionné.
+
+## Build de production
+
+Construire l'API, les packages et le front :
+
+```bash
+npm run build
+```
+
+Vite écrit le bundle optimisé dans `apps/api/dist/static`. L'API Express sert ensuite le
+front et les routes HTTP sur le même port :
+
+```bash
+SQLITE_DB_LOCATION=./todo.db npm start
+```
+
+L'application est alors disponible sur http://localhost:3000.
+
+## Exécuter l'image publiée
+
+Chaque livraison sur `main` publie une image sur GitHub Container Registry. Elle contient
+l'API et le front construit, servis sur le même port : il n'y a rien d'autre à déployer.
+
+```bash
+# Le tag sha-<court> remonte au commit exact qui a produit l'image.
+docker pull ghcr.io/project-legacy-22/project-legacy:latest
+
+docker run --rm -p 3000:3000 \
+  -e SQLITE_DB_LOCATION=/tmp/todo.db \
+  ghcr.io/project-legacy-22/project-legacy:latest
+```
+
+Le registre est privé : `docker login ghcr.io` avec un jeton personnel disposant du droit
+`read:packages` est nécessaire avant le `pull`.
+
+### Variables d'environnement
+
+| Variable | Rôle | Défaut |
+|---|---|---|
+| `SQLITE_DB_LOCATION` | chemin du fichier SQLite | `/etc/todos/todo.db`, non inscriptible dans l'image : à renseigner |
+| `MYSQL_HOST` | bascule sur MySQL quand elle est définie | aucun, SQLite est utilisé |
+| `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DB` | connexion MySQL | aucun |
+| `LOG_LEVEL` | niveau de journalisation | `info` |
+
+Les variantes `*_FILE` de chaque variable MySQL attendent un chemin de fichier plutôt qu'une
+valeur, pour les secrets montés par l'orchestrateur.
+
+> Ces variables décrivent l'état actuel. `EN-09` remplacera SQLite et MySQL par Supabase, et
+> `EN-30` rendra obligatoires celles qui le sont réellement : le tableau évoluera avec elles.
+
+L'image tourne sous un utilisateur sans privilège et ne contient ni dépendances de
+développement, ni sources TypeScript, ni fichier d'environnement.
+
+## Contrôles locaux
+
+```bash
+npm run typecheck
+npm test
+npm run build
+```
+
+| Commande | Rôle |
+|---|---|
+| `npm run dev` | Démarre l'API et Vite |
+| `npm run dev:api` | Démarre uniquement l'API en mode surveillance |
+| `npm run dev:web` | Démarre uniquement Vite |
+| `npm run typecheck` | Vérifie TypeScript et les frontières entre modules |
+| `npm test` | Exécute les tests du front, dont le contrôle axe |
+| `npm run build` | Produit le build complet de production |
+| `npm start` | Démarre le build de production |
+
+## Accessibilité du front
+
+Le socle du front vise WCAG 2.1 niveau AA :
+
+- structure sémantique avec un titre principal et des régions identifiées ;
+- navigation au clavier et focus visible ;
+- champs associés à leurs libellés, aides et erreurs ;
+- retours d'action annoncés aux technologies d'assistance ;
+- contrastes de texte et de composants contrôlés ;
+- réduction des animations avec `prefers-reduced-motion` ;
+- contrôle axe exécuté avec les tests.
+
+Une vérification manuelle au clavier et sur les formats mobiles complète le contrôle
+automatique avant chaque demande de review.

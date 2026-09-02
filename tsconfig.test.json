@@ -1,0 +1,25 @@
+{
+  // Type-checks test files and their support code (test/builders, test/fakes)
+  // separately from the production build. Those live outside each package's
+  // rootDir (src), which composite project references forbid mixing with the
+  // emitted build (see the note in vitest.config.ts). This config has no
+  // emit, so no rootDir constraint applies, and it runs after `tsc --build`
+  // so the @legacy/* package types it resolves already exist.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "noEmit": true
+  },
+  // apps/web is excluded on purpose: it resolves modules the way a bundler
+  // does, so its imports carry no file extension, which this config's NodeNext
+  // resolution rejects. Its own tsconfig covers its tests, and `npm run
+  // typecheck` runs it in the same command.
+  "include": [
+    "apps/api/**/*.test.ts",
+    "apps/api/**/test/**/*.ts",
+    "packages/**/*.test.ts",
+    "packages/**/test/**/*.ts"
+  ]
+}
