@@ -73,6 +73,41 @@ SQLITE_DB_LOCATION=./todo.db npm start
 
 L'application est alors disponible sur http://localhost:3000.
 
+## Exécuter l'image publiée
+
+Chaque livraison sur `main` publie une image sur GitHub Container Registry. Elle contient
+l'API et le front construit, servis sur le même port : il n'y a rien d'autre à déployer.
+
+```bash
+# Le tag sha-<court> remonte au commit exact qui a produit l'image.
+docker pull ghcr.io/project-legacy-22/project-legacy:latest
+
+docker run --rm -p 3000:3000 \
+  -e SQLITE_DB_LOCATION=/tmp/todo.db \
+  ghcr.io/project-legacy-22/project-legacy:latest
+```
+
+Le registre est privé : `docker login ghcr.io` avec un jeton personnel disposant du droit
+`read:packages` est nécessaire avant le `pull`.
+
+### Variables d'environnement
+
+| Variable | Rôle | Défaut |
+|---|---|---|
+| `SQLITE_DB_LOCATION` | chemin du fichier SQLite | `/etc/todos/todo.db`, non inscriptible dans l'image : à renseigner |
+| `MYSQL_HOST` | bascule sur MySQL quand elle est définie | aucun, SQLite est utilisé |
+| `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DB` | connexion MySQL | aucun |
+| `LOG_LEVEL` | niveau de journalisation | `info` |
+
+Les variantes `*_FILE` de chaque variable MySQL attendent un chemin de fichier plutôt qu'une
+valeur, pour les secrets montés par l'orchestrateur.
+
+> Ces variables décrivent l'état actuel. `EN-09` remplacera SQLite et MySQL par Supabase, et
+> `EN-30` rendra obligatoires celles qui le sont réellement : le tableau évoluera avec elles.
+
+L'image tourne sous un utilisateur sans privilège et ne contient ni dépendances de
+développement, ni sources TypeScript, ni fichier d'environnement.
+
 ## Contrôles locaux
 
 ```bash
