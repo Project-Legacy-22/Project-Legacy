@@ -81,6 +81,21 @@ function specifiers(content) {
     return [...content.matchAll(SPECIFIER)].map(m => m[1] ?? m[2]).filter(s => s !== undefined);
 }
 
+function fileViolations(path, content, rule) {
+    const found = [];
+
+    for (const specifier of specifiers(content)) {
+        const isRelative = specifier.startsWith('.');
+        const allowed = isRelative
+            ? rule.local.test(specifier)
+            : rule.bare.some(pattern => pattern.test(specifier));
+
+        if (!allowed) found.push({ path, specifier, rule: rule.name });
+    }
+
+    return found;
+}
+
 const violations = [];
 
 for (const dir of ['apps', 'packages']) {
@@ -89,16 +104,7 @@ for (const dir of ['apps', 'packages']) {
         const rule = RULES.find(r => r.match.test(path));
         if (!rule) continue;
 
-        for (const specifier of specifiers(readFileSync(file, 'utf8'))) {
-            const isRelative = specifier.startsWith('.');
-            const allowed = isRelative
-                ? rule.local.test(specifier)
-                : rule.bare.some(pattern => pattern.test(specifier));
-
-            if (!allowed) {
-                violations.push({ path, specifier, rule: rule.name });
-            }
-        }
+        violations.push(...fileViolations(path, readFileSync(file, 'utf8'), rule));
     }
 }
 

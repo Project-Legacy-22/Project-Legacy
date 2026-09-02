@@ -17,14 +17,21 @@
     "dev": "nodemon -L --watch apps --watch packages --ext ts --exec \"tsx --conditions=development apps/api/src/index.ts\"",
     "build": "tsc --build && node scripts/copy-static.mjs",
     "start": "node apps/api/dist/index.js",
-    "typecheck": "tsc --build && node scripts/check-layers.mjs"
+    "typecheck": "tsc --build && node scripts/check-layers.mjs",
+    "lint": "eslint ."
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/express": "^5.0.6",
     "@types/node": "^20.19.43",
+    "eslint": "^10.9.1",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.12.0",
     "nodemon": "^3.1.9",
+    "prettier": "^3.9.6",
     "tsx": "^4.23.13",
-    "typescript": "~5.9.3"
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.69.0"
   },
   "overrides": {
     "tar": "7.5.4",
