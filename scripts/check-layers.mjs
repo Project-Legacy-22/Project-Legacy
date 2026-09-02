@@ -67,7 +67,11 @@ function sourceFiles(dir) {
         if (entry === 'node_modules' || entry === 'dist' || entry === 'static') continue;
         const full = join(dir, entry);
         if (statSync(full).isDirectory()) found.push(...sourceFiles(full));
-        else if (entry.endsWith('.ts')) found.push(full);
+        // A test file is not part of the production dependency graph this
+        // script protects: it legitimately imports its test runner as a bare
+        // specifier (forbidden for e.g. domain/, which may import nothing)
+        // and reaches into test/ for fakes and builders.
+        else if (entry.endsWith('.ts') && !entry.endsWith('.test.ts')) found.push(full);
     }
     return found;
 }
