@@ -1,10 +1,16 @@
 {
   "name": "101-app",
   "version": "1.0.0",
-  "main": "index.js",
+  "type": "module",
   "license": "MIT",
+  "engines": {
+    "node": ">=20.11"
+  },
   "scripts": {
-    "dev": "nodemon -L src/index.js"
+    "dev": "nodemon -L --watch src --ext ts --exec \"tsx src/index.ts\"",
+    "build": "tsc && node scripts/copy-static.mjs",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "express": "^5.2.1",
@@ -14,7 +20,11 @@
     "wait-port": "^1.1.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.9"
+    "@types/express": "^5.0.6",
+    "@types/node": "^20.19.43",
+    "nodemon": "^3.1.9",
+    "tsx": "^4.23.13",
+    "typescript": "~5.9.3"
   },
   "overrides": {
     "tar": "7.5.4",

@@ -1,6 +1,12 @@
-const waitPort = require('wait-port');
-const fs = require('fs');
-const mysql = require('mysql2');
+// mysql2's exports are statically analysable, so named imports are safe here,
+// unlike sqlite3 below the same folder.
+import { createPool } from 'mysql2';
+import type { Pool } from 'mysql2';
+import waitPort from 'wait-port';
+import fs from 'node:fs';
+
+import { toItem } from './types.js';
+import type { Item, ItemUpdate, NewItem, Persistence } from './types.js';
 
 const {
     MYSQL_HOST: HOST,
@@ -13,27 +19,37 @@ const {
     MYSQL_DB_FILE: DB_FILE,
 } = process.env;
 
-let pool;
+let pool: Pool;
 
-async function init() {
-    const host = HOST_FILE ? fs.readFileSync(HOST_FILE) : HOST;
-    const user = USER_FILE ? fs.readFileSync(USER_FILE) : USER;
-    const password = PASSWORD_FILE ? fs.readFileSync(PASSWORD_FILE) : PASSWORD;
-    const database = DB_FILE ? fs.readFileSync(DB_FILE) : DB;
+// The *_FILE variants are Docker secrets: the value is a path to read, not the
+// value itself. readFileSync returns a Buffer, which mysql2 accepts as-is, so
+// the original behaviour is preserved by converting to string only here.
+function readSecret(file: string | undefined, value: string | undefined): string | undefined {
+    return file ? fs.readFileSync(file, 'utf8') : value;
+}
 
-    await waitPort({ 
-        host, 
+async function init(): Promise<void> {
+    const host = readSecret(HOST_FILE, HOST);
+    const user = readSecret(USER_FILE, USER);
+    const password = readSecret(PASSWORD_FILE, PASSWORD);
+    const database = readSecret(DB_FILE, DB);
+
+    // An absent variable is spread away rather than passed as an explicit
+    // `undefined`: both read back as undefined, but only the first form is
+    // expressible under exactOptionalPropertyTypes.
+    await waitPort({
+        ...(host === undefined ? {} : { host }),
         port: 3306,
         timeout: 10000,
         waitForDns: true,
     });
 
-    pool = mysql.createPool({
+    pool = createPool({
         connectionLimit: 5,
-        host,
-        user,
-        password,
-        database,
+        ...(host === undefined ? {} : { host }),
+        ...(user === undefined ? {} : { user }),
+        ...(password === undefined ? {} : { password }),
+        ...(database === undefined ? {} : { database }),
         charset: 'utf8mb4',
     });
 
@@ -50,7 +66,7 @@ async function init() {
     });
 }
 
-async function teardown() {
+async function teardown(): Promise<void> {
     return new Promise((acc, rej) => {
         pool.end(err => {
             if (err) rej(err);
@@ -59,37 +75,25 @@ async function teardown() {
     });
 }
 
-async function getItems() {
+async function getItems(): Promise<Item[]> {
     return new Promise((acc, rej) => {
         pool.query('SELECT * FROM todo_items', (err, rows) => {
             if (err) return rej(err);
-            acc(
-                rows.map(item =>
-                    Object.assign({}, item, {
-                        completed: item.completed === 1,
-                    }),
-                ),
-            );
+            acc((rows as unknown[]).map(toItem));
         });
     });
 }
 
-async function getItem(id) {
+async function getItem(id: string): Promise<Item | undefined> {
     return new Promise((acc, rej) => {
         pool.query('SELECT * FROM todo_items WHERE id=?', [id], (err, rows) => {
             if (err) return rej(err);
-            acc(
-                rows.map(item =>
-                    Object.assign({}, item, {
-                        completed: item.completed === 1,
-                    }),
-                )[0],
-            );
+            acc((rows as unknown[]).map(toItem)[0]);
         });
     });
 }
 
-async function storeItem(item) {
+async function storeItem(item: NewItem): Promise<void> {
     return new Promise((acc, rej) => {
         pool.query(
             'INSERT INTO todo_items (id, name, completed) VALUES (?, ?, ?)',
@@ -102,7 +106,7 @@ async function storeItem(item) {
     });
 }
 
-async function updateItem(id, item) {
+async function updateItem(id: string, item: ItemUpdate): Promise<void> {
     return new Promise((acc, rej) => {
         pool.query(
             'UPDATE todo_items SET name=?, completed=? WHERE id=?',
@@ -115,7 +119,7 @@ async function updateItem(id, item) {
     });
 }
 
-async function removeItem(id) {
+async function removeItem(id: string): Promise<void> {
     return new Promise((acc, rej) => {
         pool.query('DELETE FROM todo_items WHERE id = ?', [id], err => {
             if (err) return rej(err);
@@ -124,7 +128,7 @@ async function removeItem(id) {
     });
 }
 
-module.exports = {
+const mysqlPersistence: Persistence = {
     init,
     teardown,
     getItems,
@@ -133,3 +137,5 @@ module.exports = {
     updateItem,
     removeItem,
 };
+
+export default mysqlPersistence;
