@@ -1,20 +1,30 @@
 {
-  "name": "101-app",
+  "name": "legacy-todo",
   "version": "1.0.0",
-  "main": "index.js",
+  "private": true,
+  "type": "module",
   "license": "MIT",
-  "scripts": {
-    "dev": "nodemon -L src/index.js"
+  "engines": {
+    "node": ">=20.11"
   },
-  "dependencies": {
-    "express": "^5.2.1",
-    "mysql2": "^3.16.1",
-    "sqlite3": "^5.1.7",
-    "uuid": "^13.0.0",
-    "wait-port": "^1.1.0"
+  "workspaces": [
+    "apps/api",
+    "packages/contracts",
+    "packages/infra",
+    "packages/core/items"
+  ],
+  "scripts": {
+    "dev": "nodemon -L --watch apps --watch packages --ext ts --exec \"tsx --conditions=development apps/api/src/index.ts\"",
+    "build": "tsc --build && node scripts/copy-static.mjs",
+    "start": "node apps/api/dist/index.js",
+    "typecheck": "tsc --build && node scripts/check-layers.mjs"
   },
   "devDependencies": {
-    "nodemon": "^3.1.9"
+    "@types/express": "^5.0.6",
+    "@types/node": "^20.19.43",
+    "nodemon": "^3.1.9",
+    "tsx": "^4.23.13",
+    "typescript": "~5.9.3"
   },
   "overrides": {
     "tar": "7.5.4",

@@ -1,0 +1,21 @@
+{
+  "name": "@legacy/infra",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "development": "./src/index.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "@legacy/contracts": "*",
+    "@legacy/core-items": "*",
+    "mysql2": "^3.16.1",
+    "pino": "^10.3.1",
+    "sqlite3": "^5.1.7",
+    "wait-port": "^1.1.0"
+  }
+}
