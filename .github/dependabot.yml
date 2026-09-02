@@ -1,0 +1,54 @@
+# Dependabot surveille les dependances et ouvre une pull request quand une mise
+# a jour est disponible ou qu une faille est publiee. Repond au point npm audit
+# de la Definition of Done et prepare EN-29.
+#
+# Les mises a jour sont groupees : six pull requests separees pour six montees
+# de version de developpement noieraient le board sans rien apporter.
+
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Europe/Paris
+    open-pull-requests-limit: 5
+    # La cible est dev, comme toute contribution : main ne recoit que des
+    # livraisons.
+    target-branch: dev
+    commit-message:
+      prefix: 'chore(deps)'
+      prefix-development: 'chore(deps-dev)'
+    groups:
+      production:
+        dependency-type: production
+        update-types: [minor, patch]
+      developpement:
+        dependency-type: development
+        update-types: [minor, patch]
+    # Une montee majeure change le contrat : elle merite sa propre pull request
+    # et sa propre relecture, jamais un groupe.
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    target-branch: dev
+    commit-message:
+      prefix: 'chore(ci)'
+    groups:
+      actions:
+        patterns: ['*']
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: monthly
+    target-branch: dev
+    commit-message:
+      prefix: 'chore(ci)'

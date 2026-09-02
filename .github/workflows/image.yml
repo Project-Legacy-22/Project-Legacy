@@ -32,7 +32,8 @@ jobs:
     timeout-minutes: 20
     needs: verifier
     permissions:
-      contents: read
+      # write, et non read : la publication cree aussi une release.
+      contents: write
       packages: write
       # Necessaires a l attestation de provenance.
       id-token: write
@@ -89,6 +90,26 @@ jobs:
           subject-name: ghcr.io/${{ github.repository }}
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
+
+      # Une release par livraison : elle donne un point de reference cite en
+      # revue, et ses notes listent les items livres sans travail manuel.
+      - name: Publier la release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="v$(date -u +%Y.%m.%d)-$(echo "${{ github.sha }}" | cut -c1-7)"
+          gh release create "$tag" \
+            --target "${{ github.sha }}" \
+            --title "$tag" \
+            --generate-notes \
+            --notes-start-tag "$(gh release list --limit 1 --json tagName --jq '.[0].tagName // ""')" \
+            || gh release create "$tag" --target "${{ github.sha }}" --title "$tag" --generate-notes
+          {
+            echo '## Release'
+            echo
+            echo "Tag : \`$tag\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Resumer la publication
         run: |

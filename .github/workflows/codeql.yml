@@ -1,0 +1,46 @@
+# Analyse de securite statique. Gratuite sur un depot public, elle complete le
+# gate qualite de EN-17 : celui-ci mesure la qualite du code, celle-ci cherche
+# des failles connues.
+#
+# Elle tourne sur les pull requests et une fois par semaine : une faille
+# publiee apres l ecriture du code n apparaitrait jamais sans execution
+# periodique.
+
+name: codeql
+
+on:
+  pull_request:
+  push:
+    branches: [dev]
+  schedule:
+    # Lundi matin, avant le daily : les resultats sont la quand l equipe arrive.
+    - cron: '0 5 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  analyser:
+    name: Analyse CodeQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Initialiser CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          # security-and-quality ajoute des regles de maintenabilite qui
+          # feraient doublon avec ESLint. On garde le jeu de securite seul,
+          # pour que chaque outil ait un role distinct.
+          queries: security-extended
+
+      - name: Analyser
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: /language:javascript-typescript
