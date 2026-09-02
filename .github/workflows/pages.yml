@@ -1,0 +1,78 @@
+# Publication du rapport de couverture sur GitHub Pages, a chaque integration
+# sur dev.
+#
+# Le rapport existe deja en artefact, mais un artefact se telecharge et se
+# dezippe. Publie, il s ouvre d un clic et se cite en revue. La documentation
+# d API de EN-44 rejoindra le meme site quand elle existera.
+
+name: pages
+
+on:
+  push:
+    branches: [dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Une seule publication a la fois, sans annuler celle en cours : interrompre un
+# deploiement Pages laisse le site dans un etat indetermine.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  construire:
+    name: Produire le rapport
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Executer les tests avec couverture
+        run: npm test
+
+      - name: Ajouter une page d accueil
+        run: |
+          set -euo pipefail
+          cat > coverage/index-site.html <<'HTML'
+          <!doctype html>
+          <meta charset="utf-8">
+          <title>Legacy 22 — qualité</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <style>
+            body { font: 16px/1.6 system-ui, sans-serif; max-width: 40rem; margin: 4rem auto; padding: 0 1rem; }
+            a { color: #0969da; }
+          </style>
+          <h1>Legacy 22 — qualité</h1>
+          <p>Rapports produits à chaque intégration sur <code>dev</code>.</p>
+          <ul>
+            <li><a href="./index.html">Rapport de couverture</a></li>
+          </ul>
+          HTML
+          mv coverage/index-site.html coverage/accueil.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: coverage
+
+  publier:
+    name: Publier sur Pages
+    runs-on: ubuntu-latest
+    needs: construire
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploiement.outputs.page_url }}
+    steps:
+      - id: deploiement
+        uses: actions/deploy-pages@v4
