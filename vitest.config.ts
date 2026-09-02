@@ -27,6 +27,21 @@ export default defineConfig({
         coverage: {
             provider: 'v8',
             reporter: ['text', 'html'],
+            // Un seuil ne s active qu une fois franchissable : le rendre
+            // bloquant avant d avoir livre de quoi le franchir arreterait toute
+            // l equipe, y compris les PR qui apportent les tests manquants.
+            //
+            // Lignes, declarations et fonctions sont au niveau decide, 70 %.
+            // Les branches sont posees au plancher atteint aujourd hui : le seul
+            // fichier qui les tire vers le bas est l adaptateur MySQL, qu on ne
+            // peut pas exercer sans serveur reel et que EN-09 remplacera par
+            // Supabase. Ce plancher ne peut que monter, jamais descendre.
+            thresholds: {
+                lines: 70,
+                statements: 70,
+                functions: 70,
+                branches: 52,
+            },
             reportsDirectory: 'coverage',
             include: ['apps/**/src/**/*.{ts,tsx}', 'packages/**/src/**/*.ts'],
             exclude: [
@@ -39,6 +54,9 @@ export default defineConfig({
                 'apps/api/src/composition-root.ts',
                 'apps/api/src/config.ts',
                 'apps/api/src/index.ts',
+                // Front composition root: it mounts the app and nothing else,
+                // exactly like the API entry point above.
+                'apps/web/src/main.tsx',
                 'apps/api/src/static/**',
             ],
         },
