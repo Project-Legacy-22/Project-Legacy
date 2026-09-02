@@ -36,6 +36,11 @@ export default tseslint.config(
                     './packages/core/items/tsconfig.json',
                     './packages/infra/tsconfig.json',
                     './apps/api/tsconfig.json',
+                    // apps/web carries its own project: JSX, DOM libs and the
+                    // Vite client types. Omitting it leaves every .tsx file
+                    // outside a typed program, and the typed rules then report
+                    // each member access as unresolvable.
+                    './apps/web/tsconfig.json',
                     './tsconfig.test.json',
                 ],
                 tsconfigRootDir: import.meta.dirname,
@@ -67,7 +72,8 @@ export default tseslint.config(
     },
     {
         // Root tooling config: outside every package's tsconfig on purpose,
-        // so it cannot be part of a typed project.
+        // so it cannot be part of a typed project. apps/web's own configs are
+        // listed in its tsconfig, so they stay typed.
         files: ['*.config.js', '*.config.ts'],
         extends: [tseslint.configs.disableTypeChecked],
     },
@@ -104,6 +110,29 @@ export default tseslint.config(
             'packages/infra/src/mysql-item-repository.ts',
         ],
         rules: {
+            'max-lines-per-function': 'off',
+        },
+    },
+    {
+        // Code de test et son outillage. Les trois regles desactivees ici
+        // visent des risques de production qui n existent pas en test.
+        //
+        // require-await : `act(async () => ...)` est la facon documentee par
+        // React de demander la portee act asynchrone, qui vide les effets et
+        // la file de microtaches. Le marqueur async est un signal d API, pas
+        // un await oublie.
+        //
+        // unbound-method : extraire le setter de HTMLInputElement puis
+        // l appeler avec `.call` est le seul moyen de declencher la detection
+        // de changement de React sur un champ controle.
+        //
+        // max-lines-per-function : un bloc `describe` regroupe des tests. Le
+        // plafond de 50 lignes vise une fonction de production, ou la
+        // longueur signale qu elle fait trop de choses.
+        files: ['**/*.test.ts', '**/*.test.tsx', '**/test/**/*.ts', '**/test/**/*.tsx'],
+        rules: {
+            '@typescript-eslint/require-await': 'off',
+            '@typescript-eslint/unbound-method': 'off',
             'max-lines-per-function': 'off',
         },
     },

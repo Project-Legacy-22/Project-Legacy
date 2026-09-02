@@ -5,21 +5,24 @@
   "type": "module",
   "license": "MIT",
   "engines": {
-    "node": ">=20.11"
+    "node": "^20.19.0 || >=22.12.0"
   },
   "workspaces": [
     "apps/api",
+    "apps/web",
     "packages/contracts",
     "packages/infra",
     "packages/core/items"
   ],
   "scripts": {
-    "dev": "nodemon -L --watch apps --watch packages --ext ts --exec \"tsx --conditions=development apps/api/src/index.ts\"",
-    "build": "tsc --build && node scripts/copy-static.mjs",
+    "dev": "node scripts/dev.mjs",
+    "dev:api": "nodemon -L --watch apps/api --watch packages --ext ts --exec \"tsx --conditions=development apps/api/src/index.ts\"",
+    "dev:web": "npm run dev --workspace @legacy/web",
+    "build": "tsc --build && npm run build --workspace @legacy/web",
     "start": "node apps/api/dist/index.js",
-    "typecheck": "tsc --build && tsc -p tsconfig.test.json && node scripts/check-layers.mjs",
-    "test": "vitest run --coverage",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "typecheck": "tsc --build && tsc -p tsconfig.test.json && npm run typecheck --workspace @legacy/web && node scripts/check-layers.mjs",
+    "test": "vitest run --coverage"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

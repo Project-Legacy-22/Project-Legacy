@@ -1,0 +1,93 @@
+.site-header {
+    min-height: 260px;
+    padding: 48px 24px 76px;
+    color: #ffffff;
+    background: #12344d;
+}
+
+.header-content,
+.main-content {
+    width: min(760px, 100%);
+    margin: 0 auto;
+}
+
+.eyebrow,
+.section-kicker {
+    margin: 0 0 8px;
+    color: #b9e7dd;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+h1,
+h2,
+p {
+    margin-top: 0;
+}
+
+h1 {
+    max-width: 12ch;
+    margin-bottom: 12px;
+    font-size: clamp(2.25rem, 8vw, 4rem);
+    line-height: 1;
+    letter-spacing: -0.04em;
+}
+
+.intro {
+    max-width: 38ch;
+    margin-bottom: 0;
+    color: #e5edf4;
+    font-size: 1.0625rem;
+    line-height: 1.6;
+}
+
+.main-content {
+    display: grid;
+    gap: 20px;
+    padding: 0 16px 56px;
+    transform: translateY(-42px);
+}
+
+.panel {
+    min-width: 0;
+    padding: clamp(20px, 5vw, 32px);
+    border: 1px solid #c4ced8;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 12px 30px rgb(23 32 51 / 10%);
+}
+
+.section-heading {
+    margin-bottom: 22px;
+}
+
+.section-heading-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.section-kicker {
+    color: #31665f;
+}
+
+h2 {
+    margin-bottom: 0;
+    color: #172033;
+    font-size: 1.5rem;
+    line-height: 1.2;
+}
+
+@media (max-width: 620px) {
+    .site-header {
+        padding-inline: 16px;
+    }
+
+    .add-form,
+    .todo-item {
+        grid-template-columns: 1fr;
+    }
+}

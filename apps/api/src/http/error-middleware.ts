@@ -1,22 +1,11 @@
 import { ZodError } from 'zod';
 import { DomainError } from '@legacy/core-items';
-import type { Logger } from '@legacy/contracts';
+import type { Logger, ProblemDetails } from '@legacy/contracts';
 import type { ErrorRequestHandler } from 'express';
 
 // The single point where a failure becomes an HTTP response. No route sets an
 // error status itself, which is what keeps the error format consistent.
 //
-// Shape follows RFC 7807: never a stack trace, an SQL message, or an internal
-// identifier, since the body is read by the client.
-interface ProblemDetails {
-    type: string;
-    title: string;
-    status: number;
-    detail: string;
-    instance: string;
-    traceId: string;
-}
-
 // Only the field paths and the reason are reported, never the value that was
 // submitted: an error body must not echo back what a user typed.
 function describe(error: ZodError): string {
