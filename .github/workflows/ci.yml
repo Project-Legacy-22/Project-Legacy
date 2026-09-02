@@ -11,8 +11,10 @@
 name: ci
 
 on:
+  # Toute pull request est verifiee, quelle que soit sa cible. Filtrer sur dev
+  # laisserait une pull request empilee sur une autre sans aucune verification,
+  # ce qui est precisement le moment ou l on en a le plus besoin.
   pull_request:
-    branches: [dev]
   push:
     branches: [dev]
   workflow_call:
