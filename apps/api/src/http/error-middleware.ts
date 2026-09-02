@@ -3,6 +3,8 @@ import { DomainError } from '@legacy/core-items';
 import type { Logger, ProblemDetails } from '@legacy/contracts';
 import type { ErrorRequestHandler } from 'express';
 
+import { traceIdOf } from './trace.js';
+
 // The single point where a failure becomes an HTTP response. No route sets an
 // error status itself, which is what keeps the error format consistent.
 //
@@ -40,11 +42,14 @@ function toProblem(error: unknown): Omit<ProblemDetails, 'instance' | 'traceId'>
 }
 
 export function translateErrors(logger: Logger): ErrorRequestHandler {
-    return (error, req, res, _next) => {
+    // Express type le premier parametre en `any`. L annoter en `unknown` est
+    // accepte et rend le contrat honnete : rien ne garantit ce qui est passe a
+    // next(), et toProblem le reduit deja explicitement.
+    return (error: unknown, req, res, _next) => {
         const problem: ProblemDetails = {
             ...toProblem(error),
             instance: req.originalUrl,
-            traceId: res.locals.traceId,
+            traceId: traceIdOf(res),
         };
 
         // An expected refusal is not an incident: only a failure we did not

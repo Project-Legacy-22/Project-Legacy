@@ -1,6 +1,8 @@
 import type { Logger } from '@legacy/contracts';
 import type { RequestHandler } from 'express';
 
+import { traceIdOf } from './trace.js';
+
 // One line per request, written when the response is done so it can carry the
 // status and the duration.
 //
@@ -19,7 +21,7 @@ export function logRequests(logger: Logger): RequestHandler {
                 path: req.route === undefined ? req.path : req.originalUrl,
                 status: res.statusCode,
                 durationMs: Math.round(durationMs * 100) / 100,
-                traceId: res.locals.traceId,
+                traceId: traceIdOf(res),
             });
         });
 

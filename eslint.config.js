@@ -51,10 +51,6 @@ export default tseslint.config(
             '@typescript-eslint/no-explicit-any': 'error',
             '@typescript-eslint/no-floating-promises': 'error',
             '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
-            // Express's own type declarations augment Express.Locals through
-            // a global namespace (see apps/api/src/http/trace.ts) -- the only
-            // mechanism the library exposes for this.
-            '@typescript-eslint/no-namespace': ['error', { allowDeclarations: true }],
             'no-console': 'error',
         },
     },
@@ -76,19 +72,6 @@ export default tseslint.config(
         // listed in its tsconfig, so they stay typed.
         files: ['*.config.js', '*.config.ts'],
         extends: [tseslint.configs.disableTypeChecked],
-    },
-    {
-        // Express types res.locals as `LocalsObj & Locals` with LocalsObj
-        // defaulting to Record<string, any>: intersecting any declared field
-        // with that index signature collapses it back to `any` (TS quirk of
-        // intersecting with any), so the augmentation in trace.ts cannot type
-        // res.locals.traceId as string without threading a non-default
-        // LocalsObj generic through every handler. Tracked as follow-up
-        // debt rather than fixed here: out of EN-06's scope.
-        files: ['apps/api/src/http/error-middleware.ts'],
-        rules: {
-            '@typescript-eslint/no-unsafe-assignment': 'off',
-        },
     },
     {
         // Express only recognizes an error-handling middleware by its arity:
