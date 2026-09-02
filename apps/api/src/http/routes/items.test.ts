@@ -168,7 +168,7 @@ describe('items API', () => {
             expect(store.items.size).toBe(0);
         });
 
-        it('decrit l erreur sans renvoyer la valeur soumise', async () => {
+        it('decrit l erreur au format attendu', async () => {
             const response = await harness.request('/items', json('POST', { name: 42 }));
             const problem = (await response.json()) as Record<string, unknown>;
 
@@ -176,7 +176,23 @@ describe('items API', () => {
             expect(problem.status).toBe(400);
             expect(problem.instance).toBe('/items');
             expect(problem.traceId).toEqual(expect.any(String));
-            expect(JSON.stringify(problem)).not.toContain('42');
+        });
+
+        // Le message d erreur nomme le champ et la raison, jamais la valeur
+        // soumise : un corps d erreur ne doit pas renvoyer ce que l utilisateur
+        // a tape. L assertion porte sur `detail` et non sur le corps entier,
+        // car un traceId aleatoire peut contenir n importe quelle sous-chaine.
+        it('ne renvoie pas la valeur soumise dans le message', async () => {
+            const valeurSoumise = 'zzz-valeur-que-l-utilisateur-a-tapee-zzz';
+
+            const response = await harness.request(
+                '/items',
+                json('POST', { name: valeurSoumise.repeat(20) }),
+            );
+            const problem = (await response.json()) as { detail: string };
+
+            expect(problem.detail).toContain('name');
+            expect(problem.detail).not.toContain(valeurSoumise);
         });
     });
 
