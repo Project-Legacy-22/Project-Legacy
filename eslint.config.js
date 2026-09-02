@@ -27,7 +27,17 @@ export default tseslint.config(
     {
         languageOptions: {
             parserOptions: {
-                projectService: true,
+                // Listed explicitly rather than via projectService's
+                // auto-discovery: tsconfig.test.json is not named
+                // tsconfig.json, so the service would never find it, and
+                // every *.test.ts file would fail to parse.
+                project: [
+                    './packages/contracts/tsconfig.json',
+                    './packages/core/items/tsconfig.json',
+                    './packages/infra/tsconfig.json',
+                    './apps/api/tsconfig.json',
+                    './tsconfig.test.json',
+                ],
                 tsconfigRootDir: import.meta.dirname,
             },
         },
