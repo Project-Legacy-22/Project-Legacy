@@ -26,9 +26,18 @@ mono-utilisateur. Il porte la raison qui a emporté la décision et le coût acc
 
 ## Décisions de plateforme
 
-Les quatre décisions qui engagent un service externe — SGBD, accès aux données, mécanisme
-d'événements, stratégie de session — portent les numéros 0004, 0005, 0007 et 0008. Elles
-sont traitées par #110, qui complète cet index.
+Les quatre décisions qui engagent un service externe. Ce sont celles dont le coût de sortie
+doit être écrit, et dont les affirmations techniques sont sourcées plutôt que supposées.
+
+| ADR | Décision | Statut | Débloque |
+|---|---|---|---|
+| [0004](0004-supabase-comme-sgbd.md) | Supabase comme SGBD, pile locale en développement et en CI | Accepté | `EN-03`, `EN-09`, `EN-30` |
+| [0005](0005-acces-aux-donnees-et-migrations.md) | Accès par le client Supabase, schéma versionné en migrations | Accepté | `EN-09` |
+| [0007](0007-mecanisme-d-evenements-broker-redis.md) | Redis comme broker d'événements | Accepté | `US-10`, `US-18`, `EN-35` |
+| [0008](0008-strategie-de-session-supabase-auth.md) | Sessions et authentification par Supabase Auth | Accepté | `US-11`, `US-27`, `US-47`, `US-13` |
+
+L'ADR-0007 a lui aussi été tranché **contre** la recommandation du backlog, qui proposait un
+bus in-process. Les huit décisions bloquantes (`D-03` à `D-20`) sont désormais couvertes.
 
 ## Ce qui reste à trancher
 
@@ -37,8 +46,14 @@ sprint 1, mais chacun bloque quelque chose plus loin.
 
 | À trancher | Proposition | Bloque | Échéance |
 |---|---|---|---|
+| Garantie de livraison des événements : outbox conservée ou perte assumée | outbox conservée, Redis comme transport | `EN-35`, et donc `US-10` | planning du sprint 2, **avant le premier producteur** |
+| Effet visible démontrant le flux événementiel | « créer une tâche produit une notification visible » | la démonstration de revue | planning du sprint 2 |
 | Outil de gate qualité | SonarCloud | `EN-17` | sprint 1 |
 | Registre d'images | GHCR, déjà lié au dépôt | `EN-08` | sprint 1 |
 | Niveau d'accessibilité visé | WCAG 2.1 AA | critères d'acceptation des US front | sprint 1 |
 | Langue de l'interface, messages d'erreur compris | une seule, tranchée une fois | toutes les US front | sprint 1 |
 | Direction graphique, et qui arbitre | bibliothèque de composants ou CSS maison | toutes les US front | sprint 1 |
+
+Le premier point de ce tableau est le seul qui soit une conséquence directe d'une décision
+prise : l'ADR-0007 a retenu un broker sans statuer sur ce qui garantit qu'un événement publié
+corresponde à un fait réellement écrit. Il est daté et rattaché à `EN-35`.
