@@ -10,9 +10,7 @@ application
     .start()
     .then(() => {
         const app = createServer(config, application.useCases, logger);
-        app.listen(config.port, () =>
-            logger.info({ port: config.port, driver: config.persistence.driver }, 'server started'),
-        );
+        app.listen(config.port, () => logger.info({ port: config.port }, 'server started'));
     })
     .catch((err: unknown) => {
         logger.fatal({ err }, 'server failed to start');

@@ -11,6 +11,12 @@ export interface Item {
     // item is created or changed, not when an existing one is read.
     name: string | null;
     completed: boolean;
+    // Every item belongs to a user. The application is single-user for now
+    // (D-20), so this is always the system account, but the column is mandatory
+    // from day one so authentication (US-11) and erasure (US-13) do not force a
+    // model change later. A plain string, like `id`: branded id types are a
+    // separate cleanup, not this change.
+    ownerId: string;
 }
 
 export class DomainError extends Error {
@@ -50,12 +56,19 @@ export function itemName(candidate: string): string {
     return name;
 }
 
-export function createItem(id: string, name: string): Item {
-    return { id, name: itemName(name), completed: false };
+export function createItem(id: string, name: string, ownerId: string): Item {
+    return { id, name: itemName(name), completed: false, ownerId };
 }
 
 // Rebuilding an item from storage is not the same operation as creating one:
-// it must accept what is already persisted, including a null name.
-export function rehydrateItem(id: string, name: string | null, completed: boolean): Item {
-    return { id, name, completed };
+// it must accept what is already persisted, including a null name. A single
+// object rather than four positional arguments, so a row read back cannot be
+// passed in the wrong order.
+export function rehydrateItem(row: {
+    id: string;
+    name: string | null;
+    completed: boolean;
+    ownerId: string;
+}): Item {
+    return { id: row.id, name: row.name, completed: row.completed, ownerId: row.ownerId };
 }

@@ -1,8 +1,17 @@
 import { Router } from 'express';
 import type { RequestHandler } from 'express';
 import { CreateItemBody, UpdateItemBody, ItemIdParams } from '@legacy/contracts';
+import type { ItemDto } from '@legacy/contracts';
+import type { Item } from '@legacy/core-items';
 
 import type { ItemUseCases } from '../../composition-root.js';
+
+// The response shape clients depend on. The entity carries an ownerId since
+// EN-09; it is an internal fact and never crosses the HTTP boundary, so every
+// response is mapped through here rather than sent raw.
+function toItemDto(item: Item): ItemDto {
+    return { id: item.id, name: item.name, completed: item.completed };
+}
 
 // Routes translate HTTP into use-case calls and back. They hold no rule of
 // their own and never reach the database.
@@ -17,7 +26,7 @@ export function itemsRouter(useCases: ItemUseCases): Router {
     const list: RequestHandler = (_req, res, next) => {
         useCases
             .listItems()
-            .then(items => res.send(items))
+            .then(items => res.send(items.map(toItemDto)))
             .catch(next);
     };
 
@@ -27,7 +36,7 @@ export function itemsRouter(useCases: ItemUseCases): Router {
 
         useCases
             .addItem(body.data.name)
-            .then(item => res.send(item))
+            .then(item => res.send(toItemDto(item)))
             .catch(next);
     };
 
@@ -40,7 +49,7 @@ export function itemsRouter(useCases: ItemUseCases): Router {
 
         useCases
             .changeItem(params.data.id, body.data)
-            .then(item => res.send(item))
+            .then(item => res.send(toItemDto(item)))
             .catch(next);
     };
 

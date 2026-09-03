@@ -12,6 +12,9 @@ import { recordingLogger } from '../../../test/fakes/recording-logger.js';
 import type { RecordingLogger } from '../../../test/fakes/recording-logger.js';
 
 const GENERATED_ID = '33333333-3333-4333-8333-333333333333';
+// The single-user system account items are owned by until US-11. It is an
+// internal fact: the assertions below check it never reaches a response.
+const OWNER_ID = '00000000-0000-7000-8000-000000000001';
 
 // The routes are exercised over real HTTP rather than by calling a handler with
 // a hand-made req/res pair. Status codes, response shapes and the error
@@ -56,7 +59,7 @@ function inMemoryStore(seed: Item[] = []): Store {
 function useCasesOver(repository: ItemRepository): ItemUseCases {
     return {
         listItems: makeListItems(repository),
-        addItem: makeAddItem({ repository, newId: () => GENERATED_ID }),
+        addItem: makeAddItem({ repository, newId: () => GENERATED_ID, ownerId: () => OWNER_ID }),
         changeItem: makeChangeItem(repository),
         removeItem: makeRemoveItem(repository),
     };
@@ -97,7 +100,10 @@ const config: Config = {
     port: 0,
     // No directory is served here: only the API contract is under test.
     staticDir: import.meta.dirname,
-    persistence: { driver: 'sqlite', location: ':memory:' },
+    // The repository is a fake, so these are never dialled: they only satisfy
+    // the type.
+    supabaseUrl: 'http://127.0.0.1:54321',
+    supabaseServiceRoleKey: 'test-service-role-key',
 };
 
 describe('items API', () => {
@@ -120,7 +126,9 @@ describe('items API', () => {
 
     describe('GET /items', () => {
         it('renvoie les items persistes', async () => {
-            await reseed([{ id: EXISTING_ID, name: 'Acheter du pain', completed: false }]);
+            await reseed([
+                { id: EXISTING_ID, name: 'Acheter du pain', completed: false, ownerId: OWNER_ID },
+            ]);
 
             const response = await harness.request('/items');
 
@@ -152,6 +160,20 @@ describe('items API', () => {
                 completed: false,
             });
             expect(store.items.get(GENERATED_ID)?.name).toBe('Acheter du pain');
+        });
+
+        it('ne divulgue pas le proprietaire dans la reponse', async () => {
+            await reseed([
+                { id: EXISTING_ID, name: 'Acheter du pain', completed: false, ownerId: OWNER_ID },
+            ]);
+
+            const createResponse = await harness.request('/items', json('POST', { name: 'Autre' }));
+            const created = (await createResponse.json()) as Record<string, unknown>;
+            const listResponse = await harness.request('/items');
+            const listed = (await listResponse.json()) as Record<string, unknown>[];
+
+            expect(created).not.toHaveProperty('ownerId');
+            expect(JSON.stringify(listed)).not.toContain(OWNER_ID);
         });
 
         it('refuse un corps sans nom et ne persiste rien', async () => {
@@ -198,7 +220,9 @@ describe('items API', () => {
 
     describe('PUT /items/:id', () => {
         it('met a jour un item existant', async () => {
-            await reseed([{ id: EXISTING_ID, name: 'Ancien nom', completed: false }]);
+            await reseed([
+                { id: EXISTING_ID, name: 'Ancien nom', completed: false, ownerId: OWNER_ID },
+            ]);
 
             const response = await harness.request(
                 `/items/${EXISTING_ID}`,
@@ -243,7 +267,9 @@ describe('items API', () => {
 
     describe('DELETE /items/:id', () => {
         it('supprime un item existant', async () => {
-            await reseed([{ id: EXISTING_ID, name: 'A supprimer', completed: false }]);
+            await reseed([
+                { id: EXISTING_ID, name: 'A supprimer', completed: false, ownerId: OWNER_ID },
+            ]);
 
             const response = await harness.request(`/items/${EXISTING_ID}`, { method: 'DELETE' });
 

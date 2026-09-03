@@ -127,7 +127,8 @@ jobs:
             echo
             echo '```bash'
             echo "docker run --rm -p 3000:3000 \\\\"
-            echo "  -e SQLITE_DB_LOCATION=/tmp/todo.db \\\\"
+            echo "  -e SUPABASE_URL=https://<projet>.supabase.co \\\\"
+            echo "  -e SUPABASE_SERVICE_ROLE_KEY=<cle service role> \\\\"
             echo "  ghcr.io/${{ github.repository }}:sha-$(echo '${{ github.sha }}' | cut -c1-7)"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"

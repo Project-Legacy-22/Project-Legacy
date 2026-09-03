@@ -18,6 +18,7 @@ export function makeChangeItem(repository: ItemRepository) {
             id: existing.id,
             name: itemName(changes.name),
             completed: changes.completed,
+            ownerId: existing.ownerId,
         };
 
         await repository.update(updated);

@@ -16,13 +16,18 @@
   ],
   "scripts": {
     "dev": "node scripts/dev.mjs",
-    "dev:api": "nodemon -L --watch apps/api --watch packages --ext ts --exec \"tsx --conditions=development apps/api/src/index.ts\"",
+    "dev:api": "nodemon -L --watch apps/api --watch packages --ext ts --exec \"tsx --env-file-if-exists=.env --conditions=development apps/api/src/index.ts\"",
     "dev:web": "npm run dev --workspace @legacy/web",
     "build": "tsc --build && npm run build --workspace @legacy/web",
-    "start": "node apps/api/dist/index.js",
+    "start": "node --env-file-if-exists=.env apps/api/dist/index.js",
     "lint": "eslint .",
     "typecheck": "tsc --build && tsc -p tsconfig.test.json && npm run typecheck --workspace @legacy/web && node scripts/check-layers.mjs",
-    "test": "vitest run --coverage"
+    "test": "vitest run --coverage",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:reset": "supabase db reset",
+    "db:lint": "supabase db lint --level warning",
+    "db:types": "node scripts/db-types.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -34,6 +39,7 @@
     "globals": "^17.12.0",
     "nodemon": "^3.1.9",
     "prettier": "^3.9.6",
+    "supabase": "^2.116.0",
     "tsx": "^4.23.13",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.69.0",

@@ -12,11 +12,6 @@ ARG NODE_VERSION=22.12
 FROM node:${NODE_VERSION}-alpine AS deps
 WORKDIR /app
 
-# sqlite3 se compile depuis les sources sur musl, faute de binaire preconstruit.
-# La chaine de compilation reste dans cette etape et n atteint jamais l image
-# finale. Elle disparaitra avec EN-09, quand Supabase remplacera SQLite.
-RUN apk add --no-cache python3 make g++
-
 # Les manifestes sont copies avant le reste du code : tant qu ils ne changent
 # pas, Docker reutilise la couche d installation, qui est de loin la plus longue.
 COPY package.json package-lock.json ./
@@ -31,8 +26,6 @@ RUN npm ci --omit=dev
 # --- compilation ----------------------------------------------------------------
 FROM node:${NODE_VERSION}-alpine AS builder
 WORKDIR /app
-
-RUN apk add --no-cache python3 make g++
 
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/
