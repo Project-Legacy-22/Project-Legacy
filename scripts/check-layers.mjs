@@ -50,13 +50,13 @@ const RULES = [
     {
         name: 'infra knows contracts and core ports, never an application layer',
         match: /^packages\/infra\//,
-        bare: [/^@legacy\/(contracts|core-items)$/, /^node:/, /^(@supabase\/supabase-js|pino)$/],
+        bare: [/^@legacy\/(contracts|core-items|core-auth)$/, /^node:/, /^(@supabase\/supabase-js|pino)$/],
         local: /^\.\.?\//,
     },
     {
         name: 'only the composition root reaches for an adapter',
         match: /^apps\/api\/src\/(?!composition-root\.ts$)/,
-        bare: [/^@legacy\/(contracts|core-items)$/, /^node:/, /^(express|zod|uuid)$/],
+        bare: [/^@legacy\/(contracts|core-items|core-auth)$/, /^node:/, /^(express|zod|uuid)$/],
         local: /^\.\.?\//,
     },
     {

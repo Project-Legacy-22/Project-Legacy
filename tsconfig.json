@@ -8,6 +8,9 @@
       "path": "packages/core/items"
     },
     {
+      "path": "packages/core/auth"
+    },
+    {
       "path": "packages/infra"
     },
     {
