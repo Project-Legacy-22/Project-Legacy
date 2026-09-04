@@ -86,6 +86,13 @@ describe('TodoPage accessibility', () => {
         expect(document.querySelector('[role="status"]')?.textContent).toBe(labels.loadingItems);
     });
 
+    it('shows an explicit empty state when the list is ready', async () => {
+        await renderPage({ items: [], loadState: { status: 'ready' }, hasNextPage: false });
+
+        expect(document.querySelector('.empty-message')?.textContent).toBe(labels.emptyItems);
+        expect(document.querySelector('.todo-list')).toBeNull();
+    });
+
     it('moves focus to the list heading before retry removes its button', async () => {
         const onRetry = vi.fn();
         await renderPage({
