@@ -35,9 +35,14 @@ doit être écrit, et dont les affirmations techniques sont sourcées plutôt qu
 | [0005](0005-acces-aux-donnees-et-migrations.md) | Accès par le client Supabase, schéma versionné en migrations | Accepté | `EN-09` |
 | [0007](0007-mecanisme-d-evenements-broker-redis.md) | Redis comme broker d'événements | Accepté | `US-10`, `US-18`, `EN-35` |
 | [0008](0008-strategie-de-session-supabase-auth.md) | Sessions et authentification par Supabase Auth | Accepté | `US-11`, `US-27`, `US-47`, `US-13` |
+| [0009](0009-sonarcloud-comme-outil-de-quality-gate.md) | SonarCloud comme outil de quality gate, seuils du gate intégré | Accepté | `EN-17` |
 
 L'ADR-0007 a lui aussi été tranché **contre** la recommandation du backlog, qui proposait un
 bus in-process. Les huit décisions bloquantes (`D-03` à `D-20`) sont désormais couvertes.
+
+L'ADR-0009 tranche `D-11` (seuil de couverture) sur une valeur différente de la proposition du
+backlog (80 % au lieu de 70 %), imposée par le plan gratuit de SonarCloud plutôt que choisie :
+la raison est dans l'ADR, pas ici.
 
 ## Ce qui reste à trancher
 
@@ -48,7 +53,6 @@ sprint 1, mais chacun bloque quelque chose plus loin.
 |---|---|---|---|
 | Garantie de livraison des événements : outbox conservée ou perte assumée | outbox conservée, Redis comme transport | `EN-35`, et donc `US-10` | planning du sprint 2, **avant le premier producteur** |
 | Effet visible démontrant le flux événementiel | « créer une tâche produit une notification visible » | la démonstration de revue | planning du sprint 2 |
-| Outil de gate qualité | SonarCloud | `EN-17` | sprint 1 |
 | Registre d'images | GHCR, déjà lié au dépôt | `EN-08` | sprint 1 |
 | Niveau d'accessibilité visé | WCAG 2.1 AA | critères d'acceptation des US front | sprint 1 |
 | Langue de l'interface, messages d'erreur compris | une seule, tranchée une fois | toutes les US front | sprint 1 |
