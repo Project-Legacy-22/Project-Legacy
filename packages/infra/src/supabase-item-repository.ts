@@ -1,8 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { rehydrateItem } from '@legacy/core-items';
-import type { DomainEvent, Item } from '@legacy/core-items';
+import { Buffer } from 'node:buffer';
+
+import { InvalidItemCursor, rehydrateItem } from '@legacy/core-items';
+import type { DomainEvent, Item, ItemPage, ItemPageQuery } from '@legacy/core-items';
 
 import type { Database } from './database.types.js';
 import type { ItemStore } from './item-store.js';
@@ -31,12 +33,78 @@ function toItem(row: ItemRow): Item {
     });
 }
 
+// A page is located by its last row, not by an offset that would shift under a
+// concurrent insert. created_at alone is not unique -- two rows written in one
+// transaction share it -- so the position is the pair, which is also the order
+// items_user_id_created_at_idx serves. Encoded, so no client pins the ordering.
+function encodeCursor(row: ItemRow): string {
+    return Buffer.from(`${row.created_at} ${row.id}`, 'utf8').toString('base64url');
+}
+
+// The predicate for a position strictly before the cursor. base64url decoding
+// never fails, so the shape it decodes to is what proves the cursor is ours. The
+// timestamp is quoted: PostgREST reads ',' '.' and ':' as filter syntax.
+function beforeCursor(cursor: string): string {
+    const [createdAt, id, ...extra] = Buffer.from(cursor, 'base64url')
+        .toString('utf8')
+        .split(' ');
+
+    if (createdAt === undefined || id === undefined || extra.length > 0) {
+        throw new InvalidItemCursor();
+    }
+
+    return `created_at.lt."${createdAt}",and(created_at.eq."${createdAt}",id.lt.${id})`;
+}
+
+// The reads sit outside the factory: they need nothing from it but the client.
+type ItemClient = SupabaseClient<Database>;
+
+async function findPage(
+    client: ItemClient,
+    ownerId: string,
+    page: ItemPageQuery,
+): Promise<ItemPage> {
+    const owned = client.from('items').select('*').eq('user_id', ownerId).is('deleted_at', null);
+    const positioned = page.cursor === undefined ? owned : owned.or(beforeCursor(page.cursor));
+
+    // One row more than asked: its presence is what says there is a next page.
+    const { data, error } = await positioned
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .limit(page.limit + 1);
+    if (error) fail('findPageByOwner', error);
+
+    const rows = data ?? [];
+    const visible = rows.slice(0, page.limit);
+    const last = visible.at(-1);
+
+    return {
+        items: visible.map(toItem),
+        nextCursor: rows.length > page.limit && last !== undefined ? encodeCursor(last) : undefined,
+    };
+}
+
+async function findOwned(
+    client: ItemClient,
+    id: string,
+    ownerId: string,
+): Promise<Item | undefined> {
+    const { data, error } = await client
+        .from('items')
+        .select('*')
+        .eq('id', id)
+        .eq('user_id', ownerId)
+        .is('deleted_at', null)
+        .maybeSingle();
+    if (error) fail('findByIdForOwner', error);
+    return data ? toItem(data) : undefined;
+}
+
 // The storage adapter for the item domain. It talks to Supabase over HTTPS with
 // the service-role key, so PostgREST does not apply row-level security and the
-// application layer is responsible for ownership scoping (policies arrive with
-// US-11).
+// application layer is responsible for ownership scoping.
 export function createSupabaseItemStore(settings: SupabaseSettings): ItemStore {
-    const client: SupabaseClient<Database> = createClient<Database>(
+    const client: ItemClient = createClient<Database>(
         settings.url,
         settings.serviceRoleKey,
         { auth: { persistSession: false, autoRefreshToken: false } },
@@ -52,18 +120,6 @@ export function createSupabaseItemStore(settings: SupabaseSettings): ItemStore {
 
     async function disconnect(): Promise<void> {
         // supabase-js holds no long-lived connection to close.
-    }
-
-    async function findAll(): Promise<Item[]> {
-        const { data, error } = await client.from('items').select('*');
-        if (error) fail('findAll', error);
-        return (data ?? []).map(toItem);
-    }
-
-    async function findById(id: string): Promise<Item | undefined> {
-        const { data, error } = await client.from('items').select('*').eq('id', id).maybeSingle();
-        if (error) fail('findById', error);
-        return data ? toItem(data) : undefined;
     }
 
     // One call to a database function rather than two inserts. PostgREST opens
@@ -99,5 +155,13 @@ export function createSupabaseItemStore(settings: SupabaseSettings): ItemStore {
         if (error) fail('remove', error);
     }
 
-    return { connect, disconnect, findAll, findById, save, update, remove };
+    return {
+        connect,
+        disconnect,
+        findPageByOwner: (ownerId, page) => findPage(client, ownerId, page),
+        findByIdForOwner: (id, ownerId) => findOwned(client, id, ownerId),
+        save,
+        update,
+        remove,
+    };
 }

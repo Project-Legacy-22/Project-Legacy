@@ -1,3 +1,4 @@
+import { InvalidItemCursor } from '../../src/index.js';
 import type { DomainEvent, Item, ItemRepository } from '../../src/index.js';
 
 // A real, in-process implementation of the port, not a mock: it behaves like
@@ -10,16 +11,45 @@ import type { DomainEvent, Item, ItemRepository } from '../../src/index.js';
 // reaching into the implementation.
 export interface InMemoryItemRepository extends ItemRepository {
     recordedEvents: DomainEvent[];
+    // The rows as stored, so a test can assert what was persisted.
+    items: Map<string, Item>;
 }
 
 export function inMemoryItemRepository(seed: Item[] = []): InMemoryItemRepository {
     const items = new Map(seed.map(item => [item.id, item]));
     const recordedEvents: DomainEvent[] = [];
 
+    // Most recent first, like the adapter, insertion order standing in for
+    // creation order: a fake that ordered otherwise would prove nothing.
+    function ownedBy(ownerId: string): Item[] {
+        return [...items.values()].filter(item => item.ownerId === ownerId).reverse();
+    }
+
     return {
         recordedEvents,
-        findAll: () => Promise.resolve([...items.values()]),
-        findById: id => Promise.resolve(items.get(id)),
+        items,
+        findPageByOwner: (ownerId, { limit, cursor }) => {
+            const owned = ownedBy(ownerId);
+            const from = cursor === undefined ? 0 : owned.findIndex(item => item.id === cursor) + 1;
+
+            // Refused rather than silently answered with the first page,
+            // exactly as the adapter refuses a cursor it did not mint.
+            if (cursor !== undefined && from === 0) {
+                return Promise.reject(new InvalidItemCursor());
+            }
+
+            const page = owned.slice(from, from + limit);
+            const last = page.at(-1);
+
+            return Promise.resolve({
+                items: page,
+                nextCursor: from + limit < owned.length && last !== undefined ? last.id : undefined,
+            });
+        },
+        findByIdForOwner: (id, ownerId) => {
+            const item = items.get(id);
+            return Promise.resolve(item?.ownerId === ownerId ? item : undefined);
+        },
         save: (item, event) => {
             items.set(item.id, item);
             recordedEvents.push(event);

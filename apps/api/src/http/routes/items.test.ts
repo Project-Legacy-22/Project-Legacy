@@ -7,10 +7,11 @@ import {
     makeIdentifyCaller,
     makeRegisterAccount,
 } from '@legacy/core-auth';
-// The reference fake for the identity provider port lives with the port it
-// implements. Copying it here would let the copy drift from the contract it is
-// supposed to stand for.
+// The reference fake for a port lives with the port it implements. Copying one
+// here would let the copy drift from the contract it is supposed to stand for.
 import { inMemoryIdentityProvider } from '../../../../../packages/core/auth/test/fakes/in-memory-identity-provider.js';
+import { inMemoryItemRepository } from '../../../../../packages/core/items/test/fakes/in-memory-item-repository.js';
+import type { InMemoryItemRepository } from '../../../../../packages/core/items/test/fakes/in-memory-item-repository.js';
 
 import { createServer } from '../server.js';
 import { SESSION_COOKIE } from '../session.js';
@@ -23,37 +24,9 @@ const GENERATED_ID = '33333333-3333-4333-8333-333333333333';
 // The account every request in this suite is made by. Its identifier is an
 // internal fact: the assertions below check it never reaches a response.
 const OWNER_ID = '00000000-0000-7000-8000-000000000001';
+const OTHER_OWNER_ID = '00000000-0000-7000-8000-000000000002';
 const ADRESSE = 'alice@example.com';
 const MOT_DE_PASSE = 'MotDePasse2026';
-
-interface Store {
-    items: Map<string, Item>;
-    repository: ItemRepository;
-}
-
-function inMemoryStore(seed: Item[] = []): Store {
-    const items = new Map(seed.map(item => [item.id, item]));
-
-    return {
-        items,
-        repository: {
-            findAll: () => Promise.resolve([...items.values()]),
-            findById: id => Promise.resolve(items.get(id)),
-            save: item => {
-                items.set(item.id, item);
-                return Promise.resolve();
-            },
-            update: item => {
-                items.set(item.id, item);
-                return Promise.resolve();
-            },
-            remove: id => {
-                items.delete(id);
-                return Promise.resolve();
-            },
-        },
-    };
-}
 
 function useCasesOver(repository: ItemRepository, provider: IdentityProvider): AppUseCases {
     return {
@@ -80,16 +53,23 @@ function useCasesOver(repository: ItemRepository, provider: IdentityProvider): A
 // at the boundary, and the test would prove nothing about the route behind it.
 const EXISTING_ID = '11111111-1111-4111-8111-111111111111';
 const UNKNOWN_ID = '22222222-2222-4222-8222-222222222222';
+const OTHER_ID = '44444444-4444-4444-8444-444444444444';
+
+type Page = { items: { id: string }[]; nextCursor: string | null };
+
+function anItemOf(id: string, ownerId: string, name = 'Acheter du pain'): Item {
+    return { id, name, completed: false, ownerId };
+}
 
 describe('items API', () => {
     let harness: Harness;
-    let store: Store;
+    let store: InMemoryItemRepository;
 
     // Every request in this suite carries a session: since US-11 the item
     // routes refuse anything else. The refusal itself is asserted in the
     // authentication suite, where the repository is unreachable on purpose.
     async function serve(seed: Item[] = []): Promise<void> {
-        store = inMemoryStore(seed);
+        store = inMemoryItemRepository(seed);
         const provider = inMemoryIdentityProvider([
             { id: OWNER_ID, email: ADRESSE, password: MOT_DE_PASSE },
         ]);
@@ -97,7 +77,7 @@ describe('items API', () => {
         const logger = recordingLogger();
 
         harness = await listen(
-            createServer(testConfig, useCasesOver(store.repository, provider), logger),
+            createServer(testConfig, useCasesOver(store, provider), logger),
             logger,
             `${SESSION_COOKIE}=${session.accessToken}`,
         );
@@ -113,23 +93,62 @@ describe('items API', () => {
 
     describe('GET /items', () => {
         it('renvoie les items persistes', async () => {
-            await reseed([
-                { id: EXISTING_ID, name: 'Acheter du pain', completed: false, ownerId: OWNER_ID },
-            ]);
+            await reseed([anItemOf(EXISTING_ID, OWNER_ID)]);
 
             const response = await harness.request('/items');
 
             expect(response.status).toBe(200);
-            await expect(response.json()).resolves.toEqual([
-                { id: EXISTING_ID, name: 'Acheter du pain', completed: false },
-            ]);
+            await expect(response.json()).resolves.toEqual({
+                items: [{ id: EXISTING_ID, name: 'Acheter du pain', completed: false }],
+                nextCursor: null,
+            });
         });
 
-        it('renvoie une liste vide plutot qu une erreur quand il n y a rien', async () => {
+        it('renvoie une page vide plutot qu une erreur quand il n y a rien', async () => {
             const response = await harness.request('/items');
 
             expect(response.status).toBe(200);
-            await expect(response.json()).resolves.toEqual([]);
+            await expect(response.json()).resolves.toEqual({ items: [], nextCursor: null });
+        });
+
+        // Critere bloquant de US-12. L item present compte autant que l item
+        // absent : un filtre qui ne renvoie jamais rien passerait la moitie.
+        it('ne renvoie que les items du compte de la session', async () => {
+            await reseed([
+                anItemOf(EXISTING_ID, OWNER_ID, 'Le mien'),
+                anItemOf(OTHER_ID, OTHER_OWNER_ID, 'Celui d un autre'),
+            ]);
+
+            const page = (await (await harness.request('/items')).json()) as Page;
+
+            expect(page.items.map(item => item.id)).toEqual([EXISTING_ID]);
+        });
+
+        it('borne la liste et sert la suite depuis le curseur', async () => {
+            await reseed([anItemOf(EXISTING_ID, OWNER_ID), anItemOf(OTHER_ID, OWNER_ID)]);
+
+            const first = (await (await harness.request('/items?limit=1')).json()) as Page;
+            const next = `/items?limit=1&cursor=${encodeURIComponent(String(first.nextCursor))}`;
+            const second = (await (await harness.request(next)).json()) as Page;
+
+            // Les deux pages couvrent les deux items, sans doublon ni saut.
+            expect(first.items.map(item => item.id)).toEqual([OTHER_ID]);
+            expect(second.items.map(item => item.id)).toEqual([EXISTING_ID]);
+            expect(second.nextCursor).toBeNull();
+        });
+
+        it('refuse une taille de page hors bornes', async () => {
+            const response = await harness.request('/items?limit=1000');
+
+            expect(response.status).toBe(400);
+        });
+
+        it('refuse un curseur qui n a pas ete emis par l API', async () => {
+            await reseed([anItemOf(EXISTING_ID, OWNER_ID)]);
+
+            const response = await harness.request('/items?cursor=curseur-invente');
+
+            expect(response.status).toBe(400);
         });
     });
 
@@ -165,7 +184,7 @@ describe('items API', () => {
             const createResponse = await harness.request('/items', json('POST', { name: 'Autre' }));
             const created = (await createResponse.json()) as Record<string, unknown>;
             const listResponse = await harness.request('/items');
-            const listed = (await listResponse.json()) as Record<string, unknown>[];
+            const listed = (await listResponse.json()) as Record<string, unknown>;
 
             expect(created).not.toHaveProperty('ownerId');
             expect(JSON.stringify(listed)).not.toContain(OWNER_ID);
@@ -250,6 +269,21 @@ describe('items API', () => {
             expect(response.status).toBe(400);
         });
 
+        // Meme reponse que pour un item inexistant : un 403 confirmerait que
+        // cet identifiant designe quelque chose.
+        it('repond 404 sur l item d un autre compte et le laisse intact', async () => {
+            const theirs = anItemOf(OTHER_ID, OTHER_OWNER_ID, 'Celui d un autre');
+            await reseed([theirs]);
+
+            const response = await harness.request(
+                `/items/${OTHER_ID}`,
+                json('PUT', { name: 'Nouveau nom', completed: true }),
+            );
+
+            expect(response.status).toBe(404);
+            expect(store.items.get(OTHER_ID)).toEqual(theirs);
+        });
+
         it('refuse un corps incomplet', async () => {
             const response = await harness.request(
                 `/items/${EXISTING_ID}`,
@@ -279,6 +313,15 @@ describe('items API', () => {
             const response = await harness.request(`/items/${UNKNOWN_ID}`, { method: 'DELETE' });
 
             expect(response.status).toBe(404);
+        });
+
+        it('repond 404 sur l item d un autre compte et ne le supprime pas', async () => {
+            await reseed([anItemOf(OTHER_ID, OTHER_OWNER_ID)]);
+
+            const response = await harness.request(`/items/${OTHER_ID}`, { method: 'DELETE' });
+
+            expect(response.status).toBe(404);
+            expect(store.items.has(OTHER_ID)).toBe(true);
         });
     });
 

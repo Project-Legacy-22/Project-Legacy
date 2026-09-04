@@ -4,6 +4,7 @@ export {
     itemName,
     DomainError,
     InvalidItemName,
+    InvalidItemCursor,
     ItemNotFound,
     MAX_ITEM_NAME_LENGTH,
 } from './domain/item.js';
@@ -12,7 +13,7 @@ export type { Item } from './domain/item.js';
 export { ITEM_CREATED_V1, itemCreated } from './domain/event.js';
 export type { DomainEvent, ItemCreatedV1 } from './domain/event.js';
 
-export type { ItemRepository } from './ports/item-repository.js';
+export type { ItemRepository, ItemPage, ItemPageQuery } from './ports/item-repository.js';
 
 export { makeListItems } from './application/list-items.js';
 export { makeAddItem } from './application/add-item.js';

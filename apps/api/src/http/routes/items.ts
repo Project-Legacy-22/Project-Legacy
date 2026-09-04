@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import type { RequestHandler } from 'express';
-import { CreateItemBody, UpdateItemBody, ItemIdParams } from '@legacy/contracts';
-import type { ItemDto } from '@legacy/contracts';
-import type { Item } from '@legacy/core-items';
+import { CreateItemBody, UpdateItemBody, ItemIdParams, ListItemsQuery } from '@legacy/contracts';
+import type { ItemDto, ItemPageDto } from '@legacy/contracts';
+import type { Item, ItemPage } from '@legacy/core-items';
 
 import type { ItemUseCases } from '../../composition-root.js';
 import { accountOf } from '../session.js';
@@ -14,6 +14,12 @@ function toItemDto(item: Item): ItemDto {
     return { id: item.id, name: item.name, completed: item.completed };
 }
 
+// The cursor crosses the boundary as null when no page is left: undefined is
+// what the domain says, and JSON.stringify would drop the field entirely.
+function toItemPageDto(page: ItemPage): ItemPageDto {
+    return { items: page.items.map(toItemDto), nextCursor: page.nextCursor ?? null };
+}
+
 // Routes translate HTTP into use-case calls and back. They hold no rule of
 // their own and never reach the database.
 //
@@ -22,16 +28,21 @@ function toItemDto(item: Item): ItemDto {
 // into a 400. The domain still enforces its own invariants -- a rule that only
 // lives at the boundary is a rule the domain cannot guarantee.
 //
-// Every route here is mounted behind requireAccount, so accountOf always has an
-// identity to return. Reads are still not owner-scoped: filtering the list by
-// owner, and answering 404 rather than 403 on someone else's item, is US-12.
+// Every route is mounted behind requireAccount and names that account when it
+// reaches a use case: since US-12 no read crosses owners, and a request aimed at
+// somebody else's item is answered like one aimed at nothing.
 export function itemsRouter(useCases: ItemUseCases): Router {
     const router = Router();
 
-    const list: RequestHandler = (_req, res, next) => {
+    const list: RequestHandler = (req, res, next) => {
+        // Validated like a body: an absent limit is the default page size, an
+        // unparseable or oversized one is a 400.
+        const query = ListItemsQuery.safeParse(req.query);
+        if (!query.success) return next(query.error);
+
         useCases
-            .listItems()
-            .then(items => res.send(items.map(toItemDto)))
+            .listItems(accountOf(res).id, { limit: query.data.limit, cursor: query.data.cursor })
+            .then(page => res.send(toItemPageDto(page)))
             .catch(next);
     };
 
@@ -53,7 +64,7 @@ export function itemsRouter(useCases: ItemUseCases): Router {
         if (!body.success) return next(body.error);
 
         useCases
-            .changeItem(params.data.id, body.data)
+            .changeItem(params.data.id, accountOf(res).id, body.data)
             .then(item => res.send(toItemDto(item)))
             .catch(next);
     };
@@ -63,7 +74,7 @@ export function itemsRouter(useCases: ItemUseCases): Router {
         if (!params.success) return next(params.error);
 
         useCases
-            .removeItem(params.data.id)
+            .removeItem(params.data.id, accountOf(res).id)
             .then(() => res.sendStatus(200))
             .catch(next);
     };

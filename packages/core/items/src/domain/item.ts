@@ -42,6 +42,14 @@ export class ItemNotFound extends DomainError {
     }
 }
 
+// A cursor handed back by a client is outside data like any other. The refusal
+// lives here so the error middleware finds it with the domain's other refusals.
+export class InvalidItemCursor extends DomainError {
+    constructor() {
+        super('invalid_item_cursor', 400, 'Item cursor was not issued by this API');
+    }
+}
+
 // Enforces the invariant. Every path that writes a name goes through here.
 export function itemName(candidate: string): string {
     const name = candidate.trim();

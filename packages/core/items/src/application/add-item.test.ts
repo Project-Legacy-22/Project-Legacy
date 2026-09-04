@@ -40,7 +40,7 @@ describe('addItem', () => {
             completed: false,
             ownerId: OWNER_ID,
         });
-        expect(await repository.findById('item-id')).toEqual(item);
+        expect(await repository.findByIdForOwner('item-id', OWNER_ID)).toEqual(item);
     });
 
     // Le proprietaire vient de l appelant : deux appelants differents ne
@@ -74,7 +74,7 @@ describe('addItem', () => {
         await expect(addItemWith(repository)('   ', OWNER_ID)).rejects.toBeInstanceOf(
             InvalidItemName,
         );
-        expect(await repository.findAll()).toHaveLength(0);
+        expect(repository.items.size).toBe(0);
         expect(repository.recordedEvents).toHaveLength(0);
     });
 
