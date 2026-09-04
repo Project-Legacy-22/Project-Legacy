@@ -7,6 +7,8 @@ vers une application Kanban maintenable. Le dépôt utilise TypeScript et des wo
 
 | Commande | Ce qu'elle fait |
 |---|---|
+| `npm run up` | démarre tout : broker, base de données, API et front |
+| `npm run down` | arrête le broker et la base de données |
 | `npm run lint` | analyse statique sur tout le dépôt, `apps/web` compris |
 | `npm run typecheck` | types de la production et des tests, workspace web, puis contrôle des frontières de couches |
 | `npm test` | tous les tests, Node et front, avec un rapport de couverture unique dans `coverage/` |
@@ -20,7 +22,7 @@ vers une application Kanban maintenable. Le dépôt utilise TypeScript et des wo
 
 - Node.js 20.19, ou Node.js 22.12 et versions ultérieures
 - npm avec prise en charge des workspaces
-- Docker, pour la pile Supabase locale utilisée en développement (`npm run db:start`)
+- Docker, en cours d'exécution : il fait tourner la base de données et le broker
 
 ## Organisation
 
@@ -37,13 +39,53 @@ packages/
 Le front utilise les contrats de `packages/contracts` pour valider les réponses de l'API.
 Il ne dépend pas directement des modules du domaine ou de l'infrastructure.
 
-## Installation
+## Démarrer
 
-Installer exactement les dépendances du lockfile :
+Deux commandes depuis un dépôt fraîchement cloné, dont une seule à répéter ensuite :
 
 ```bash
-npm ci
+npm ci        # installe exactement les dépendances du lockfile
+npm run up    # démarre le broker, la base de données, l'API et le front
 ```
+
+`npm run up` enchaîne le broker déclaré dans `compose.yaml`, la pile Supabase locale et ses
+migrations, puis l'API et le serveur Vite. Il transmet à l'application les coordonnées
+imprimées par le CLI Supabase : aucun fichier à copier, aucune valeur à renseigner à la main.
+
+- Front avec rechargement à chaud : http://localhost:5173
+- API : http://localhost:3000
+- Studio Supabase : http://localhost:54323
+- Les requêtes `/items` du front sont transmises à l'API par le proxy Vite.
+
+`Ctrl+C` arrête l'API et le front. Le broker et la base restent debout, avec leurs données ;
+`npm run down` les arrête. Relancer `npm run up` repart de l'état laissé la fois précédente.
+
+Si Docker ne tourne pas, la commande s'arrête en le disant plutôt que d'échouer plus loin sur
+une erreur de connexion.
+
+## Variables d'environnement
+
+`.env.example` documente les variables attendues et leurs valeurs pour la pile locale.
+
+| Variable | Rôle |
+|---|---|
+| `SUPABASE_URL` | point d'entrée de la base. Requise : l'API refuse de démarrer sans elle |
+| `SUPABASE_SERVICE_ROLE_KEY` | clé de service utilisée par l'API. Requise |
+| `REDIS_URL` | broker déclaré dans `compose.yaml` |
+| `REDIS_PORT` | port hôte du broker, `6379` par défaut |
+| `LOG_LEVEL` | niveau pino, `info` par défaut |
+
+Un poste qui fait déjà tourner un Redis sur le port par défaut ne peut pas le publier une
+seconde fois. Dans ce cas, choisir un autre port sans rien modifier dans le dépôt :
+
+```bash
+REDIS_PORT=6380 npm run up
+```
+
+Les valeurs de la pile locale sont identiques sur chaque poste et ne sont donc pas des
+secrets. Celles de production viennent du tableau de bord Supabase et ne sont jamais
+versionnées. Copier `.env.example` en `.env` n'est utile que pour lancer `npm run dev` ou
+`npm start` seuls, sans passer par `npm run up`.
 
 ## Base de données
 
@@ -58,20 +100,16 @@ npm run db:types     # régénère packages/infra/src/database.types.ts après u
 npm run db:lint      # contrôles statiques sur le schéma
 ```
 
-## Développement
+## Démarrer les étages séparément
 
-Copier `.env.example` en `.env` : il contient les valeurs par défaut de la pile Supabase
-locale, identiques sur chaque poste. Puis :
+`npm run up` couvre le cas courant. Les commandes ci-dessous servent quand on veut agir sur
+un seul étage, par exemple relancer l'application sans toucher à la base.
 
 ```bash
-npm run db:start
-npm run dev
+docker compose up -d     # le broker seul
+npm run db:start         # la base et ses migrations
+npm run dev              # l'API et le front, en lisant .env
 ```
-
-- Front avec rechargement à chaud : http://localhost:5173
-- API : http://localhost:3000
-- Studio Supabase : http://localhost:54323
-- Les requêtes `/items` du front sont transmises à l'API par le proxy Vite.
 
 L'API refuse de démarrer si `SUPABASE_URL` ou `SUPABASE_SERVICE_ROLE_KEY` manque, en nommant
 la variable absente.
