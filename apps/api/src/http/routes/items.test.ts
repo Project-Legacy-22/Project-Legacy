@@ -59,7 +59,11 @@ function useCasesOver(repository: ItemRepository, provider: IdentityProvider): A
     return {
         items: {
             listItems: makeListItems(repository),
-            addItem: makeAddItem({ repository, newId: () => GENERATED_ID }),
+            addItem: makeAddItem({
+                repository,
+                newId: () => GENERATED_ID,
+                now: () => new Date('2026-09-04T10:00:00.000Z'),
+            }),
             changeItem: makeChangeItem(repository),
             removeItem: makeRemoveItem(repository),
         },

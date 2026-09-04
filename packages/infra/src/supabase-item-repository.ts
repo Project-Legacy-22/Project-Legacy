@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { rehydrateItem } from '@legacy/core-items';
-import type { Item } from '@legacy/core-items';
+import type { DomainEvent, Item } from '@legacy/core-items';
 
 import type { Database } from './database.types.js';
 import type { ItemStore } from './item-store.js';
@@ -66,13 +66,21 @@ export function createSupabaseItemStore(settings: SupabaseSettings): ItemStore {
         return data ? toItem(data) : undefined;
     }
 
-    async function save(item: Item): Promise<void> {
+    // One call to a database function rather than two inserts. PostgREST opens
+    // a transaction per request, so writing the item and then its event would
+    // be two of them: a failure in between would leave the event announcing a
+    // creation that was rolled back. The function body is a single transaction
+    // (see the outbox migration).
+    async function save(item: Item, event: DomainEvent): Promise<void> {
         if (item.name === null) fail('save', new Error('an item written to storage must have a name'));
-        const { error } = await client.from('items').insert({
-            id: item.id,
-            name: item.name,
-            completed: item.completed,
-            user_id: item.ownerId,
+        const { error } = await client.rpc('create_item_with_event', {
+            p_item_id: item.id,
+            p_user_id: item.ownerId,
+            p_name: item.name,
+            p_event_id: event.id,
+            p_event_name: event.name,
+            p_occurred_at: event.occurredAt,
+            p_payload: event.payload,
         });
         if (error) fail('save', error);
     }

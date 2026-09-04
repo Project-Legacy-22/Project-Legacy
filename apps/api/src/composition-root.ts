@@ -51,7 +51,7 @@ export function compose(config: Config): Application {
         useCases: {
             items: {
                 listItems: makeListItems(store),
-                addItem: makeAddItem({ repository: store, newId: uuid }),
+                addItem: makeAddItem({ repository: store, newId: uuid, now: () => new Date() }),
                 changeItem: makeChangeItem(store),
                 removeItem: makeRemoveItem(store),
             },
