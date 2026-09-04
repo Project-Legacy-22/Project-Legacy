@@ -1,0 +1,57 @@
+/* Ecrans d authentification (US-11b). Meme vocabulaire visuel que le reste :
+   les champs, les etiquettes et les messages reutilisent .form-field,
+   .field-help et .field-error de controls.css. Seule la mise en page de la
+   page et les deux messages de resultat sont propres a cet ecran. */
+
+.auth-page {
+    width: min(100% - 32px, 26rem);
+    margin: 48px auto;
+}
+
+.auth-intro {
+    margin: 0 0 24px;
+    color: #465568;
+    line-height: 1.5;
+}
+
+.auth-form {
+    display: grid;
+    gap: 18px;
+}
+
+/* Meme traitement que .field-error, mais pour un echec qui porte sur la
+   soumission entiere et non sur un champ. */
+.form-error,
+.form-success {
+    margin: 0;
+    font-weight: 700;
+    line-height: 1.45;
+}
+
+.form-error {
+    color: #8a1c16;
+}
+
+.form-success {
+    color: #184f49;
+}
+
+/* Bascule entre connexion et inscription : une action secondaire, qui ne doit
+   pas concurrencer visuellement le bouton de soumission. */
+.button-quiet {
+    margin-top: 20px;
+    border-color: transparent;
+    color: #184f49;
+    background: transparent;
+    text-decoration: underline;
+}
+
+.button-quiet:hover:not(:disabled) {
+    background: #e9f6f3;
+}
+
+.session-banner {
+    margin: 0 0 16px;
+    color: #465568;
+    font-size: 0.9375rem;
+}
