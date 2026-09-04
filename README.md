@@ -150,6 +150,19 @@ L'API expose trois routes :
 Toutes les routes `/items` exigent une session valide et attribuent les éléments créés au
 compte de l'appelant.
 
+## Éléments
+
+Un élément appartient au compte qui l'a créé, et à lui seul. Une requête portant sur
+l'élément d'un autre compte reçoit la même réponse qu'une requête portant sur un élément
+inexistant, en lecture comme en modification et en suppression : un `403` révélerait que
+l'identifiant désigne quelque chose.
+
+`GET /items` est paginé, là où la version héritée renvoyait la table entière. `limit` vaut
+20 par défaut, est borné à 100, et `cursor` reprend la réponse précédente ; hors de ces
+bornes, `400`. La réponse est `{ "items": [...], "nextCursor": ... }`, `nextCursor` valant
+`null` sur la dernière page. Le curseur est opaque et désigne la dernière ligne servie et
+non un décalage, pour qu'une création concurrente ne fasse ni sauter ni répéter un élément.
+
 Deux comportements sont volontaires et ne doivent pas être « corrigés » :
 
 - la création de compte répond de la même façon que l'adresse soit libre ou déjà prise, et

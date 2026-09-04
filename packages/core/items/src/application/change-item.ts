@@ -8,8 +8,14 @@ export interface ItemChanges {
 }
 
 export function makeChangeItem(repository: ItemRepository) {
-    return async function changeItem(id: string, changes: ItemChanges): Promise<Item> {
-        const existing = await repository.findById(id);
+    return async function changeItem(
+        id: string,
+        ownerId: string,
+        changes: ItemChanges,
+    ): Promise<Item> {
+        const existing = await repository.findByIdForOwner(id, ownerId);
+        // Someone else's item is reported like one that never existed: a 403
+        // would confirm the identifier designates a real item (US-12).
         if (!existing) {
             throw new ItemNotFound(id);
         }

@@ -1,4 +1,4 @@
-import { ItemDto, ItemListDto, ProblemDetails } from '@legacy/contracts';
+import { ItemDto, ItemPageDto, ProblemDetails } from '@legacy/contracts';
 import type { CreateItemBody, UpdateItemBody } from '@legacy/contracts';
 
 import { labels } from '../labels';
@@ -59,9 +59,11 @@ const jsonHeaders = {
 export const itemsApi: ItemsApi = {
     listItems(signal) {
         return requestJson('/items', { headers: { Accept: 'application/json' }, signal }, value => {
-            const result = ItemListDto.safeParse(value);
+            const result = ItemPageDto.safeParse(value);
             if (!result.success) throw new ApiError(502, labels.invalidItemList);
-            return result.data;
+            // The server bounds the collection and says where the next page
+            // starts. Asking for it belongs to the list screen (#132).
+            return result.data.items;
         });
     },
 
