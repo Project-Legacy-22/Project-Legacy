@@ -23,9 +23,9 @@ async function loadItems({ api, signal, setItems, setLoadState }: LoadItemsConte
     setLoadState({ status: 'loading' });
 
     try {
-        const items = await api.listItems(signal);
+        const page = await api.listItems({ signal });
         if (signal.aborted) return;
-        setItems(items);
+        setItems(page.items);
         setLoadState({ status: 'ready' });
     } catch (error) {
         if (signal.aborted || isAbortError(error)) return;
