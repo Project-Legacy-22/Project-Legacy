@@ -15,6 +15,8 @@
     "packages/core/items"
   ],
   "scripts": {
+    "up": "node scripts/up.mjs",
+    "down": "docker compose down && supabase stop",
     "dev": "node scripts/dev.mjs",
     "dev:api": "nodemon -L --watch apps/api --watch packages --ext ts --exec \"tsx --env-file-if-exists=.env --conditions=development apps/api/src/index.ts\"",
     "dev:web": "npm run dev --workspace @legacy/web",
