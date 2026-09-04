@@ -15,10 +15,9 @@ describe('registerAccount', () => {
         const signIn = makeSignIn(provider);
 
         await registerAccount(ADRESSE, MOT_DE_PASSE);
+        const session = await signIn(ADRESSE, MOT_DE_PASSE);
 
-        await expect(signIn(ADRESSE, MOT_DE_PASSE)).resolves.toEqual(
-            expect.objectContaining({ account: expect.objectContaining({ email: ADRESSE }) }),
-        );
+        expect(session.account.email).toBe(ADRESSE);
     });
 
     // Le critere central de US-11 : la creation de compte ne doit pas permettre

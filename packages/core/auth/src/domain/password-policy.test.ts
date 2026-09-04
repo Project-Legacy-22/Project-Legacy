@@ -43,8 +43,7 @@ describe('checkedPassword', () => {
     it('ne renvoie pas le mot de passe soumis dans le message d erreur', () => {
         const soumis = 'zzzmotdepassetapezzz';
 
-        expect(() => checkedPassword(soumis)).toThrow(
-            expect.objectContaining({ message: expect.not.stringContaining(soumis) as string }),
-        );
+        expect(() => checkedPassword(soumis)).toThrow(WeakPassword);
+        expect(() => checkedPassword(soumis)).not.toThrow(soumis);
     });
 });

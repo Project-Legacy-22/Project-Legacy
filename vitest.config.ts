@@ -71,6 +71,11 @@ export default defineConfig({
                 // PostgREST endpoint. Its round trip is covered by the
                 // integration suite (EN-25), like every outbound adapter.
                 'packages/infra/src/supabase-item-repository.ts',
+                // Same reason for the authentication adapter: it translates
+                // port calls into GoTrue calls and cannot be exercised without
+                // a running Supabase Auth. Its behaviour was verified against
+                // the local stack and belongs to the integration suite (EN-25).
+                'packages/infra/src/supabase-identity-provider.ts',
                 // Front composition root: it mounts the app and nothing else,
                 // exactly like the API entry point above.
                 'apps/web/src/main.tsx',

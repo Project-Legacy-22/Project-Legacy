@@ -29,9 +29,8 @@ describe('emailAddress', () => {
     it('ne renvoie pas l adresse soumise dans le message d erreur', () => {
         const soumise = 'zzz-adresse-tapee-zzz';
 
-        expect(() => emailAddress(soumise)).toThrow(
-            expect.objectContaining({ message: expect.not.stringContaining(soumise) as string }),
-        );
+        expect(() => emailAddress(soumise)).toThrow(InvalidEmailAddress);
+        expect(() => emailAddress(soumise)).not.toThrow(soumise);
     });
 });
 

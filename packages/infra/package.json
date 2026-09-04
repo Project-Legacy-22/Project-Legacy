@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@legacy/contracts": "*",
+    "@legacy/core-auth": "*",
     "@legacy/core-items": "*",
     "@supabase/supabase-js": "2.105.0",
     "pino": "^10.3.1"
