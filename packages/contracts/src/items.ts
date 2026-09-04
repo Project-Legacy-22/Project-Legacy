@@ -3,9 +3,10 @@ import { z } from 'zod';
 // The shapes accepted at the HTTP boundary. Everything past this point works on
 // values the compiler and the runtime both vouch for.
 //
-// The length bound matches what the column already declares. SQLite does not
-// enforce it, which is exactly the kind of silent divergence a boundary schema
-// is there to catch.
+// The length bound mirrors the items_name_length_chk CHECK constraint in the
+// initial migration and MAX_ITEM_NAME_LENGTH in the item domain. Validating it
+// here too rejects an over-long name with a 400 at the boundary instead of
+// letting it reach the database and come back as a 500.
 export const MAX_ITEM_NAME_LENGTH = 255;
 
 const itemNameSchema = z.string().trim().min(1).max(MAX_ITEM_NAME_LENGTH);

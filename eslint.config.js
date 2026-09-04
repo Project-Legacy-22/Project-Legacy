@@ -15,7 +15,15 @@ const complexity = {
 
 export default tseslint.config(
     {
-        ignores: ['**/dist/**', '**/coverage/**', '**/node_modules/**', 'apps/api/src/static/**'],
+        ignores: [
+            '**/dist/**',
+            '**/coverage/**',
+            '**/node_modules/**',
+            'apps/api/src/static/**',
+            // Generated from the database schema by `npm run db:types`. Its
+            // shape is the CLI's to decide, not ours to lint.
+            'packages/infra/src/database.types.ts',
+        ],
     },
     js.configs.recommended,
     // recommendedTypeChecked, not strictTypeChecked: standards/02-code-style.md
@@ -80,20 +88,6 @@ export default tseslint.config(
         files: ['apps/api/src/http/error-middleware.ts'],
         rules: {
             'max-params': 'off',
-        },
-    },
-    {
-        // Each function wraps one callback-style sqlite3/mysql2 driver call
-        // per repository operation; splitting further would trade one large
-        // function for several tiny ones that are only ever called once.
-        // Tracked as follow-up debt (revisit once the driver calls are
-        // promisified) rather than fixed here: out of EN-06's scope.
-        files: [
-            'packages/infra/src/sqlite-item-repository.ts',
-            'packages/infra/src/mysql-item-repository.ts',
-        ],
-        rules: {
-            'max-lines-per-function': 'off',
         },
     },
     {

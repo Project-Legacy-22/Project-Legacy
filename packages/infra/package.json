@@ -13,9 +13,7 @@
   "dependencies": {
     "@legacy/contracts": "*",
     "@legacy/core-items": "*",
-    "mysql2": "^3.16.1",
-    "pino": "^10.3.1",
-    "sqlite3": "^6.0.1",
-    "wait-port": "^1.1.0"
+    "@supabase/supabase-js": "2.105.0",
+    "pino": "^10.3.1"
   }
 }

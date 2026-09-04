@@ -12,11 +12,15 @@ vers une application Kanban maintenable. Le dépôt utilise TypeScript et des wo
 | `npm test` | tous les tests, Node et front, avec un rapport de couverture unique dans `coverage/` |
 | `npm run dev` | API et serveur Vite en développement |
 | `npm run build` | build de production, front écrit dans `apps/api/dist/static` |
+| `npm run db:start` | pile Supabase locale et application des migrations |
+| `npm run db:reset` | rejoue les migrations depuis une base vide |
+| `npm run db:types` | régénère les types TypeScript du schéma |
 
 ## Prérequis
 
 - Node.js 20.19, ou Node.js 22.12 et versions ultérieures
 - npm avec prise en charge des workspaces
+- Docker, pour la pile Supabase locale utilisée en développement (`npm run db:start`)
 
 ## Organisation
 
@@ -41,20 +45,36 @@ Installer exactement les dépendances du lockfile :
 npm ci
 ```
 
-## Développement
+## Base de données
 
-Démarrer l'API et le serveur Vite avec une base SQLite locale :
+Le schéma résulte de migrations versionnées dans `supabase/migrations/`, jamais d'un
+`CREATE TABLE` au démarrage. Les conventions de nommage et d'en-tête sont dans
+[`supabase/README.md`](supabase/README.md).
 
 ```bash
-SQLITE_DB_LOCATION=./todo.db npm run dev
+npm run db:start     # démarre la pile Supabase locale (Docker) et applique les migrations
+npm run db:reset     # rejoue toutes les migrations depuis une base vide, puis supabase/seed.sql
+npm run db:types     # régénère packages/infra/src/database.types.ts après une migration
+npm run db:lint      # contrôles statiques sur le schéma
+```
+
+## Développement
+
+Copier `.env.example` en `.env` : il contient les valeurs par défaut de la pile Supabase
+locale, identiques sur chaque poste. Puis :
+
+```bash
+npm run db:start
+npm run dev
 ```
 
 - Front avec rechargement à chaud : http://localhost:5173
 - API : http://localhost:3000
+- Studio Supabase : http://localhost:54323
 - Les requêtes `/items` du front sont transmises à l'API par le proxy Vite.
 
-`SQLITE_DB_LOCATION` est nécessaire en local pour éviter le chemin utilisé par l'image de
-production. Le fichier `todo.db` créé par cette commande ne doit pas être versionné.
+L'API refuse de démarrer si `SUPABASE_URL` ou `SUPABASE_SERVICE_ROLE_KEY` manque, en nommant
+la variable absente.
 
 ## Build de production
 
@@ -65,10 +85,10 @@ npm run build
 ```
 
 Vite écrit le bundle optimisé dans `apps/api/dist/static`. L'API Express sert ensuite le
-front et les routes HTTP sur le même port :
+front et les routes HTTP sur le même port. Avec la pile locale démarrée et `.env` en place :
 
 ```bash
-SQLITE_DB_LOCATION=./todo.db npm start
+npm start
 ```
 
 L'application est alors disponible sur http://localhost:3000.
@@ -83,7 +103,8 @@ l'API et le front construit, servis sur le même port : il n'y a rien d'autre à
 docker pull ghcr.io/project-legacy-22/project-legacy:latest
 
 docker run --rm -p 3000:3000 \
-  -e SQLITE_DB_LOCATION=/tmp/todo.db \
+  -e SUPABASE_URL=https://<projet>.supabase.co \
+  -e SUPABASE_SERVICE_ROLE_KEY=<clé service role> \
   ghcr.io/project-legacy-22/project-legacy:latest
 ```
 
@@ -94,16 +115,14 @@ Le registre est privé : `docker login ghcr.io` avec un jeton personnel disposan
 
 | Variable | Rôle | Défaut |
 |---|---|---|
-| `SQLITE_DB_LOCATION` | chemin du fichier SQLite | `/etc/todos/todo.db`, non inscriptible dans l'image : à renseigner |
-| `MYSQL_HOST` | bascule sur MySQL quand elle est définie | aucun, SQLite est utilisé |
-| `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DB` | connexion MySQL | aucun |
+| `SUPABASE_URL` | URL du projet Supabase | aucun, obligatoire |
+| `SUPABASE_SERVICE_ROLE_KEY` | clé service role du projet | aucun, obligatoire |
 | `LOG_LEVEL` | niveau de journalisation | `info` |
 
-Les variantes `*_FILE` de chaque variable MySQL attendent un chemin de fichier plutôt qu'une
-valeur, pour les secrets montés par l'orchestrateur.
-
-> Ces variables décrivent l'état actuel. `EN-09` remplacera SQLite et MySQL par Supabase, et
-> `EN-30` rendra obligatoires celles qui le sont réellement : le tableau évoluera avec elles.
+Les valeurs de développement sont celles de la pile locale, publiées par `npm run db:start`
+et reprises dans `.env.example`. Les valeurs de production viennent du tableau de bord
+Supabase et ne sont jamais versionnées. Le durcissement de la configuration et le scan de
+secrets sont l'objet d'`EN-30`.
 
 L'image tourne sous un utilisateur sans privilège et ne contient ni dépendances de
 développement, ni sources TypeScript, ni fichier d'environnement.
@@ -121,6 +140,10 @@ npm run build
 | `npm run dev` | Démarre l'API et Vite |
 | `npm run dev:api` | Démarre uniquement l'API en mode surveillance |
 | `npm run dev:web` | Démarre uniquement Vite |
+| `npm run db:start` | Démarre la pile Supabase locale et applique les migrations |
+| `npm run db:reset` | Reconstruit la base locale depuis les migrations et `supabase/seed.sql` |
+| `npm run db:types` | Régénère `packages/infra/src/database.types.ts` |
+| `npm run db:lint` | Contrôles statiques sur le schéma |
 | `npm run typecheck` | Vérifie TypeScript et les frontières entre modules |
 | `npm test` | Exécute les tests du front, dont le contrôle axe |
 | `npm run build` | Produit le build complet de production |

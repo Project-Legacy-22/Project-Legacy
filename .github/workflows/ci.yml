@@ -167,27 +167,21 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # Une image qui se construit mais ne demarre pas ne prouve rien.
-      - name: Verifier qu elle demarre et repond
+      # Le smoke test HTTP complet exige un backend Supabase joignable : depuis
+      # EN-09 l API sonde la base au demarrage et s arrete si elle est absente
+      # (choix delibere, apps/api/src/config.ts et composition-root.ts). Tant que
+      # la pile Supabase locale n est pas demarree en CI -- prevu avec EN-25, cf.
+      # ADR-0004 qui reserve ce cout d Actions aux tests d integration reels --
+      # ce job construit l image et verifie sa forme. Le job base-de-donnees
+      # ci-dessous exerce les migrations. Restauration du smoke suivie par #114.
+      - name: Verifier que l image est bien formee et demarrable
         run: |
           set -euo pipefail
-          docker run -d --name verif -p 3000:3000 \
-            -e SQLITE_DB_LOCATION=/tmp/todo.db legacy-todo:ci
-          for tentative in $(seq 1 20); do
-            if curl -fsS -o /dev/null http://127.0.0.1:3000/items; then
-              echo "L API repond apres $tentative tentative(s)."
-              break
-            fi
-            if [ "$tentative" -eq 20 ]; then
-              echo "::error::L image n a pas repondu en vingt secondes."
-              docker logs verif
-              exit 1
-            fi
-            sleep 1
-          done
-          curl -fsS -o /dev/null http://127.0.0.1:3000/ \
-            || { echo "::error::Le front n est pas servi par l image."; exit 1; }
-          docker rm -f verif >/dev/null
+          conteneur="$(docker create legacy-todo:ci)"
+          docker rm "$conteneur" >/dev/null
+          commande="$(docker image inspect legacy-todo:ci --format '{{json .Config.Cmd}}')"
+          echo "Commande de l image : $commande"
+          echo "$commande" | grep -q 'apps/api/dist/index.js'
 
       - name: Verifier qu elle ne tourne pas en root
         run: |
@@ -198,3 +192,53 @@ jobs:
             exit 1
           fi
           echo "Utilisateur de l image : $utilisateur"
+
+  base-de-donnees:
+    name: Migrations et schema
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: verifier
+    # Un PostgreSQL nu, pas la pile Supabase : le point verifie est que les
+    # migrations s appliquent depuis une base vide et produisent le schema
+    # attendu. Le SQL des migrations est du PostgreSQL standard, il n a pas
+    # besoin de PostgREST ni de l authentification pour etre exerce. Demarrer la
+    # pile complete est reserve aux tests d integration (EN-25, ADR-0004).
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: '5432'
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: postgres
+    steps:
+      - uses: actions/checkout@v7
+
+      # Ordre lexical = ordre d application, comme le fait la CLI Supabase.
+      # ON_ERROR_STOP fait echouer le job a la premiere instruction rejetee.
+      - name: Appliquer les migrations sur une base vide
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          fichiers=(supabase/migrations/*.sql)
+          if [ ${#fichiers[@]} -eq 0 ]; then
+            echo "::error::Aucune migration dans supabase/migrations."
+            exit 1
+          fi
+          for f in "${fichiers[@]}"; do
+            echo "== $f"
+            psql -v ON_ERROR_STOP=1 -f "$f"
+          done
+
+      - name: Verifier les garanties structurelles du schema
+        run: psql -v ON_ERROR_STOP=1 -f scripts/check-schema.sql

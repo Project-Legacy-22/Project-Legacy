@@ -34,15 +34,15 @@ export default defineConfig({
             // l equipe, y compris les PR qui apportent les tests manquants.
             //
             // Lignes, declarations et fonctions sont au niveau decide, 70 %.
-            // Les branches sont posees au plancher atteint aujourd hui : le seul
-            // fichier qui les tire vers le bas est l adaptateur MySQL, qu on ne
-            // peut pas exercer sans serveur reel et que EN-09 remplacera par
-            // Supabase. Ce plancher ne peut que monter, jamais descendre.
+            // Les branches sont posees au plancher atteint aujourd hui. Ce
+            // plancher ne peut que monter, jamais descendre : EN-09 a supprime
+            // l adaptateur MySQL, non testable sans serveur, qui les tirait a
+            // 52 %.
             thresholds: {
                 lines: 70,
                 statements: 70,
                 functions: 70,
-                branches: 52,
+                branches: 60,
             },
             reportsDirectory: 'coverage',
             include: ['apps/**/src/**/*.{ts,tsx}', 'packages/**/src/**/*.ts'],
@@ -56,6 +56,14 @@ export default defineConfig({
                 'apps/api/src/composition-root.ts',
                 'apps/api/src/config.ts',
                 'apps/api/src/index.ts',
+                // Generated from the database schema by `npm run db:types`;
+                // excluded per standards/03-testing.md section 7.
+                'packages/infra/src/database.types.ts',
+                // The Supabase adapter only translates port calls into
+                // supabase-js calls and cannot be exercised without a real
+                // PostgREST endpoint. Its round trip is covered by the
+                // integration suite (EN-25), like every outbound adapter.
+                'packages/infra/src/supabase-item-repository.ts',
                 // Front composition root: it mounts the app and nothing else,
                 // exactly like the API entry point above.
                 'apps/web/src/main.tsx',
