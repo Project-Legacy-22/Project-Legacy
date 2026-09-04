@@ -3,6 +3,11 @@ export type ItemsLoadState =
     | { status: 'ready' }
     | { status: 'error'; message: string };
 
+export type ItemsPaginationState =
+    | { status: 'idle'; announcement: string }
+    | { status: 'loading' }
+    | { status: 'error'; message: string };
+
 export type ItemActionFeedback =
     | { status: 'idle' }
     | { status: 'success'; message: string }

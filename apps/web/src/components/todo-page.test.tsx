@@ -20,9 +20,12 @@ function pageProps(overrides: Partial<TodoPageProps> = {}): TodoPageProps {
         feedback: { status: 'idle' },
         isAdding: false,
         pendingItemIds: new Set(),
+        hasNextPage: true,
+        paginationState: { status: 'idle', announcement: '' },
         onAdd: vi.fn(async (): Promise<AddItemResult> => ({ status: 'success' })),
         onToggle: vi.fn(async () => undefined),
         onRemove: vi.fn(async () => true),
+        onLoadMore: vi.fn(),
         onRetry: vi.fn(),
         ...overrides,
     };

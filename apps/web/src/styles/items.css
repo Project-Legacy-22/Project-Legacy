@@ -65,6 +65,21 @@
     gap: 8px;
 }
 
+.items-pagination {
+    display: grid;
+    justify-items: center;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.pagination-error {
+    margin: 0;
+    color: #8a1c16;
+    font-weight: 700;
+    line-height: 1.45;
+    text-align: center;
+}
+
 @media (max-width: 620px) {
     .item-actions {
         width: 100%;
