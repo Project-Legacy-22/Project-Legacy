@@ -57,9 +57,10 @@ describe('App item pagination', () => {
         await testRoot.render(<App api={createApi(listItems)} auth={auth} />);
 
         const loadMore = getElement<HTMLButtonElement>('.items-pagination button');
+        loadMore.focus();
         await click(loadMore);
 
-        expect(loadMore.disabled).toBe(true);
+        expect(loadMore.getAttribute('aria-disabled')).toBe('true');
         expect(listItems.mock.calls[1]?.[0].cursor).toBe('next page');
 
         await act(async () => {
@@ -76,8 +77,9 @@ describe('App item pagination', () => {
         expect(document.querySelectorAll('.todo-item')).toHaveLength(2);
         expect(document.querySelector('.pagination-error')).toBeNull();
         expect(listItems).toHaveBeenCalledTimes(3);
-        expect(loadMore.disabled).toBe(true);
+        expect(loadMore.getAttribute('aria-disabled')).toBe('true');
         expect(loadMore.textContent).toBe(labels.allItemsLoaded);
+        expect(document.activeElement).toBe(loadMore);
         expect(getElement<HTMLElement>('.pagination-status').textContent).toBe(
             labels.itemsLoaded(1),
         );

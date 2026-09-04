@@ -21,6 +21,7 @@ function statusMessage(state: ItemsPaginationState): string {
 export function ItemsPagination({ hasNextPage, state, onLoadMore }: ItemsPaginationProps) {
     const hasLoadedPage = state.status === 'idle' && state.announcement !== '';
     const showButton = hasNextPage || hasLoadedPage || state.status !== 'idle';
+    const isUnavailable = state.status === 'loading' || !hasNextPage;
 
     return (
         <div className="items-pagination">
@@ -37,8 +38,8 @@ export function ItemsPagination({ hasNextPage, state, onLoadMore }: ItemsPaginat
                     aria-describedby={
                         state.status === 'error' ? 'items-pagination-error' : undefined
                     }
-                    disabled={state.status === 'loading' || !hasNextPage}
-                    onClick={onLoadMore}
+                    aria-disabled={isUnavailable}
+                    onClick={isUnavailable ? undefined : onLoadMore}
                 >
                     {buttonLabel(state, hasNextPage)}
                 </button>

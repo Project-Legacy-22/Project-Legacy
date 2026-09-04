@@ -80,6 +80,17 @@
     text-align: center;
 }
 
+.items-pagination .button[aria-disabled='true'] {
+    cursor: not-allowed;
+    opacity: 0.62;
+    filter: none;
+}
+
+.items-pagination .button[aria-disabled='true']:hover {
+    border-color: #47736d;
+    background: #ffffff;
+}
+
 @media (max-width: 620px) {
     .item-actions {
         width: 100%;
