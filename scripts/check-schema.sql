@@ -127,5 +127,43 @@ begin
     raise exception 'row-level security disabled on: %', offending;
   end if;
 
+  -- 10. Row-level security without a policy denies everything, which is safe
+  --     and proves nothing. US-11 requires the ownership policies to exist, so
+  --     their absence must fail the job rather than pass quietly.
+  select string_agg(rel.relname, ', ')
+    into offending
+  from pg_class rel
+  join pg_namespace n on n.oid = rel.relnamespace
+  where n.nspname = 'public' and rel.relkind = 'r'
+    and rel.relname in ('users', 'items')
+    and not exists (
+      select 1 from pg_policies p
+      where p.schemaname = 'public' and p.tablename = rel.relname
+    );
+  if offending is not null then
+    raise exception 'row-level security enabled without any policy on: %', offending;
+  end if;
+
+  -- 11. items carries a policy for each of the four commands: a table readable
+  --     but not writable by its owner would look protected and be unusable.
+  select string_agg(c.cmd, ', ')
+    into offending
+  from (values ('SELECT'), ('INSERT'), ('UPDATE'), ('DELETE')) as c(cmd)
+  where not exists (
+    select 1 from pg_policies p
+    where p.schemaname = 'public' and p.tablename = 'items' and p.cmd = c.cmd
+  );
+  if offending is not null then
+    raise exception 'items has no policy for: %', offending;
+  end if;
+
+  -- 12. Every account created by the provider gets its application row, without
+  --     which items.user_id cannot reference the account a session designates.
+  if not exists (
+    select 1 from pg_trigger where tgname = 'on_auth_user_changed'
+  ) then
+    raise exception 'auth.users must be mirrored into public.users by a trigger';
+  end if;
+
   raise notice 'schema assertions passed';
 end $$;

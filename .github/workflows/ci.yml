@@ -287,6 +287,31 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Depuis US-11 les migrations dependent du schema auth de Supabase : le
+      # miroir de auth.users et les politiques qui appellent auth.uid()
+      # (ADR-0008). Un PostgreSQL nu ne l a pas. On pose ici le strict minimum
+      # dont les migrations ont besoin, pas une imitation de GoTrue : le
+      # comportement du fournisseur n est pas exerce dans ce job. Le jour ou ce
+      # fac-simile ne suffit plus, c est que le job doit demarrer la pile
+      # Supabase, ce que l ADR-0004 reserve aux tests d integration (EN-25).
+      - name: Poser le schema auth minimal attendu par les migrations
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          create schema if not exists auth;
+          create table if not exists auth.users (id uuid primary key, email text);
+          create or replace function auth.uid() returns uuid
+          language sql stable
+          as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+          do $$
+          begin
+            if not exists (select from pg_roles where rolname = 'authenticated') then
+              create role authenticated;
+            end if;
+          end
+          $$;
+          SQL
+
       # Ordre lexical = ordre d application, comme le fait la CLI Supabase.
       # ON_ERROR_STOP fait echouer le job a la premiere instruction rejetee.
       - name: Appliquer les migrations sur une base vide
