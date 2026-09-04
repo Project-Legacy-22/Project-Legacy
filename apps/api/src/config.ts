@@ -3,23 +3,34 @@ import path from 'node:path';
 import { z } from 'zod';
 
 // The only module allowed to read process.env. Everything else receives typed
-// values, so no part of the code has to guess whether a variable was set.
+// values, so no part of the code has to guess whether a variable was set, and
+// a reader looking for what the application expects has one file to open.
 //
-// The persistence target is a single Supabase project reached over HTTPS. There
-// is no driver to choose any more: the connection is fully described by a URL
-// and a service-role key. A full configuration module with an example file and
-// secret scanning is EN-30; this is the minimum EN-09 needs.
+// The persistence target is a single Supabase project reached over HTTPS. The
+// connection is fully described by a URL and a service-role key.
+
+// The levels pino accepts. Enumerating them rather than taking a free string
+// makes a typo fail at startup, naming the variable, instead of reaching pino
+// and configuring a logger nobody asked for.
+const LOG_LEVELS = ['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'] as const;
 
 const EnvSchema = z.object({
     SUPABASE_URL: z.string().url(),
     SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+    // Optional: absent, it is `info`. An optional variable is declared here
+    // like every other one, otherwise its default ends up scattered across the
+    // code that consumes it and the example file stops being the reference.
+    LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
 });
+
+export type LogLevel = (typeof LOG_LEVELS)[number];
 
 export interface Config {
     port: number;
     staticDir: string;
     supabaseUrl: string;
     supabaseServiceRoleKey: string;
+    logLevel: LogLevel;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -40,5 +51,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
         staticDir: path.join(import.meta.dirname, 'static'),
         supabaseUrl: parsed.data.SUPABASE_URL,
         supabaseServiceRoleKey: parsed.data.SUPABASE_SERVICE_ROLE_KEY,
+        logLevel: parsed.data.LOG_LEVEL,
     };
 }
