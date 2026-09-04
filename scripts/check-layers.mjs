@@ -50,7 +50,11 @@ const RULES = [
     {
         name: 'infra knows contracts and core ports, never an application layer',
         match: /^packages\/infra\//,
-        bare: [/^@legacy\/(contracts|core-items|core-auth)$/, /^node:/, /^(@supabase\/supabase-js|pino)$/],
+        bare: [
+            /^@legacy\/(contracts|core-items|core-auth)$/,
+            /^node:/,
+            /^(@supabase\/supabase-js|pino|@redis\/client)$/,
+        ],
         local: /^\.\.?\//,
     },
     {
