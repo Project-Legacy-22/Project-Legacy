@@ -1,12 +1,22 @@
-import { ItemDto, ItemPageDto, ProblemDetails } from '@legacy/contracts';
+import {
+    DEFAULT_ITEM_PAGE_SIZE,
+    ItemDto,
+    ItemPageDto,
+    ProblemDetails,
+} from '@legacy/contracts';
 import type { CreateItemBody, UpdateItemBody } from '@legacy/contracts';
 
 import { labels } from '../labels';
 
-export type { ItemDto } from '@legacy/contracts';
+export type { ItemDto, ItemPageDto } from '@legacy/contracts';
+
+export interface ListItemsRequest {
+    signal: AbortSignal;
+    cursor?: string;
+}
 
 export interface ItemsApi {
-    listItems: (signal: AbortSignal) => Promise<readonly ItemDto[]>;
+    listItems: (request: ListItemsRequest) => Promise<ItemPageDto>;
     createItem: (body: CreateItemBody) => Promise<ItemDto>;
     updateItem: (id: string, body: UpdateItemBody) => Promise<ItemDto>;
     deleteItem: (id: string) => Promise<void>;
@@ -56,15 +66,23 @@ const jsonHeaders = {
     'Content-Type': 'application/json',
 };
 
+function itemsPath(cursor?: string): string {
+    const query = new URLSearchParams({ limit: String(DEFAULT_ITEM_PAGE_SIZE) });
+    if (cursor !== undefined) query.set('cursor', cursor);
+    return `/items?${query.toString()}`;
+}
+
 export const itemsApi: ItemsApi = {
-    listItems(signal) {
-        return requestJson('/items', { headers: { Accept: 'application/json' }, signal }, value => {
-            const result = ItemPageDto.safeParse(value);
-            if (!result.success) throw new ApiError(502, labels.invalidItemList);
-            // The server bounds the collection and says where the next page
-            // starts. Asking for it belongs to the list screen (#132).
-            return result.data.items;
-        });
+    listItems({ signal, cursor }) {
+        return requestJson(
+            itemsPath(cursor),
+            { headers: { Accept: 'application/json' }, signal },
+            value => {
+                const result = ItemPageDto.safeParse(value);
+                if (!result.success) throw new ApiError(502, labels.invalidItemList);
+                return result.data;
+            },
+        );
     },
 
     createItem(body) {

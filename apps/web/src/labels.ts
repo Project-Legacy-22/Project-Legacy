@@ -59,6 +59,10 @@ export const labels = {
     currentWorkKicker: 'Current work',
     itemsTitle: 'Items',
     loadingItems: 'Loading items…',
+    loadMoreItems: 'Load more items',
+    loadingMoreItems: 'Loading more items…',
+    retryLoadingMore: 'Try loading more again',
+    allItemsLoaded: 'All items loaded',
     retry: 'Try again',
     emptyItems: 'No items yet. Add one above.',
     unnamedItem: 'Unnamed item',
@@ -73,6 +77,7 @@ export const labels = {
     invalidItemList: 'The server returned an invalid item list.',
     unreadableResponse: 'The server returned an unreadable response.',
     loadItemsFailed: 'Unable to load the item list.',
+    loadMoreItemsFailed: 'Unable to load more items.',
     addItemFailed: 'Unable to add the item.',
     updateItemFailed: 'Unable to update the item.',
     removeItemFailed: 'Unable to remove the item.',
@@ -87,6 +92,9 @@ export const labels = {
     },
     itemCount(count: number): string {
         return `${count} ${count === 1 ? 'item' : 'items'}`;
+    },
+    itemsLoaded(count: number): string {
+        return `${count} more ${count === 1 ? 'item' : 'items'} loaded.`;
     },
     completeItem(name: string): string {
         return `Complete: ${name}`;

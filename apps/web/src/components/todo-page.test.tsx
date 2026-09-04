@@ -20,9 +20,12 @@ function pageProps(overrides: Partial<TodoPageProps> = {}): TodoPageProps {
         feedback: { status: 'idle' },
         isAdding: false,
         pendingItemIds: new Set(),
+        hasNextPage: true,
+        paginationState: { status: 'idle', announcement: '' },
         onAdd: vi.fn(async (): Promise<AddItemResult> => ({ status: 'success' })),
         onToggle: vi.fn(async () => undefined),
         onRemove: vi.fn(async () => true),
+        onLoadMore: vi.fn(),
         onRetry: vi.fn(),
         ...overrides,
     };
@@ -81,6 +84,13 @@ describe('TodoPage accessibility', () => {
         expect(getElement<HTMLInputElement>('#item-name').disabled).toBe(true);
         expect(getElement<HTMLButtonElement>('.button-primary').disabled).toBe(true);
         expect(document.querySelector('[role="status"]')?.textContent).toBe(labels.loadingItems);
+    });
+
+    it('shows an explicit empty state when the list is ready', async () => {
+        await renderPage({ items: [], loadState: { status: 'ready' }, hasNextPage: false });
+
+        expect(document.querySelector('.empty-message')?.textContent).toBe(labels.emptyItems);
+        expect(document.querySelector('.todo-list')).toBeNull();
     });
 
     it('moves focus to the list heading before retry removes its button', async () => {

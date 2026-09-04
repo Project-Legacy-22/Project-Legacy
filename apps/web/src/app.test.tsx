@@ -2,7 +2,7 @@ import { act } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from './app';
-import type { ItemDto, ItemsApi } from './api/items-api';
+import type { ItemDto, ItemPageDto, ItemsApi } from './api/items-api';
 import { ApiError } from './api/items-api';
 import type { AccountDto, AuthApi } from './api/auth-api';
 import {
@@ -45,12 +45,16 @@ function deferred<T>(): Deferred<T> {
 
 function createApi(overrides: Partial<ItemsApi> = {}): ItemsApi {
     return {
-        listItems: vi.fn(async () => []),
+        listItems: vi.fn(async () => itemPage()),
         createItem: vi.fn(async () => firstItem),
         updateItem: vi.fn(async () => firstItem),
         deleteItem: vi.fn(async () => undefined),
         ...overrides,
     };
+}
+
+function itemPage(items: readonly ItemDto[] = [], nextCursor: string | null = null): ItemPageDto {
+    return { items: [...items], nextCursor };
 }
 
 const ACCOUNT: AccountDto = { id: '5b1f0f4a-9d3f-4d0e-9e2a-6c0f5a3b1d77', email: 'ada@example.com' };
@@ -86,7 +90,7 @@ afterEach(async () => {
 
 describe('App item workflow', () => {
     it('keeps mutations disabled until the initial query is complete', async () => {
-        const listRequest = deferred<readonly ItemDto[]>();
+        const listRequest = deferred<ItemPageDto>();
         const createItem = vi.fn(async () => firstItem);
         const api = createApi({ listItems: vi.fn(() => listRequest.promise), createItem });
 
@@ -97,7 +101,7 @@ describe('App item workflow', () => {
         expect(createItem).not.toHaveBeenCalled();
 
         await act(async () => {
-            listRequest.resolve([]);
+            listRequest.resolve(itemPage());
             await listRequest.promise;
         });
 
@@ -105,7 +109,9 @@ describe('App item workflow', () => {
     });
 
     it('moves focus to the next row after a successful removal', async () => {
-        const api = createApi({ listItems: vi.fn(async () => [firstItem, secondItem]) });
+        const api = createApi({
+            listItems: vi.fn(async () => itemPage([firstItem, secondItem])),
+        });
         await testRoot.render(<App api={api} auth={createAuth()} />);
 
         const firstRemove = getElement<HTMLButtonElement>('.button-danger');
@@ -121,7 +127,7 @@ describe('App item workflow', () => {
 
 describe('App authentication', () => {
     it('ecarte le visiteur sans session en montrant le formulaire, sans appeler l API des items', async () => {
-        const listItems = vi.fn(async () => []);
+        const listItems = vi.fn(async () => itemPage());
         const api = createApi({ listItems });
         const auth = createAuth({ currentAccount: vi.fn(async () => null) });
 

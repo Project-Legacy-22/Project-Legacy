@@ -22,6 +22,21 @@ afterEach(async () => {
 });
 
 describe('AddItemForm', () => {
+    it('associates an empty-name error with the input', async () => {
+        const onAdd = vi.fn(async () => ({ status: 'success' as const }));
+        await testRoot.render(<AddItemForm isAdding={false} isDisabled={false} onAdd={onAdd} />);
+
+        const input = getElement<HTMLInputElement>('#item-name');
+        await setInputValue(input, '   ');
+        await submitForm(getElement('form'));
+
+        expect(onAdd).not.toHaveBeenCalled();
+        expect(input.getAttribute('aria-invalid')).toBe('true');
+        expect(input.getAttribute('aria-describedby')).toContain('item-name-error');
+        expect(document.querySelector('[role="alert"]')?.textContent).toBe(labels.itemNameRequired);
+        expect(document.activeElement).toBe(input);
+    });
+
     it('associates an overlong-name error with the input', async () => {
         const onAdd = vi.fn(async () => ({ status: 'success' as const }));
         await testRoot.render(<AddItemForm isAdding={false} isDisabled={false} onAdd={onAdd} />);

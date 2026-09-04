@@ -28,9 +28,12 @@ function SignedInApp({ api, email }: { api: ItemsApi; email: string }) {
                 feedback={state.feedback}
                 isAdding={state.isAdding}
                 pendingItemIds={state.pendingItemIds}
+                hasNextPage={state.hasNextPage}
+                paginationState={state.paginationState}
                 onAdd={state.addItem}
                 onToggle={state.toggleItem}
                 onRemove={state.removeItem}
+                onLoadMore={state.loadMore}
                 onRetry={state.retry}
             />
         </>

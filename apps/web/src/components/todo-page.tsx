@@ -1,6 +1,11 @@
 import type { ItemDto } from '../api/items-api';
 import { labels } from '../labels';
-import type { AddItemResult, ItemActionFeedback, ItemsLoadState } from '../hooks/use-items';
+import type {
+    AddItemResult,
+    ItemActionFeedback,
+    ItemsLoadState,
+    ItemsPaginationState,
+} from '../hooks/use-items';
 import { ActionFeedback } from './action-feedback';
 import { AddItemSection } from './add-item-section';
 import { ItemsSection } from './items-section';
@@ -12,9 +17,12 @@ export interface TodoPageProps {
     feedback: ItemActionFeedback;
     isAdding: boolean;
     pendingItemIds: ReadonlySet<string>;
+    hasNextPage: boolean;
+    paginationState: ItemsPaginationState;
     onAdd: (name: string) => Promise<AddItemResult>;
     onToggle: (item: ItemDto) => Promise<void>;
     onRemove: (item: ItemDto) => Promise<boolean>;
+    onLoadMore: () => void;
     onRetry: () => void;
 }
 
@@ -37,8 +45,11 @@ export function TodoPage(props: TodoPageProps) {
                     items={props.items}
                     loadState={props.loadState}
                     pendingItemIds={props.pendingItemIds}
+                    hasNextPage={props.hasNextPage}
+                    paginationState={props.paginationState}
                     onToggle={props.onToggle}
                     onRemove={props.onRemove}
+                    onLoadMore={props.onLoadMore}
                     onRetry={props.onRetry}
                 />
                 <ActionFeedback feedback={props.feedback} />
