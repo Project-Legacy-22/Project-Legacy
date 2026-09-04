@@ -198,3 +198,77 @@ describe('App authentication', () => {
         expect(error.getAttribute('role')).toBe('alert');
     });
 });
+
+describe('App session states', () => {
+    it('attend la reponse du serveur au lieu de montrer le formulaire par defaut', async () => {
+        const pending = deferred<AccountDto | null>();
+        const auth = createAuth({ currentAccount: vi.fn(() => pending.promise) });
+
+        await testRoot.render(<App api={createApi()} auth={auth} />);
+
+        // La session est portee par un cookie httpOnly : la page ne peut pas la
+        // lire. Montrer le formulaire pendant la verification le ferait
+        // clignoter a chaque rechargement pour quelqu un de deja connecte.
+        expect(document.querySelector('form.auth-form')).toBeNull();
+        expect(getElement<HTMLElement>('[role="status"]').textContent).toBe('Checking your session…');
+
+        await act(async () => {
+            pending.resolve(null);
+            await pending.promise;
+        });
+
+        expect(document.querySelector('form.auth-form')).not.toBeNull();
+    });
+
+    it('annonce l echec de la verification sans faire croire a une deconnexion', async () => {
+        const auth = createAuth({
+            currentAccount: vi.fn(async () => {
+                throw new ApiError(503, 'Unable to check the session.');
+            }),
+        });
+
+        await testRoot.render(<App api={createApi()} auth={auth} />);
+
+        expect(getElement<HTMLElement>('[role="alert"]').textContent).toBe(
+            'Unable to check the session.',
+        );
+        expect(document.querySelector('form.auth-form')).toBeNull();
+    });
+
+    it('confirme une inscription sans reveler si l adresse existait deja', async () => {
+        const register = vi.fn(async () => undefined);
+        const auth = createAuth({ currentAccount: vi.fn(async () => null), register });
+        await testRoot.render(<App api={createApi()} auth={auth} />);
+
+        await click(getElement<HTMLButtonElement>('.button-quiet'));
+        await setInputValue(getElement<HTMLInputElement>('input[type="email"]'), 'ada@example.com');
+        await setInputValue(
+            getElement<HTMLInputElement>('input[type="password"]'),
+            'un-mot-de-passe-valide',
+        );
+        await submitForm(getElement<HTMLFormElement>('form.auth-form'));
+        await flushTimers();
+
+        expect(register).toHaveBeenCalledOnce();
+        const message = getElement<HTMLElement>('.form-success').textContent ?? '';
+        expect(message).toContain('If that address was available');
+        // Le mot de passe est vide : l etape suivante est la connexion.
+        expect(getElement<HTMLInputElement>('input[type="password"]').value).toBe('');
+    });
+
+    it('refuse un mot de passe trop court sans appeler le serveur', async () => {
+        const register = vi.fn(async () => undefined);
+        const auth = createAuth({ currentAccount: vi.fn(async () => null), register });
+        await testRoot.render(<App api={createApi()} auth={auth} />);
+
+        await click(getElement<HTMLButtonElement>('.button-quiet'));
+        await setInputValue(getElement<HTMLInputElement>('input[type="email"]'), 'ada@example.com');
+        await setInputValue(getElement<HTMLInputElement>('input[type="password"]'), 'court');
+        await submitForm(getElement<HTMLFormElement>('form.auth-form'));
+
+        expect(register).not.toHaveBeenCalled();
+        expect(getElement<HTMLInputElement>('input[type="password"]').getAttribute('aria-invalid')).toBe(
+            'true',
+        );
+    });
+});
