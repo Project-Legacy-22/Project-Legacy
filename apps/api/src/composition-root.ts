@@ -30,7 +30,7 @@ export function compose(config: Config): Application {
         url: config.supabaseUrl,
         serviceRoleKey: config.supabaseServiceRoleKey,
     });
-    const logger = createLogger();
+    const logger = createLogger(config.logLevel);
 
     return {
         logger,

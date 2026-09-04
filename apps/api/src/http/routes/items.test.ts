@@ -104,6 +104,9 @@ const config: Config = {
     // the type.
     supabaseUrl: 'http://127.0.0.1:54321',
     supabaseServiceRoleKey: 'test-service-role-key',
+    // Le journal de ce test est capture par un logger d essai ; le niveau ne
+    // sert qu a satisfaire le type.
+    logLevel: 'info',
 };
 
 describe('items API', () => {

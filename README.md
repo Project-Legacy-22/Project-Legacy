@@ -65,7 +65,10 @@ une erreur de connexion.
 
 ## Variables d'environnement
 
-`.env.example` documente les variables attendues et leurs valeurs pour la pile locale.
+`.env.example` est la référence : il liste toutes les variables lues, sans aucune valeur
+réelle. `apps/api/src/config.ts` est le seul module qui lit l'environnement ; tout le reste
+reçoit des valeurs typées. Ajouter une variable ailleurs créerait une seconde source de
+configuration, que le fichier d'exemple cesserait de décrire.
 
 | Variable | Rôle |
 |---|---|
@@ -73,7 +76,13 @@ une erreur de connexion.
 | `SUPABASE_SERVICE_ROLE_KEY` | clé de service utilisée par l'API. Requise |
 | `REDIS_URL` | broker déclaré dans `compose.yaml` |
 | `REDIS_PORT` | port hôte du broker, `6379` par défaut |
-| `LOG_LEVEL` | niveau pino, `info` par défaut |
+| `LOG_LEVEL` | niveau pino parmi `fatal`, `error`, `warn`, `info`, `debug`, `trace`, `silent`. `info` par défaut ; une valeur inconnue empêche le démarrage |
+
+Une variable requise absente arrête l'API au démarrage avec un message qui la nomme, plutôt
+que de la laisser échouer à la première requête.
+
+Les valeurs de la pile locale s'obtiennent avec `npm run db:start`, ou à tout moment avec
+`supabase status -o env`. `npm run up` les lit et les transmet lui-même.
 
 Un poste qui fait déjà tourner un Redis sur le port par défaut ne peut pas le publier une
 seconde fois. Dans ce cas, choisir un autre port sans rien modifier dans le dépôt :
@@ -82,10 +91,22 @@ seconde fois. Dans ce cas, choisir un autre port sans rien modifier dans le dép
 REDIS_PORT=6380 npm run up
 ```
 
-Les valeurs de la pile locale sont identiques sur chaque poste et ne sont donc pas des
-secrets. Celles de production viennent du tableau de bord Supabase et ne sont jamais
-versionnées. Copier `.env.example` en `.env` n'est utile que pour lancer `npm run dev` ou
-`npm start` seuls, sans passer par `npm run up`.
+Copier `.env.example` en `.env` n'est utile que pour lancer `npm run dev` ou `npm start`
+seuls, sans passer par `npm run up`.
+
+### Aucun secret dans le dépôt
+
+Les valeurs de production viennent du tableau de bord Supabase et ne sont jamais versionnées.
+`.env` et ses variantes sont exclus par le `.gitignore`, à l'exception de `.env.example`.
+
+La CI exécute gitleaks sur le code **et sur l'historique** à chaque pull request : un secret
+retiré par un commit ultérieur reste lisible dans les commits précédents, donc scanner le
+seul état courant laisserait passer le cas qui compte. Le job échoue si une correspondance
+est trouvée, sans recopier la valeur dans le journal d'exécution.
+
+Les exceptions sont dans `.gitleaks.toml`, chacune avec sa justification. Y ajouter une
+entrée n'est pas une façon de faire passer un scan : si la valeur est un vrai secret, elle
+doit être révoquée, pas mise sur liste blanche.
 
 ## Base de données
 

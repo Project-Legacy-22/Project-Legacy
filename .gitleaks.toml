@@ -1,0 +1,32 @@
+# Configuration du scanner de secrets execute par la CI (job "Secrets").
+#
+# Les regles par defaut de gitleaks sont conservees telles quelles : elles
+# couvrent les fournisseurs courants et sont tenues a jour en amont. On n ajoute
+# ici que ce que ce depot doit dire en propre.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = """
+Cles de demonstration de la pile Supabase locale.
+
+Supabase publie ces jetons dans sa documentation : ils sont identiques sur
+toutes les installations locales, signes par un secret lui aussi public, et ne
+donnent acces qu a une base qui tourne sur la machine du developpeur. Ce ne sont
+pas des secrets, et aucun ne peut le devenir : un projet heberge en genere
+d autres.
+
+Ils ont figure dans .env.example jusqu a EN-30, qui les a remplaces par un
+champ vide. Ils restent donc dans l historique, que l on ne reecrit pas sur des
+branches partagees. Sans cette exception, le scan echouerait sur chaque pull
+request a cause de commits deja integres, et l equipe prendrait l habitude
+d ignorer ce job -- c est-a-dire exactement ce qu il doit empecher.
+
+L exception vise la charge utile de ces jetons, pas un chemin de fichier : une
+vraie cle collee dans .env.example serait toujours detectee.
+"""
+regexes = [
+  # Prefixe base64url de {"iss":"supabase-demo","role": ...
+  '''eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6''',
+]
