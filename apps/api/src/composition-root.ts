@@ -36,7 +36,12 @@ export function compose(config: Config): Application {
         logger,
         useCases: {
             listItems: makeListItems(store),
-            addItem: makeAddItem({ repository: store, newId: uuid, ownerId: () => SYSTEM_USER_ID }),
+            addItem: makeAddItem({
+                repository: store,
+                newId: uuid,
+                ownerId: () => SYSTEM_USER_ID,
+                now: () => new Date(),
+            }),
             changeItem: makeChangeItem(store),
             removeItem: makeRemoveItem(store),
         },

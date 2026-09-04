@@ -59,7 +59,12 @@ function inMemoryStore(seed: Item[] = []): Store {
 function useCasesOver(repository: ItemRepository): ItemUseCases {
     return {
         listItems: makeListItems(repository),
-        addItem: makeAddItem({ repository, newId: () => GENERATED_ID, ownerId: () => OWNER_ID }),
+        addItem: makeAddItem({
+            repository,
+            newId: () => GENERATED_ID,
+            ownerId: () => OWNER_ID,
+            now: () => new Date('2026-09-04T10:00:00.000Z'),
+        }),
         changeItem: makeChangeItem(repository),
         removeItem: makeRemoveItem(repository),
     };
