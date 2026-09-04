@@ -76,6 +76,100 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          item_id: string
+          read_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          item_id: string
+          read_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          item_id?: string
+          read_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "processed_events"
+            referencedColumns: ["event_id"]
+          },
+          {
+            foreignKeyName: "notifications_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      outbox: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          occurred_at: string
+          payload: Json
+          published_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          name: string
+          occurred_at: string
+          payload: Json
+          published_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          occurred_at?: string
+          payload?: Json
+          published_at?: string | null
+        }
+        Relationships: []
+      }
+      processed_events: {
+        Row: {
+          event_id: string
+          processed_at: string
+        }
+        Insert: {
+          event_id: string
+          processed_at?: string
+        }
+        Update: {
+          event_id?: string
+          processed_at?: string
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           created_at: string
@@ -102,6 +196,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_item_with_event: {
+        Args: {
+          p_event_id: string
+          p_event_name: string
+          p_item_id: string
+          p_name: string
+          p_occurred_at: string
+          p_payload: Json
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       uuid_generate_v7: { Args: never; Returns: string }
     }
     Enums: {
