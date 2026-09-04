@@ -50,12 +50,18 @@ export default defineConfig({
             exclude: [
                 '**/*.test.{ts,tsx}',
                 '**/test/**',
-                // Composition root and config only wire things together; a
+                // Composition root and entry point only wire things together; a
                 // domain rule tested through them would be an integration
                 // test wearing a unit test's clothes. Excluded per
                 // standards/03-testing.md section 7.
+                //
+                // config.ts is no longer among them. It stopped being wiring
+                // when EN-30 gave it a schema to enforce: it now rejects a
+                // missing variable and an out-of-range log level, which is
+                // behaviour, is covered by config.test.ts, and would go
+                // unmeasured here while SonarCloud still counts its lines as
+                // new code.
                 'apps/api/src/composition-root.ts',
-                'apps/api/src/config.ts',
                 'apps/api/src/index.ts',
                 // Generated from the database schema by `npm run db:types`;
                 // excluded per standards/03-testing.md section 7.
