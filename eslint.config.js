@@ -42,6 +42,7 @@ export default tseslint.config(
                 project: [
                     './packages/contracts/tsconfig.json',
                     './packages/core/items/tsconfig.json',
+                    './packages/core/auth/tsconfig.json',
                     './packages/infra/tsconfig.json',
                     './apps/api/tsconfig.json',
                     // apps/web carries its own project: JSX, DOM libs and the

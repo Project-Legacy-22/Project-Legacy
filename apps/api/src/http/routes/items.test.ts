@@ -1,31 +1,30 @@
-import { createServer as createHttpServer } from 'node:http';
-import type { AddressInfo } from 'node:net';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { Express } from 'express';
+import { makeSignIn } from '@legacy/core-auth';
+import type { IdentityProvider } from '@legacy/core-auth';
 import { makeAddItem, makeChangeItem, makeListItems, makeRemoveItem } from '@legacy/core-items';
 import type { Item, ItemRepository } from '@legacy/core-items';
+import {
+    makeIdentifyCaller,
+    makeRegisterAccount,
+} from '@legacy/core-auth';
+// The reference fake for the identity provider port lives with the port it
+// implements. Copying it here would let the copy drift from the contract it is
+// supposed to stand for.
+import { inMemoryIdentityProvider } from '../../../../../packages/core/auth/test/fakes/in-memory-identity-provider.js';
 
 import { createServer } from '../server.js';
-import type { Config } from '../../config.js';
-import type { ItemUseCases } from '../../composition-root.js';
+import { SESSION_COOKIE } from '../session.js';
+import type { AppUseCases } from '../../composition-root.js';
 import { recordingLogger } from '../../../test/fakes/recording-logger.js';
-import type { RecordingLogger } from '../../../test/fakes/recording-logger.js';
+import { json, listen, testConfig } from '../../../test/http-harness.js';
+import type { Harness } from '../../../test/http-harness.js';
 
 const GENERATED_ID = '33333333-3333-4333-8333-333333333333';
-// The single-user system account items are owned by until US-11. It is an
+// The account every request in this suite is made by. Its identifier is an
 // internal fact: the assertions below check it never reaches a response.
 const OWNER_ID = '00000000-0000-7000-8000-000000000001';
-
-// The routes are exercised over real HTTP rather than by calling a handler with
-// a hand-made req/res pair. Status codes, response shapes and the error
-// middleware's output are the contract clients depend on; calling the handler
-// directly would assert the code's shape instead of that contract.
-
-interface Harness {
-    request: (path: string, init?: RequestInit) => Promise<Response>;
-    close: () => Promise<void>;
-    logger: RecordingLogger;
-}
+const ADRESSE = 'alice@example.com';
+const MOT_DE_PASSE = 'MotDePasse2026';
 
 interface Store {
     items: Map<string, Item>;
@@ -56,33 +55,19 @@ function inMemoryStore(seed: Item[] = []): Store {
     };
 }
 
-function useCasesOver(repository: ItemRepository): ItemUseCases {
+function useCasesOver(repository: ItemRepository, provider: IdentityProvider): AppUseCases {
     return {
-        listItems: makeListItems(repository),
-        addItem: makeAddItem({ repository, newId: () => GENERATED_ID, ownerId: () => OWNER_ID }),
-        changeItem: makeChangeItem(repository),
-        removeItem: makeRemoveItem(repository),
-    };
-}
-
-// Port 0 lets the operating system pick a free port, so a test never collides
-// with a running dev server or with another test.
-async function start(app: Express, logger: RecordingLogger): Promise<Harness> {
-    const server = createHttpServer(app);
-    await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
-    const { port } = server.address() as AddressInfo;
-    const origin = `http://127.0.0.1:${String(port)}`;
-
-    return {
-        logger,
-        request: (path, init) => fetch(`${origin}${path}`, init),
-        close: () =>
-            new Promise<void>((resolve, reject) => {
-                server.close(error => {
-                    if (error) reject(error);
-                    else resolve();
-                });
-            }),
+        items: {
+            listItems: makeListItems(repository),
+            addItem: makeAddItem({ repository, newId: () => GENERATED_ID }),
+            changeItem: makeChangeItem(repository),
+            removeItem: makeRemoveItem(repository),
+        },
+        auth: {
+            registerAccount: makeRegisterAccount(provider),
+            signIn: makeSignIn(provider),
+            identifyCaller: makeIdentifyCaller(provider),
+        },
     };
 }
 
@@ -92,31 +77,26 @@ async function start(app: Express, logger: RecordingLogger): Promise<Harness> {
 const EXISTING_ID = '11111111-1111-4111-8111-111111111111';
 const UNKNOWN_ID = '22222222-2222-4222-8222-222222222222';
 
-function json(method: string, body: unknown): RequestInit {
-    return { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
-}
-
-const config: Config = {
-    port: 0,
-    // No directory is served here: only the API contract is under test.
-    staticDir: import.meta.dirname,
-    // The repository is a fake, so these are never dialled: they only satisfy
-    // the type.
-    supabaseUrl: 'http://127.0.0.1:54321',
-    supabaseServiceRoleKey: 'test-service-role-key',
-    // Le journal de ce test est capture par un logger d essai ; le niveau ne
-    // sert qu a satisfaire le type.
-    logLevel: 'info',
-};
-
 describe('items API', () => {
     let harness: Harness;
     let store: Store;
 
+    // Every request in this suite carries a session: since US-11 the item
+    // routes refuse anything else. The refusal itself is asserted in the
+    // authentication suite, where the repository is unreachable on purpose.
     async function serve(seed: Item[] = []): Promise<void> {
         store = inMemoryStore(seed);
+        const provider = inMemoryIdentityProvider([
+            { id: OWNER_ID, email: ADRESSE, password: MOT_DE_PASSE },
+        ]);
+        const session = await makeSignIn(provider)(ADRESSE, MOT_DE_PASSE);
         const logger = recordingLogger();
-        harness = await start(createServer(config, useCasesOver(store.repository), logger), logger);
+
+        harness = await listen(
+            createServer(testConfig, useCasesOver(store.repository, provider), logger),
+            logger,
+            `${SESSION_COOKIE}=${session.accessToken}`,
+        );
     }
 
     async function reseed(seed: Item[]): Promise<void> {
@@ -163,6 +143,14 @@ describe('items API', () => {
                 completed: false,
             });
             expect(store.items.get(GENERATED_ID)?.name).toBe('Acheter du pain');
+        });
+
+        // Depuis US-11 le proprietaire n est plus un compte fixe : c est celui
+        // que la session designe.
+        it('attribue l item au compte de la session', async () => {
+            await harness.request('/items', json('POST', { name: 'Acheter du pain' }));
+
+            expect(store.items.get(GENERATED_ID)?.ownerId).toBe(OWNER_ID);
         });
 
         it('ne divulgue pas le proprietaire dans la reponse', async () => {

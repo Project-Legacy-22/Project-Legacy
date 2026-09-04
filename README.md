@@ -32,8 +32,9 @@ apps/
 └── web/                 Interface React construite avec Vite
 packages/
 ├── contracts/           Schémas et types partagés aux frontières
+├── core/auth/           Domaine et cas d'usage de l'authentification
 ├── core/items/          Domaine et cas d'usage des éléments
-└── infra/               Adaptateurs de persistance et journalisation
+└── infra/               Adaptateurs de persistance, d'identité et journalisation
 ```
 
 Le front utilise les contrats de `packages/contracts` pour valider les réponses de l'API.
@@ -132,8 +133,43 @@ npm run db:start         # la base et ses migrations
 npm run dev              # l'API et le front, en lisant .env
 ```
 
-L'API refuse de démarrer si `SUPABASE_URL` ou `SUPABASE_SERVICE_ROLE_KEY` manque, en nommant
-la variable absente.
+L'API refuse de démarrer si `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` ou
+`SUPABASE_ANON_KEY` manque, en nommant la variable absente.
+
+## Authentification
+
+Les sessions et les mots de passe sont gérés par Supabase Auth ([ADR-0008](docs/adr/0008-strategie-de-session-supabase-auth.md)).
+L'API expose trois routes :
+
+| Route | Effet |
+|---|---|
+| `POST /auth/register` | Crée un compte. Répond toujours `201`, sans corps ni session |
+| `POST /auth/login` | Ouvre une session et pose le jeton dans un cookie `httpOnly` |
+| `GET /auth/me` | Renvoie le compte de la session en cours, ou `401` |
+
+Toutes les routes `/items` exigent une session valide et attribuent les éléments créés au
+compte de l'appelant.
+
+Deux comportements sont volontaires et ne doivent pas être « corrigés » :
+
+- la création de compte répond de la même façon que l'adresse soit libre ou déjà prise, et
+  n'ouvre jamais de session. Toute différence de statut, de corps ou d'en-tête révélerait
+  quelles adresses ont un compte ;
+- l'échec de connexion ne distingue pas un mot de passe faux d'une adresse inconnue.
+
+La politique de mot de passe est appliquée deux fois, dans le domaine et par la
+configuration du fournisseur : douze caractères mêlant minuscules, majuscules et chiffres,
+bornés à 72 octets, la limite au-delà de laquelle bcrypt tronque en silence. Elle est
+exportée par `packages/contracts` sous le nom `PASSWORD_POLICY`, pour que l'interface puisse
+l'énoncer avant la saisie.
+
+La vérification contre une liste de mots de passe compromis n'existe pas dans la
+configuration locale : c'est un réglage du tableau de bord Supabase, à activer sur le projet
+hébergé.
+
+Les tentatives de création de compte et de connexion partagent une limite de dix par
+tranche de cinq minutes et par adresse d'appel. Les en-têtes de sécurité et la restriction
+CORS relèvent d'`EN-29`.
 
 ## Build de production
 
@@ -164,6 +200,8 @@ docker pull ghcr.io/project-legacy-22/project-legacy:latest
 docker run --rm -p 3000:3000 \
   -e SUPABASE_URL=https://<projet>.supabase.co \
   -e SUPABASE_SERVICE_ROLE_KEY=<clé service role> \
+  -e SUPABASE_ANON_KEY=<clé publique> \
+  -e NODE_ENV=production \
   ghcr.io/project-legacy-22/project-legacy:latest
 ```
 
@@ -175,7 +213,9 @@ Le registre est privé : `docker login ghcr.io` avec un jeton personnel disposan
 | Variable | Rôle | Défaut |
 |---|---|---|
 | `SUPABASE_URL` | URL du projet Supabase | aucun, obligatoire |
-| `SUPABASE_SERVICE_ROLE_KEY` | clé service role du projet | aucun, obligatoire |
+| `SUPABASE_SERVICE_ROLE_KEY` | clé service role du projet, ne quitte jamais le serveur | aucun, obligatoire |
+| `SUPABASE_ANON_KEY` | clé publique, utilisée par l'authentification | aucun, obligatoire |
+| `NODE_ENV` | `production` marque le cookie de session `Secure` | `development` |
 | `LOG_LEVEL` | niveau de journalisation | `info` |
 
 Les valeurs de développement sont celles de la pile locale, publiées par `npm run db:start`

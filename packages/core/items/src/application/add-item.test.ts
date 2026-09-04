@@ -5,17 +5,14 @@ import { InvalidItemName } from '../domain/item.js';
 import { makeAddItem } from './add-item.js';
 
 const OWNER_ID = '00000000-0000-7000-8000-000000000001';
+const OTHER_OWNER_ID = '00000000-0000-7000-8000-000000000002';
 
 describe('addItem', () => {
-    it('persiste un item avec l id et le proprietaire fournis par les generateurs injectes', async () => {
+    it('persiste un item avec l id injecte et le proprietaire fourni', async () => {
         const repository = inMemoryItemRepository();
-        const addItem = makeAddItem({
-            repository,
-            newId: () => 'generated-id',
-            ownerId: () => OWNER_ID,
-        });
+        const addItem = makeAddItem({ repository, newId: () => 'generated-id' });
 
-        const item = await addItem('Buy milk');
+        const item = await addItem('Buy milk', OWNER_ID);
 
         expect(item).toEqual({
             id: 'generated-id',
@@ -26,15 +23,22 @@ describe('addItem', () => {
         expect(await repository.findById('generated-id')).toEqual(item);
     });
 
+    // Le proprietaire vient de l appelant : deux appelants differents ne
+    // produisent pas des items du meme proprietaire.
+    it('attribue l item a l appelant et pas a un compte fixe', async () => {
+        const repository = inMemoryItemRepository();
+        const addItem = makeAddItem({ repository, newId: () => 'generated-id' });
+
+        const item = await addItem('Buy milk', OTHER_OWNER_ID);
+
+        expect(item.ownerId).toBe(OTHER_OWNER_ID);
+    });
+
     it('refuse un titre vide sans toucher au depot', async () => {
         const repository = inMemoryItemRepository();
-        const addItem = makeAddItem({
-            repository,
-            newId: () => 'generated-id',
-            ownerId: () => OWNER_ID,
-        });
+        const addItem = makeAddItem({ repository, newId: () => 'generated-id' });
 
-        await expect(addItem('   ')).rejects.toBeInstanceOf(InvalidItemName);
+        await expect(addItem('   ', OWNER_ID)).rejects.toBeInstanceOf(InvalidItemName);
         expect(await repository.findAll()).toHaveLength(0);
     });
 });

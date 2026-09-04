@@ -5,6 +5,7 @@ import type { ItemDto } from '@legacy/contracts';
 import type { Item } from '@legacy/core-items';
 
 import type { ItemUseCases } from '../../composition-root.js';
+import { accountOf } from '../session.js';
 
 // The response shape clients depend on. The entity carries an ownerId since
 // EN-09; it is an internal fact and never crosses the HTTP boundary, so every
@@ -20,6 +21,10 @@ function toItemDto(item: Item): ItemDto {
 // body or a malformed id is handed to next(), which the error middleware turns
 // into a 400. The domain still enforces its own invariants -- a rule that only
 // lives at the boundary is a rule the domain cannot guarantee.
+//
+// Every route here is mounted behind requireAccount, so accountOf always has an
+// identity to return. Reads are still not owner-scoped: filtering the list by
+// owner, and answering 404 rather than 403 on someone else's item, is US-12.
 export function itemsRouter(useCases: ItemUseCases): Router {
     const router = Router();
 
@@ -35,7 +40,7 @@ export function itemsRouter(useCases: ItemUseCases): Router {
         if (!body.success) return next(body.error);
 
         useCases
-            .addItem(body.data.name)
+            .addItem(body.data.name, accountOf(res).id)
             .then(item => res.send(toItemDto(item)))
             .catch(next);
     };

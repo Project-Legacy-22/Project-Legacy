@@ -12,7 +12,8 @@
     "apps/web",
     "packages/contracts",
     "packages/infra",
-    "packages/core/items"
+    "packages/core/items",
+    "packages/core/auth"
   ],
   "scripts": {
     "up": "node scripts/up.mjs",

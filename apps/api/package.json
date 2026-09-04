@@ -5,6 +5,7 @@
   "type": "module",
   "dependencies": {
     "@legacy/contracts": "*",
+    "@legacy/core-auth": "*",
     "@legacy/core-items": "*",
     "@legacy/infra": "*",
     "express": "^5.2.1",

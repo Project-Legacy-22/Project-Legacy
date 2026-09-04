@@ -16,7 +16,11 @@ import { spawn, spawnSync } from 'node:child_process';
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 
 // Ce que l API attend, et d ou cela vient dans la sortie du CLI Supabase.
-const REQUIRED = { SUPABASE_URL: 'API_URL', SUPABASE_SERVICE_ROLE_KEY: 'SERVICE_ROLE_KEY' };
+const REQUIRED = {
+    SUPABASE_URL: 'API_URL',
+    SUPABASE_SERVICE_ROLE_KEY: 'SERVICE_ROLE_KEY',
+    SUPABASE_ANON_KEY: 'ANON_KEY',
+};
 
 // Le broker ecoute sur la boucle locale. Le port par defaut est celui de Redis ;
 // un poste qui en fait deja tourner un le surcharge par REDIS_PORT, sans quoi
