@@ -5,7 +5,7 @@ import path from 'node:path';
 import type { Express } from 'express';
 
 import type { Config } from '../src/config.js';
-import type { RecordingLogger } from './fakes/recording-logger.js';
+import type { RecordingLogger } from '../../../packages/contracts/test/fakes/recording-logger.js';
 
 // Headers as a plain object rather than HeadersInit: every suite builds them
 // that way, and the harness has to be able to add a cookie to them.

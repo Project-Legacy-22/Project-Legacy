@@ -91,19 +91,28 @@ export default defineConfig({
                 // new code.
                 'apps/api/src/composition-root.ts',
                 'apps/api/src/index.ts',
+                // The worker's entry point, for the same reason as the API's:
+                // it wires adapters together and loops. What it decides -- what
+                // to do with one event -- lives in event-consumer.ts, which is
+                // tested.
+                'apps/worker/src/index.ts',
                 // Generated from the database schema by `npm run db:types`;
                 // excluded per standards/03-testing.md section 7.
                 'packages/infra/src/database.types.ts',
-                // The Supabase adapters only translate port calls into
-                // supabase-js calls and cannot be exercised without a real
-                // PostgREST endpoint. Their round trip is covered by the
-                // integration suite (EN-25), like every outbound adapter. What
-                // the erasure adapter delegates to -- the erase_account
-                // function -- is asserted against a real database by
-                // scripts/check-schema.sql, which CI runs on every pull
+                // Outbound adapters. They only translate port calls into
+                // client calls and cannot be exercised without a real PostgREST
+                // endpoint or a real broker. Their round trip is covered by the
+                // integration suite (EN-25); the decisions taken above them --
+                // relaying, consuming, staying idempotent -- are tested against
+                // fakes. What the erasure adapter delegates to -- the
+                // erase_account function -- is asserted against a real database
+                // by scripts/check-schema.sql, which CI runs on every pull
                 // request.
                 'packages/infra/src/supabase-item-repository.ts',
                 'packages/infra/src/supabase-personal-data-store.ts',
+                'packages/infra/src/outbox-store.ts',
+                'packages/infra/src/notification-store.ts',
+                'packages/infra/src/redis-event-bus.ts',
                 // Front composition root: it mounts the app and nothing else,
                 // exactly like the API entry point above.
                 'apps/web/src/main.tsx',

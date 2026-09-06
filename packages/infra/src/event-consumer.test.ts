@@ -5,7 +5,7 @@ import type { DomainEvent } from '@legacy/contracts';
 
 import { consume } from './event-consumer.js';
 import type { NotificationStore } from './notification-store.js';
-import { recordingLogger } from '../test/fakes/recording-logger.js';
+import { recordingLogger } from '../../contracts/test/fakes/recording-logger.js';
 
 const OWNER_ID = '00000000-0000-7000-8000-000000000001';
 const ITEM_ID = '01931f3a-0000-7000-8000-000000000002';

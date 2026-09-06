@@ -6,7 +6,7 @@ import type { DomainEvent } from '@legacy/contracts';
 import { relayOnce } from './outbox-relay.js';
 import type { EventBus } from './redis-event-bus.js';
 import type { OutboxStore } from './outbox-store.js';
-import { recordingLogger } from '../test/fakes/recording-logger.js';
+import { recordingLogger } from '../../contracts/test/fakes/recording-logger.js';
 
 function anEvent(id: string, occurredAt: string): DomainEvent {
     return {
