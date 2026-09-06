@@ -50,6 +50,7 @@ function useCasesOver(provider: InMemoryIdentityProvider, compromised: string[])
             changeItem: makeChangeItem(repository),
             removeItem: makeRemoveItem(repository),
         },
+        notifications: { countUnread: () => Promise.resolve(0) },
         auth: {
             registerAccount: makeRegisterAccount(provider),
             signIn: makeSignIn(provider),

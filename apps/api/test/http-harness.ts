@@ -32,6 +32,8 @@ export const testConfig: Config = {
     // Le journal est capture par un logger d essai ; le niveau ne sert
     // qu a satisfaire le type.
     logLevel: 'info',
+    // Le relais n est pas demarre par ce harnais : la valeur ne sert qu au type.
+    redisUrl: 'redis://127.0.0.1:6379',
     secureCookies: false,
 };
 

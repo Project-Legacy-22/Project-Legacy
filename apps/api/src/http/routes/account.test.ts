@@ -44,6 +44,7 @@ function useCasesOver(provider: IdentityProvider, store: PersonalDataStore): App
             changeItem: makeChangeItem(repository),
             removeItem: makeRemoveItem(repository),
         },
+        notifications: { countUnread: () => Promise.resolve(0) },
         auth: {
             registerAccount: makeRegisterAccount(provider),
             signIn: makeSignIn(provider),

@@ -48,9 +48,9 @@ Un item a été créé.
 | | |
 |---|---|
 | **Producteur** | `apps/api`, cas d'usage `addItem` de `packages/core/items` |
-| **Consommateurs** | aucun à ce jour |
-| **Effet attendu** | notifier le propriétaire que son item a été créé |
-| **Statut** | contrat défini ; publication et consommation à venir dans `US-10` |
+| **Consommateurs** | `apps/worker` |
+| **Effet attendu** | une notification non lue pour le propriétaire, visible dans le bandeau de session |
+| **Statut** | en service |
 
 Payload :
 
@@ -71,3 +71,36 @@ Le nom de l'item est délibérément absent : c'est du contenu utilisateur.
 Changer la forme d'un événement déjà publié se fait en publiant une nouvelle version à côté
 de l'ancienne, jamais en modifiant celle qui existe : un consommateur peut être en train de
 la lire.
+
+## Démontrer le flux
+
+Le découplage se montre plutôt qu'il ne s'explique : c'est la raison pour laquelle
+l'ADR-0007 a retenu un broker externe et un consommateur dans son propre processus.
+
+`npm run up` démarre les quatre étages, worker compris. La séquence tient en une minute.
+
+1. Se connecter, créer une tâche. Le compte de notifications du bandeau passe à 1 en une
+   seconde ou deux : l'API n'a rien notifié elle-même, elle a seulement écrit l'événement
+   dans la même transaction que la tâche.
+2. Arrêter le worker seul, puis créer deux tâches. Le compte ne bouge plus. La file
+   s'accumule, ce que l'on peut lire :
+
+   ```bash
+   docker compose exec redis redis-cli LLEN legacy22:events
+   ```
+
+3. Redémarrer le worker : `npm run dev:worker`. La file se vide, le compte rattrape son
+   retard. Rien n'a été perdu pendant l'arrêt.
+
+Ce que la démonstration établit : l'API ne dépend pas du consommateur pour répondre, une
+panne du consommateur ne fait pas tomber l'API, et le travail en attente survit à son arrêt.
+
+Pour montrer l'idempotence sans attendre une panne, republier un événement déjà traité :
+
+```bash
+docker compose exec redis redis-cli LPUSH legacy22:events "$(...)"
+```
+
+Le worker le consomme, journalise `event already handled, nothing to do`, et le compte de
+notifications ne bouge pas : la clé primaire de `processed_events` a refusé la seconde
+réservation.

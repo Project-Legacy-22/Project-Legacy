@@ -58,6 +58,7 @@ function useCasesOver(provider: InMemoryIdentityProvider): AppUseCases {
             changeItem: makeChangeItem(repository),
             removeItem: makeRemoveItem(repository),
         },
+        notifications: { countUnread: () => Promise.resolve(0) },
         auth: {
             registerAccount: makeRegisterAccount(provider),
             signIn: makeSignIn(provider),

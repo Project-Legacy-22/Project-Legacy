@@ -58,6 +58,15 @@ const RULES = [
         local: /^\.\.?\//,
     },
     {
+        // Le worker est un consommateur : il assemble des adaptateurs et n a
+        // aucune logique metier a lui. Il n atteint donc jamais un domaine
+        // directement, seulement infra et les contrats.
+        name: 'the worker composes adapters and holds no domain logic',
+        match: /^apps\/worker\//,
+        bare: [/^@legacy\/(contracts|infra)$/, /^node:/, /^zod$/],
+        local: /^\.\.?\//,
+    },
+    {
         name: 'only the composition root reaches for an adapter',
         match: /^apps\/api\/src\/(?!composition-root\.ts$)/,
         bare: [/^@legacy\/(contracts|core-items|core-auth)$/, /^node:/, /^(express|zod|uuid)$/],

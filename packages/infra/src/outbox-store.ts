@@ -46,7 +46,14 @@ export function createSupabaseOutboxStore(settings: SupabaseSettings): OutboxSto
                 const parsed = DomainEvent.safeParse({
                     id: row.id,
                     name: row.name,
-                    occurredAt: row.occurred_at,
+                    // PostgreSQL renders a timestamptz with a numeric offset
+                    // (`+00:00`), while the catalogue's canonical form ends in
+                    // `Z`. Both denote the same instant; normalising here keeps
+                    // the contract strict about one shape on the wire and keeps
+                    // the storage representation where it belongs, in the
+                    // adapter. Read straight through, the relay rejects the
+                    // very events it wrote.
+                    occurredAt: new Date(row.occurred_at).toISOString(),
                     payload: row.payload,
                 });
 
