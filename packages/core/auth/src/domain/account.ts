@@ -42,6 +42,30 @@ export class WeakPassword extends AuthError {
     }
 }
 
+// A password that is strong in shape but known to have leaked. US-28 requires
+// the check; the message names the rule, never the password.
+export class CompromisedPassword extends AuthError {
+    constructor() {
+        super(
+            'compromised_password',
+            400,
+            'Password has appeared in a known data breach. Choose a different one.',
+        );
+    }
+}
+
+// One message for an unknown token, a consumed one and an expired one.
+// Telling them apart would say whether a link ever existed for an address.
+export class InvalidResetToken extends AuthError {
+    constructor() {
+        super(
+            'invalid_reset_token',
+            400,
+            'This password reset link is invalid or has expired. Request a new one.',
+        );
+    }
+}
+
 export class SessionRequired extends AuthError {
     constructor() {
         super('session_required', 401, 'This request requires a valid session.');
