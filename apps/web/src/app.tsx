@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react';
+
 import { accountApi } from './api/account-api';
 import type { AccountApi } from './api/account-api';
 import { authApi } from './api/auth-api';
@@ -6,6 +8,7 @@ import { itemsApi } from './api/items-api';
 import type { ItemsApi } from './api/items-api';
 import { AuthPage } from './components/auth-page';
 import { PersonalDataSection } from './components/personal-data-section';
+import { ResetPasswordPage } from './components/reset-password-page';
 import { TodoPage } from './components/todo-page';
 import { useItems } from './hooks/use-items';
 import { usePersonalData } from './hooks/use-personal-data';
@@ -13,6 +16,14 @@ import { useSession } from './hooks/use-session';
 import { labels } from './labels';
 import { saveFile } from './save-file';
 import type { SaveFile } from './save-file';
+
+// The recovery email links here with the token hash as a query parameter. It is
+// read once, on the first render, and then wiped from the address bar so it
+// stops sitting in history or leaking through a Referer on the next navigation.
+function readRecoveryToken(): string | null {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('type') === 'recovery' ? params.get('token_hash') : null;
+}
 
 export interface AppProps {
     api?: ItemsApi;
@@ -74,6 +85,25 @@ export function App({
     save = saveFile,
 }: AppProps) {
     const session = useSession(auth);
+    const recoveryToken = useRef(readRecoveryToken());
+
+    useEffect(() => {
+        if (recoveryToken.current !== null) {
+            window.history.replaceState(null, '', window.location.pathname);
+        }
+    }, []);
+
+    // A recovery link wins over everything else, including a live session: the
+    // person following it wants to set a new password, not see their items.
+    if (recoveryToken.current !== null) {
+        return (
+            <ResetPasswordPage
+                token={recoveryToken.current}
+                isSubmitting={session.isSubmitting}
+                onSubmit={session.resetPassword}
+            />
+        );
+    }
 
     // Waiting rather than showing the sign-in screen: the cookie is httpOnly,
     // so only the API can say whether a session is valid, and flashing a form
@@ -95,6 +125,7 @@ export function App({
                 isSubmitting={session.isSubmitting}
                 onSignIn={session.signIn}
                 onRegister={session.register}
+                onRequestReset={session.requestPasswordReset}
             />
         );
     }

@@ -15,6 +15,7 @@ import {
 } from './test/react-root';
 import type { ReactTestRoot } from './test/react-root';
 import { anItem } from './test/builders/item-builder';
+import { labels } from './labels';
 
 interface Deferred<T> {
     promise: Promise<T>;
@@ -66,6 +67,8 @@ function createAuth(overrides: Partial<AuthApi> = {}): AuthApi {
         register: vi.fn(async () => undefined),
         signIn: vi.fn(async () => ACCOUNT),
         currentAccount: vi.fn(async () => ACCOUNT),
+        requestPasswordReset: vi.fn(async () => undefined),
+        resetPassword: vi.fn(async () => undefined),
         ...overrides,
     };
 }
@@ -276,5 +279,56 @@ describe('App session states', () => {
         expect(getElement<HTMLInputElement>('input[type="password"]').getAttribute('aria-invalid')).toBe(
             'true',
         );
+    });
+
+    it('lets a signed-out visitor ask for a reset link and shows a neutral reply', async () => {
+        const requestPasswordReset = vi.fn(async () => undefined);
+        const auth = createAuth({ currentAccount: vi.fn(async () => null), requestPasswordReset });
+        await testRoot.render(<App api={createApi()} auth={auth} />);
+
+        await click(getElement<HTMLButtonElement>('.button-quiet:last-of-type'));
+        await setInputValue(getElement<HTMLInputElement>('input[type="email"]'), 'ada@example.com');
+        await submitForm(getElement<HTMLFormElement>('form.auth-form'));
+        await flushTimers();
+
+        expect(requestPasswordReset).toHaveBeenCalledWith({ email: 'ada@example.com' });
+        expect(getElement<HTMLElement>('.form-success').textContent).toBe(labels.resetRequestAccepted);
+    });
+});
+
+describe('App password recovery', () => {
+    afterEach(() => {
+        window.history.replaceState(null, '', '/');
+    });
+
+    it('shows the set-new-password screen for a recovery link and clears the token from the URL', async () => {
+        window.history.replaceState(null, '', '/?token_hash=abc123&type=recovery');
+        const resetPassword = vi.fn(async () => undefined);
+        const auth = createAuth({ resetPassword });
+
+        await testRoot.render(<App api={createApi()} auth={auth} />);
+
+        expect(getElement<HTMLHeadingElement>('h1').textContent).toBe(labels.resetPasswordTitle);
+        expect(window.location.search).toBe('');
+        expect(document.body.innerHTML).not.toContain('abc123');
+    });
+
+    it('sends the token from the link with the new password', async () => {
+        window.history.replaceState(null, '', '/?token_hash=abc123&type=recovery');
+        const resetPassword = vi.fn(async () => undefined);
+        const auth = createAuth({ resetPassword });
+        await testRoot.render(<App api={createApi()} auth={auth} />);
+
+        await setInputValue(
+            getElement<HTMLInputElement>('input[type="password"]'),
+            'NouveauMotDePasse2',
+        );
+        await submitForm(getElement<HTMLFormElement>('form'));
+        await flushTimers();
+
+        expect(resetPassword).toHaveBeenCalledWith({
+            token: 'abc123',
+            password: 'NouveauMotDePasse2',
+        });
     });
 });

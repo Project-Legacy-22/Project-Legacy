@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import type { Dispatch, SetStateAction } from 'react';
 
 import { ApiError } from '../api/items-api';
 import type { AccountDto, AuthApi } from '../api/auth-api';
@@ -23,12 +24,27 @@ function messageOf(error: unknown, fallback: string): string {
     return error instanceof ApiError ? error.message : fallback;
 }
 
-export function useSession(api: AuthApi) {
-    const [state, setState] = useState<SessionState>({ status: 'checking' });
-    const [isSubmitting, setIsSubmitting] = useState(false);
+// The shape every non-sign-in action shares: call the API, report a fixed
+// success line, or the server's reason on failure. sign-in is the exception,
+// because it also has an account to store.
+async function attempt(
+    call: () => Promise<unknown>,
+    success: string,
+    fallback: string,
+): Promise<SubmitResult> {
+    try {
+        await call();
+        return { status: 'success', message: success };
+    } catch (error) {
+        return { status: 'error', message: messageOf(error, fallback) };
+    }
+}
 
-    // Asked once on mount. The cookie is httpOnly, so the page cannot read it:
-    // the only way to know whether a session is valid is to ask the API.
+// Asked once on mount. The cookie is httpOnly, so the page cannot read it: the
+// only way to know whether a session is valid is to ask the API.
+function useSessionCheck(api: AuthApi): [SessionState, Dispatch<SetStateAction<SessionState>>] {
+    const [state, setState] = useState<SessionState>({ status: 'checking' });
+
     useEffect(() => {
         const controller = new AbortController();
 
@@ -45,37 +61,35 @@ export function useSession(api: AuthApi) {
         return () => controller.abort();
     }, [api]);
 
-    const signIn = useCallback(
-        async (email: string, password: string): Promise<SubmitResult> => {
+    return [state, setState];
+}
+
+function useSessionActions(api: AuthApi, setState: Dispatch<SetStateAction<SessionState>>) {
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const guarded = useCallback(
+        async (action: () => Promise<SubmitResult>): Promise<SubmitResult> => {
             setIsSubmitting(true);
             try {
-                const account = await api.signIn({ email, password });
-                setState({ status: 'signedIn', account });
-                return { status: 'success' };
-            } catch (error) {
-                return { status: 'error', message: messageOf(error, labels.signInRejected) };
+                return await action();
             } finally {
                 setIsSubmitting(false);
             }
         },
-        [api],
+        [],
     );
 
-    const register = useCallback(
-        async (email: string, password: string): Promise<SubmitResult> => {
-            setIsSubmitting(true);
-            try {
-                await api.register({ email, password });
-                // No session and no account name in the confirmation: the API
-                // answers the same way whether the address was free or taken.
-                return { status: 'success', message: labels.registerAccepted };
-            } catch (error) {
-                return { status: 'error', message: messageOf(error, labels.registerFailed) };
-            } finally {
-                setIsSubmitting(false);
-            }
-        },
-        [api],
+    const signIn = useCallback(
+        (email: string, password: string): Promise<SubmitResult> =>
+            guarded(async () => {
+                try {
+                    setState({ status: 'signedIn', account: await api.signIn({ email, password }) });
+                    return { status: 'success' };
+                } catch (error) {
+                    return { status: 'error', message: messageOf(error, labels.signInRejected) };
+                }
+            }),
+        [api, guarded, setState],
     );
 
     // The account behind this session no longer exists. Erasure (US-13) is the
@@ -83,7 +97,37 @@ export function useSession(api: AuthApi) {
     // the cookie as well, which this does not do.
     const forget = useCallback(() => {
         setState({ status: 'anonymous' });
-    }, []);
+    }, [setState]);
 
-    return { state, isSubmitting, signIn, register, forget };
+    const run = useCallback(
+        (call: () => Promise<unknown>, success: string, fallback: string): Promise<SubmitResult> =>
+            guarded(() => attempt(call, success, fallback)),
+        [guarded],
+    );
+
+    return {
+        isSubmitting,
+        signIn,
+        forget,
+        register: (email: string, password: string) =>
+            run(() => api.register({ email, password }), labels.registerAccepted, labels.registerFailed),
+        requestPasswordReset: (email: string) =>
+            run(
+                () => api.requestPasswordReset({ email }),
+                labels.resetRequestAccepted,
+                labels.resetRequestFailed,
+            ),
+        resetPassword: (token: string, password: string) =>
+            run(
+                () => api.resetPassword({ token, password }),
+                labels.resetPasswordSucceeded,
+                labels.resetPasswordFailed,
+            ),
+    };
+}
+
+export function useSession(api: AuthApi) {
+    const [state, setState] = useSessionCheck(api);
+
+    return { state, ...useSessionActions(api, setState) };
 }

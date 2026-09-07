@@ -4,6 +4,10 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#12344d" />
+        <!-- The password recovery link (US-28) briefly carries a token in the
+             URL. no-referrer keeps that token out of the Referer header of any
+             request the page makes before it is wiped from the address bar. -->
+        <meta name="referrer" content="no-referrer" />
         <title>Todo list | Legacy 22</title>
     </head>
     <body>

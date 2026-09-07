@@ -109,6 +109,100 @@ describe('authApi.register', () => {
     });
 });
 
+describe('authApi.requestPasswordReset', () => {
+    it('aboutit sur une reponse acceptee sans corps', async () => {
+        stubFetch(new Response(null, { status: 202 }));
+
+        await expect(authApi.requestPasswordReset({ email: 'ada@example.com' })).resolves.toBeUndefined();
+    });
+
+    // Le critere de US-28 : la reponse ne doit pas reveler si l adresse a un
+    // compte. Le client ne relaie donc jamais le detail du serveur ici.
+    it('leve un message generique, jamais le detail du serveur', async () => {
+        stubFetch(
+            response(
+                {
+                    type: 'rate_limited',
+                    title: 'TooManyAttempts',
+                    status: 429,
+                    detail: 'Address alice@example.com already has a pending link.',
+                    instance: '/auth/password/forgot',
+                    traceId: 'a-test-trace-id',
+                },
+                429,
+            ),
+        );
+
+        await expect(authApi.requestPasswordReset({ email: 'ada@example.com' })).rejects.toEqual(
+            new ApiError(429, labels.resetRequestFailed),
+        );
+    });
+
+    it('n envoie l adresse que dans le corps', async () => {
+        const fetchMock = stubFetch(new Response(null, { status: 202 }));
+
+        await authApi.requestPasswordReset({ email: 'ada@example.com' });
+
+        const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+        expect(url).toBe('/auth/password/forgot');
+        expect(url).not.toContain('ada@example.com');
+        expect(init.body).toContain('ada@example.com');
+    });
+});
+
+describe('authApi.resetPassword', () => {
+    const BODY = { token: 'un-jeton-de-recuperation', password: 'NouveauMotDePasse2' };
+
+    it('aboutit sur une reponse sans corps', async () => {
+        stubFetch(new Response(null, { status: 204 }));
+
+        await expect(authApi.resetPassword(BODY)).resolves.toBeUndefined();
+    });
+
+    // Ici le detail est utile : "ce lien a expire" est exactement ce que la
+    // personne sur l ecran de reinitialisation a besoin de lire.
+    it('remonte le detail du serveur quand le lien est invalide', async () => {
+        stubFetch(
+            response(
+                {
+                    type: 'invalid_reset_token',
+                    title: 'InvalidResetToken',
+                    status: 400,
+                    detail: 'This password reset link is invalid or has expired. Request a new one.',
+                    instance: '/auth/password/reset',
+                    traceId: 'a-test-trace-id',
+                },
+                400,
+            ),
+        );
+
+        await expect(authApi.resetPassword(BODY)).rejects.toEqual(
+            new ApiError(400, 'This password reset link is invalid or has expired. Request a new one.'),
+        );
+    });
+
+    it('retombe sur un message generique quand le corps n est pas exploitable', async () => {
+        stubFetch(new Response('pas du json', { status: 500 }));
+
+        await expect(authApi.resetPassword(BODY)).rejects.toEqual(
+            new ApiError(500, labels.resetPasswordFailed),
+        );
+    });
+
+    it('n envoie ni le jeton ni le mot de passe dans l URL', async () => {
+        const fetchMock = stubFetch(new Response(null, { status: 204 }));
+
+        await authApi.resetPassword(BODY);
+
+        const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+        expect(url).toBe('/auth/password/reset');
+        expect(url).not.toContain(BODY.token);
+        expect(url).not.toContain(BODY.password);
+        expect(init.body).toContain(BODY.token);
+        expect(init.body).toContain(BODY.password);
+    });
+});
+
 describe('authApi.currentAccount', () => {
     it('renvoie le compte quand la session est valide', async () => {
         stubFetch(response(ACCOUNT));
