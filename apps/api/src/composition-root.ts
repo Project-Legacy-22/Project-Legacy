@@ -1,5 +1,6 @@
 import { v7 as uuid } from 'uuid';
 import {
+    createHibpPasswordRegistry,
     createLogger,
     createSupabaseIdentityProvider,
     createSupabaseItemStore,
@@ -12,6 +13,8 @@ import {
     makeExportPersonalData,
     makeIdentifyCaller,
     makeRegisterAccount,
+    makeRequestPasswordReset,
+    makeResetPassword,
     makeSignIn,
 } from '@legacy/core-auth';
 import { makeListItems, makeAddItem, makeChangeItem, makeRemoveItem } from '@legacy/core-items';
@@ -29,6 +32,8 @@ export interface AuthUseCases {
     registerAccount: ReturnType<typeof makeRegisterAccount>;
     signIn: ReturnType<typeof makeSignIn>;
     identifyCaller: ReturnType<typeof makeIdentifyCaller>;
+    requestPasswordReset: ReturnType<typeof makeRequestPasswordReset>;
+    resetPassword: ReturnType<typeof makeResetPassword>;
 }
 
 // Kept apart from AuthUseCases, which requireAccount receives on every request
@@ -73,6 +78,7 @@ export function compose(config: Config): Application {
         serviceRoleKey: config.supabaseServiceRoleKey,
     });
     const logger = createLogger(config.logLevel);
+    const compromisedPasswords = createHibpPasswordRegistry({ logger });
 
     return {
         logger,
@@ -87,6 +93,8 @@ export function compose(config: Config): Application {
                 registerAccount: makeRegisterAccount(identity),
                 signIn: makeSignIn(identity),
                 identifyCaller: makeIdentifyCaller(identity),
+                requestPasswordReset: makeRequestPasswordReset(identity),
+                resetPassword: makeResetPassword({ provider: identity, compromisedPasswords }),
             },
             account: {
                 exportPersonalData: makeExportPersonalData({

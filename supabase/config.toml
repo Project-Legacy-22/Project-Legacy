@@ -152,12 +152,14 @@ max_indexes = 5
 [auth]
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
-# in emails.
-site_url = "http://127.0.0.1:3000"
+# in emails. The password recovery email (US-28) builds its link from this value, so it points at
+# the origin a developer actually opens: Vite on 5173, which proxies /auth to the API on 3000. A
+# deployment overrides this with the real public origin.
+site_url = "http://localhost:5173"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+additional_redirect_urls = ["http://127.0.0.1:5173", "http://127.0.0.1:3000", "https://127.0.0.1:3000"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.
@@ -227,10 +229,15 @@ secure_password_change = false
 max_frequency = "1s"
 # Number of characters used in the email OTP.
 otp_length = 6
-# Number of seconds before the email OTP expires (defaults to 1 hour).
+# Number of seconds before the email OTP expires (defaults to 1 hour). This is the lifetime of a
+# password recovery link (US-28); it is also enforced again in the auth domain and in tests.
 otp_expiry = 3600
 
-# Use a production-ready SMTP server
+# Use a production-ready SMTP server.
+#
+# Left disabled on purpose (ADR-0010): with SMTP off, the local stack captures every message in
+# its mail viewer instead of sending it, which is exactly what US-28 asks for in development. A
+# deployment enables this block and supplies the credentials through environment variables.
 # [auth.email.smtp]
 # enabled = true
 # host = "smtp.sendgrid.net"
@@ -239,6 +246,13 @@ otp_expiry = 3600
 # pass = "env(SENDGRID_API_KEY)"
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
+
+# Password recovery email (US-28). The link carries the token hash as a plain query parameter on
+# our own path, so the exchange happens server-side (POST /auth/password/reset) and no token ever
+# lands in the browser or a Referer header.
+[auth.email.template.recovery]
+subject = "Reset your Legacy 22 password"
+content_path = "./supabase/templates/recovery.html"
 
 # Uncomment to customize email template
 # [auth.email.template.invite]

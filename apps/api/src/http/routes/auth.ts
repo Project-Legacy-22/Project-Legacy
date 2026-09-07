@@ -1,5 +1,11 @@
-import { RegisterAccountBody, SignInBody } from '@legacy/contracts';
+import {
+    RegisterAccountBody,
+    RequestPasswordResetBody,
+    ResetPasswordBody,
+    SignInBody,
+} from '@legacy/contracts';
 import type { AccountDto } from '@legacy/contracts';
+import { normalizeEmailAddress } from '@legacy/core-auth';
 import type { Account } from '@legacy/core-auth';
 import { Router } from 'express';
 import type { RequestHandler } from 'express';
@@ -12,11 +18,54 @@ export interface AuthRoutesOptions {
     secureCookie: boolean;
     maxAttempts: number;
     windowMs: number;
+    // Password reset is its own budget: a burst of reset attempts must not lock
+    // a legitimate visitor out of sign-in.
+    resetMaxAttempts: number;
+    resetWindowMs: number;
+    // A second budget on the request endpoint, keyed on the target address
+    // rather than the caller, so one address cannot be flooded with links from
+    // many origins.
+    resetRequestsPerEmail: number;
+    resetEmailWindowMs: number;
 }
 
 // A caller only ever learns about itself, and only these two fields.
 function toAccountDto(account: Account): AccountDto {
     return { id: account.id, email: account.email };
+}
+
+function emailKey(body: unknown): string {
+    const email = (body as { email?: unknown }).email;
+    return normalizeEmailAddress(typeof email === 'string' ? email : '');
+}
+
+function forgotPasswordHandler(useCases: AuthUseCases): RequestHandler {
+    return (req, res, next) => {
+        const body = RequestPasswordResetBody.safeParse(req.body);
+        if (!body.success) return next(body.error);
+
+        useCases
+            .requestPasswordReset(body.data.email)
+            // 202, no body: the request was accepted. Whether an email goes out
+            // is not disclosed, so a registered and an unregistered address get
+            // the exact same answer.
+            .then(() => res.status(202).end())
+            .catch(next);
+    };
+}
+
+function resetPasswordHandler(useCases: AuthUseCases): RequestHandler {
+    return (req, res, next) => {
+        const body = ResetPasswordBody.safeParse(req.body);
+        if (!body.success) return next(body.error);
+
+        useCases
+            .resetPassword(body.data.token, body.data.password)
+            // 204, no session cookie: a reset does not sign anyone in, and every
+            // session of the account was just revoked.
+            .then(() => res.status(204).end())
+            .catch(next);
+    };
 }
 
 export function authRouter(useCases: AuthUseCases, options: AuthRoutesOptions): Router {
@@ -25,6 +74,15 @@ export function authRouter(useCases: AuthUseCases, options: AuthRoutesOptions): 
     // addresses exist are the same attack from the same client; two counters
     // would let it run twice as long.
     const limit = rateLimit({ maxAttempts: options.maxAttempts, windowMs: options.windowMs });
+    const resetLimit = rateLimit({
+        maxAttempts: options.resetMaxAttempts,
+        windowMs: options.resetWindowMs,
+    });
+    const resetPerEmail = rateLimit({
+        maxAttempts: options.resetRequestsPerEmail,
+        windowMs: options.resetEmailWindowMs,
+        key: req => emailKey(req.body),
+    });
 
     const register: RequestHandler = (req, res, next) => {
         const body = RegisterAccountBody.safeParse(req.body);
@@ -60,6 +118,8 @@ export function authRouter(useCases: AuthUseCases, options: AuthRoutesOptions): 
     router.post('/auth/register', limit, register);
     router.post('/auth/login', limit, login);
     router.get('/auth/me', requireAccount(useCases), me);
+    router.post('/auth/password/forgot', resetLimit, resetPerEmail, forgotPasswordHandler(useCases));
+    router.post('/auth/password/reset', resetLimit, resetPasswordHandler(useCases));
 
     return router;
 }

@@ -4,14 +4,16 @@ import {
     makeExportPersonalData,
     makeIdentifyCaller,
     makeRegisterAccount,
+    makeRequestPasswordReset,
+    makeResetPassword,
     makeSignIn,
 } from '@legacy/core-auth';
-import type { IdentityProvider } from '@legacy/core-auth';
 import { makeAddItem, makeChangeItem, makeListItems, makeRemoveItem } from '@legacy/core-items';
-// The reference fake for the identity provider port lives with the port it
-// implements. Copying it here would let the copy drift from the contract it
-// is supposed to stand for.
+// The reference fakes for the auth ports live with the ports they implement.
+// Copying them here would let the copy drift from the contract it stands for.
+import { inMemoryCompromisedPasswords } from '../../../../../packages/core/auth/test/fakes/in-memory-compromised-passwords.js';
 import { inMemoryIdentityProvider } from '../../../../../packages/core/auth/test/fakes/in-memory-identity-provider.js';
+import type { InMemoryIdentityProvider } from '../../../../../packages/core/auth/test/fakes/in-memory-identity-provider.js';
 import { inMemoryPersonalDataStore } from '../../../../../packages/core/auth/test/fakes/in-memory-personal-data-store.js';
 
 import { createServer } from '../server.js';
@@ -38,11 +40,12 @@ const ACCOUNT_ID = '00000000-0000-7000-8000-000000000001';
 
 // Le depot d items refuse tout appel : une requete qui l atteindrait sans
 // session repondrait 500 au lieu du refus attendu, et le test le verrait.
-function useCasesOver(provider: IdentityProvider): AppUseCases {
+function useCasesOver(provider: InMemoryIdentityProvider): AppUseCases {
     const repository = unreachableItemRepository();
     // Aucun compte : les routes exercees ici ne touchent pas aux donnees
     // personnelles, et un magasin vide le rend visible si l une d elles s y met.
     const personalData = inMemoryPersonalDataStore();
+    const compromisedPasswords = inMemoryCompromisedPasswords();
 
     return {
         items: {
@@ -59,6 +62,8 @@ function useCasesOver(provider: IdentityProvider): AppUseCases {
             registerAccount: makeRegisterAccount(provider),
             signIn: makeSignIn(provider),
             identifyCaller: makeIdentifyCaller(provider),
+            requestPasswordReset: makeRequestPasswordReset(provider),
+            resetPassword: makeResetPassword({ provider, compromisedPasswords }),
         },
         account: {
             exportPersonalData: makeExportPersonalData({
