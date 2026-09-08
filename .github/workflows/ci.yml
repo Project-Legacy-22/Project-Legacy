@@ -74,13 +74,9 @@ jobs:
       - name: Installer les dependances
         run: npm ci
 
-      # Les tests d integration (EN-25) auront besoin de Supabase local et de
-      # Redis. Les demarrer des maintenant couterait des minutes d Actions pour
-      # rien : aucun test ne les utilise encore. Le point d accroche est ici.
-      #
-      # - name: Demarrer les services
-      #   run: npx supabase start
-
+      # Les tests d integration (EN-25) tournent dans leur propre job : ils ont
+      # besoin de la pile Supabase locale, que ce job-ci n a aucune raison de
+      # payer pour npm test, execute a chaque changement.
       - name: Executer les tests
         run: npm test
 
@@ -119,6 +115,53 @@ jobs:
           path: coverage/
           retention-days: 7
           if-no-files-found: ignore
+
+  integration:
+    name: Tests d integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: verifier
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Installer les dependances
+        run: npm ci
+
+      # Applique aussi les migrations : c est le CLI, pas ce job, qui sait les
+      # rejouer dans l ordre attendu par la pile qu il demarre.
+      - name: Demarrer la pile Supabase locale
+        run: npx supabase start
+
+      # Le CLI imprime API_URL / SERVICE_ROLE_KEY / ANON_KEY (format
+      # `CLE="valeur"`) ; scripts/up.mjs fait la meme lecture pour le
+      # developpement local. Ecrites dans GITHUB_ENV, les etapes suivantes du
+      # job les recoivent sans qu aucun secret ne soit imprime : ce sont des
+      # cles locales, generees pour cette pile ephemere.
+      - name: Lire les coordonnees de la pile
+        run: |
+          set -euo pipefail
+          while IFS='=' read -r key value; do
+            valeur="${value%\"}"; valeur="${valeur#\"}"
+            case "$key" in
+              API_URL) echo "SUPABASE_URL=$valeur" >> "$GITHUB_ENV" ;;
+              SERVICE_ROLE_KEY) echo "SUPABASE_SERVICE_ROLE_KEY=$valeur" >> "$GITHUB_ENV" ;;
+              ANON_KEY) echo "SUPABASE_ANON_KEY=$valeur" >> "$GITHUB_ENV" ;;
+            esac
+          done < <(npx supabase status -o env)
+
+      - name: Executer les tests d integration
+        run: |
+          set -euo pipefail
+          debut=$(date +%s)
+          npm run test:integration
+          duree=$(( $(date +%s) - debut ))
+          echo "## Tests d integration" >> "$GITHUB_STEP_SUMMARY"
+          echo "Duree : ${duree}s" >> "$GITHUB_STEP_SUMMARY"
 
   qualite:
     name: Qualite (SonarCloud)
