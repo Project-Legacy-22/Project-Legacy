@@ -32,6 +32,41 @@ afterEach(() => {
     vi.unstubAllGlobals();
 });
 
+// `Blob.prototype.text` n'est pas garanti dans l'environnement de test. jsdom
+// fournit son propre `Blob`, dont le prototype se limite a `slice`, `size` et
+// `type`, et selon la version de Node c'est lui ou celui de la plateforme que
+// `Response.blob()` renvoie. La suite passait donc sur Node 22 et echouait sur
+// Node 26, alors que `engines` annonce les deux.
+//
+// Le navigateur, lui, implemente `text()` : le code de production n'a rien a
+// corriger, et il ne lit de toute facon jamais ce document -- il le passe a
+// `saveFile`. Seule cette lecture de test doit tenir sur les deux
+// implementations, sans rien retirer a ce qu'elle verifie.
+function lireLeDocument(document: Blob): Promise<string> {
+    if (typeof document.text === 'function') {
+        return document.text();
+    }
+
+    return new Promise((resolve, reject) => {
+        const lecteur = new FileReader();
+        lecteur.onload = () => {
+            // readAsText rend toujours une chaine ; le type couvre aussi
+            // readAsArrayBuffer, d ou ce retrecissement explicite.
+            const contenu = lecteur.result;
+            if (typeof contenu === 'string') {
+                resolve(contenu);
+            } else {
+                reject(new Error('le document lu n est pas du texte'));
+            }
+        };
+        lecteur.onerror = () => {
+            reject(lecteur.error ?? new Error('lecture du document impossible'));
+        };
+        lecteur.readAsText(document);
+    });
+}
+
+
 describe('accountApi.exportPersonalData', () => {
     // Le document n est pas relu ici : la page le remet tel quel a la personne,
     // et le parser pour le reserialiser sauvegarderait autre chose que ce que
@@ -41,7 +76,7 @@ describe('accountApi.exportPersonalData', () => {
 
         const document = await accountApi.exportPersonalData();
 
-        await expect(document.text()).resolves.toBe(EXPORT_BODY);
+        await expect(lireLeDocument(document)).resolves.toBe(EXPORT_BODY);
     });
 
     it('reprend le detail du serveur quand l export est refuse', async () => {
