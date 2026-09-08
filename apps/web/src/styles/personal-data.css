@@ -1,0 +1,45 @@
+/* Section des donnees personnelles (US-13). Elle reutilise .panel,
+   .section-heading, .form-field et .button-danger : rien ici n a besoin d un
+   vocabulaire visuel propre, seule la mise en garde en a un. */
+
+.delete-account {
+    display: grid;
+    gap: 12px;
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top: 1px solid #d6dee7;
+}
+
+.delete-account h3 {
+    margin: 0;
+    color: #8a1c16;
+}
+
+.delete-account p {
+    margin: 0;
+    color: #39495c;
+    line-height: 1.5;
+}
+
+.delete-account-losses {
+    margin: 0;
+    padding-left: 22px;
+    color: #39495c;
+    line-height: 1.5;
+}
+
+/* Le seul element de cette section qui doit se lire avant le bouton : il dit
+   qu il n y a ni delai ni retour en arriere. Le contraste reste au-dessus de
+   4.5:1 sur le fond du panneau (US-14). */
+.delete-account-warning {
+    padding: 12px 14px;
+    border: 1px solid #d89a96;
+    border-radius: 8px;
+    color: #751912;
+    background: #fff1f0;
+    font-weight: 700;
+}
+
+.delete-account .button-danger {
+    justify-self: start;
+}

@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 import type { ItemDto } from '../api/items-api';
 import { labels } from '../labels';
 import type {
@@ -24,6 +26,11 @@ export interface TodoPageProps {
     onRemove: (item: ItemDto) => Promise<boolean>;
     onLoadMore: () => void;
     onRetry: () => void;
+    // Sections this page does not own, rendered inside its main landmark. The
+    // alternative was to place them after the page, which would leave content
+    // outside every landmark and out of reach of a screen reader navigating by
+    // region.
+    children?: ReactNode;
 }
 
 export function TodoPage(props: TodoPageProps) {
@@ -53,6 +60,7 @@ export function TodoPage(props: TodoPageProps) {
                     onRetry={props.onRetry}
                 />
                 <ActionFeedback feedback={props.feedback} />
+                {props.children}
             </main>
         </div>
     );
