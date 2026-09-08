@@ -11,5 +11,8 @@
     "express": "^5.2.1",
     "uuid": "^13.0.0",
     "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@supabase/supabase-js": "2.105.0"
   }
 }

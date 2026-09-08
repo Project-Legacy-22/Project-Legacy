@@ -1,0 +1,117 @@
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+
+import { json } from '../http-harness.js';
+import type { Harness } from '../http-harness.js';
+import { realApplication, registerAndSignIn, serveAs } from './support.js';
+import type { RealAccount } from './support.js';
+
+// Against the real stack (Postgres, PostgREST, GoTrue, migrations applied),
+// not the fakes packages/core/items/test and packages/core/auth/test provide
+// for the unit and HTTP-contract suites. What this file proves is that the
+// pieces work when actually wired together -- the composition root, the
+// service-role-backed repository, the RLS-enabled schema -- which no amount of
+// fake-backed testing can.
+//
+// Row-level security itself, reached without the service-role bypass, is
+// exercised separately in row-level-security.integration.test.ts: this file
+// tests the API's own authorization, that file tests the database's.
+const MOT_DE_PASSE = 'IntegrationTest2026';
+
+describe('items API (integration)', () => {
+    let app: Awaited<ReturnType<typeof realApplication>>;
+    let owner: RealAccount;
+    let intruder: RealAccount;
+    let asOwner: Harness;
+    let asIntruder: Harness;
+
+    beforeAll(async () => {
+        app = realApplication();
+        await app.start();
+        owner = await registerAndSignIn(app, MOT_DE_PASSE);
+        intruder = await registerAndSignIn(app, MOT_DE_PASSE);
+        asOwner = await serveAs(app, owner.cookie);
+        asIntruder = await serveAs(app, intruder.cookie);
+    });
+
+    afterAll(async () => {
+        await asOwner.close();
+        await asIntruder.close();
+        await app.stop();
+    });
+
+    it('cree un item et le renvoie sans le proprietaire', async () => {
+        const response = await asOwner.request('/items', json('POST', { name: 'Depot integration' }));
+        const created = (await response.json()) as Record<string, unknown>;
+
+        expect(response.status).toBe(200);
+        expect(created).not.toHaveProperty('ownerId');
+        expect(created.name).toBe('Depot integration');
+    });
+
+    describe('isolation entre comptes', () => {
+        let itemId: string;
+
+        beforeAll(async () => {
+            const response = await asOwner.request('/items', json('POST', { name: 'A moi' }));
+            itemId = ((await response.json()) as { id: string }).id;
+        });
+
+        it('le proprietaire voit son item dans la liste', async () => {
+            const page = (await (await asOwner.request('/items')).json()) as {
+                items: { id: string }[];
+            };
+
+            expect(page.items.map(item => item.id)).toContain(itemId);
+        });
+
+        it('un autre compte ne voit pas cet item dans sa liste', async () => {
+            const page = (await (await asIntruder.request('/items')).json()) as {
+                items: { id: string }[];
+            };
+
+            expect(page.items.map(item => item.id)).not.toContain(itemId);
+        });
+
+        it('le proprietaire peut le modifier', async () => {
+            const response = await asOwner.request(
+                `/items/${itemId}`,
+                json('PUT', { name: 'A moi, renomme', completed: true }),
+            );
+
+            expect(response.status).toBe(200);
+        });
+
+        // Meme reponse qu un item inexistant : voir items.test.ts pour la
+        // meme regle deja exercee contre des doublures.
+        it('un autre compte ne peut pas le modifier, et ne le change pas', async () => {
+            const response = await asIntruder.request(
+                `/items/${itemId}`,
+                json('PUT', { name: 'Vole', completed: true }),
+            );
+
+            expect(response.status).toBe(404);
+
+            const stillMine = (await (await asOwner.request('/items')).json()) as {
+                items: { id: string; name: string }[];
+            };
+            expect(stillMine.items.find(item => item.id === itemId)?.name).toBe('A moi, renomme');
+        });
+
+        it('un autre compte ne peut pas le supprimer, et il reste present', async () => {
+            const response = await asIntruder.request(`/items/${itemId}`, { method: 'DELETE' });
+
+            expect(response.status).toBe(404);
+
+            const stillThere = (await (await asOwner.request('/items')).json()) as {
+                items: { id: string }[];
+            };
+            expect(stillThere.items.map(item => item.id)).toContain(itemId);
+        });
+
+        it('le proprietaire peut le supprimer', async () => {
+            const response = await asOwner.request(`/items/${itemId}`, { method: 'DELETE' });
+
+            expect(response.status).toBe(200);
+        });
+    });
+});

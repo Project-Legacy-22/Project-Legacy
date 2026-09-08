@@ -17,6 +17,10 @@ export default defineConfig({
                 test: {
                     name: 'node',
                     include: ['apps/api/**/*.test.ts', 'packages/**/*.test.ts'],
+                    // Its own suite, its own config (vitest.integration.config.ts):
+                    // it needs the local Supabase stack, which npm test must not
+                    // require on every change.
+                    exclude: ['apps/api/test/integration/**'],
                     environment: 'node',
                 },
             },
