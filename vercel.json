@@ -4,5 +4,15 @@
     "installCommand": "npm ci",
     "buildCommand": "npm run build",
     "outputDirectory": "apps/api/dist/static",
-    "ignoreCommand": "test -n \"$VERCEL_GIT_PREVIOUS_SHA\" && git diff --quiet \"$VERCEL_GIT_PREVIOUS_SHA\" HEAD -- apps/web packages package-lock.json vercel.json"
+    "rewrites": [
+        {
+            "source": "/auth/(.*)",
+            "destination": "/api"
+        },
+        {
+            "source": "/items(.*)",
+            "destination": "/api"
+        }
+    ],
+    "ignoreCommand": "test -n \"$VERCEL_GIT_PREVIOUS_SHA\" && git diff --quiet \"$VERCEL_GIT_PREVIOUS_SHA\" HEAD -- api apps packages package-lock.json vercel.json"
 }
