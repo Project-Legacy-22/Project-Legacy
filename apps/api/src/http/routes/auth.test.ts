@@ -9,12 +9,14 @@ import {
     makeSignIn,
 } from '@legacy/core-auth';
 import { makeAddItem, makeChangeItem, makeListItems, makeRemoveItem } from '@legacy/core-items';
+import { makeAddProject, makeListProjects, makeRemoveProject } from '@legacy/core-projects';
 // The reference fakes for the auth ports live with the ports they implement.
 // Copying them here would let the copy drift from the contract it stands for.
 import { inMemoryCompromisedPasswords } from '../../../../../packages/core/auth/test/fakes/in-memory-compromised-passwords.js';
 import { inMemoryIdentityProvider } from '../../../../../packages/core/auth/test/fakes/in-memory-identity-provider.js';
 import type { InMemoryIdentityProvider } from '../../../../../packages/core/auth/test/fakes/in-memory-identity-provider.js';
 import { inMemoryPersonalDataStore } from '../../../../../packages/core/auth/test/fakes/in-memory-personal-data-store.js';
+import { inMemoryProjectRepository } from '../../../../../packages/core/projects/test/fakes/in-memory-project-repository.js';
 
 import { createServer } from '../server.js';
 import type { AppUseCases } from '../../composition-root.js';
@@ -46,6 +48,7 @@ function useCasesOver(provider: InMemoryIdentityProvider): AppUseCases {
     // personnelles, et un magasin vide le rend visible si l une d elles s y met.
     const personalData = inMemoryPersonalDataStore();
     const compromisedPasswords = inMemoryCompromisedPasswords();
+    const projects = inMemoryProjectRepository();
 
     return {
         items: {
@@ -70,7 +73,18 @@ function useCasesOver(provider: InMemoryIdentityProvider): AppUseCases {
                 store: personalData,
                 now: () => new Date('2026-09-04T10:00:00.000Z'),
             }),
-            eraseAccount: makeEraseAccount({ store: personalData, identity: provider }),
+            eraseAccount: makeEraseAccount({
+                store: personalData,
+                identity: provider,
+            }),
+        },
+        projects: {
+            listProjects: makeListProjects(projects),
+            addProject: makeAddProject({
+                repository: projects,
+                newId: () => ACCOUNT_ID,
+            }),
+            removeProject: makeRemoveProject(projects),
         },
     };
 }
@@ -116,14 +130,15 @@ describe('API d authentification', () => {
             );
             const surAdresseLibre = await harness.request(
                 '/auth/register',
-                json('POST', { email: 'bob@example.com', password: 'AutreMotDePasse7' }),
+                json('POST', {
+                    email: 'bob@example.com',
+                    password: 'AutreMotDePasse7',
+                }),
             );
 
             expect(surAdressePrise.status).toBe(surAdresseLibre.status);
             expect(await surAdressePrise.text()).toBe(await surAdresseLibre.text());
-            expect(surAdressePrise.headers.get('set-cookie')).toBe(
-                surAdresseLibre.headers.get('set-cookie'),
-            );
+            expect(surAdressePrise.headers.get('set-cookie')).toBe(surAdresseLibre.headers.get('set-cookie'));
         });
 
         // Creer un compte ne connecte pas : une reponse qui poserait une session
@@ -173,7 +188,10 @@ describe('API d authentification', () => {
             const cookie = response.headers.get('set-cookie') ?? '';
 
             expect(response.status).toBe(200);
-            await expect(response.json()).resolves.toEqual({ id: ACCOUNT_ID, email: ADRESSE });
+            await expect(response.json()).resolves.toEqual({
+                id: ACCOUNT_ID,
+                email: ADRESSE,
+            });
             expect(cookie).toContain('HttpOnly');
             expect(cookie).toContain('SameSite=Lax');
         });
@@ -200,10 +218,7 @@ describe('API d authentification', () => {
         it('ne journalise ni l adresse ni le mot de passe', async () => {
             await serve(compteExistant);
 
-            await harness.request(
-                '/auth/login',
-                json('POST', { email: ADRESSE, password: MOT_DE_PASSE }),
-            );
+            await harness.request('/auth/login', json('POST', { email: ADRESSE, password: MOT_DE_PASSE }));
 
             const journal = JSON.stringify(harness.logger.lines);
             expect(journal).not.toContain(ADRESSE);
@@ -225,13 +240,12 @@ describe('API d authentification', () => {
         // refusee sans que le fournisseur soit interroge.
         it('refuse les tentatives au-dela de la limite de frequence', async () => {
             await serve(compteExistant);
-            const tentative = () =>
-                harness.request('/auth/login', json('POST', { email: ADRESSE, password: 'Faux1' }));
+            const tentative = () => harness.request('/auth/login', json('POST', { email: ADRESSE, password: 'Faux1' }));
 
             const reponses = await repeter(11, tentative);
 
             expect(reponses.at(-1)?.status).toBe(429);
-            expect(reponses.filter(response => response.status === 429)).toHaveLength(1);
+            expect(reponses.filter((response) => response.status === 429)).toHaveLength(1);
         });
     });
 
@@ -258,10 +272,15 @@ describe('API d authentification', () => {
             );
             const cookie = (connexion.headers.get('set-cookie') ?? '').split(';')[0] ?? '';
 
-            const response = await harness.request('/auth/me', { headers: { Cookie: cookie } });
+            const response = await harness.request('/auth/me', {
+                headers: { Cookie: cookie },
+            });
 
             expect(response.status).toBe(200);
-            await expect(response.json()).resolves.toEqual({ id: ACCOUNT_ID, email: ADRESSE });
+            await expect(response.json()).resolves.toEqual({
+                id: ACCOUNT_ID,
+                email: ADRESSE,
+            });
         });
     });
 

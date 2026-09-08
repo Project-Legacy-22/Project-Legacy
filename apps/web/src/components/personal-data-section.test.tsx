@@ -6,18 +6,16 @@ import type { AccountApi } from '../api/account-api';
 import type { AccountDto, AuthApi } from '../api/auth-api';
 import type { ItemPageDto, ItemsApi } from '../api/items-api';
 import { ApiError } from '../api/items-api';
+import type { ProjectsApi } from '../api/projects-api';
 import { labels } from '../labels';
 import type { SaveFile } from '../save-file';
-import {
-    click,
-    createReactTestRoot,
-    getElement,
-    setInputValue,
-    submitForm,
-} from '../test/react-root';
+import { click, createReactTestRoot, getElement, setInputValue, submitForm } from '../test/react-root';
 import type { ReactTestRoot } from '../test/react-root';
 
-const ACCOUNT: AccountDto = { id: '5b1f0f4a-9d3f-4d0e-9e2a-6c0f5a3b1d77', email: 'ada@example.com' };
+const ACCOUNT: AccountDto = {
+    id: '5b1f0f4a-9d3f-4d0e-9e2a-6c0f5a3b1d77',
+    email: 'ada@example.com',
+};
 // Le document que l API sert. L assertion porte sur l objet lui-meme et non sur
 // son contenu : ce que promet la page est de remettre ce qu elle a recu, sans le
 // relire ni le reserialiser.
@@ -59,6 +57,14 @@ function createAccount(overrides: Partial<AccountApi> = {}): AccountApi {
     };
 }
 
+function createProjects(): ProjectsApi {
+    return {
+        listProjects: vi.fn(async () => ({ projects: [], nextCursor: null })),
+        createProject: vi.fn(),
+        deleteProject: vi.fn(),
+    };
+}
+
 async function afficher(account: AccountApi, save: SaveFile = vi.fn()): Promise<void> {
     // apps/web/index.html les porte ; le document vierge de jsdom, non. Sans
     // eux, le controle axe signalerait deux manques du bac a sable plutot que
@@ -67,7 +73,7 @@ async function afficher(account: AccountApi, save: SaveFile = vi.fn()): Promise<
     document.title = 'Todo list | Legacy 22';
 
     await testRoot.render(
-        <App api={createItems()} auth={createAuth()} account={account} save={save} />,
+        <App api={createItems()} auth={createAuth()} account={account} projects={createProjects()} save={save} />,
     );
 }
 
@@ -76,7 +82,7 @@ async function afficher(account: AccountApi, save: SaveFile = vi.fn()): Promise<
 // l assertion muette le jour ou elle designerait le mauvais.
 function bouton(libelle: string): HTMLButtonElement {
     const trouve = [...document.querySelectorAll('button')].find(
-        candidat => candidat.textContent?.trim() === libelle,
+        (candidat) => candidat.textContent?.trim() === libelle,
     );
 
     if (trouve === undefined) throw new Error(`Aucun bouton intitule ${libelle}.`);
@@ -111,7 +117,7 @@ describe('section des donnees personnelles', () => {
             rules: { 'color-contrast': { enabled: false } },
         });
 
-        expect(resultats.violations.map(violation => violation.id)).toEqual([]);
+        expect(resultats.violations.map((violation) => violation.id)).toEqual([]);
     });
 
     it('enonce ce que la suppression fait perdre, avant de la proposer', async () => {
@@ -120,10 +126,9 @@ describe('section des donnees personnelles', () => {
         const pertes = getElement('.delete-account-losses').textContent ?? '';
 
         expect(pertes).toContain(labels.deleteAccountLosesItems);
+        expect(pertes).toContain(labels.deleteAccountLosesProjects);
         expect(pertes).toContain(labels.deleteAccountLosesNotifications);
-        expect(getElement('.delete-account-warning').textContent).toBe(
-            labels.deleteAccountNoRecovery,
-        );
+        expect(getElement('.delete-account-warning').textContent).toBe(labels.deleteAccountNoRecovery);
     });
 
     describe('export', () => {

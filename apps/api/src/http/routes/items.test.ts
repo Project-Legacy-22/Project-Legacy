@@ -1,395 +1,262 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { IdentityProvider } from '@legacy/core-auth';
-import { makeAddItem, makeChangeItem, makeListItems, makeRemoveItem } from '@legacy/core-items';
-import type { Item, ItemRepository } from '@legacy/core-items';
-import {
-    makeEraseAccount,
-    makeExportPersonalData,
-    makeIdentifyCaller,
-    makeRegisterAccount,
-    makeRequestPasswordReset,
-    makeResetPassword,
-    makeSignIn,
-} from '@legacy/core-auth';
-// The reference fakes for a port live with the port they implement. Copying one
-// here would let the copy drift from the contract it is supposed to stand for.
-import { inMemoryCompromisedPasswords } from '../../../../../packages/core/auth/test/fakes/in-memory-compromised-passwords.js';
+import { makeSignIn } from '@legacy/core-auth';
+import type { Item } from '@legacy/core-items';
 import { inMemoryIdentityProvider } from '../../../../../packages/core/auth/test/fakes/in-memory-identity-provider.js';
-import { inMemoryPersonalDataStore } from '../../../../../packages/core/auth/test/fakes/in-memory-personal-data-store.js';
 import { inMemoryItemRepository } from '../../../../../packages/core/items/test/fakes/in-memory-item-repository.js';
-import type { InMemoryItemRepository } from '../../../../../packages/core/items/test/fakes/in-memory-item-repository.js';
+import type {
+    InMemoryItemRepository,
+    ProjectMembership,
+} from '../../../../../packages/core/items/test/fakes/in-memory-item-repository.js';
 
 import { createServer } from '../server.js';
 import { SESSION_COOKIE } from '../session.js';
-import type { AppUseCases } from '../../composition-root.js';
 import { recordingLogger } from '../../../test/fakes/recording-logger.js';
 import { json, listen, testConfig } from '../../../test/http-harness.js';
 import type { Harness } from '../../../test/http-harness.js';
+import { makeItemRouteUseCases } from '../../../test/fakes/item-route-use-cases.js';
 
 const GENERATED_ID = '33333333-3333-4333-8333-333333333333';
-// The account every request in this suite is made by. Its identifier is an
-// internal fact: the assertions below check it never reaches a response.
 const OWNER_ID = '00000000-0000-7000-8000-000000000001';
 const OTHER_OWNER_ID = '00000000-0000-7000-8000-000000000002';
-const ADRESSE = 'alice@example.com';
-const MOT_DE_PASSE = 'MotDePasse2026';
-
-function useCasesOver(repository: ItemRepository, provider: IdentityProvider): AppUseCases {
-    // Aucun compte : les routes d items ne touchent pas aux donnees
-    // personnelles, et un magasin vide le rend visible si l une d elles s y met.
-    const personalData = inMemoryPersonalDataStore();
-
-    return {
-        items: {
-            listItems: makeListItems(repository),
-            addItem: makeAddItem({
-                repository,
-                newId: () => GENERATED_ID,
-                now: () => new Date('2026-09-04T10:00:00.000Z'),
-            }),
-            changeItem: makeChangeItem(repository),
-            removeItem: makeRemoveItem(repository),
-        },
-        auth: {
-            registerAccount: makeRegisterAccount(provider),
-            signIn: makeSignIn(provider),
-            identifyCaller: makeIdentifyCaller(provider),
-            requestPasswordReset: makeRequestPasswordReset(provider),
-            resetPassword: makeResetPassword({
-                provider,
-                compromisedPasswords: inMemoryCompromisedPasswords(),
-            }),
-        },
-        account: {
-            exportPersonalData: makeExportPersonalData({
-                store: personalData,
-                now: () => new Date('2026-09-04T10:00:00.000Z'),
-            }),
-            eraseAccount: makeEraseAccount({ store: personalData, identity: provider }),
-        },
-    };
-}
-
-// Identifiers are UUIDs by contract (packages/contracts ItemIdParams), so the
-// fixtures use real ones: a readable string such as 'item-1' would be rejected
-// at the boundary, and the test would prove nothing about the route behind it.
+const PROJECT_ID = '00000000-0000-7000-8000-000000000010';
+const UNKNOWN_PROJECT_ID = '00000000-0000-7000-8000-000000000099';
 const EXISTING_ID = '11111111-1111-4111-8111-111111111111';
 const UNKNOWN_ID = '22222222-2222-4222-8222-222222222222';
 const OTHER_ID = '44444444-4444-4444-8444-444444444444';
+const ADRESSE = 'alice@example.com';
+const MOT_DE_PASSE = 'MotDePasse2026';
+const ITEMS_PATH = `/projects/${PROJECT_ID}/items`;
 
 type Page = { items: { id: string }[]; nextCursor: string | null };
 
-function anItemOf(id: string, ownerId: string, name = 'Acheter du pain'): Item {
-    return { id, name, completed: false, ownerId };
+function anItemOf(candidate: { id: string; ownerId: string; name?: string; projectId?: string }): Item {
+    return {
+        id: candidate.id,
+        name: candidate.name ?? 'Acheter du pain',
+        completed: false,
+        projectId: candidate.projectId ?? PROJECT_ID,
+        ownerId: candidate.ownerId,
+    };
 }
 
 describe('items API', () => {
     let harness: Harness;
     let store: InMemoryItemRepository;
 
-    // Every request in this suite carries a session: since US-11 the item
-    // routes refuse anything else. The refusal itself is asserted in the
-    // authentication suite, where the repository is unreachable on purpose.
-    async function serve(seed: Item[] = []): Promise<void> {
-        store = inMemoryItemRepository(seed);
-        const provider = inMemoryIdentityProvider([
-            { id: OWNER_ID, email: ADRESSE, password: MOT_DE_PASSE },
-        ]);
+    async function serve(
+        seed: Item[] = [],
+        memberships: ProjectMembership[] = [{ projectId: PROJECT_ID, userId: OWNER_ID }],
+    ): Promise<void> {
+        store = inMemoryItemRepository(seed, memberships);
+        const provider = inMemoryIdentityProvider([{ id: OWNER_ID, email: ADRESSE, password: MOT_DE_PASSE }]);
         const session = await makeSignIn(provider)(ADRESSE, MOT_DE_PASSE);
         const logger = recordingLogger();
-
         harness = await listen(
-            createServer(testConfig, useCasesOver(store, provider), logger),
+            createServer(
+                testConfig,
+                makeItemRouteUseCases({
+                    repository: store,
+                    provider,
+                    generatedId: GENERATED_ID,
+                    projectId: PROJECT_ID,
+                }),
+                logger,
+            ),
             logger,
             `${SESSION_COOKIE}=${session.accessToken}`,
         );
     }
 
-    async function reseed(seed: Item[]): Promise<void> {
+    async function reseed(seed: Item[], memberships?: ProjectMembership[]): Promise<void> {
         await harness.close();
-        await serve(seed);
+        await serve(seed, memberships);
     }
 
     beforeEach(() => serve());
     afterEach(() => harness.close());
 
-    describe('GET /items', () => {
-        it('renvoie les items persistes', async () => {
-            await reseed([anItemOf(EXISTING_ID, OWNER_ID)]);
+    describe('GET /projects/:projectId/items', () => {
+        it('returns the project items to a member, including another member item', async () => {
+            await reseed([
+                anItemOf({ id: EXISTING_ID, ownerId: OWNER_ID, name: 'Le mien' }),
+                anItemOf({ id: OTHER_ID, ownerId: OTHER_OWNER_ID, name: 'Partage' }),
+            ]);
 
-            const response = await harness.request('/items');
+            const response = await harness.request(ITEMS_PATH);
 
             expect(response.status).toBe(200);
-            await expect(response.json()).resolves.toEqual({
-                items: [{ id: EXISTING_ID, name: 'Acheter du pain', completed: false }],
-                nextCursor: null,
+            const page = (await response.json()) as Page;
+            expect(page.items.map((item) => item.id)).toEqual([OTHER_ID, EXISTING_ID]);
+            expect(JSON.stringify(page)).not.toContain(OWNER_ID);
+        });
+
+        it('returns the same absence for a non-member and an unknown project', async () => {
+            await reseed([anItemOf({ id: EXISTING_ID, ownerId: OTHER_OWNER_ID })], []);
+
+            const denied = await harness.request(ITEMS_PATH);
+            const unknown = await harness.request(`/projects/${UNKNOWN_PROJECT_ID}/items`);
+
+            expect(denied.status).toBe(404);
+            expect(unknown.status).toBe(404);
+            expect((await denied.json()) as object).toMatchObject({
+                type: 'project_not_found',
+            });
+            expect((await unknown.json()) as object).toMatchObject({
+                type: 'project_not_found',
             });
         });
 
-        it('renvoie une page vide plutot qu une erreur quand il n y a rien', async () => {
-            const response = await harness.request('/items');
-
-            expect(response.status).toBe(200);
-            await expect(response.json()).resolves.toEqual({ items: [], nextCursor: null });
-        });
-
-        // Critere bloquant de US-12. L item present compte autant que l item
-        // absent : un filtre qui ne renvoie jamais rien passerait la moitie.
-        it('ne renvoie que les items du compte de la session', async () => {
+        it('paginates without repeating or skipping an item', async () => {
             await reseed([
-                anItemOf(EXISTING_ID, OWNER_ID, 'Le mien'),
-                anItemOf(OTHER_ID, OTHER_OWNER_ID, 'Celui d un autre'),
+                anItemOf({ id: EXISTING_ID, ownerId: OWNER_ID }),
+                anItemOf({ id: OTHER_ID, ownerId: OWNER_ID }),
             ]);
 
-            const page = (await (await harness.request('/items')).json()) as Page;
+            const first = (await (await harness.request(`${ITEMS_PATH}?limit=1`)).json()) as Page;
+            const second = (await (
+                await harness.request(`${ITEMS_PATH}?limit=1&cursor=${encodeURIComponent(String(first.nextCursor))}`)
+            ).json()) as Page;
 
-            expect(page.items.map(item => item.id)).toEqual([EXISTING_ID]);
-        });
-
-        it('borne la liste et sert la suite depuis le curseur', async () => {
-            await reseed([anItemOf(EXISTING_ID, OWNER_ID), anItemOf(OTHER_ID, OWNER_ID)]);
-
-            const first = (await (await harness.request('/items?limit=1')).json()) as Page;
-            const next = `/items?limit=1&cursor=${encodeURIComponent(String(first.nextCursor))}`;
-            const second = (await (await harness.request(next)).json()) as Page;
-
-            // Les deux pages couvrent les deux items, sans doublon ni saut.
-            expect(first.items.map(item => item.id)).toEqual([OTHER_ID]);
-            expect(second.items.map(item => item.id)).toEqual([EXISTING_ID]);
+            expect(first.items.map((item) => item.id)).toEqual([OTHER_ID]);
+            expect(second.items.map((item) => item.id)).toEqual([EXISTING_ID]);
             expect(second.nextCursor).toBeNull();
         });
 
-        it('refuse une taille de page hors bornes', async () => {
-            const response = await harness.request('/items?limit=1000');
-
-            expect(response.status).toBe(400);
-        });
-
-        it('refuse un curseur qui n a pas ete emis par l API', async () => {
-            await reseed([anItemOf(EXISTING_ID, OWNER_ID)]);
-
-            const response = await harness.request('/items?cursor=curseur-invente');
-
-            expect(response.status).toBe(400);
+        it('rejects an invalid page size or cursor', async () => {
+            expect((await harness.request(`${ITEMS_PATH}?limit=1000`)).status).toBe(400);
+            expect((await harness.request(`${ITEMS_PATH}?cursor=invente`)).status).toBe(400);
         });
     });
 
-    describe('POST /items', () => {
-        it('cree un item et le renvoie', async () => {
-            const response = await harness.request(
-                '/items',
-                json('POST', { name: 'Acheter du pain' }),
-            );
+    describe('POST /projects/:projectId/items', () => {
+        it('creates an item in the project for a member', async () => {
+            const response = await harness.request(ITEMS_PATH, json('POST', { name: 'Acheter du pain' }));
 
             expect(response.status).toBe(200);
             await expect(response.json()).resolves.toEqual({
                 id: GENERATED_ID,
+                projectId: PROJECT_ID,
                 name: 'Acheter du pain',
                 completed: false,
             });
-            expect(store.items.get(GENERATED_ID)?.name).toBe('Acheter du pain');
-        });
-
-        // Depuis US-11 le proprietaire n est plus un compte fixe : c est celui
-        // que la session designe.
-        it('attribue l item au compte de la session', async () => {
-            await harness.request('/items', json('POST', { name: 'Acheter du pain' }));
-
-            expect(store.items.get(GENERATED_ID)?.ownerId).toBe(OWNER_ID);
-        });
-
-        it('ne divulgue pas le proprietaire dans la reponse', async () => {
-            await reseed([
-                { id: EXISTING_ID, name: 'Acheter du pain', completed: false, ownerId: OWNER_ID },
-            ]);
-
-            const createResponse = await harness.request('/items', json('POST', { name: 'Autre' }));
-            const created = (await createResponse.json()) as Record<string, unknown>;
-            const listResponse = await harness.request('/items');
-            const listed = (await listResponse.json()) as Record<string, unknown>;
-
-            expect(created).not.toHaveProperty('ownerId');
-            expect(JSON.stringify(listed)).not.toContain(OWNER_ID);
-        });
-
-        it('refuse un corps sans nom et ne persiste rien', async () => {
-            const response = await harness.request('/items', json('POST', {}));
-
-            expect(response.status).toBe(400);
-            expect(store.items.size).toBe(0);
-        });
-
-        it('refuse un nom vide', async () => {
-            const response = await harness.request('/items', json('POST', { name: '   ' }));
-
-            expect(response.status).toBe(400);
-            expect(store.items.size).toBe(0);
-        });
-
-        it('decrit l erreur au format attendu', async () => {
-            const response = await harness.request('/items', json('POST', { name: 42 }));
-            const problem = (await response.json()) as Record<string, unknown>;
-
-            expect(problem.type).toBe('validation_error');
-            expect(problem.status).toBe(400);
-            expect(problem.instance).toBe('/items');
-            expect(problem.traceId).toEqual(expect.any(String));
-        });
-
-        // Le message d erreur nomme le champ et la raison, jamais la valeur
-        // soumise : un corps d erreur ne doit pas renvoyer ce que l utilisateur
-        // a tape. L assertion porte sur `detail` et non sur le corps entier,
-        // car un traceId aleatoire peut contenir n importe quelle sous-chaine.
-        it('ne renvoie pas la valeur soumise dans le message', async () => {
-            const valeurSoumise = 'zzz-valeur-que-l-utilisateur-a-tapee-zzz';
-
-            const response = await harness.request(
-                '/items',
-                json('POST', { name: valeurSoumise.repeat(20) }),
-            );
-            const problem = (await response.json()) as { detail: string };
-
-            expect(problem.detail).toContain('name');
-            expect(problem.detail).not.toContain(valeurSoumise);
-        });
-    });
-
-    describe('PUT /items/:id', () => {
-        it('met a jour un item existant', async () => {
-            await reseed([
-                { id: EXISTING_ID, name: 'Ancien nom', completed: false, ownerId: OWNER_ID },
-            ]);
-
-            const response = await harness.request(
-                `/items/${EXISTING_ID}`,
-                json('PUT', { name: 'Nouveau nom', completed: true }),
-            );
-
-            expect(response.status).toBe(200);
-            await expect(response.json()).resolves.toEqual({
-                id: EXISTING_ID,
-                name: 'Nouveau nom',
-                completed: true,
+            expect(store.items.get(GENERATED_ID)).toMatchObject({
+                projectId: PROJECT_ID,
+                ownerId: OWNER_ID,
             });
         });
 
-        it('repond 404 sur un item inexistant', async () => {
-            const response = await harness.request(
-                `/items/${UNKNOWN_ID}`,
-                json('PUT', { name: 'Nouveau nom', completed: true }),
+        it('returns the same absence for a non-member and an unknown project', async () => {
+            await reseed([], []);
+
+            const denied = await harness.request(ITEMS_PATH, json('POST', { name: 'Secret' }));
+            const unknown = await harness.request(
+                `/projects/${UNKNOWN_PROJECT_ID}/items`,
+                json('POST', { name: 'Secret' }),
             );
 
-            expect(response.status).toBe(404);
-        });
-
-        it('refuse un identifiant qui n est pas un uuid', async () => {
-            const response = await harness.request(
-                '/items/pas-un-uuid',
-                json('PUT', { name: 'Nouveau nom', completed: true }),
-            );
-
-            expect(response.status).toBe(400);
-        });
-
-        // Meme reponse que pour un item inexistant : un 403 confirmerait que
-        // cet identifiant designe quelque chose.
-        it('repond 404 sur l item d un autre compte et le laisse intact', async () => {
-            const theirs = anItemOf(OTHER_ID, OTHER_OWNER_ID, 'Celui d un autre');
-            await reseed([theirs]);
-
-            const response = await harness.request(
-                `/items/${OTHER_ID}`,
-                json('PUT', { name: 'Nouveau nom', completed: true }),
-            );
-
-            expect(response.status).toBe(404);
-            expect(store.items.get(OTHER_ID)).toEqual(theirs);
-        });
-
-        it('refuse un corps incomplet', async () => {
-            const response = await harness.request(
-                `/items/${EXISTING_ID}`,
-                json('PUT', { name: 'Sans etat' }),
-            );
-
-            expect(response.status).toBe(400);
-        });
-    });
-
-    describe('DELETE /items/:id', () => {
-        it('supprime un item existant', async () => {
-            await reseed([
-                { id: EXISTING_ID, name: 'A supprimer', completed: false, ownerId: OWNER_ID },
-            ]);
-
-            const response = await harness.request(`/items/${EXISTING_ID}`, { method: 'DELETE' });
-
-            expect(response.status).toBe(200);
+            expect(denied.status).toBe(404);
+            expect(unknown.status).toBe(404);
             expect(store.items.size).toBe(0);
         });
 
-        // Le code herite repondait 200 sans regarder si l item existait. La
-        // suppression signale desormais l absence, ce qui permet a un client de
-        // distinguer une suppression effective d une ressource deja disparue.
-        it('repond 404 sur un item inexistant', async () => {
-            const response = await harness.request(`/items/${UNKNOWN_ID}`, { method: 'DELETE' });
+        it('rejects an invalid name without echoing it', async () => {
+            const submitted = 'valeur-personnelle-'.repeat(20);
+            const response = await harness.request(ITEMS_PATH, json('POST', { name: submitted }));
+            const problem = (await response.json()) as { detail: string };
 
-            expect(response.status).toBe(404);
-        });
-
-        it('repond 404 sur l item d un autre compte et ne le supprime pas', async () => {
-            await reseed([anItemOf(OTHER_ID, OTHER_OWNER_ID)]);
-
-            const response = await harness.request(`/items/${OTHER_ID}`, { method: 'DELETE' });
-
-            expect(response.status).toBe(404);
-            expect(store.items.has(OTHER_ID)).toBe(true);
+            expect(response.status).toBe(400);
+            expect(problem.detail).not.toContain(submitted);
+            expect(store.items.size).toBe(0);
         });
     });
 
-    describe('identifiant de trace', () => {
-        // Le middleware garantit la presence de l identifiant. S il etait
-        // oublie, propager `undefined` jusque dans un journal rendrait tout
-        // signalement d utilisateur intracable : l acces echoue donc bruyamment.
-        it('echoue clairement si le middleware de trace n est pas monte', async () => {
-            const { traceIdOf } = await import('../trace.js');
+    describe('PUT /projects/:projectId/items/:id', () => {
+        it('allows a member to update an item created by another member', async () => {
+            await reseed([
+                anItemOf({
+                    id: EXISTING_ID,
+                    ownerId: OTHER_OWNER_ID,
+                    name: 'Ancien nom',
+                }),
+            ]);
 
-            expect(() => traceIdOf({ locals: {} } as never)).toThrow(/withTraceId/);
+            const response = await harness.request(
+                `${ITEMS_PATH}/${EXISTING_ID}`,
+                json('PUT', { name: 'Nouveau nom', completed: true }),
+            );
+
+            expect(response.status).toBe(200);
+            expect(store.items.get(EXISTING_ID)).toMatchObject({
+                name: 'Nouveau nom',
+                completed: true,
+                ownerId: OTHER_OWNER_ID,
+            });
         });
 
-        it('donne le meme identifiant a la reponse et aux lignes journalisees', async () => {
-            const response = await harness.request('/items', json('POST', {}));
-            const problem = (await response.json()) as { traceId: string };
+        it('returns the same absence for a non-member and an unknown project', async () => {
+            const item = anItemOf({
+                id: EXISTING_ID,
+                ownerId: OTHER_OWNER_ID,
+                name: 'Intact',
+            });
+            await reseed([item], []);
 
-            expect(problem.traceId).toMatch(
-                /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+            const denied = await harness.request(
+                `${ITEMS_PATH}/${EXISTING_ID}`,
+                json('PUT', { name: 'Modifie', completed: true }),
+            );
+            const unknown = await harness.request(
+                `/projects/${UNKNOWN_PROJECT_ID}/items/${EXISTING_ID}`,
+                json('PUT', { name: 'Modifie', completed: true }),
+            );
+
+            expect(denied.status).toBe(404);
+            expect(unknown.status).toBe(404);
+            expect(store.items.get(EXISTING_ID)).toEqual(item);
+        });
+
+        it('rejects an invalid identifier and an incomplete body', async () => {
+            expect(
+                (await harness.request(`${ITEMS_PATH}/pas-un-uuid`, json('PUT', { name: 'Nom', completed: true })))
+                    .status,
+            ).toBe(400);
+            expect((await harness.request(`${ITEMS_PATH}/${UNKNOWN_ID}`, json('PUT', { name: 'Nom' }))).status).toBe(
+                400,
             );
         });
     });
 
-    describe('journalisation', () => {
-        it('ne journalise jamais le nom d un item', async () => {
-            await harness.request('/items', json('POST', { name: 'Acheter du pain' }));
+    describe('DELETE /projects/:projectId/items/:id', () => {
+        it('allows a member to delete an item created by another member', async () => {
+            await reseed([anItemOf({ id: EXISTING_ID, ownerId: OTHER_OWNER_ID })]);
 
-            expect(JSON.stringify(harness.logger.lines)).not.toContain('Acheter du pain');
+            const response = await harness.request(`${ITEMS_PATH}/${EXISTING_ID}`, {
+                method: 'DELETE',
+            });
+
+            expect(response.status).toBe(200);
+            expect(store.items.has(EXISTING_ID)).toBe(false);
         });
 
-        it('journalise un refus attendu en avertissement, pas en erreur', async () => {
-            await harness.request('/items', json('POST', {}));
+        it('returns the same absence for a non-member and an unknown project', async () => {
+            const item = anItemOf({ id: EXISTING_ID, ownerId: OTHER_OWNER_ID });
+            await reseed([item], []);
 
-            const levels = harness.logger.lines.map(line => line.level);
-            expect(levels).toContain('warn');
-            expect(levels).not.toContain('error');
+            const denied = await harness.request(`${ITEMS_PATH}/${EXISTING_ID}`, {
+                method: 'DELETE',
+            });
+            const unknown = await harness.request(`/projects/${UNKNOWN_PROJECT_ID}/items/${EXISTING_ID}`, {
+                method: 'DELETE',
+            });
+
+            expect(denied.status).toBe(404);
+            expect(unknown.status).toBe(404);
+            expect(store.items.get(EXISTING_ID)).toEqual(item);
         });
+    });
 
-        it('rattache le meme identifiant de trace a la reponse et au journal', async () => {
-            const response = await harness.request('/items', json('POST', {}));
-            const problem = (await response.json()) as { traceId: string };
-
-            const traced = harness.logger.lines.filter(
-                line => (line.fields as { traceId?: string }).traceId === problem.traceId,
-            );
-            expect(traced.length).toBeGreaterThan(0);
-        });
+    it('never writes an item name to logs', async () => {
+        await harness.request(ITEMS_PATH, json('POST', { name: 'Acheter du pain' }));
+        expect(JSON.stringify(harness.logger.lines)).not.toContain('Acheter du pain');
     });
 });

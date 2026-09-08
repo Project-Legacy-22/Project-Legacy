@@ -5,14 +5,8 @@ import { App } from './app';
 import type { ItemDto, ItemPageDto, ItemsApi } from './api/items-api';
 import { ApiError } from './api/items-api';
 import type { AccountDto, AuthApi } from './api/auth-api';
-import {
-    click,
-    createReactTestRoot,
-    flushTimers,
-    getElement,
-    setInputValue,
-    submitForm,
-} from './test/react-root';
+import type { ProjectsApi } from './api/projects-api';
+import { click, createReactTestRoot, flushTimers, getElement, setInputValue, submitForm } from './test/react-root';
 import type { ReactTestRoot } from './test/react-root';
 import { anItem } from './test/builders/item-builder';
 import { labels } from './labels';
@@ -31,6 +25,12 @@ const secondItem = anItem({
     id: '93a3eb56-61a2-4b0b-8e92-bb97fb9b3531',
     name: 'Second item',
 });
+const PROJECT = {
+    id: firstItem.projectId,
+    name: 'My project',
+    role: 'owner' as const,
+    itemCount: 2,
+};
 
 let testRoot: ReactTestRoot;
 
@@ -38,7 +38,7 @@ function deferred<T>(): Deferred<T> {
     let resolve: Deferred<T>['resolve'] = () => {
         throw new Error('Deferred promise was not initialized.');
     };
-    const promise = new Promise<T>(promiseResolve => {
+    const promise = new Promise<T>((promiseResolve) => {
         resolve = promiseResolve;
     });
     return { promise, resolve };
@@ -58,7 +58,10 @@ function itemPage(items: readonly ItemDto[] = [], nextCursor: string | null = nu
     return { items: [...items], nextCursor };
 }
 
-const ACCOUNT: AccountDto = { id: '5b1f0f4a-9d3f-4d0e-9e2a-6c0f5a3b1d77', email: 'ada@example.com' };
+const ACCOUNT: AccountDto = {
+    id: '5b1f0f4a-9d3f-4d0e-9e2a-6c0f5a3b1d77',
+    email: 'ada@example.com',
+};
 
 // Signed in by default: the item tests below are about the item workflow, and
 // making each of them sign in first would test the session over and over.
@@ -71,6 +74,34 @@ function createAuth(overrides: Partial<AuthApi> = {}): AuthApi {
         resetPassword: vi.fn(async () => undefined),
         ...overrides,
     };
+}
+
+function createProjectsApi(overrides: Partial<ProjectsApi> = {}): ProjectsApi {
+    return {
+        listProjects: vi.fn(async () => ({
+            projects: [PROJECT],
+            nextCursor: null,
+        })),
+        createProject: vi.fn(async () => PROJECT),
+        deleteProject: vi.fn(async () => undefined),
+        ...overrides,
+    };
+}
+
+interface AppFixture {
+    api?: ItemsApi;
+    auth?: AuthApi;
+    projects?: ProjectsApi;
+}
+
+function renderApp(fixture: AppFixture = {}): Promise<void> {
+    return testRoot.render(
+        <App
+            api={fixture.api ?? createApi()}
+            auth={fixture.auth ?? createAuth()}
+            projects={fixture.projects ?? createProjectsApi()}
+        />,
+    );
 }
 
 async function fillSignInForm(email: string, password: string): Promise<void> {
@@ -95,10 +126,13 @@ describe('App item workflow', () => {
     it('keeps mutations disabled until the initial query is complete', async () => {
         const listRequest = deferred<ItemPageDto>();
         const createItem = vi.fn(async () => firstItem);
-        const api = createApi({ listItems: vi.fn(() => listRequest.promise), createItem });
+        const api = createApi({
+            listItems: vi.fn(() => listRequest.promise),
+            createItem,
+        });
 
-        await testRoot.render(<App api={api} auth={createAuth()} />);
-        const addButton = getElement<HTMLButtonElement>('.button-primary');
+        await renderApp({ api });
+        const addButton = getElement<HTMLButtonElement>('.add-form .button-primary');
         expect(addButton.disabled).toBe(true);
         await click(addButton);
         expect(createItem).not.toHaveBeenCalled();
@@ -115,16 +149,16 @@ describe('App item workflow', () => {
         const api = createApi({
             listItems: vi.fn(async () => itemPage([firstItem, secondItem])),
         });
-        await testRoot.render(<App api={api} auth={createAuth()} />);
+        await renderApp({ api });
 
-        const firstRemove = getElement<HTMLButtonElement>('.button-danger');
+        const firstRemove = getElement<HTMLButtonElement>('.todo-item .button-danger');
         firstRemove.focus();
         await click(firstRemove);
         await flushTimers();
 
         expect(document.querySelectorAll('.todo-item')).toHaveLength(1);
         expect(getElement<HTMLElement>('.item-name').textContent).toBe(secondItem.name);
-        expect(document.activeElement).toBe(getElement<HTMLButtonElement>('.button-secondary'));
+        expect(document.activeElement).toBe(getElement<HTMLButtonElement>('.todo-item .button-secondary'));
     });
 });
 
@@ -134,7 +168,7 @@ describe('App authentication', () => {
         const api = createApi({ listItems });
         const auth = createAuth({ currentAccount: vi.fn(async () => null) });
 
-        await testRoot.render(<App api={api} auth={auth} />);
+        await renderApp({ api, auth });
 
         expect(document.querySelector('form.auth-form')).not.toBeNull();
         // Le garde est cote interface : la requete n est meme pas tentee, au
@@ -144,7 +178,7 @@ describe('App authentication', () => {
 
     it('enonce la politique de mot de passe avant toute saisie, rattachee au champ', async () => {
         const auth = createAuth({ currentAccount: vi.fn(async () => null) });
-        await testRoot.render(<App api={createApi()} auth={auth} />);
+        await renderApp({ auth });
 
         await click(getElement<HTMLButtonElement>('.button-quiet'));
 
@@ -162,7 +196,7 @@ describe('App authentication', () => {
                 throw new ApiError(401, 'Email address or password is incorrect.');
             }),
         });
-        await testRoot.render(<App api={createApi()} auth={auth} />);
+        await renderApp({ auth });
 
         await fillSignInForm('ada@example.com', 'mauvais-mot-de-passe');
 
@@ -174,7 +208,7 @@ describe('App authentication', () => {
 
     it('atteint l espace de l utilisateur apres une connexion reussie', async () => {
         const auth = createAuth({ currentAccount: vi.fn(async () => null) });
-        await testRoot.render(<App api={createApi()} auth={auth} />);
+        await renderApp({ auth });
 
         await fillSignInForm('ada@example.com', 'un-mot-de-passe-valide');
         await flushTimers();
@@ -185,7 +219,7 @@ describe('App authentication', () => {
 
     it('associe une etiquette a chaque champ et n annonce aucune erreur avant soumission', async () => {
         const auth = createAuth({ currentAccount: vi.fn(async () => null) });
-        await testRoot.render(<App api={createApi()} auth={auth} />);
+        await renderApp({ auth });
 
         for (const input of document.querySelectorAll<HTMLInputElement>('form.auth-form input')) {
             expect(document.querySelector(`label[for="${input.id}"]`)).not.toBeNull();
@@ -196,7 +230,7 @@ describe('App authentication', () => {
 
     it('rattache l erreur au champ concerne et l annonce', async () => {
         const auth = createAuth({ currentAccount: vi.fn(async () => null) });
-        await testRoot.render(<App api={createApi()} auth={auth} />);
+        await renderApp({ auth });
 
         await submitForm(getElement<HTMLFormElement>('form.auth-form'));
 
@@ -213,7 +247,7 @@ describe('App session states', () => {
         const pending = deferred<AccountDto | null>();
         const auth = createAuth({ currentAccount: vi.fn(() => pending.promise) });
 
-        await testRoot.render(<App api={createApi()} auth={auth} />);
+        await renderApp({ auth });
 
         // La session est portee par un cookie httpOnly : la page ne peut pas la
         // lire. Montrer le formulaire pendant la verification le ferait
@@ -236,25 +270,23 @@ describe('App session states', () => {
             }),
         });
 
-        await testRoot.render(<App api={createApi()} auth={auth} />);
+        await renderApp({ auth });
 
-        expect(getElement<HTMLElement>('[role="alert"]').textContent).toBe(
-            'Unable to check the session.',
-        );
+        expect(getElement<HTMLElement>('[role="alert"]').textContent).toBe('Unable to check the session.');
         expect(document.querySelector('form.auth-form')).toBeNull();
     });
 
     it('confirme une inscription sans reveler si l adresse existait deja', async () => {
         const register = vi.fn(async () => undefined);
-        const auth = createAuth({ currentAccount: vi.fn(async () => null), register });
-        await testRoot.render(<App api={createApi()} auth={auth} />);
+        const auth = createAuth({
+            currentAccount: vi.fn(async () => null),
+            register,
+        });
+        await renderApp({ auth });
 
         await click(getElement<HTMLButtonElement>('.button-quiet'));
         await setInputValue(getElement<HTMLInputElement>('input[type="email"]'), 'ada@example.com');
-        await setInputValue(
-            getElement<HTMLInputElement>('input[type="password"]'),
-            'un-mot-de-passe-valide',
-        );
+        await setInputValue(getElement<HTMLInputElement>('input[type="password"]'), 'un-mot-de-passe-valide');
         await submitForm(getElement<HTMLFormElement>('form.auth-form'));
         await flushTimers();
 
@@ -267,8 +299,11 @@ describe('App session states', () => {
 
     it('refuse un mot de passe trop court sans appeler le serveur', async () => {
         const register = vi.fn(async () => undefined);
-        const auth = createAuth({ currentAccount: vi.fn(async () => null), register });
-        await testRoot.render(<App api={createApi()} auth={auth} />);
+        const auth = createAuth({
+            currentAccount: vi.fn(async () => null),
+            register,
+        });
+        await renderApp({ auth });
 
         await click(getElement<HTMLButtonElement>('.button-quiet'));
         await setInputValue(getElement<HTMLInputElement>('input[type="email"]'), 'ada@example.com');
@@ -276,9 +311,7 @@ describe('App session states', () => {
         await submitForm(getElement<HTMLFormElement>('form.auth-form'));
 
         expect(register).not.toHaveBeenCalled();
-        expect(getElement<HTMLInputElement>('input[type="password"]').getAttribute('aria-invalid')).toBe(
-            'true',
-        );
+        expect(getElement<HTMLInputElement>('input[type="password"]').getAttribute('aria-invalid')).toBe('true');
     });
 
     it('lets a signed-out visitor ask for a reset link and shows a neutral reply', async () => {

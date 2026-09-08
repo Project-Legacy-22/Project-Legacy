@@ -104,6 +104,7 @@ export default defineConfig({
                 // request.
                 'packages/infra/src/supabase-item-repository.ts',
                 'packages/infra/src/supabase-personal-data-store.ts',
+                'packages/infra/src/supabase-project-repository.ts',
                 // Front composition root: it mounts the app and nothing else,
                 // exactly like the API entry point above.
                 'apps/web/src/main.tsx',

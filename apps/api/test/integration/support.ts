@@ -38,6 +38,7 @@ export interface RealAccount {
     email: string;
     accessToken: string;
     cookie: string;
+    projectId: string;
 }
 
 // Goes through the real HTTP-facing use cases, backed by the real Supabase
@@ -53,12 +54,19 @@ export async function registerAndSignIn(app: Application, password: string): Pro
 
     await app.useCases.auth.registerAccount(email, password);
     const session = await app.useCases.auth.signIn(email, password);
+    const page = await app.useCases.projects.listProjects(session.account.id, {
+        limit: 1,
+        cursor: undefined,
+    });
+    const project = page.projects[0];
+    if (project === undefined) throw new Error('registration did not create a default project');
 
     return {
         id: session.account.id,
         email,
         accessToken: session.accessToken,
         cookie: `${SESSION_COOKIE}=${session.accessToken}`,
+        projectId: project.id,
     };
 }
 

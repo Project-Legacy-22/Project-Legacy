@@ -9,11 +9,13 @@ import {
     makeSignIn,
 } from '@legacy/core-auth';
 import { makeAddItem, makeChangeItem, makeListItems, makeRemoveItem } from '@legacy/core-items';
+import { makeAddProject, makeListProjects, makeRemoveProject } from '@legacy/core-projects';
 // The reference fakes for a port live with the port they implement.
 import { inMemoryCompromisedPasswords } from '../../../../../packages/core/auth/test/fakes/in-memory-compromised-passwords.js';
 import { inMemoryPersonalDataStore } from '../../../../../packages/core/auth/test/fakes/in-memory-personal-data-store.js';
 import { inMemoryIdentityProvider } from '../../../../../packages/core/auth/test/fakes/in-memory-identity-provider.js';
 import type { InMemoryIdentityProvider } from '../../../../../packages/core/auth/test/fakes/in-memory-identity-provider.js';
+import { inMemoryProjectRepository } from '../../../../../packages/core/projects/test/fakes/in-memory-project-repository.js';
 
 import { createServer } from '../server.js';
 import type { AppUseCases } from '../../composition-root.js';
@@ -38,6 +40,7 @@ const COMPTE = [{ id: ACCOUNT_ID, email: ADRESSE, password: ANCIEN }];
 
 function useCasesOver(provider: InMemoryIdentityProvider, compromised: string[]): AppUseCases {
     const repository = unreachableItemRepository();
+    const projects = inMemoryProjectRepository();
 
     return {
         items: {
@@ -69,6 +72,11 @@ function useCasesOver(provider: InMemoryIdentityProvider, compromised: string[])
                 now: () => new Date('2026-09-04T10:00:00.000Z'),
             }),
             eraseAccount: makeEraseAccount({ store: inMemoryPersonalDataStore(), identity: provider }),
+        },
+        projects: {
+            listProjects: makeListProjects(projects),
+            addProject: makeAddProject({ repository: projects, newId: () => ACCOUNT_ID }),
+            removeProject: makeRemoveProject(projects),
         },
     };
 }
