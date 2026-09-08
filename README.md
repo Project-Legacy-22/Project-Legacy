@@ -273,7 +273,7 @@ bâtit le seul espace de travail `@legacy/web` :
 | `installCommand` | `npm ci` | `typescript` n'est déclaré qu'à la racine. Installer depuis `apps/web` ne l'installe pas, et le build échoue sur `tsc: command not found`. |
 | `buildCommand` | `npm run build` | la commande de la racine, celle que la CI exécute. Elle lance `tsc --build` avant Vite : sans cette étape, `@legacy/contracts` n'est pas compilé et le front ne trouve pas ses types. |
 | `outputDirectory` | `apps/api/dist/static` | Vite y écrit déjà, l'API sert ce répertoire en production |
-| `ignoreCommand` | diff entre le dernier commit déployé et la tête, sur `apps/web`, `packages`, le verrou et ce fichier | une poussée qui ne touche que l'API ne déclenche pas de build. La comparaison part de `VERCEL_GIT_PREVIOUS_SHA` et non de `HEAD^`, sans quoi une poussée de plusieurs commits n'examinerait que le dernier. Sans cette variable, le build a lieu. |
+| `ignoreCommand` | diff entre le dernier commit déployé et la tête, sur `api`, `apps`, `packages`, le verrou et ce fichier | une poussée qui ne touche que l'API ne déclenche pas de build. La comparaison part de `VERCEL_GIT_PREVIOUS_SHA` et non de `HEAD^`, sans quoi une poussée de plusieurs commits n'examinerait que le dernier. Sans cette variable, le build a lieu. Un redéploiement du même commit bâtit aussi : les deux identifiants sont alors égaux, et un changement de variable d'environnement ne touche pas Git. |
 
 **Réglages du projet Vercel**, à poser dans le tableau de bord et non ici : *Root Directory* à
 la racine du dépôt, et *Production Branch* sur `main`. Les aperçus se déclenchent alors sur
