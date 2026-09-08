@@ -184,6 +184,30 @@ Les tentatives de création de compte et de connexion partagent une limite de di
 tranche de cinq minutes et par adresse d'appel. Les en-têtes de sécurité et la restriction
 CORS relèvent d'`EN-29`.
 
+## Données personnelles
+
+Deux routes portent les droits de portabilité et d'effacement (`US-13`). Elles agissent sur
+le compte de la session et n'acceptent aucun identifiant : une route qui en prendrait un
+serait une route qu'on peut pointer vers quelqu'un d'autre.
+
+| Route | Effet |
+|---|---|
+| `GET /auth/me/export` | Sert en JSON le compte, ses éléments et ses notifications |
+| `DELETE /auth/me` | Supprime le compte, sans délai, après confirmation |
+
+L'export est assemblé à la demande et servi tel quel : rien n'est écrit sur disque, donc
+aucune copie ne subsiste à protéger ni à purger. Les éléments supprimés y figurent avec leur
+date de suppression, parce qu'ils sont encore détenus.
+
+La suppression exige que le corps de la requête reprenne l'adresse du compte
+(`{ "confirmation": "..." }`), faute de quoi elle répond `422`. Elle efface physiquement les
+lignes des cinq tables concernées en une seule transaction, puis supprime les identifiants
+chez le fournisseur, ce qui révoque toutes les sessions. L'ordre est délibéré : une
+tentative interrompue entre les deux étapes peut être relancée, l'inverse laisserait des
+données derrière un compte inaccessible. Il n'y a ni délai de grâce ni retour en arrière.
+
+Détail complet dans [docs/features/14-export-and-delete-account.md](docs/features/14-export-and-delete-account.md).
+
 ## Build de production
 
 Construire l'API, les packages et le front :
