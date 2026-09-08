@@ -273,7 +273,7 @@ bâtit le seul espace de travail `@legacy/web` :
 | `installCommand` | `npm ci` | `typescript` n'est déclaré qu'à la racine. Installer depuis `apps/web` ne l'installe pas, et le build échoue sur `tsc: command not found`. |
 | `buildCommand` | `npm run build --workspace @legacy/web` | une seule commande, celle que la CI exécute déjà |
 | `outputDirectory` | `apps/api/dist/static` | Vite y écrit déjà, l'API sert ce répertoire en production |
-| `ignoreCommand` | diff sur `apps/web`, `packages`, le verrou et ce fichier | un commit qui ne touche que l'API ne déclenche pas de build |
+| `ignoreCommand` | diff entre le dernier commit déployé et la tête, sur `apps/web`, `packages`, le verrou et ce fichier | une poussée qui ne touche que l'API ne déclenche pas de build. La comparaison part de `VERCEL_GIT_PREVIOUS_SHA` et non de `HEAD^`, sans quoi une poussée de plusieurs commits n'examinerait que le dernier. Sans cette variable, le build a lieu. |
 
 **Réglages du projet Vercel**, à poser dans le tableau de bord et non ici : *Root Directory* à
 la racine du dépôt, et *Production Branch* sur `main`. Les aperçus se déclenchent alors sur
