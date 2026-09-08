@@ -21,4 +21,14 @@ export interface IdentityProvider {
     register(email: string, password: string): Promise<RegistrationOutcome>;
     authenticate(email: string, password: string): Promise<Session | undefined>;
     identify(accessToken: string): Promise<Account | undefined>;
+
+    // Removes the credentials and every session they opened, which is what
+    // signs the person out of every browser rather than only the one that
+    // asked. Erasure (US-13) is its only caller: this application has no
+    // administrative deletion, and adding one would need its own story.
+    //
+    // Deleting an account that is already gone succeeds, for the same reason
+    // PersonalDataStore.eraseFor tolerates a second call: a retry must be able
+    // to finish what a failed attempt started.
+    remove(accountId: string): Promise<void>;
 }

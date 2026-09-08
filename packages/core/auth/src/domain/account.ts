@@ -47,3 +47,25 @@ export class SessionRequired extends AuthError {
         super('session_required', 401, 'This request requires a valid session.');
     }
 }
+
+// A session vouched for an account the application no longer holds. It means
+// the two stores have drifted, not that the caller did anything wrong, so it is
+// reported as an absent resource and never as a rejected credential.
+export class AccountNotFound extends AuthError {
+    constructor() {
+        super('account_not_found', 404, 'This account no longer exists.');
+    }
+}
+
+// The address retyped to confirm an erasure is not the one the session belongs
+// to. The message names the rule and not the value that was submitted: an error
+// body must not echo back what a person typed.
+export class ErasureNotConfirmed extends AuthError {
+    constructor() {
+        super(
+            'erasure_not_confirmed',
+            422,
+            'Deleting the account requires confirming its email address.',
+        );
+    }
+}

@@ -34,6 +34,15 @@ export const SignInBody = z.object({
     password: z.string().min(1),
 });
 
+// Erasure is immediate and has no grace period (Sprint Planning 2 decision), so
+// the request itself has to carry the confirmation: the caller retypes the
+// address the session belongs to. A mis-click, a replayed request or a stray
+// DELETE cannot produce that value, and there is no later window in which to
+// take the deletion back.
+export const DeleteAccountBody = z.object({
+    confirmation: emailSchema,
+});
+
 // What a caller may learn about itself. There is no endpoint that returns
 // anybody else's account.
 export const AccountDto = z.object({
@@ -43,4 +52,5 @@ export const AccountDto = z.object({
 
 export type RegisterAccountBody = z.infer<typeof RegisterAccountBody>;
 export type SignInBody = z.infer<typeof SignInBody>;
+export type DeleteAccountBody = z.infer<typeof DeleteAccountBody>;
 export type AccountDto = z.infer<typeof AccountDto>;

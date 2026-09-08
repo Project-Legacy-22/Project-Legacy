@@ -25,6 +25,17 @@ export function setSessionCookie(res: Response, session: Session, secure: boolea
     });
 }
 
+// Drops the cookie the browser holds. The attributes have to match the ones
+// setSessionCookie wrote, path included, or the browser keeps the original and
+// the page carries on sending a token nothing will honour any more.
+//
+// The token it carried is already worthless by the time this runs: erasure
+// deletes the account, and the identity provider stops vouching for its
+// sessions. This is what stops the interface from pretending otherwise.
+export function clearSessionCookie(res: Response, secure: boolean): void {
+    res.clearCookie(SESSION_COOKIE, { httpOnly: true, sameSite: 'lax', secure, path: '/' });
+}
+
 // Same shape as trace.ts, for the same reason: express types res.locals through
 // an index signature that collapses a declared field back to `any`, so the
 // value travels through a typed view and is checked on the way out.

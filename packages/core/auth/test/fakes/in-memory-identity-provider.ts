@@ -50,5 +50,17 @@ export function inMemoryIdentityProvider(seed: StoredAccount[] = []): IdentityPr
                 found === undefined ? undefined : { id: found.id, email: found.email },
             );
         },
+
+        // Removing the account also removes the only thing identify() matches
+        // on, so every token it had handed out stops resolving. That is the
+        // behaviour the real provider has -- deleting a user drops its sessions
+        // -- and it is what a test of US-13 asserts against.
+        remove: (accountId): Promise<void> => {
+            const found = [...accounts.values()].find(account => account.id === accountId);
+
+            if (found !== undefined) accounts.delete(found.email);
+
+            return Promise.resolve();
+        },
     };
 }

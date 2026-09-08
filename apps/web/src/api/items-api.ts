@@ -32,13 +32,19 @@ export class ApiError extends Error {
     }
 }
 
-async function errorMessage(response: Response): Promise<string> {
+// Exported for the other API modules: every endpoint answers a failure with the
+// same problem document, so reading one is not the item client's own business.
+// The fallback is a parameter because a caller usually has a better sentence
+// than "the request failed" for the one operation it was attempting.
+export async function errorMessage(response: Response, fallback?: string): Promise<string> {
+    const generic = fallback ?? labels.requestFailed(response.status);
+
     try {
         const body: unknown = await response.json();
         const problem = ProblemDetails.safeParse(body);
-        return problem.success ? problem.data.detail : labels.requestFailed(response.status);
+        return problem.success ? problem.data.detail : generic;
     } catch {
-        return labels.requestFailed(response.status);
+        return generic;
     }
 }
 

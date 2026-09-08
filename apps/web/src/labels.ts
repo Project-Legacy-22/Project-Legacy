@@ -46,6 +46,35 @@ export const labels = {
         return `Enter at least ${minimumLength} characters.`;
     },
 
+    // Personal data (US-13). The deletion wording names what is lost, item by
+    // item, because that is what the confirmation is for: an irreversible
+    // action announced as "are you sure?" tells the reader nothing.
+    personalDataKicker: 'Your data',
+    personalDataTitle: 'Export or delete your data',
+    personalDataIntro:
+        'You can take a copy of everything this application holds about you, or have all of it removed.',
+    exportData: 'Download my data',
+    exportingData: 'Preparing the download…',
+    exportDone: 'Your data has been downloaded.',
+    exportFailed: 'Unable to prepare the export.',
+    exportFilename: 'legacy-22-personal-data-export.json',
+    deleteAccountTitle: 'Delete my account',
+    deleteAccountWarning: 'Deleting your account removes, immediately and for good:',
+    deleteAccountLosesAccount: 'your account and the address it is registered with',
+    deleteAccountLosesItems: 'every item you created, including the ones you already removed',
+    deleteAccountLosesNotifications: 'every notification you received',
+    deleteAccountNoRecovery:
+        'There is no waiting period and no way back. Download your data first if you want to keep it.',
+    deleteAccountConfirmationLabel: 'Confirm by typing your email address',
+    deleteAccountConfirmationRequired: 'Type your email address to confirm.',
+    deleteAccountConfirmationMismatch: 'That is not the address this account is registered with.',
+    deleteAccount: 'Delete my account',
+    deletingAccount: 'Deleting the account…',
+    deleteAccountFailed: 'Unable to delete the account.',
+    deleteAccountConfirmationHelp(email: string): string {
+        return `Type ${email} to confirm.`;
+    },
+
     skipToContent: 'Skip to content',
     productName: 'Legacy 22',
     pageTitle: 'Todo list',

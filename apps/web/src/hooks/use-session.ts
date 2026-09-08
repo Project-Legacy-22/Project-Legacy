@@ -78,5 +78,12 @@ export function useSession(api: AuthApi) {
         [api],
     );
 
-    return { state, isSubmitting, signIn, register };
+    // The account behind this session no longer exists. Erasure (US-13) is the
+    // only caller today; a real sign-out is US-27 and will need the API to drop
+    // the cookie as well, which this does not do.
+    const forget = useCallback(() => {
+        setState({ status: 'anonymous' });
+    }, []);
+
+    return { state, isSubmitting, signIn, register, forget };
 }
