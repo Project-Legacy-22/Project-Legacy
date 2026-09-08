@@ -263,6 +263,40 @@ secrets sont l'objet d'`EN-30`.
 L'image tourne sous un utilisateur sans privilège et ne contient ni dépendances de
 développement, ni sources TypeScript, ni fichier d'environnement.
 
+## Déploiement Vercel
+
+`vercel.json` porte la configuration de build du front. Vercel installe à la racine du dépôt et
+bâtit le seul espace de travail `@legacy/web` :
+
+| Réglage | Valeur | Pourquoi |
+|---|---|---|
+| `installCommand` | `npm ci` | `typescript` n'est déclaré qu'à la racine. Installer depuis `apps/web` ne l'installe pas, et le build échoue sur `tsc: command not found`. |
+| `buildCommand` | `npm run build --workspace @legacy/web` | une seule commande, celle que la CI exécute déjà |
+| `outputDirectory` | `apps/api/dist/static` | Vite y écrit déjà, l'API sert ce répertoire en production |
+| `ignoreCommand` | diff sur `apps/web`, `packages`, le verrou et ce fichier | un commit qui ne touche que l'API ne déclenche pas de build |
+
+**Réglages du projet Vercel**, à poser dans le tableau de bord et non ici : *Root Directory* à
+la racine du dépôt, et *Production Branch* sur `main`. Les aperçus se déclenchent alors sur
+`dev` et sur chaque pull request, la production sur `main` uniquement.
+
+### Ce que ce déploiement ne fait pas
+
+Il publie le front, pas l'application. Le front appelle l'API en chemins relatifs — `/auth`,
+`/items` — pour que le navigateur porte de lui-même le cookie de session, comme l'explique
+`apps/web/vite.config.ts`. Une API servie sur une autre origine mettrait ce cookie hors
+d'atteinte et ramènerait le jeton dans le JavaScript, ce que l'ADR-0008 refuse.
+
+Tant que l'API n'est pas hébergée, l'interface déployée se chargera mais tout appel échouera.
+Deux choses manquent, suivies par `EN-49` :
+
+- un hôte de conteneurs qui exécute l'image publiée sur GHCR par `EN-08` ;
+- une réécriture Vercel de `/auth` et `/items` vers cet hôte, pour que le navigateur continue
+  de voir une seule origine et que le cookie fonctionne.
+
+Vercel construit des conteneurs depuis un `Dockerfile` du dépôt et dispose de son propre
+registre ; il ne tire pas une image existante depuis GHCR. L'image GHCR reste donc le livrable
+de l'API, exécutée ailleurs, et Vercel ne sert que le front.
+
 ## Contrôles locaux
 
 ```bash

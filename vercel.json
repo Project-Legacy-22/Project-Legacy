@@ -1,0 +1,8 @@
+{
+    "$schema": "https://openapi.vercel.sh/vercel.json",
+    "framework": "vite",
+    "installCommand": "npm ci",
+    "buildCommand": "npm run build --workspace @legacy/web",
+    "outputDirectory": "apps/api/dist/static",
+    "ignoreCommand": "git diff --quiet HEAD^ HEAD -- apps/web packages package-lock.json vercel.json"
+}
