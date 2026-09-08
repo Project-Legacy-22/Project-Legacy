@@ -18,10 +18,6 @@ Both actions sit in a section of the item screen rather than behind a settings p
 deletion names what it destroys, one line per category, and only proceeds once the person
 retypes the address the account is registered with.
 
-Out of scope, and deliberately so: projects and project memberships. They do not exist in
-the schema yet, and the story that introduces them is US-16 (#17), which is still open.
-See **Known limits**.
-
 ## Surface
 
 | Endpoint or screen | Purpose | Auth |
@@ -41,12 +37,15 @@ a person as a file they cannot use.
 
 ## Data
 
-The export reads, and the erasure removes, every table that carries an account today.
+The export reads every table that carries an account today. Erasure removes the caller's
+rows, plus projects and items that would otherwise have no member left.
 
 | Table | Read by the export | Removed by the erasure | Carries the account through |
 |---|---|---|---|
 | `users` | yes | yes | `id` |
-| `items` | yes, soft-deleted rows included | yes, by cascade | `user_id` |
+| `projects` | yes, when the caller is a member | yes, only when no other member remains | the caller's membership |
+| `project_memberships` | yes, caller's rows only | yes, by cascade | `user_id` |
+| `items` | yes, soft-deleted rows and `projectId` included | yes, by cascade | `user_id` and `project_id` |
 | `notifications` | yes | yes, by cascade | `user_id` |
 | `outbox` | no | yes | `payload ->> 'ownerId'` |
 | `processed_events` | no | yes | the events the account produced |
@@ -63,8 +62,12 @@ application would be three transactions, and a failure in between would leave an
 half erased with nothing recording how far it got. Calling it twice is a no-op by design, so
 an interrupted erasure can be retried.
 
-The migration is irreversible, which is the point of the feature. Its header says so instead
-of offering a rollback that would not restore anything.
+Migration `20260908144244_extend_account_erasure_for_projects` extends that transaction after
+US-16 introduces projects. It deletes a project before the account row only when the caller is
+its last member; otherwise the project and its other memberships survive. It also restricts
+the function to the backend service role. Both migrations are irreversible, which is the point
+of the feature. Their headers say so instead of offering a rollback that would not restore
+anything.
 
 Credentials and sessions live in `auth.users` and are removed through the GoTrue admin
 endpoint, not by deleting that row: deleting it directly would leave GoTrue's own session and
@@ -105,6 +108,7 @@ the document is what a person receives.
   announced through the existing polite live region, which stays silent until something
   happens.
 - The whole flow is reachable and operable by keyboard; there is no pointer-only control.
+- The warning names project memberships and projects where the account is the last member.
 - `autocomplete` is off on the confirmation field. Letting the browser fill it would supply
   the proof of intent the field exists to obtain.
 - Checked by `axe-core` over the full signed-in screen in
@@ -112,8 +116,8 @@ the document is what a person receives.
 
 ## Personal data
 
-The email address is the only personal data the application collects. The export contains it,
-along with item names, which are content the person typed.
+The email address is the only identifying data the application collects. The export contains
+it, along with project and item names, which are content the person typed.
 
 - The export is never written to disk and never cached; the file exists only in the browser
   that asked for it.
@@ -138,7 +142,7 @@ psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=
 The tests that cover it:
 
 - `packages/core/auth/src/application/export-personal-data.test.ts`: the export spans every
-  table, is dated, and carries no trace of another account.
+  table, including projects and memberships, is dated, and carries no trace of another account.
 - `packages/core/auth/src/application/erase-account.test.ts`: no row keeps the identifier,
   another account is untouched, sessions stop resolving, and a wrong confirmation erases
   nothing.
@@ -146,8 +150,9 @@ The tests that cover it:
   the cleared cookie and the replayed cookie that no longer works.
 - `packages/infra/src/supabase-identity-provider.test.ts`: deletion against a stand-in
   GoTrue, including the already-deleted case a retry depends on.
-- `scripts/check-schema.sql`, assertion 13: `erase_account` against a real database, with a
-  bystander account that must survive and a second call that must be a no-op.
+- `scripts/check-schema.sql`: `erase_account` against a real database, with a last-member
+  project that must disappear, a shared project and bystander that must survive, and a second
+  call that must be a no-op.
 
 By hand, with the stack running: sign in, add an item, download the export and open it, then
 delete the account with the wrong address (refused on the field), then with the right one.
@@ -155,17 +160,5 @@ The sign-in screen comes back without a reload, and signing in again fails.
 
 ## Known limits
 
-- **Projects and memberships are absent.** The issue asks for them in the export, and asks
-  the erasure to delete projects whose last member leaves while sparing shared ones. Neither
-  table exists: US-16 (#17) introduces them and is still open, and it is owned by someone
-  else. The export shape, the port and `erase_account` each cover one category per table, so
-  adding them is an addition rather than a redesign, but until then those two acceptance
-  criteria are not met.
-- **Erasure and shared events.** `erase_account` removes the events an account produced and
-  the processed-event rows they created. Today an item only ever notifies its owner, so the
-  two sets coincide. Once a project is shared, an event of this account will have produced a
-  notification for somebody else, and that notification would go with it. The migration says
-  so at the statement concerned; deciding what should happen belongs to the story that
-  introduces the sharing.
 - **No audit trail.** Nothing records that an account was erased, on purpose: a record of
   the deletion would itself be a record of the person.

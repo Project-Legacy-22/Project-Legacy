@@ -34,6 +34,7 @@ packages/
 ├── contracts/           Schémas et types partagés aux frontières
 ├── core/auth/           Domaine et cas d'usage de l'authentification
 ├── core/items/          Domaine et cas d'usage des éléments
+├── core/projects/       Domaine et cas d'usage des projets
 └── infra/               Adaptateurs de persistance, d'identité et journalisation
 ```
 
@@ -56,7 +57,7 @@ imprimées par le CLI Supabase : aucun fichier à copier, aucune valeur à rense
 - Front avec rechargement à chaud : http://localhost:5173
 - API : http://localhost:3000
 - Studio Supabase : http://localhost:54323
-- Les requêtes `/items` du front sont transmises à l'API par le proxy Vite.
+- Les requêtes `/projects` et `/auth` du front sont transmises à l'API par le proxy Vite.
 
 `Ctrl+C` arrête l'API et le front. Le broker et la base restent debout, avec leurs données ;
 `npm run down` les arrête. Relancer `npm run up` repart de l'état laissé la fois précédente.
@@ -147,21 +148,25 @@ L'API expose trois routes :
 | `POST /auth/login` | Ouvre une session et pose le jeton dans un cookie `httpOnly` |
 | `GET /auth/me` | Renvoie le compte de la session en cours, ou `401` |
 
-Toutes les routes `/items` exigent une session valide et attribuent les éléments créés au
-compte de l'appelant.
+Toutes les routes `/projects` exigent une session valide. Les éléments sont accessibles sous
+le projet auquel ils appartiennent.
 
-## Éléments
+## Projets et éléments
 
-Un élément appartient au compte qui l'a créé, et à lui seul. Une requête portant sur
-l'élément d'un autre compte reçoit la même réponse qu'une requête portant sur un élément
-inexistant, en lecture comme en modification et en suppression : un `403` révélerait que
-l'identifiant désigne quelque chose.
+Chaque compte reçoit un projet par défaut à son inscription. Il peut créer d'autres projets,
+consulter ceux dont il est membre et supprimer ceux dont il est propriétaire. Une suppression
+de projet est confirmée dans l'interface avec son nom et le nombre d'éléments qui seront
+effacés, puis supprime ces éléments par cascade.
 
-`GET /items` est paginé, là où la version héritée renvoyait la table entière. `limit` vaut
-20 par défaut, est borné à 100, et `cursor` reprend la réponse précédente ; hors de ces
-bornes, `400`. La réponse est `{ "items": [...], "nextCursor": ... }`, `nextCursor` valant
-`null` sur la dernière page. Le curseur est opaque et désigne la dernière ligne servie et
-non un décalage, pour qu'une création concurrente ne fasse ni sauter ni répéter un élément.
+Les routes d'éléments sont imbriquées sous `/projects/:projectId/items`. L'accès dépend de
+l'appartenance au projet, pas du compte qui a créé l'élément : tous les membres voient et
+modifient les mêmes éléments. Un non-membre reçoit le même `404` que pour un projet ou un
+élément inexistant, en lecture comme en écriture.
+
+`GET /projects` et `GET /projects/:projectId/items` sont paginés. `limit` vaut 20 par défaut,
+est borné à 100, et `cursor` reprend la réponse précédente ; hors de ces bornes, `400`. Le
+curseur est opaque et désigne la dernière ligne servie plutôt qu'un décalage, pour qu'une
+création concurrente ne fasse ni sauter ni répéter une ligne.
 
 Deux comportements sont volontaires et ne doivent pas être « corrigés » :
 
@@ -192,7 +197,7 @@ serait une route qu'on peut pointer vers quelqu'un d'autre.
 
 | Route | Effet |
 |---|---|
-| `GET /auth/me/export` | Sert en JSON le compte, ses éléments et ses notifications |
+| `GET /auth/me/export` | Sert en JSON le compte, ses projets, appartenances, éléments et notifications |
 | `DELETE /auth/me` | Supprime le compte, sans délai, après confirmation |
 
 L'export est assemblé à la demande et servi tel quel : rien n'est écrit sur disque, donc
@@ -201,12 +206,16 @@ date de suppression, parce qu'ils sont encore détenus.
 
 La suppression exige que le corps de la requête reprenne l'adresse du compte
 (`{ "confirmation": "..." }`), faute de quoi elle répond `422`. Elle efface physiquement les
-lignes des cinq tables concernées en une seule transaction, puis supprime les identifiants
-chez le fournisseur, ce qui révoque toutes les sessions. L'ordre est délibéré : une
-tentative interrompue entre les deux étapes peut être relancée, l'inverse laisserait des
-données derrière un compte inaccessible. Il n'y a ni délai de grâce ni retour en arrière.
+lignes concernées en une seule transaction. Elle retire les appartenances, supprime les
+projets dont le compte est le dernier membre et conserve les projets partagés. Elle supprime
+ensuite les identifiants chez le fournisseur, ce qui révoque toutes les sessions. L'ordre est
+délibéré : une tentative interrompue entre les deux étapes peut être relancée, l'inverse
+laisserait des données derrière un compte inaccessible. Il n'y a ni délai de grâce ni retour
+en arrière.
 
 Détail complet dans [docs/features/14-export-and-delete-account.md](docs/features/14-export-and-delete-account.md).
+Le regroupement par projet est décrit dans
+[docs/features/17-projects.md](docs/features/17-projects.md).
 
 ## Build de production
 
