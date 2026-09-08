@@ -208,6 +208,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      erase_account: { Args: { p_user_id: string }; Returns: undefined }
       uuid_generate_v7: { Args: never; Returns: string }
     }
     Enums: {

@@ -167,3 +167,76 @@ begin
 
   raise notice 'schema assertions passed';
 end $$;
+
+-- 13. Erasure removes every row that carries an account, and only that
+--     account's rows (US-13). This is the one assertion in this file that
+--     exercises behaviour rather than structure, and it is here for the same
+--     reason as the others: the promise is made by a function body no unit test
+--     can reach, and a doubled fake of it would only prove the fake.
+--
+--     It runs in its own block, and removes the fixture it created: the rest of
+--     the job keeps using this database.
+do $$
+declare
+  cible uuid := '00000000-0000-7000-8000-0000000000e1';
+  temoin uuid := '00000000-0000-7000-8000-0000000000e2';
+  item_cible uuid := '00000000-0000-7000-8000-0000000000a1';
+  item_temoin uuid := '00000000-0000-7000-8000-0000000000a2';
+  event_cible uuid := '00000000-0000-7000-8000-0000000000c1';
+  event_temoin uuid := '00000000-0000-7000-8000-0000000000c2';
+  restant integer;
+begin
+  insert into public.users (id, email)
+  values (cible, 'erasure-target@localhost'), (temoin, 'erasure-bystander@localhost');
+
+  insert into public.items (id, user_id, name)
+  values (item_cible, cible, 'target item'), (item_temoin, temoin, 'bystander item');
+
+  insert into public.outbox (id, name, occurred_at, payload)
+  values
+    (event_cible, 'item.created.v1', now(),
+     jsonb_build_object('itemId', item_cible, 'ownerId', cible)),
+    (event_temoin, 'item.created.v1', now(),
+     jsonb_build_object('itemId', item_temoin, 'ownerId', temoin));
+
+  insert into public.processed_events (event_id) values (event_cible), (event_temoin);
+
+  insert into public.notifications (user_id, item_id, event_id)
+  values (cible, item_cible, event_cible), (temoin, item_temoin, event_temoin);
+
+  perform public.erase_account(cible);
+
+  select count(*) into restant from (
+    select 1 from public.users where id = cible
+    union all select 1 from public.items where user_id = cible
+    union all select 1 from public.notifications where user_id = cible
+    union all select 1 from public.outbox where payload ->> 'ownerId' = cible::text
+    union all select 1 from public.processed_events where event_id = event_cible
+  ) reste;
+  if restant <> 0 then
+    raise exception 'erase_account left % row(s) carrying the erased account', restant;
+  end if;
+
+  select count(*) into restant from (
+    select 1 from public.users where id = temoin
+    union all select 1 from public.items where user_id = temoin
+    union all select 1 from public.notifications where user_id = temoin
+    union all select 1 from public.outbox where payload ->> 'ownerId' = temoin::text
+    union all select 1 from public.processed_events where event_id = event_temoin
+  ) reste;
+  if restant <> 5 then
+    raise exception 'erase_account removed % row(s) belonging to another account', 5 - restant;
+  end if;
+
+  -- A caller whose erasure failed after the rows were removed has to be able to
+  -- ask again, so a second call must find nothing and raise nothing.
+  perform public.erase_account(cible);
+
+  -- users first: items and notifications cascade from it, and the remaining
+  -- processed_events row can only go once no notification references it.
+  delete from public.users where id = temoin;
+  delete from public.outbox where id = event_temoin;
+  delete from public.processed_events where event_id = event_temoin;
+
+  raise notice 'erasure assertions passed';
+end $$;
