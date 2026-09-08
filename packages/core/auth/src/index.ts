@@ -15,6 +15,8 @@ export type {
     ExportedAccount,
     ExportedItem,
     ExportedNotification,
+    ExportedProject,
+    ExportedProjectMembership,
     PersonalData,
     PersonalDataExport,
 } from './domain/personal-data.js';

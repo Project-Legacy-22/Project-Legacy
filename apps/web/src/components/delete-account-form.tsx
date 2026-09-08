@@ -32,6 +32,17 @@ function refusalOf(confirmation: string, email: string): string | null {
     return null;
 }
 
+function AccountLosses() {
+    return (
+        <ul className="delete-account-losses">
+            <li>{labels.deleteAccountLosesAccount}</li>
+            <li>{labels.deleteAccountLosesItems}</li>
+            <li>{labels.deleteAccountLosesProjects}</li>
+            <li>{labels.deleteAccountLosesNotifications}</li>
+        </ul>
+    );
+}
+
 // Deletion is immediate and irreversible, so the form says what is lost before
 // asking for anything, item by item. "Are you sure?" is not a confirmation: it
 // asks a person to agree to something the interface never told them.
@@ -39,12 +50,7 @@ function refusalOf(confirmation: string, email: string): string | null {
 // Retyping the address is what turns a click into a decision. It is checked
 // here to spare a pointless round trip and to put the refusal on the field, and
 // checked again by the API, which is the only place that can enforce it.
-export function DeleteAccountForm({
-    email,
-    isDeleting,
-    isDisabled,
-    onDelete,
-}: DeleteAccountFormProps) {
+export function DeleteAccountForm({ email, isDeleting, isDisabled, onDelete }: DeleteAccountFormProps) {
     const [confirmation, setConfirmation] = useState('');
     const [refusal, setRefusal] = useState<string | null>(null);
     const isBlocked = isDisabled || isDeleting;
@@ -61,11 +67,7 @@ export function DeleteAccountForm({
         <form className="delete-account" onSubmit={submit} noValidate>
             <h3 id="delete-account-heading">{labels.deleteAccountTitle}</h3>
             <p>{labels.deleteAccountWarning}</p>
-            <ul className="delete-account-losses">
-                <li>{labels.deleteAccountLosesAccount}</li>
-                <li>{labels.deleteAccountLosesItems}</li>
-                <li>{labels.deleteAccountLosesNotifications}</li>
-            </ul>
+            <AccountLosses />
             <p className="delete-account-warning">{labels.deleteAccountNoRecovery}</p>
             <AuthField
                 id={FIELD_ID}
@@ -76,7 +78,10 @@ export function DeleteAccountForm({
                 autoComplete="off"
                 value={confirmation}
                 onChange={setConfirmation}
-                help={{ id: HELP_ID, text: labels.deleteAccountConfirmationHelp(email) }}
+                help={{
+                    id: HELP_ID,
+                    text: labels.deleteAccountConfirmationHelp(email),
+                }}
                 error={refusal}
                 errorId={ERROR_ID}
                 disabled={isBlocked}
