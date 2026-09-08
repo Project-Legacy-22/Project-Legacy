@@ -1,9 +1,12 @@
+import { ItemProjectNotFound } from '../domain/item.js';
 import type { ItemPage, ItemPageQuery, ItemRepository } from '../ports/item-repository.js';
 
-// The caller is an argument, like the owner of a new item: since US-12 the list
-// is the caller's own items and nothing else.
+// The project and caller are both mandatory: the list contains the selected
+// project's items only when that caller is a member.
 export function makeListItems(repository: ItemRepository) {
-    return async function listItems(ownerId: string, page: ItemPageQuery): Promise<ItemPage> {
-        return repository.findPageByOwner(ownerId, page);
+    return async function listItems(projectId: string, memberId: string, page: ItemPageQuery): Promise<ItemPage> {
+        const found = await repository.findPageForMember(projectId, memberId, page);
+        if (!found) throw new ItemProjectNotFound(projectId);
+        return found;
     };
 }

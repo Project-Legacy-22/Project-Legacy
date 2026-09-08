@@ -7,4 +7,5 @@ export { createSupabasePersonalDataStore } from './supabase-personal-data-store.
 export { createHibpPasswordRegistry } from './hibp-password-registry.js';
 export type { HibpSettings } from './hibp-password-registry.js';
 export type { ItemStore } from './item-store.js';
+export { createSupabaseProjectRepository } from './supabase-project-repository.js';
 export { createLogger } from './logger.js';

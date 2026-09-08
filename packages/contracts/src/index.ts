@@ -20,6 +20,18 @@ export {
     PASSWORD_POLICY,
 } from './auth.js';
 export { PersonalDataExportDto } from './personal-data.js';
+export {
+    ProjectIdParams,
+    ProjectItemIdParams,
+    CreateProjectBody,
+    ListProjectsQuery,
+    ProjectRole,
+    ProjectDto,
+    ProjectPageDto,
+    MAX_PROJECT_NAME_LENGTH,
+    DEFAULT_PROJECT_PAGE_SIZE,
+    MAX_PROJECT_PAGE_SIZE,
+} from './projects.js';
 export { ITEM_CREATED_V1, ItemCreatedV1, ItemCreatedV1Payload, DomainEvent } from './events.js';
 export { ProblemDetails } from './problem-details.js';
 export type { Logger } from './logger.js';

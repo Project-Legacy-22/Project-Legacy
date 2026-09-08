@@ -17,6 +17,9 @@
     },
     {
       "path": "../core/auth"
+    },
+    {
+      "path": "../core/projects"
     }
   ]
 }

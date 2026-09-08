@@ -7,23 +7,27 @@ export interface ItemChanges {
     completed: boolean;
 }
 
+export interface ChangeItemRequest {
+    id: string;
+    projectId: string;
+    memberId: string;
+    changes: ItemChanges;
+}
+
 export function makeChangeItem(repository: ItemRepository) {
-    return async function changeItem(
-        id: string,
-        ownerId: string,
-        changes: ItemChanges,
-    ): Promise<Item> {
-        const existing = await repository.findByIdForOwner(id, ownerId);
+    return async function changeItem(request: ChangeItemRequest): Promise<Item> {
+        const existing = await repository.findByIdForMember(request.id, request.projectId, request.memberId);
         // Someone else's item is reported like one that never existed: a 403
         // would confirm the identifier designates a real item (US-12).
         if (!existing) {
-            throw new ItemNotFound(id);
+            throw new ItemNotFound(request.id);
         }
 
         const updated: Item = {
             id: existing.id,
-            name: itemName(changes.name),
-            completed: changes.completed,
+            name: itemName(request.changes.name),
+            completed: request.changes.completed,
+            projectId: existing.projectId,
             ownerId: existing.ownerId,
         };
 

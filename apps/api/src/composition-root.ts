@@ -5,6 +5,7 @@ import {
     createSupabaseIdentityProvider,
     createSupabaseItemStore,
     createSupabasePersonalDataStore,
+    createSupabaseProjectRepository,
 } from '@legacy/infra';
 import type { ItemStore } from '@legacy/infra';
 import type { Logger } from '@legacy/contracts';
@@ -18,6 +19,7 @@ import {
     makeSignIn,
 } from '@legacy/core-auth';
 import { makeListItems, makeAddItem, makeChangeItem, makeRemoveItem } from '@legacy/core-items';
+import { makeAddProject, makeListProjects, makeRemoveProject } from '@legacy/core-projects';
 
 import type { Config } from './config.js';
 
@@ -44,10 +46,17 @@ export interface AccountUseCases {
     eraseAccount: ReturnType<typeof makeEraseAccount>;
 }
 
+export interface ProjectUseCases {
+    listProjects: ReturnType<typeof makeListProjects>;
+    addProject: ReturnType<typeof makeAddProject>;
+    removeProject: ReturnType<typeof makeRemoveProject>;
+}
+
 export interface AppUseCases {
     items: ItemUseCases;
     auth: AuthUseCases;
     account: AccountUseCases;
+    projects: ProjectUseCases;
 }
 
 export interface Application {
@@ -55,6 +64,49 @@ export interface Application {
     logger: Logger;
     start(): Promise<void>;
     stop(): Promise<void>;
+}
+
+interface UseCaseDependencies {
+    store: ItemStore;
+    identity: ReturnType<typeof createSupabaseIdentityProvider>;
+    personalData: ReturnType<typeof createSupabasePersonalDataStore>;
+    projects: ReturnType<typeof createSupabaseProjectRepository>;
+    compromisedPasswords: ReturnType<typeof createHibpPasswordRegistry>;
+}
+
+function wireUseCases(dependencies: UseCaseDependencies): AppUseCases {
+    const { store, identity, personalData, projects, compromisedPasswords } = dependencies;
+    return {
+        items: {
+            listItems: makeListItems(store),
+            addItem: makeAddItem({
+                repository: store,
+                newId: uuid,
+                now: () => new Date(),
+            }),
+            changeItem: makeChangeItem(store),
+            removeItem: makeRemoveItem(store),
+        },
+        auth: {
+            registerAccount: makeRegisterAccount(identity),
+            signIn: makeSignIn(identity),
+            identifyCaller: makeIdentifyCaller(identity),
+            requestPasswordReset: makeRequestPasswordReset(identity),
+            resetPassword: makeResetPassword({ provider: identity, compromisedPasswords }),
+        },
+        account: {
+            exportPersonalData: makeExportPersonalData({
+                store: personalData,
+                now: () => new Date(),
+            }),
+            eraseAccount: makeEraseAccount({ store: personalData, identity }),
+        },
+        projects: {
+            listProjects: makeListProjects(projects),
+            addProject: makeAddProject({ repository: projects, newId: uuid }),
+            removeProject: makeRemoveProject(projects),
+        },
+    };
 }
 
 export function compose(config: Config): Application {
@@ -77,33 +129,16 @@ export function compose(config: Config): Application {
         url: config.supabaseUrl,
         serviceRoleKey: config.supabaseServiceRoleKey,
     });
+    const projects = createSupabaseProjectRepository({
+        url: config.supabaseUrl,
+        serviceRoleKey: config.supabaseServiceRoleKey,
+    });
     const logger = createLogger(config.logLevel);
     const compromisedPasswords = createHibpPasswordRegistry({ logger });
 
     return {
         logger,
-        useCases: {
-            items: {
-                listItems: makeListItems(store),
-                addItem: makeAddItem({ repository: store, newId: uuid, now: () => new Date() }),
-                changeItem: makeChangeItem(store),
-                removeItem: makeRemoveItem(store),
-            },
-            auth: {
-                registerAccount: makeRegisterAccount(identity),
-                signIn: makeSignIn(identity),
-                identifyCaller: makeIdentifyCaller(identity),
-                requestPasswordReset: makeRequestPasswordReset(identity),
-                resetPassword: makeResetPassword({ provider: identity, compromisedPasswords }),
-            },
-            account: {
-                exportPersonalData: makeExportPersonalData({
-                    store: personalData,
-                    now: () => new Date(),
-                }),
-                eraseAccount: makeEraseAccount({ store: personalData, identity }),
-            },
-        },
+        useCases: wireUseCases({ store, identity, personalData, projects, compromisedPasswords }),
         // start() no longer creates the schema -- that is what migrations are
         // for. It checks the connection so a misconfigured deployment fails
         // loudly at boot instead of on the first request.
