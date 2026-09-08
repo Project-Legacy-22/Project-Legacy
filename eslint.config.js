@@ -45,6 +45,8 @@ export default tseslint.config(
                     './packages/core/auth/tsconfig.json',
                     './packages/infra/tsconfig.json',
                     './apps/api/tsconfig.json',
+                    // Le point d entree Vercel vit hors des espaces de travail.
+                    './api/tsconfig.json',
                     // apps/web carries its own project: JSX, DOM libs and the
                     // Vite client types. Omitting it leaves every .tsx file
                     // outside a typed program, and the typed rules then report

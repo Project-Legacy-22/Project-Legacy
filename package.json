@@ -24,7 +24,7 @@
     "build": "tsc --build && npm run build --workspace @legacy/web",
     "start": "node --env-file-if-exists=.env apps/api/dist/index.js",
     "lint": "eslint .",
-    "typecheck": "tsc --build && tsc -p tsconfig.test.json && npm run typecheck --workspace @legacy/web && node scripts/check-layers.mjs",
+    "typecheck": "tsc --build && tsc -p tsconfig.test.json && tsc -p api/tsconfig.json && npm run typecheck --workspace @legacy/web && node scripts/check-layers.mjs",
     "test": "vitest run --coverage",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "db:start": "supabase start",

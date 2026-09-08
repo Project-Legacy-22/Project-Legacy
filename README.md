@@ -279,23 +279,38 @@ bâtit le seul espace de travail `@legacy/web` :
 la racine du dépôt, et *Production Branch* sur `main`. Les aperçus se déclenchent alors sur
 `dev` et sur chaque pull request, la production sur `main` uniquement.
 
-### Ce que ce déploiement ne fait pas
+### L'API sur le même déploiement
 
-Il publie le front, pas l'application. Le front appelle l'API en chemins relatifs — `/auth`,
-`/items` — pour que le navigateur porte de lui-même le cookie de session, comme l'explique
-`apps/web/vite.config.ts`. Une API servie sur une autre origine mettrait ce cookie hors
-d'atteinte et ramènerait le jeton dans le JavaScript, ce que l'ADR-0008 refuse.
+`api/index.ts` exporte l'application Express, et `vercel.json` y réécrit `/auth` et `/items`.
+Le navigateur ne voit donc qu'une seule origine, ce qui est la condition pour que le cookie de
+session `httpOnly` fonctionne — `apps/web/vite.config.ts` explique pourquoi une API sur une
+autre origine le mettrait hors d'atteinte.
 
-Tant que l'API n'est pas hébergée, l'interface déployée se chargera mais tout appel échouera.
-Deux choses manquent, suivies par `EN-49` :
+La fonction consomme la sortie de build (`apps/api/dist`) plutôt que les sources : le typage
+vient des déclarations générées, et le point d'entrée de déploiement consomme un artefact
+plutôt que de recompiler.
 
-- un hôte de conteneurs qui exécute l'image publiée sur GHCR par `EN-08` ;
-- une réécriture Vercel de `/auth` et `/items` vers cet hôte, pour que le navigateur continue
-  de voir une seule origine et que le cookie fonctionne.
+Elle n'appelle pas `application.start()`. Ce contrôle de santé sert à un processus long qui
+doit refuser de démarrer mal configuré ; une fonction n'a pas ce cycle de vie, et `supabase-js`
+ne tient aucune connexion à ouvrir.
 
-Vercel construit des conteneurs depuis un `Dockerfile` du dépôt et dispose de son propre
-registre ; il ne tire pas une image existante depuis GHCR. L'image GHCR reste donc le livrable
-de l'API, exécutée ailleurs, et Vercel ne sert que le front.
+**Ce que cela n'héberge pas** : aucun processus long ne survit en sans-serveur, donc le
+consommateur d'événements Redis prévu par `EN-35` devra vivre ailleurs. L'image publiée sur
+GHCR par `EN-08` reste le livrable de l'exécution en conteneur.
+
+### Variables à poser sur Vercel
+
+L'API refuse de démarrer si l'une manque, en la nommant. Elles pointent un projet Supabase
+hébergé, distinct de la pile locale.
+
+| Variable | Origine |
+|---|---|
+| `SUPABASE_URL` | tableau de bord du projet hébergé |
+| `SUPABASE_SERVICE_ROLE_KEY` | idem, à ne jamais exposer au navigateur |
+| `SUPABASE_ANON_KEY` | idem |
+| `NODE_ENV` | `production`, pour que le cookie de session porte `Secure` |
+
+Le schéma s'applique au projet hébergé avec `supabase link` puis `supabase db push`.
 
 ## Contrôles locaux
 
