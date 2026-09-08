@@ -1,0 +1,85 @@
+.project-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 14px;
+    margin-bottom: 22px;
+}
+
+.projects-list {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.project-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+}
+
+.project-select {
+    display: flex;
+    min-width: 0;
+    min-height: 48px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 10px 14px;
+    border: 2px solid #8596a6;
+    border-radius: 8px;
+    color: #172033;
+    background: #ffffff;
+    text-align: left;
+    cursor: pointer;
+}
+
+.project-select:hover {
+    border-color: #184f49;
+    background: #f2faf8;
+}
+
+.project-select[aria-pressed='true'] {
+    border-color: #0f7169;
+    background: #e9f6f3;
+    box-shadow: inset 5px 0 0 #0f7169;
+}
+
+.project-name {
+    overflow-wrap: anywhere;
+    font-weight: 750;
+}
+
+.project-count {
+    flex: 0 0 auto;
+    color: #465568;
+    font-size: 0.8125rem;
+    font-weight: 700;
+}
+
+.project-remove {
+    align-self: stretch;
+}
+
+.project-pagination {
+    margin-top: 18px;
+}
+
+.projects-panel .action-error,
+.projects-panel .action-success {
+    margin: 18px 0 0;
+}
+
+@media (max-width: 620px) {
+    .project-form,
+    .project-row {
+        grid-template-columns: 1fr;
+    }
+
+    .project-form .button,
+    .project-remove {
+        width: 100%;
+    }
+}

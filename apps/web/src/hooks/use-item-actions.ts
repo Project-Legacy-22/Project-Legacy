@@ -9,6 +9,7 @@ import type { SetItems } from './use-items-query';
 
 interface ActionContext {
     api: ItemsApi;
+    projectId: string | null;
     setItems: SetItems;
     setFeedback: Dispatch<SetStateAction<ItemActionFeedback>>;
     setIsAdding: Dispatch<SetStateAction<boolean>>;
@@ -24,7 +25,7 @@ function itemName(item: ItemDto): string {
 }
 
 function updatePending(context: ActionContext, id: string, operation: 'add' | 'remove') {
-    context.setPendingItemIds(current => {
+    context.setPendingItemIds((current) => {
         const next = new Set(current);
         if (operation === 'add') next.add(id);
         else next.delete(id);
@@ -33,24 +34,35 @@ function updatePending(context: ActionContext, id: string, operation: 'add' | 'r
 }
 
 async function addItem(context: ActionContext, name: string): Promise<AddItemResult> {
+    if (context.projectId === null) return { status: 'error', message: labels.selectProject };
     context.setIsAdding(true);
     context.setFeedback({ status: 'idle' });
 
     try {
-        const created = await context.api.createItem({ name });
-        context.setItems(current => [...current, created]);
-        context.setFeedback({ status: 'success', message: labels.itemAdded(itemName(created)) });
+        const created = await context.api.createItem(context.projectId, { name });
+        context.setItems((current) => [...current, created]);
+        context.setFeedback({
+            status: 'success',
+            message: labels.itemAdded(itemName(created)),
+        });
         return { status: 'success' };
     } catch (error) {
-        return { status: 'error', message: messageFor(error, labels.addItemFailed) };
+        return {
+            status: 'error',
+            message: messageFor(error, labels.addItemFailed),
+        };
     } finally {
         context.setIsAdding(false);
     }
 }
 
 async function toggleItem(context: ActionContext, item: ItemDto): Promise<void> {
+    if (context.projectId === null) return;
     if (item.name === null) {
-        context.setFeedback({ status: 'error', message: labels.unnamedItemRemediation });
+        context.setFeedback({
+            status: 'error',
+            message: labels.unnamedItemRemediation,
+        });
         return;
     }
 
@@ -58,53 +70,79 @@ async function toggleItem(context: ActionContext, item: ItemDto): Promise<void> 
     context.setFeedback({ status: 'idle' });
 
     try {
-        const updated = await context.api.updateItem(item.id, {
+        const updated = await context.api.updateItem(context.projectId, item.id, {
             name: item.name,
             completed: !item.completed,
         });
-        context.setItems(current =>
-            current.map(currentItem => (currentItem.id === updated.id ? updated : currentItem)),
+        context.setItems((current) =>
+            current.map((currentItem) => (currentItem.id === updated.id ? updated : currentItem)),
         );
         context.setFeedback({
             status: 'success',
             message: labels.itemCompletionChanged(itemName(updated), updated.completed),
         });
     } catch (error) {
-        context.setFeedback({ status: 'error', message: messageFor(error, labels.updateItemFailed) });
+        context.setFeedback({
+            status: 'error',
+            message: messageFor(error, labels.updateItemFailed),
+        });
     } finally {
         updatePending(context, item.id, 'remove');
     }
 }
 
 async function removeItem(context: ActionContext, item: ItemDto): Promise<boolean> {
+    if (context.projectId === null) return false;
     updatePending(context, item.id, 'add');
     context.setFeedback({ status: 'idle' });
 
     try {
-        await context.api.deleteItem(item.id);
-        context.setItems(current => current.filter(currentItem => currentItem.id !== item.id));
-        context.setFeedback({ status: 'success', message: labels.itemRemoved(itemName(item)) });
+        await context.api.deleteItem(context.projectId, item.id);
+        context.setItems((current) => current.filter((currentItem) => currentItem.id !== item.id));
+        context.setFeedback({
+            status: 'success',
+            message: labels.itemRemoved(itemName(item)),
+        });
         return true;
     } catch (error) {
-        context.setFeedback({ status: 'error', message: messageFor(error, labels.removeItemFailed) });
+        context.setFeedback({
+            status: 'error',
+            message: messageFor(error, labels.removeItemFailed),
+        });
         return false;
     } finally {
         updatePending(context, item.id, 'remove');
     }
 }
 
-export function useItemActions(api: ItemsApi, setItems: SetItems) {
-    const [feedback, setFeedback] = useState<ItemActionFeedback>({ status: 'idle' });
+export function useItemActions(api: ItemsApi, projectId: string | null, setItems: SetItems) {
+    const [feedback, setFeedback] = useState<ItemActionFeedback>({
+        status: 'idle',
+    });
     const [isAdding, setIsAdding] = useState(false);
     const [pendingItemIds, setPendingItemIds] = useState<ReadonlySet<string>>(new Set());
     const context = useMemo(
-        () => ({ api, setItems, setFeedback, setIsAdding, setPendingItemIds }),
-        [api, setItems],
+        () => ({
+            api,
+            projectId,
+            setItems,
+            setFeedback,
+            setIsAdding,
+            setPendingItemIds,
+        }),
+        [api, projectId, setItems],
     );
 
     const add = useCallback((name: string) => addItem(context, name), [context]);
     const toggle = useCallback((item: ItemDto) => toggleItem(context, item), [context]);
     const remove = useCallback((item: ItemDto) => removeItem(context, item), [context]);
 
-    return { feedback, isAdding, pendingItemIds, addItem: add, toggleItem: toggle, removeItem: remove };
+    return {
+        feedback,
+        isAdding,
+        pendingItemIds,
+        addItem: add,
+        toggleItem: toggle,
+        removeItem: remove,
+    };
 }

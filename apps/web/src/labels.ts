@@ -51,8 +51,7 @@ export const labels = {
     // action announced as "are you sure?" tells the reader nothing.
     personalDataKicker: 'Your data',
     personalDataTitle: 'Export or delete your data',
-    personalDataIntro:
-        'You can take a copy of everything this application holds about you, or have all of it removed.',
+    personalDataIntro: 'You can take a copy of everything this application holds about you, or have all of it removed.',
     exportData: 'Download my data',
     exportingData: 'Preparing the download…',
     exportDone: 'Your data has been downloaded.',
@@ -62,6 +61,7 @@ export const labels = {
     deleteAccountWarning: 'Deleting your account removes, immediately and for good:',
     deleteAccountLosesAccount: 'your account and the address it is registered with',
     deleteAccountLosesItems: 'every item you created, including the ones you already removed',
+    deleteAccountLosesProjects: 'your project memberships and every project where you are the last member',
     deleteAccountLosesNotifications: 'every notification you received',
     deleteAccountNoRecovery:
         'There is no waiting period and no way back. Download your data first if you want to keep it.',
@@ -94,6 +94,51 @@ export const labels = {
     resetPasswordFailed: 'Unable to set a new password.',
     requestNewResetLink: 'Request a new link',
 
+    projectsKicker: 'Workspace',
+    projectsTitle: 'Projects',
+    projectNameLabel: 'Project name',
+    projectNameRequired: 'Enter a project name.',
+    createProject: 'Create project',
+    creatingProject: 'Creating project…',
+    loadingProjects: 'Loading projects…',
+    loadMoreProjects: 'Load more projects',
+    loadingMoreProjects: 'Loading more projects…',
+    retryLoadingMoreProjects: 'Try loading more projects again',
+    allProjectsLoaded: 'All projects loaded',
+    emptyProjects: 'No project yet. Create one to start grouping items.',
+    selectProject: 'Select or create a project first.',
+    invalidProject: 'The server returned an invalid project.',
+    invalidProjectList: 'The server returned an invalid project list.',
+    loadProjectsFailed: 'Unable to load the project list.',
+    loadMoreProjectsFailed: 'Unable to load more projects.',
+    createProjectFailed: 'Unable to create the project.',
+    removeProjectFailed: 'Unable to remove the project.',
+    projectNameHelp(maximumLength: number): string {
+        return `Required. ${maximumLength} characters maximum.`;
+    },
+    projectNameTooLong(maximumLength: number): string {
+        return `Enter no more than ${maximumLength} characters.`;
+    },
+    projectItemCount(count: number): string {
+        return `${count} ${count === 1 ? 'item' : 'items'}`;
+    },
+    projectsLoaded(count: number): string {
+        return `${count} more ${count === 1 ? 'project' : 'projects'} loaded.`;
+    },
+    projectCreated(name: string): string {
+        return `${name} created.`;
+    },
+    projectRemoved(name: string): string {
+        return `${name} removed.`;
+    },
+    removeProject(name: string): string {
+        return `Remove project: ${name}`;
+    },
+    confirmProjectRemoval(name: string, itemCount: number): string {
+        const items = `${itemCount} ${itemCount === 1 ? 'item' : 'items'}`;
+        return `Remove ${name}? ${items} will be permanently deleted.`;
+    },
+
     skipToContent: 'Skip to content',
     productName: 'Legacy 22',
     pageTitle: 'Todo list',
@@ -106,6 +151,9 @@ export const labels = {
     addItem: 'Add item',
     currentWorkKicker: 'Current work',
     itemsTitle: 'Items',
+    itemsInProject(name: string): string {
+        return `Items in ${name}`;
+    },
     loadingItems: 'Loading items…',
     loadMoreItems: 'Load more items',
     loadingMoreItems: 'Loading more items…',

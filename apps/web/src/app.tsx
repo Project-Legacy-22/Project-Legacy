@@ -6,6 +6,8 @@ import { authApi } from './api/auth-api';
 import type { AuthApi } from './api/auth-api';
 import { itemsApi } from './api/items-api';
 import type { ItemsApi } from './api/items-api';
+import { projectsApi } from './api/projects-api';
+import type { ProjectsApi } from './api/projects-api';
 import { AuthPage } from './components/auth-page';
 import { PersonalDataSection } from './components/personal-data-section';
 import { ResetPasswordPage } from './components/reset-password-page';
@@ -13,6 +15,7 @@ import { TodoPage } from './components/todo-page';
 import { useItems } from './hooks/use-items';
 import { usePersonalData } from './hooks/use-personal-data';
 import { useSession } from './hooks/use-session';
+import { useProjects } from './hooks/use-projects';
 import { labels } from './labels';
 import { saveFile } from './save-file';
 import type { SaveFile } from './save-file';
@@ -32,39 +35,78 @@ export interface AppProps {
     // Injected so a test can assert on what a download would have contained
     // without a jsdom that implements object URLs.
     save?: SaveFile;
+    projects?: ProjectsApi;
 }
 
 interface SignedInAppProps {
     api: ItemsApi;
     account: AccountApi;
     save: SaveFile;
+    projectsApi: ProjectsApi;
     email: string;
     onDeleted: () => void;
+}
+
+function useProjectItems(api: ItemsApi, projects: ReturnType<typeof useProjects>) {
+    const items = useItems(api, projects.selectedProjectId);
+    const addItem = async (name: string) => {
+        const result = await items.addItem(name);
+        if (result.status === 'success') projects.adjustSelectedItemCount(1);
+        return result;
+    };
+    const removeItem = async (item: Parameters<typeof items.removeItem>[0]) => {
+        const removed = await items.removeItem(item);
+        if (removed) projects.adjustSelectedItemCount(-1);
+        return removed;
+    };
+
+    return { ...items, addItem, removeItem };
+}
+
+function projectSectionProps(projects: ReturnType<typeof useProjects>) {
+    return {
+        projects: projects.projects,
+        selectedProjectId: projects.selectedProjectId,
+        loadState: projects.loadState,
+        feedback: projects.feedback,
+        isAdding: projects.isAdding,
+        pendingProjectId: projects.pendingProjectId,
+        hasNextPage: projects.hasNextPage,
+        paginationState: projects.paginationState,
+        onSelect: projects.selectProject,
+        onAdd: projects.addProject,
+        onRemove: projects.removeProject,
+        onLoadMore: projects.loadMore,
+        onRetry: projects.retry,
+    };
 }
 
 // The items screen is mounted in its own component so its data is only fetched
 // once there is a session. Rendering it behind a condition in App would run its
 // hooks anyway and fire a request that can only come back 401.
-function SignedInApp({ api, account, save, email, onDeleted }: SignedInAppProps) {
-    const state = useItems(api);
+function SignedInApp({ api, account, save, projectsApi, email, onDeleted }: SignedInAppProps) {
+    const projects = useProjects(projectsApi);
+    const items = useProjectItems(api, projects);
     const personalData = usePersonalData({ api: account, save, onDeleted });
 
     return (
         <>
             <p className="session-banner">{labels.signedInAs(email)}</p>
             <TodoPage
-                items={state.items}
-                loadState={state.loadState}
-                feedback={state.feedback}
-                isAdding={state.isAdding}
-                pendingItemIds={state.pendingItemIds}
-                hasNextPage={state.hasNextPage}
-                paginationState={state.paginationState}
-                onAdd={state.addItem}
-                onToggle={state.toggleItem}
-                onRemove={state.removeItem}
-                onLoadMore={state.loadMore}
-                onRetry={state.retry}
+                items={items.items}
+                loadState={items.loadState}
+                feedback={items.feedback}
+                isAdding={items.isAdding}
+                pendingItemIds={items.pendingItemIds}
+                hasNextPage={items.hasNextPage}
+                paginationState={items.paginationState}
+                onAdd={items.addItem}
+                onToggle={items.toggleItem}
+                onRemove={items.removeItem}
+                onLoadMore={items.loadMore}
+                onRetry={items.retry}
+                selectedProject={projects.selectedProject}
+                projects={projectSectionProps(projects)}
             >
                 <PersonalDataSection
                     email={email}
@@ -83,6 +125,7 @@ export function App({
     auth = authApi,
     account = accountApi,
     save = saveFile,
+    projects = projectsApi,
 }: AppProps) {
     const session = useSession(auth);
     const recoveryToken = useRef(readRecoveryToken());
@@ -135,6 +178,7 @@ export function App({
             api={api}
             account={account}
             save={save}
+            projectsApi={projects}
             email={session.state.account.email}
             onDeleted={session.forget}
         />
