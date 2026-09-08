@@ -4,6 +4,7 @@ import type { Logger } from '@legacy/contracts';
 
 import type { Config } from '../config.js';
 import type { AppUseCases } from '../composition-root.js';
+import { accountRouter } from './routes/account.js';
 import { authRouter } from './routes/auth.js';
 import { itemsRouter } from './routes/items.js';
 import { translateErrors } from './error-middleware.js';
@@ -32,6 +33,10 @@ export function createServer(config: Config, useCases: AppUseCases, logger: Logg
             windowMs: AUTH_WINDOW_MS,
         }),
     );
+
+    // Carries its own requireAccount, like GET /auth/me: exporting and erasing
+    // act on the caller's own account, so they resolve it the same way.
+    app.use(accountRouter(useCases.account, useCases.auth, { secureCookie: config.secureCookies }));
 
     // Items belong to somebody since US-11: no session, no items.
     app.use(requireAccount(useCases.auth), itemsRouter(useCases.items));

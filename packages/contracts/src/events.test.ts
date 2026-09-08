@@ -42,6 +42,24 @@ describe('ItemCreatedV1Payload', () => {
         ).toThrow();
     });
 
+    // Ce que US-13 fait reposer sur la regle ci-dessus : si un payload publie
+    // ne peut porter que des identifiants, alors effacer un compte n a rien a
+    // purger chez un consommateur ni dans le broker. Le test enonce la liste
+    // exacte des champs plutot que de faire confiance a la regle : un champ
+    // ajoute au schema echoue ici, la ou il serait indetectable une fois
+    // l evenement parti.
+    it('ne transporte que des identifiants, donc rien a purger hors de la base', () => {
+        const payload = ItemCreatedV1Payload.parse(VALID_EVENT.payload);
+
+        expect(Object.keys(payload).sort()).toEqual(['itemId', 'ownerId']);
+    });
+
+    it('rejette un payload qui transporte l adresse du proprietaire', () => {
+        expect(() =>
+            ItemCreatedV1Payload.parse({ ...VALID_EVENT.payload, email: 'alice@example.com' }),
+        ).toThrow();
+    });
+
     it('rejette un identifiant qui n est pas un uuid', () => {
         expect(() =>
             ItemCreatedV1Payload.parse({

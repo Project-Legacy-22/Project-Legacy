@@ -77,6 +77,7 @@ async function fauxFournisseur(): Promise<FauxFournisseur> {
 const SIGNUP = 'POST /auth/v1/signup';
 const TOKEN = 'POST /auth/v1/token';
 const USER = 'GET /auth/v1/user';
+const ADMIN_DELETE = `DELETE /auth/v1/admin/users/${UTILISATEUR.id}`;
 
 describe('adaptateur Supabase Auth', () => {
     let faux: FauxFournisseur;
@@ -84,7 +85,11 @@ describe('adaptateur Supabase Auth', () => {
     async function adaptateur() {
         faux = await fauxFournisseur();
         return {
-            provider: createSupabaseIdentityProvider({ url: faux.url, anonKey: 'cle-publique' }),
+            provider: createSupabaseIdentityProvider({
+                url: faux.url,
+                anonKey: 'cle-publique',
+                serviceRoleKey: 'cle-de-service',
+            }),
             faux,
         };
     }
@@ -195,6 +200,38 @@ describe('adaptateur Supabase Auth', () => {
             });
 
             await expect(provider.identify('jeton-acces')).rejects.toThrow(/identify/);
+        });
+    });
+
+    describe('remove', () => {
+        it('supprime le compte que le fournisseur detient', async () => {
+            const { provider, faux: serveur } = await adaptateur();
+            serveur.quand(ADMIN_DELETE, { status: 200, body: UTILISATEUR });
+
+            await expect(provider.remove(UTILISATEUR.id)).resolves.toBeUndefined();
+        });
+
+        // L effacement supprime les lignes avant les identifiants. Une tentative
+        // interrompue entre les deux doit pouvoir etre relancee, donc un compte
+        // deja parti est un succes et non une erreur a signaler.
+        it('tient pour fait un compte que le fournisseur ne detient plus', async () => {
+            const { provider, faux: serveur } = await adaptateur();
+            serveur.quand(ADMIN_DELETE, {
+                status: 404,
+                body: { code: 404, error_code: 'user_not_found', msg: 'User not found' },
+            });
+
+            await expect(provider.remove(UTILISATEUR.id)).resolves.toBeUndefined();
+        });
+
+        it('propage une panne plutot que de la faire passer pour un effacement', async () => {
+            const { provider, faux: serveur } = await adaptateur();
+            serveur.quand(ADMIN_DELETE, {
+                status: 503,
+                body: { code: 503, error_code: 'unexpected_failure', msg: 'panne' },
+            });
+
+            await expect(provider.remove(UTILISATEUR.id)).rejects.toThrow(/remove/);
         });
     });
 });

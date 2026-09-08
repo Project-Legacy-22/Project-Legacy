@@ -1,0 +1,53 @@
+import { z } from 'zod';
+
+// The copy of an account handed back by the portability endpoint (US-13).
+//
+// This is a response shape rather than an input one, and it is declared here
+// all the same: it is the document a person receives and keeps, so it is a
+// contract like any other. A schema is also the only description of it that
+// cannot drift from what is served, since the route parses through it.
+//
+// Dates are ISO 8601 instants, the same form the rest of the API uses. The
+// export is meant to be readable by the person who asked for it and reusable by
+// another application, which rules out database-shaped column names.
+
+const ExportedAccount = z.object({
+    id: z.uuid(),
+    email: z.string(),
+    createdAt: z.iso.datetime(),
+});
+
+// Soft-deleted items are exported too, with the date they were removed. They
+// are still stored personal data; leaving them out would make the export a
+// description of what the interface shows rather than of what is held.
+const ExportedItem = z.object({
+    id: z.uuid(),
+    name: z.string().nullable(),
+    completed: z.boolean(),
+    createdAt: z.iso.datetime(),
+    updatedAt: z.iso.datetime(),
+    deletedAt: z.iso.datetime().nullable(),
+});
+
+// Notifications carry no message text: the wording belongs to the interface
+// (see the outbox migration). What is exported is therefore what the row
+// actually holds, identifiers and dates, not a rendered sentence.
+const ExportedNotification = z.object({
+    id: z.uuid(),
+    itemId: z.uuid(),
+    eventId: z.uuid(),
+    readAt: z.iso.datetime().nullable(),
+    createdAt: z.iso.datetime(),
+});
+
+export const PersonalDataExportDto = z.object({
+    // Names the moment the copy was taken. Two exports of the same account are
+    // otherwise indistinguishable, and a person comparing them cannot tell
+    // which is the recent one.
+    exportedAt: z.iso.datetime(),
+    account: ExportedAccount,
+    items: z.array(ExportedItem),
+    notifications: z.array(ExportedNotification),
+});
+
+export type PersonalDataExportDto = z.infer<typeof PersonalDataExportDto>;

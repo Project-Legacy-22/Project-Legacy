@@ -5,6 +5,11 @@ import type { Account, IdentityProvider, RegistrationOutcome, Session } from '@l
 export interface SupabaseAuthSettings {
     url: string;
     anonKey: string;
+    // Deleting an account is the one operation of this port that no session can
+    // perform on its own behalf: GoTrue exposes it on the admin API only. It is
+    // held in a second client below rather than raising the privilege of the
+    // one that signs people in.
+    serviceRoleKey: string;
 }
 
 // GoTrue answers a well-formed request in one of a few known ways. These three
@@ -15,6 +20,10 @@ export interface SupabaseAuthSettings {
 const ALREADY_REGISTERED = 'user_already_exists';
 const INVALID_CREDENTIALS = 'invalid_credentials';
 const UNUSABLE_TOKEN = new Set(['bad_jwt', 'session_expired', 'session_not_found']);
+// Deleting an account that is already gone. The erasure use case may be a retry
+// of an attempt that failed after removing the rows, and a retry has to be able
+// to finish rather than report a failure for work already done.
+const USER_NOT_FOUND = 404;
 
 // The cause is attached rather than interpolated: the provider's message can
 // carry the address that was submitted, and this error is going to be logged.
@@ -37,6 +46,13 @@ export function createSupabaseIdentityProvider(settings: SupabaseAuthSettings): 
         // The API is stateless: it holds no session of its own, and the caller's
         // token arrives with each request. Persisting or refreshing anything
         // here would mean one shared session for every user of the process.
+        auth: { persistSession: false, autoRefreshToken: false },
+    });
+    // The admin client, used by one method. Kept apart from the one above so
+    // that sign-up and sign-in cannot reach the service-role key by accident:
+    // the endpoints that apply the password policy and the provider's rate
+    // limits are exactly the endpoints that key would bypass.
+    const admin = createClient(settings.url, settings.serviceRoleKey, {
         auth: { persistSession: false, autoRefreshToken: false },
     });
 
@@ -81,5 +97,18 @@ export function createSupabaseIdentityProvider(settings: SupabaseAuthSettings): 
         return accountOf(result.data.user);
     }
 
-    return { register, authenticate, identify };
+    async function remove(accountId: string): Promise<void> {
+        // No second argument: deleteUser soft-deletes only when asked to, and a
+        // soft delete would keep the row, the address and the credentials that
+        // an erasure exists to remove. Deleting the user also drops the
+        // sessions and refresh tokens GoTrue holds for it, which is what signs
+        // the person out everywhere instead of only in the browser that asked.
+        const { error } = await admin.auth.admin.deleteUser(accountId);
+
+        if (error === null || error.status === USER_NOT_FOUND) return;
+
+        return fail('remove', error);
+    }
+
+    return { register, authenticate, identify, remove };
 }

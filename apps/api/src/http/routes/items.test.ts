@@ -4,12 +4,15 @@ import type { IdentityProvider } from '@legacy/core-auth';
 import { makeAddItem, makeChangeItem, makeListItems, makeRemoveItem } from '@legacy/core-items';
 import type { Item, ItemRepository } from '@legacy/core-items';
 import {
+    makeEraseAccount,
+    makeExportPersonalData,
     makeIdentifyCaller,
     makeRegisterAccount,
 } from '@legacy/core-auth';
 // The reference fake for a port lives with the port it implements. Copying one
 // here would let the copy drift from the contract it is supposed to stand for.
 import { inMemoryIdentityProvider } from '../../../../../packages/core/auth/test/fakes/in-memory-identity-provider.js';
+import { inMemoryPersonalDataStore } from '../../../../../packages/core/auth/test/fakes/in-memory-personal-data-store.js';
 import { inMemoryItemRepository } from '../../../../../packages/core/items/test/fakes/in-memory-item-repository.js';
 import type { InMemoryItemRepository } from '../../../../../packages/core/items/test/fakes/in-memory-item-repository.js';
 
@@ -29,6 +32,10 @@ const ADRESSE = 'alice@example.com';
 const MOT_DE_PASSE = 'MotDePasse2026';
 
 function useCasesOver(repository: ItemRepository, provider: IdentityProvider): AppUseCases {
+    // Aucun compte : les routes d items ne touchent pas aux donnees
+    // personnelles, et un magasin vide le rend visible si l une d elles s y met.
+    const personalData = inMemoryPersonalDataStore();
+
     return {
         items: {
             listItems: makeListItems(repository),
@@ -44,6 +51,13 @@ function useCasesOver(repository: ItemRepository, provider: IdentityProvider): A
             registerAccount: makeRegisterAccount(provider),
             signIn: makeSignIn(provider),
             identifyCaller: makeIdentifyCaller(provider),
+        },
+        account: {
+            exportPersonalData: makeExportPersonalData({
+                store: personalData,
+                now: () => new Date('2026-09-04T10:00:00.000Z'),
+            }),
+            eraseAccount: makeEraseAccount({ store: personalData, identity: provider }),
         },
     };
 }

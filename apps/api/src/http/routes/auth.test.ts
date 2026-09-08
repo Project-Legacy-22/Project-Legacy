@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
+    makeEraseAccount,
+    makeExportPersonalData,
     makeIdentifyCaller,
     makeRegisterAccount,
     makeSignIn,
@@ -10,6 +12,7 @@ import { makeAddItem, makeChangeItem, makeListItems, makeRemoveItem } from '@leg
 // implements. Copying it here would let the copy drift from the contract it
 // is supposed to stand for.
 import { inMemoryIdentityProvider } from '../../../../../packages/core/auth/test/fakes/in-memory-identity-provider.js';
+import { inMemoryPersonalDataStore } from '../../../../../packages/core/auth/test/fakes/in-memory-personal-data-store.js';
 
 import { createServer } from '../server.js';
 import type { AppUseCases } from '../../composition-root.js';
@@ -37,6 +40,9 @@ const ACCOUNT_ID = '00000000-0000-7000-8000-000000000001';
 // session repondrait 500 au lieu du refus attendu, et le test le verrait.
 function useCasesOver(provider: IdentityProvider): AppUseCases {
     const repository = unreachableItemRepository();
+    // Aucun compte : les routes exercees ici ne touchent pas aux donnees
+    // personnelles, et un magasin vide le rend visible si l une d elles s y met.
+    const personalData = inMemoryPersonalDataStore();
 
     return {
         items: {
@@ -53,6 +59,13 @@ function useCasesOver(provider: IdentityProvider): AppUseCases {
             registerAccount: makeRegisterAccount(provider),
             signIn: makeSignIn(provider),
             identifyCaller: makeIdentifyCaller(provider),
+        },
+        account: {
+            exportPersonalData: makeExportPersonalData({
+                store: personalData,
+                now: () => new Date('2026-09-04T10:00:00.000Z'),
+            }),
+            eraseAccount: makeEraseAccount({ store: personalData, identity: provider }),
         },
     };
 }
