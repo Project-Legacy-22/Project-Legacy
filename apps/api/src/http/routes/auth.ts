@@ -35,7 +35,14 @@ function toAccountDto(account: Account): AccountDto {
 }
 
 function emailKey(body: unknown): string {
-    const email = (body as { email?: unknown }).email;
+    // Runs on the rate limiter's path, before any validation, so it must
+    // tolerate anything. Express 5 leaves the body undefined when the request
+    // carries no JSON content type: reading a property off it would throw and
+    // turn a malformed request into a 500 with an "unhandled failure" line,
+    // where the boundary owes a 400. Guarding here rather than at the call site
+    // covers every future caller too.
+    const email =
+        typeof body === 'object' && body !== null ? (body as { email?: unknown }).email : undefined;
     return normalizeEmailAddress(typeof email === 'string' ? email : '');
 }
 

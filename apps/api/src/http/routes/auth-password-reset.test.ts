@@ -109,6 +109,17 @@ describe('API de reinitialisation de mot de passe', () => {
             expect(surInconnue.headers.get('set-cookie')).toBeNull();
         });
 
+        // Express 5 laisse le corps indefini quand la requete ne porte pas de
+        // type json. Le compteur par adresse s execute avant toute validation :
+        // s il dereference ce corps, une requete malformee devient un 500 avec
+        // une ligne "unhandled failure", la ou la frontiere doit un 400.
+        it('refuse un corps absent plutot que d echouer en 500', async () => {
+            const reponse = await harness.request('/auth/password/forgot', { method: 'POST' });
+
+            expect(reponse.status).toBe(400);
+            expect(harness.logger.lines.map(ligne => ligne.level)).not.toContain('error');
+        });
+
         it('refuse une adresse qui n en est pas une', async () => {
             const response = await harness.request(
                 '/auth/password/forgot',
