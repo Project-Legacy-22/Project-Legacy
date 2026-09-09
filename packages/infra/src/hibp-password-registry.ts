@@ -15,12 +15,19 @@ import type { Logger } from '@legacy/contracts';
 // not reveal how many real matches there were.
 const RANGE_URL = 'https://api.pwnedpasswords.com/range/';
 const PREFIX_LENGTH = 5;
+// A reply that never comes is not a rejection: without a deadline the platform
+// default is counted in minutes, and a password reset would hang for all of it
+// -- exactly what failing open exists to prevent. Two seconds is far above the
+// service's normal latency and far below anything a person would wait through.
+const DEFAULT_TIMEOUT_MS = 2000;
 
 export interface HibpSettings {
     logger: Logger;
     // Injected so a test drives the exchange without a network. Defaults to the
     // platform fetch.
     fetch?: typeof globalThis.fetch;
+    // Injected so a test can prove the deadline without waiting for it.
+    timeoutMs?: number;
 }
 
 function sha1Upper(value: string): string {
@@ -44,6 +51,7 @@ function suffixIsBreached(body: string, suffix: string): boolean {
 
 export function createHibpPasswordRegistry(settings: HibpSettings): CompromisedPasswordRegistry {
     const doFetch = settings.fetch ?? globalThis.fetch;
+    const timeoutMs = settings.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
     return {
         async isCompromised(candidate: string): Promise<boolean> {
@@ -54,6 +62,9 @@ export function createHibpPasswordRegistry(settings: HibpSettings): CompromisedP
             try {
                 const response = await doFetch(`${RANGE_URL}${prefix}`, {
                     headers: { 'Add-Padding': 'true' },
+                    // The abort surfaces as a rejection, which the catch below
+                    // already turns into failing open.
+                    signal: AbortSignal.timeout(timeoutMs),
                 });
 
                 if (!response.ok) {

@@ -89,4 +89,23 @@ describe('createHibpPasswordRegistry', () => {
         await expect(registry.isCompromised(CANDIDATE)).resolves.toBe(false);
         expect(logger.warn).toHaveBeenCalledOnce();
     });
+
+    // Une reponse qui ne vient jamais n est pas un rejet : sans echeance, la
+    // reinitialisation resterait bloquee le temps du defaut de la plateforme.
+    // Le service reel n est pas sollicite ici, seul le signal transmis compte.
+    it('abandonne quand la reponse ne vient pas, plutot que d attendre', async () => {
+        const logger = recordingLogger();
+        const fetch = vi.fn((_url: string, init?: RequestInit) => {
+            return new Promise<Response>((_resolve, reject) => {
+                init?.signal?.addEventListener('abort', () => {
+                    reject(init.signal?.reason ?? new Error('aborted'));
+                });
+            });
+        }) as unknown as typeof globalThis.fetch;
+
+        const registry = createHibpPasswordRegistry({ logger, fetch, timeoutMs: 10 });
+
+        await expect(registry.isCompromised(CANDIDATE)).resolves.toBe(false);
+        expect(logger.warn).toHaveBeenCalledOnce();
+    });
 });
