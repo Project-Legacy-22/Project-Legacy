@@ -70,4 +70,33 @@ describe('loadConfig', () => {
     it('refuse un niveau de journal inconnu plutot que de le transmettre a pino', () => {
         expect(() => loadConfig({ ...VALID_ENV, LOG_LEVEL: 'verbeux' })).toThrow(/LOG_LEVEL/);
     });
+
+    // EN-29 : l origine autorisee et la confiance proxy sont optionnelles, avec
+    // un defaut adapte au developpement direct.
+    it('autorise le front de developpement quand WEB_ORIGIN est absente', () => {
+        expect(loadConfig(VALID_ENV).webOrigin).toBe('http://localhost:5173');
+    });
+
+    it('retient l origine autorisee demandee', () => {
+        expect(loadConfig({ ...VALID_ENV, WEB_ORIGIN: 'https://todo.example' }).webOrigin).toBe(
+            'https://todo.example',
+        );
+    });
+
+    it('refuse une origine autorisee qui n est pas une URL, en la nommant', () => {
+        expect(() => loadConfig({ ...VALID_ENV, WEB_ORIGIN: 'todo.example' })).toThrow(/WEB_ORIGIN/);
+    });
+
+    it('ne fait confiance a aucun proxy quand TRUST_PROXY est absente', () => {
+        expect(loadConfig(VALID_ENV).trustProxy).toBe(0);
+    });
+
+    it('retient le nombre de sauts de proxy demande', () => {
+        expect(loadConfig({ ...VALID_ENV, TRUST_PROXY: '1' }).trustProxy).toBe(1);
+    });
+
+    it('refuse une confiance proxy negative ou non entiere, en la nommant', () => {
+        expect(() => loadConfig({ ...VALID_ENV, TRUST_PROXY: '-1' })).toThrow(/TRUST_PROXY/);
+        expect(() => loadConfig({ ...VALID_ENV, TRUST_PROXY: '1.5' })).toThrow(/TRUST_PROXY/);
+    });
 });
