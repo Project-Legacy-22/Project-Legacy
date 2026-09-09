@@ -51,7 +51,15 @@
 }
 
 .session-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     margin: 0 0 16px;
+}
+
+.session-banner p {
+    margin: 0;
     color: #465568;
     font-size: 0.9375rem;
 }
@@ -66,4 +74,8 @@
     background: #e9f6f3;
     font-size: 0.8125rem;
     font-weight: 700;
+}
+
+.session-banner .button-quiet {
+    margin-top: 0;
 }

@@ -16,6 +16,7 @@ import { useItems } from './hooks/use-items';
 import { useNotifications } from './hooks/use-notifications';
 import { usePersonalData } from './hooks/use-personal-data';
 import { useSession } from './hooks/use-session';
+import type { SubmitResult } from './hooks/use-session';
 import { labels } from './labels';
 import { saveFile } from './save-file';
 import type { SaveFile } from './save-file';
@@ -44,28 +45,49 @@ interface SignedInAppProps {
     notifications: NotificationsApi;
     save: SaveFile;
     email: string;
+    isSigningOut: boolean;
     onDeleted: () => void;
+    onSignOut: () => Promise<SubmitResult>;
 }
 
 // The items screen is mounted in its own component so its data is only fetched
 // once there is a session. Rendering it behind a condition in App would run its
 // hooks anyway and fire a request that can only come back 401.
-function SignedInApp({ api, account, notifications, save, email, onDeleted }: SignedInAppProps) {
+function SignedInApp({
+    api,
+    account,
+    notifications,
+    save,
+    email,
+    isSigningOut,
+    onDeleted,
+    onSignOut,
+}: SignedInAppProps) {
     const state = useItems(api);
     const personalData = usePersonalData({ api: account, save, onDeleted });
     const unread = useNotifications(notifications, true);
 
     return (
         <>
-            <p className="session-banner">
-                {labels.signedInAs(email)}
-                {/* role="status" : le compte change tout seul, quand le worker a
-                    traite l evenement. L annoncer sans interrompre la lecture est
-                    exactement ce pour quoi ce role existe. */}
-                <span className="notification-badge" role="status">
-                    {labels.unreadNotifications(unread)}
-                </span>
-            </p>
+            <div className="session-banner">
+                <p>
+                    {labels.signedInAs(email)}
+                    {/* role="status" : le compte change tout seul, quand le worker a
+                        traite l evenement. L annoncer sans interrompre la lecture est
+                        exactement ce pour quoi ce role existe. */}
+                    <span className="notification-badge" role="status">
+                        {labels.unreadNotifications(unread)}
+                    </span>
+                </p>
+                <button
+                    type="button"
+                    className="button button-quiet"
+                    onClick={() => void onSignOut()}
+                    disabled={isSigningOut}
+                >
+                    {isSigningOut ? labels.signingOut : labels.signOut}
+                </button>
+            </div>
             <TodoPage
                 items={state.items}
                 loadState={state.loadState}
@@ -152,7 +174,9 @@ export function App({
             notifications={notifications}
             save={save}
             email={session.state.account.email}
+            isSigningOut={session.isSubmitting}
             onDeleted={session.forget}
+            onSignOut={session.signOut}
         />
     );
 }

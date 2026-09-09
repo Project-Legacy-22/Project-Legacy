@@ -27,6 +27,9 @@ export const labels = {
     signedInAs(email: string): string {
         return `Signed in as ${email}`;
     },
+    signOut: 'Sign out',
+    signingOut: 'Signing out…',
+    signOutFailed: 'Unable to sign out cleanly. Your session was still cleared on this device.',
     // Stated before anything is typed rather than after a refusal, which is
     // what US-11b asks for. Built from the contract so the wording cannot drift
     // from what the API actually enforces.

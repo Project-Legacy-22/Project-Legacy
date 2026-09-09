@@ -70,6 +70,7 @@ function createAuth(overrides: Partial<AuthApi> = {}): AuthApi {
         currentAccount: vi.fn(async () => ACCOUNT),
         requestPasswordReset: vi.fn(async () => undefined),
         resetPassword: vi.fn(async () => undefined),
+        signOut: vi.fn(async () => undefined),
         ...overrides,
     };
 }
@@ -212,6 +213,41 @@ describe('App authentication', () => {
         const errorId = email.getAttribute('aria-describedby');
         const error = getElement<HTMLElement>(`#${errorId ?? ''}`);
         expect(error.getAttribute('role')).toBe('alert');
+    });
+});
+
+describe('App sign-out', () => {
+    it('renvoie a l ecran de connexion et y deplace le focus', async () => {
+        const signOut = vi.fn(async () => undefined);
+        const auth = createAuth({ signOut });
+        await testRoot.render(<App api={createApi()} auth={auth} />);
+
+        await click(getElement<HTMLButtonElement>('.session-banner button'));
+        await flushTimers();
+
+        expect(signOut).toHaveBeenCalledOnce();
+        expect(document.querySelector('.session-banner')).toBeNull();
+        expect(document.querySelector('form.auth-form')).not.toBeNull();
+        // Critere US-47 : le retour a l ecran de connexion deplace le focus
+        // sur le titre.
+        expect(document.activeElement).toBe(getElement<HTMLHeadingElement>('.auth-page h1'));
+    });
+
+    // La deconnexion doit fonctionner sur un poste partage meme si la
+    // revocation cote serveur echoue : le cookie est efface quoi qu il arrive
+    // (voir apps/api/src/http/routes/auth.ts).
+    it('revient a l ecran de connexion meme si la requete echoue', async () => {
+        const auth = createAuth({
+            signOut: vi.fn(async () => {
+                throw new ApiError(500, 'panne du fournisseur');
+            }),
+        });
+        await testRoot.render(<App api={createApi()} auth={auth} />);
+
+        await click(getElement<HTMLButtonElement>('.session-banner button'));
+        await flushTimers();
+
+        expect(document.querySelector('form.auth-form')).not.toBeNull();
     });
 });
 
