@@ -346,11 +346,20 @@ jobs:
           create or replace function auth.uid() returns uuid
           language sql stable
           as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+          -- Les trois roles que Supabase fournit, pas seulement celui dont les
+          -- migrations d aujourd hui se servent. Une migration qui accorde des
+          -- droits a anon ou service_role est valide sur un vrai projet ; ne
+          -- creer qu authenticated la faisait echouer ici sur "role does not
+          -- exist", c est-a-dire sur un manque de la CI et non sur une faute.
           do $$
+          declare
+            role_name text;
           begin
-            if not exists (select from pg_roles where rolname = 'authenticated') then
-              create role authenticated;
-            end if;
+            foreach role_name in array array['anon', 'authenticated', 'service_role'] loop
+              if not exists (select from pg_roles where rolname = role_name) then
+                execute format('create role %I', role_name);
+              end if;
+            end loop;
           end
           $$;
           SQL
