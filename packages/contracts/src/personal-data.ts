@@ -19,9 +19,6 @@ const ExportedAccount = z.object({
     createdAt: z.iso.datetime(),
 });
 
-// Soft-deleted items are exported too, with the date they were removed. They
-// are still stored personal data; leaving them out would make the export a
-// description of what the interface shows rather than of what is held.
 const ExportedItem = z.object({
     id: z.uuid(),
     projectId: z.uuid(),
@@ -29,7 +26,6 @@ const ExportedItem = z.object({
     completed: z.boolean(),
     createdAt: z.iso.datetime(),
     updatedAt: z.iso.datetime(),
-    deletedAt: z.iso.datetime().nullable(),
 });
 
 const ExportedProject = z.object({

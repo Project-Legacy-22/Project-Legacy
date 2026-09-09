@@ -55,7 +55,6 @@ function toItem(row: ItemRow): ExportedItem {
         completed: row.completed,
         createdAt: toInstant(row.created_at),
         updatedAt: toInstant(row.updated_at),
-        deletedAt: toOptionalInstant(row.deleted_at),
     };
 }
 
@@ -148,8 +147,6 @@ export function createSupabasePersonalDataStore(settings: SupabaseSettings): Per
         // than one after the other. Oldest first in both collections: an export
         // is read by a person, and a history reads forwards.
         //
-        // Items are not filtered on deleted_at. A removed item is still a row
-        // this application holds, so it is still part of what is exported.
         const [account, items, notifications, projectMemberships] = await Promise.all([
             client.from('users').select('*').eq('id', accountId).maybeSingle(),
             client.from('items').select('*').eq('user_id', accountId).order('created_at'),

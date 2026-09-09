@@ -119,18 +119,38 @@ begin
     raise exception 'users.email must have a UNIQUE constraint';
   end if;
 
-  -- 7. Timestamps are timezone-aware and stored in UTC.
+  -- 7. Item deletion is physical. Keeping a state column would allow a route
+  --    to hide a row without removing the personal data it contains.
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public' and table_name = 'items'
+      and column_name = 'deleted_at'
+  ) then
+    raise exception 'items must not carry a soft-deletion column';
+  end if;
+
+  if exists (
+    select 1
+    from pg_indexes
+    where schemaname = 'public' and indexname = 'items_project_id_created_at_idx'
+      and indexdef ilike '% where %'
+  ) then
+    raise exception 'the item pagination index must not filter deletion state';
+  end if;
+
+  -- 8. Timestamps are timezone-aware and stored in UTC.
   select string_agg(format('%s.%s', table_name, column_name), ', ')
     into offending
   from information_schema.columns
   where table_schema = 'public'
-    and column_name in ('created_at', 'updated_at', 'deleted_at')
+    and column_name in ('created_at', 'updated_at')
     and data_type <> 'timestamp with time zone';
   if offending is not null then
     raise exception 'timestamp columns not timestamptz: %', offending;
   end if;
 
-  -- 8. Item and project names carry database length constraints.
+  -- 9. Item and project names carry database length constraints.
   --    left to the application).
   if not exists (
     select 1
@@ -154,7 +174,7 @@ begin
     raise exception 'projects.name must have a CHECK constraint on its length';
   end if;
 
-  -- 9. The system account remains a functional fixture for old event data.
+  -- 10. The system account remains a functional fixture for old event data.
   --    in every environment (D-20), so it is seeded by the migration, not by
   --    supabase/seed.sql.
   if not exists (
@@ -163,7 +183,7 @@ begin
     raise exception 'the system user must be seeded by the initial migration';
   end if;
 
-  -- 10. Every account present during the migration owns a default project,
+  -- 11. Every account present during the migration owns a default project,
   --     and the backfill leaves no item outside its creator's membership.
   if exists (
     select 1
@@ -187,7 +207,7 @@ begin
     raise exception 'every migrated item creator must belong to its project';
   end if;
 
-  -- 11. Membership roles are constrained to the vocabulary accepted by the
+  -- 12. Membership roles are constrained to the vocabulary accepted by the
   --     contracts, and account lookups have an index in the useful direction.
   if not exists (
     select 1
@@ -213,7 +233,7 @@ begin
     raise exception 'project_memberships.user_id must lead an index';
   end if;
 
-  -- 12. Row-level security is enabled on every table holding user data.
+  -- 13. Row-level security is enabled on every table holding user data.
   select string_agg(rel.relname, ', ')
     into offending
   from pg_class rel
@@ -225,7 +245,7 @@ begin
     raise exception 'row-level security disabled on: %', offending;
   end if;
 
-  -- 13. Row-level security without a policy denies everything, which is safe
+  -- 14. Row-level security without a policy denies everything, which is safe
   --     and proves nothing. US-11 requires the ownership policies to exist, so
   --     their absence must fail the job rather than pass quietly.
   select string_agg(rel.relname, ', ')
@@ -242,7 +262,7 @@ begin
     raise exception 'row-level security enabled without any policy on: %', offending;
   end if;
 
-  -- 14. Items carry one policy per command and every policy delegates access
+  -- 15. Items carry one policy per command and every policy delegates access
   --     to project membership rather than creator ownership.
   --     but not writable by its owner would look protected and be unusable.
   select string_agg(c.cmd, ', ')
@@ -265,7 +285,7 @@ begin
     raise exception 'every items policy must check project membership';
   end if;
 
-  -- 15. Every account created by the provider gets its application row and
+  -- 16. Every account created by the provider gets its application row and
   --     default project through the same trigger.
   --     which items.user_id cannot reference the account a session designates.
   if not exists (
@@ -274,7 +294,7 @@ begin
     raise exception 'auth.users must be mirrored into public.users by a trigger';
   end if;
 
-  -- 16. Account erasure takes an arbitrary account id and therefore stays an
+  -- 17. Account erasure takes an arbitrary account id and therefore stays an
   --     internal backend operation. Exposing it as a public RPC would let the
   --     caller aim it at somebody else.
   if (to_regrole('anon') is not null
@@ -482,6 +502,20 @@ begin
   get diagnostics affected = row_count;
   if affected <> 0 then
     raise exception 'a non-member must not update a foreign item';
+  end if;
+
+  delete from public.items
+  where id = '00000000-0000-7000-8000-000000000301';
+  get diagnostics affected = row_count;
+  if affected <> 1 then
+    raise exception 'a project member must be able to delete an item';
+  end if;
+
+  delete from public.items
+  where id = '00000000-0000-7000-8000-000000000302';
+  get diagnostics affected = row_count;
+  if affected <> 0 then
+    raise exception 'a non-member must not delete a foreign item';
   end if;
 
   delete from public.projects
