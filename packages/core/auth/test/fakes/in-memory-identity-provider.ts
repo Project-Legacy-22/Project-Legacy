@@ -110,6 +110,17 @@ export function inMemoryIdentityProvider(
 
             return Promise.resolve();
         },
+        // The fake tracks one current token per account, not one per device,
+        // so there is nothing narrower than the account's whole epoch to
+        // revoke: the same bump resetPassword uses. A token that does not
+        // match the current one is already unusable, which is signOut's goal
+        // state, so there is nothing to do.
+        signOut: (accessToken): Promise<void> => {
+            const account = accountByCurrentToken(accessToken);
+            if (account !== undefined) account.sessionEpoch += 1;
+            return Promise.resolve();
+        },
+
         requestPasswordReset: (email): Promise<void> => {
             const account = accounts.get(email);
 
