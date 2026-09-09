@@ -92,13 +92,6 @@ function useSessionActions(api: AuthApi, setState: Dispatch<SetStateAction<Sessi
         [api, guarded, setState],
     );
 
-    // The account behind this session no longer exists. Erasure (US-13) is the
-    // only caller today; a real sign-out is US-27 and will need the API to drop
-    // the cookie as well, which this does not do.
-    const forget = useCallback(() => {
-        setState({ status: 'anonymous' });
-    }, [setState]);
-
     const run = useCallback(
         (call: () => Promise<unknown>, success: string, fallback: string): Promise<SubmitResult> =>
             guarded(() => attempt(call, success, fallback)),
@@ -108,7 +101,6 @@ function useSessionActions(api: AuthApi, setState: Dispatch<SetStateAction<Sessi
     return {
         isSubmitting,
         signIn,
-        forget,
         register: (email: string, password: string) =>
             run(() => api.register({ email, password }), labels.registerAccepted, labels.registerFailed),
         requestPasswordReset: (email: string) =>
@@ -129,5 +121,13 @@ function useSessionActions(api: AuthApi, setState: Dispatch<SetStateAction<Sessi
 export function useSession(api: AuthApi) {
     const [state, setState] = useSessionCheck(api);
 
-    return { state, ...useSessionActions(api, setState) };
+    // The account behind this session no longer exists. Erasure (US-13) is the
+    // only caller today; a real sign-out is US-27 and will need the API to drop
+    // the cookie as well, which this does not do. It sits here rather than in
+    // useSessionActions: it submits nothing and has no failure to report.
+    const forget = useCallback(() => {
+        setState({ status: 'anonymous' });
+    }, [setState]);
+
+    return { state, forget, ...useSessionActions(api, setState) };
 }
