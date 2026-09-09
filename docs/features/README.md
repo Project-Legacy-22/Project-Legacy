@@ -23,3 +23,4 @@ the acceptance criteria: it describes the feature as it now behaves, in the pres
 | Issue | Feature | Epic |
 |---|---|---|
 | [#14](14-export-and-delete-account.md) | Export and delete my personal data | GDPR |
+| [#30](30-api-hardening.md) | API security hardening | Quality |
