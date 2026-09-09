@@ -238,6 +238,11 @@ export const labels = {
     open: 'Open',
     complete: 'Complete',
     reopen: 'Reopen',
+    edit: 'Edit',
+    editItemNameLabel: 'Edit item name',
+    saveItem: 'Save',
+    savingItem: 'Saving…',
+    cancel: 'Cancel',
     remove: 'Remove',
     invalidItem: 'The server returned an invalid item.',
     invalidItemList: 'The server returned an invalid item list.',
@@ -268,14 +273,23 @@ export const labels = {
     reopenItem(name: string): string {
         return `Reopen: ${name}`;
     },
+    editItem(name: string): string {
+        return `Edit: ${name}`;
+    },
     removeItem(name: string): string {
         return `Remove: ${name}`;
+    },
+    confirmItemRemoval(name: string): string {
+        return `Permanently remove ${name}?`;
     },
     itemAdded(name: string): string {
         return `${name} added.`;
     },
     itemCompletionChanged(name: string, isCompleted: boolean): string {
         return `${name} marked as ${isCompleted ? 'completed' : 'open'}.`;
+    },
+    itemRenamed(name: string): string {
+        return `${name} saved.`;
     },
     itemRemoved(name: string): string {
         return `${name} removed.`;

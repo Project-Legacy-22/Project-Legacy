@@ -11,9 +11,15 @@ export interface ItemsContentProps {
     hasNextPage: boolean;
     paginationState: ItemsPaginationState;
     onToggle: (item: ItemDto) => Promise<void>;
+    onRename: (item: ItemDto, name: string) => Promise<boolean>;
     onRemove: (item: ItemDto) => Promise<boolean>;
     onLoadMore: () => void;
     onRetry: () => void;
+}
+
+function retryItems(onRetry: () => void): void {
+    onRetry();
+    document.querySelector<HTMLElement>('#items-heading')?.focus();
 }
 
 export function ItemsContent({
@@ -23,15 +29,11 @@ export function ItemsContent({
     hasNextPage,
     paginationState,
     onToggle,
+    onRename,
     onRemove,
     onLoadMore,
     onRetry,
 }: ItemsContentProps) {
-    const handleRetry = () => {
-        onRetry();
-        document.querySelector<HTMLElement>('#items-heading')?.focus();
-    };
-
     if (loadState.status === 'loading') {
         return (
             <p className="status-message" role="status">
@@ -44,7 +46,7 @@ export function ItemsContent({
         return (
             <div className="error-message" role="alert">
                 <p>{loadState.message}</p>
-                <button className="button button-secondary" type="button" onClick={handleRetry}>
+                <button className="button button-secondary" type="button" onClick={() => retryItems(onRetry)}>
                     {labels.retry}
                 </button>
             </div>
@@ -59,6 +61,7 @@ export function ItemsContent({
                 items={items}
                 pendingItemIds={pendingItemIds}
                 onToggle={onToggle}
+                onRename={onRename}
                 onRemove={onRemove}
             />
             <ItemsPagination

@@ -62,6 +62,20 @@
 
 .item-actions {
     display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.item-edit-form {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 14px;
+}
+
+.item-edit-actions {
+    display: flex;
     gap: 8px;
 }
 
@@ -92,7 +106,16 @@
 }
 
 @media (max-width: 620px) {
+    .todo-item,
+    .item-edit-form {
+        grid-template-columns: 1fr;
+    }
+
     .item-actions {
         width: 100%;
+    }
+
+    .item-edit-actions .button {
+        flex: 1;
     }
 }

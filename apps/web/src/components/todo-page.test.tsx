@@ -31,6 +31,7 @@ function pageProps(overrides: Partial<TodoPageProps> = {}): TodoPageProps {
         paginationState: { status: 'idle', announcement: '' },
         onAdd: vi.fn(async (): Promise<AddItemResult> => ({ status: 'success' })),
         onToggle: vi.fn(async () => undefined),
+        onRename: vi.fn(async () => true),
         onRemove: vi.fn(async () => true),
         onLoadMore: vi.fn(),
         onRetry: vi.fn(),
@@ -74,13 +75,18 @@ describe('TodoPage accessibility', () => {
     it('has no automatically detectable WCAG A or AA violation', async () => {
         await renderPage();
 
-        const results = await axe.run(document, {
+        const initial = await axe.run(document, {
             runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21aa'] },
             // axe documents that this rule cannot produce reliable results in jsdom.
             rules: { 'color-contrast': { enabled: false } },
         });
+        await click(getElement<HTMLButtonElement>('.item-edit'));
+        const editing = await axe.run(document, {
+            runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21aa'] },
+            rules: { 'color-contrast': { enabled: false } },
+        });
 
-        expect(results.violations.map((violation) => violation.id)).toEqual([]);
+        expect([...initial.violations, ...editing.violations].map((violation) => violation.id)).toEqual([]);
     });
 
     it('links every input help reference to an existing element', async () => {

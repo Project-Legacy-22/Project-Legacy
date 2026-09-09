@@ -15,6 +15,7 @@ export interface ItemsState {
     paginationState: ItemsPaginationState;
     addItem: (name: string) => Promise<AddItemResult>;
     toggleItem: ReturnType<typeof useItemActions>['toggleItem'];
+    renameItem: ReturnType<typeof useItemActions>['renameItem'];
     removeItem: ReturnType<typeof useItemActions>['removeItem'];
     loadMore: () => void;
     retry: () => void;
@@ -34,6 +35,7 @@ export function useItems(api: ItemsApi, projectId: string | null): ItemsState {
         paginationState: query.paginationState,
         addItem: actions.addItem,
         toggleItem: actions.toggleItem,
+        renameItem: actions.renameItem,
         removeItem: actions.removeItem,
         loadMore: () => {
             void query.loadMore();
