@@ -81,6 +81,7 @@ beforeEach(() => {
 
 afterEach(async () => {
     await testRoot.unmount();
+    vi.unstubAllGlobals();
 });
 
 describe('App item workflow', () => {
@@ -107,6 +108,7 @@ describe('App item workflow', () => {
     });
 
     it('moves focus to the next row after a successful removal', async () => {
+        vi.stubGlobal('confirm', vi.fn(() => true));
         const api = createApi({
             listItems: vi.fn(async () => itemPage([firstItem, secondItem])),
         });
