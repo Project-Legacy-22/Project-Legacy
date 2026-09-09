@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -94,6 +94,31 @@ describe('contraste de la palette', () => {
         ]);
 
         expect([...PALETTE.keys()].filter(nom => !decrits.has(nom))).toEqual([]);
+    });
+
+    // Le garde qui rend cette specification vraie plutot que decorative.
+    //
+    // Tant que les feuilles portent leurs propres hexadecimaux, un test qui ne
+    // lirait que tokens.css verifierait une palette que personne ne sert : une
+    // couleur changee dans auth.css passerait inapercue. On verifie donc que
+    // toute couleur ecrite quelque part est une valeur declaree ici.
+    //
+    // Ce test tient avant la migration vers var(--...) comme apres : il porte
+    // sur les valeurs, pas sur la forme d'ecriture.
+    it('ne laisse aucune couleur des feuilles hors de la palette', () => {
+        const connues = new Set(PALETTE.values());
+        const intrus: string[] = [];
+
+        for (const fichier of readdirSync(import.meta.dirname)) {
+            if (!fichier.endsWith('.css') || fichier === 'tokens.css') continue;
+
+            const contenu = readFileSync(join(import.meta.dirname, fichier), 'utf8');
+            for (const [couleur] of contenu.matchAll(/#[0-9a-f]{3,8}\b/giu)) {
+                if (!connues.has(couleur.toLowerCase())) intrus.push(`${fichier} : ${couleur}`);
+            }
+        }
+
+        expect(intrus).toEqual([]);
     });
 
     it('exige une raison ecrite pour chaque exemption', () => {
