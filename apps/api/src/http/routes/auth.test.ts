@@ -7,6 +7,7 @@ import {
     makeRequestPasswordReset,
     makeResetPassword,
     makeSignIn,
+    makeSignOut,
 } from '@legacy/core-auth';
 import { makeAddItem, makeChangeItem, makeListItems, makeRemoveItem } from '@legacy/core-items';
 // The reference fakes for the auth ports live with the ports they implement.
@@ -65,6 +66,7 @@ function useCasesOver(provider: InMemoryIdentityProvider): AppUseCases {
             identifyCaller: makeIdentifyCaller(provider),
             requestPasswordReset: makeRequestPasswordReset(provider),
             resetPassword: makeResetPassword({ provider, compromisedPasswords }),
+            signOut: makeSignOut(provider),
         },
         account: {
             exportPersonalData: makeExportPersonalData({

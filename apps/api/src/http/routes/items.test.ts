@@ -10,6 +10,7 @@ import {
     makeRequestPasswordReset,
     makeResetPassword,
     makeSignIn,
+    makeSignOut,
 } from '@legacy/core-auth';
 // The reference fakes for a port live with the port they implement. Copying one
 // here would let the copy drift from the contract it is supposed to stand for.
@@ -60,6 +61,7 @@ function useCasesOver(repository: ItemRepository, provider: IdentityProvider): A
                 provider,
                 compromisedPasswords: inMemoryCompromisedPasswords(),
             }),
+            signOut: makeSignOut(provider),
         },
         account: {
             exportPersonalData: makeExportPersonalData({

@@ -26,6 +26,7 @@ import {
     makeRequestPasswordReset,
     makeResetPassword,
     makeSignIn,
+    makeSignOut,
 } from '@legacy/core-auth';
 import { makeListItems, makeAddItem, makeChangeItem, makeRemoveItem } from '@legacy/core-items';
 
@@ -44,6 +45,7 @@ export interface AuthUseCases {
     identifyCaller: ReturnType<typeof makeIdentifyCaller>;
     requestPasswordReset: ReturnType<typeof makeRequestPasswordReset>;
     resetPassword: ReturnType<typeof makeResetPassword>;
+    signOut: ReturnType<typeof makeSignOut>;
 }
 
 // Kept apart from AuthUseCases, which requireAccount receives on every request
@@ -163,6 +165,7 @@ export function compose(config: Config): Application {
                 identifyCaller: makeIdentifyCaller(identity),
                 requestPasswordReset: makeRequestPasswordReset(identity),
                 resetPassword: makeResetPassword({ provider: identity, compromisedPasswords }),
+                signOut: makeSignOut(identity),
             },
             account: {
                 exportPersonalData: makeExportPersonalData({
