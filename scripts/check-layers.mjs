@@ -56,7 +56,11 @@ const RULES = [
     {
         name: 'only the composition root reaches for an adapter',
         match: /^apps\/api\/src\/(?!composition-root\.ts$)/,
-        bare: [/^@legacy\/(contracts|core-items|core-auth)$/, /^node:/, /^(express|zod|uuid)$/],
+        bare: [
+            /^@legacy\/(contracts|core-items|core-auth)$/,
+            /^node:/,
+            /^(express|helmet|zod|uuid)$/,
+        ],
         local: /^\.\.?\//,
     },
     {

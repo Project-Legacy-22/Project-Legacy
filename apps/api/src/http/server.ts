@@ -14,6 +14,14 @@ import { translateErrors } from './error-middleware.js';
 import { requireAccount } from './session.js';
 import { withTraceId } from './trace.js';
 import { logRequests } from './request-log.js';
+import { securityHeaders } from './security-headers.js';
+import { cors } from './cors.js';
+
+// The largest body any route accepts is an email and a password, or a task
+// title. 16 KiB leaves room for every legitimate request and rejects a payload
+// meant to exhaust memory. A refusal is turned into a 413 by the error
+// middleware rather than a generic 500.
+const MAX_BODY_SIZE = '16kb';
 
 // Ten attempts per five minutes and per address, across sign-up and sign-in
 // together. Loose enough that nobody legitimate meets it by mistyping a
@@ -45,8 +53,21 @@ export function createServer(config: Config, useCases: AppUseCases, logger: Logg
     const app = express();
     const appShell = readAppShell(config.staticDir);
 
-    app.use(express.json());
+    // req.ip, and therefore the rate limiter's client key, is only as
+    // trustworthy as this setting: it says how many proxy hops in front of the
+    // process may set X-Forwarded-For.
+    app.set('trust proxy', config.trustProxy);
+    // helmet also removes it, but disabling it at the source means no code path
+    // can put it back.
+    app.disable('x-powered-by');
+
+    // Before the body parser: a body that is too large or not JSON is refused
+    // by express.json() with a next(error), and the error middleware needs the
+    // trace id to already be on the response to report that refusal.
     app.use(withTraceId);
+    app.use(securityHeaders());
+    app.use(cors(config.webOrigin));
+    app.use(express.json({ limit: MAX_BODY_SIZE }));
     app.use(logRequests(logger));
     app.use(express.static(config.staticDir));
 

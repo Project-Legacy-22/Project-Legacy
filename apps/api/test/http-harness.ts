@@ -33,6 +33,11 @@ export const testConfig: Config = {
     // qu a satisfaire le type.
     logLevel: 'info',
     secureCookies: false,
+    // Le front de developpement. Une suite CORS peut la surcharger.
+    webOrigin: 'http://localhost:5173',
+    // Aucun proxy devant le harness : req.ip est l adresse de la connexion.
+    // Une suite qui exerce X-Forwarded-For remonte cette valeur.
+    trustProxy: 0,
 };
 
 export function json(method: string, body: unknown): TestRequestInit {
