@@ -140,15 +140,52 @@ export async function tab({ shift = false } = {}): Promise<HTMLElement | null> {
     return cible;
 }
 
+// Le nom accessible, resolu dans l'ordre ou l'arbre d'accessibilite le fait :
+// aria-label, puis aria-labelledby, puis l'etiquette associee, puis le contenu.
+//
+// L'etiquette compte parce qu'un champ n'a pas de contenu textuel : sans elle,
+// tous les champs d'un formulaire portent le meme nom vide et deviennent
+// indistinguables dans un ordre de tabulation. Un test qui les compare passerait
+// alors meme si deux champs etaient echanges.
+
+// Une source ne nomme rien quand elle est absente, et pas davantage quand elle
+// est vide : un aria-label rempli d'espaces est un oubli, pas un nom. C'est ce
+// que ?? seul ne voyait pas, un champ recevant alors la chaine vide.
+function premierNonVide(...sources: (string | null | undefined)[]): string {
+    for (const source of sources) {
+        const propre = source?.trim();
+        if (propre !== undefined && propre !== '') return propre;
+    }
+    return '';
+}
+
+// Seuls les controles de formulaire portent une etiquette associee, et c'est
+// leur seul nom : ils n'ont pas de contenu textuel.
+function etiquetteAssociee(element: HTMLElement): string | null | undefined {
+    const controle =
+        element instanceof HTMLInputElement ||
+        element instanceof HTMLSelectElement ||
+        element instanceof HTMLTextAreaElement;
+
+    return controle ? element.labels?.[0]?.textContent : undefined;
+}
+
+export function nomAccessible(element: HTMLElement): string {
+    const reference = element.getAttribute('aria-labelledby');
+
+    return premierNonVide(
+        element.getAttribute('aria-label'),
+        reference === null ? undefined : document.getElementById(reference)?.textContent,
+        etiquetteAssociee(element),
+        element.textContent,
+        element.getAttribute('name'),
+    );
+}
+
 // L'ordre de tabulation sous une forme lisible dans un echec de test :
 // le nom accessible plutot que le noeud, qui ne dit rien une fois affiche.
 export function focusOrder(root: ParentNode = document): string[] {
-    return tabbables(root).map(element => {
-        const nom =
-            element.getAttribute('aria-label') ??
-            element.textContent?.trim() ??
-            element.getAttribute('name') ??
-            '';
-        return `${element.tagName.toLowerCase()}:${nom.slice(0, 40)}`;
-    });
+    return tabbables(root).map(
+        element => `${element.tagName.toLowerCase()}:${nomAccessible(element).slice(0, 40)}`,
+    );
 }
