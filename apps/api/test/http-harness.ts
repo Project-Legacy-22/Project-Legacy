@@ -1,5 +1,7 @@
 import { createServer as createHttpServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
+import path from 'node:path';
+
 import type { Express } from 'express';
 
 import type { Config } from '../src/config.js';
@@ -21,8 +23,9 @@ export interface Harness {
 // drop a secure cookie there.
 export const testConfig: Config = {
     port: 0,
-    // No directory is served here: only the API contract is under test.
-    staticDir: import.meta.dirname,
+    // A minimal shell, enough for the routes that serve the app for a deep link
+    // (GET /reset-password) to be exercised without building the real bundle.
+    staticDir: path.join(import.meta.dirname, 'fixtures', 'web-shell'),
     supabaseUrl: 'http://127.0.0.1:54321',
     supabaseServiceRoleKey: 'test-service-role-key',
     supabaseAnonKey: 'test-anon-key',

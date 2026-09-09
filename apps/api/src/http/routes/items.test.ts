@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { makeSignIn } from '@legacy/core-auth';
 import type { IdentityProvider } from '@legacy/core-auth';
 import { makeAddItem, makeChangeItem, makeListItems, makeRemoveItem } from '@legacy/core-items';
 import type { Item, ItemRepository } from '@legacy/core-items';
@@ -8,9 +7,13 @@ import {
     makeExportPersonalData,
     makeIdentifyCaller,
     makeRegisterAccount,
+    makeRequestPasswordReset,
+    makeResetPassword,
+    makeSignIn,
 } from '@legacy/core-auth';
-// The reference fake for a port lives with the port it implements. Copying one
+// The reference fakes for a port live with the port they implement. Copying one
 // here would let the copy drift from the contract it is supposed to stand for.
+import { inMemoryCompromisedPasswords } from '../../../../../packages/core/auth/test/fakes/in-memory-compromised-passwords.js';
 import { inMemoryIdentityProvider } from '../../../../../packages/core/auth/test/fakes/in-memory-identity-provider.js';
 import { inMemoryPersonalDataStore } from '../../../../../packages/core/auth/test/fakes/in-memory-personal-data-store.js';
 import { inMemoryItemRepository } from '../../../../../packages/core/items/test/fakes/in-memory-item-repository.js';
@@ -51,6 +54,11 @@ function useCasesOver(repository: ItemRepository, provider: IdentityProvider): A
             registerAccount: makeRegisterAccount(provider),
             signIn: makeSignIn(provider),
             identifyCaller: makeIdentifyCaller(provider),
+            requestPasswordReset: makeRequestPasswordReset(provider),
+            resetPassword: makeResetPassword({
+                provider,
+                compromisedPasswords: inMemoryCompromisedPasswords(),
+            }),
         },
         account: {
             exportPersonalData: makeExportPersonalData({

@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+
 import express from 'express';
 import type { Express } from 'express';
 import type { Logger } from '@legacy/contracts';
@@ -18,8 +21,29 @@ import { logRequests } from './request-log.js';
 const AUTH_MAX_ATTEMPTS = 10;
 const AUTH_WINDOW_MS = 5 * 60 * 1000;
 
+// Password reset carries its own budgets. Per origin, the same shape as
+// sign-in. Per address, tighter and over an hour: nobody needs three links to
+// the same inbox in an hour, and it caps how far one address can be flooded.
+const RESET_MAX_ATTEMPTS = 10;
+const RESET_WINDOW_MS = 5 * 60 * 1000;
+const RESET_REQUESTS_PER_EMAIL = 3;
+const RESET_EMAIL_WINDOW_MS = 60 * 60 * 1000;
+
+// Read once at startup, not per request: the deep link for the recovery email
+// needs the app shell, and a route that hits the file system on every call
+// would be one more thing to rate-limit for no reason. Absent in development,
+// where Vite serves this path.
+function readAppShell(staticDir: string): string | undefined {
+    try {
+        return readFileSync(path.join(staticDir, 'index.html'), 'utf8');
+    } catch {
+        return undefined;
+    }
+}
+
 export function createServer(config: Config, useCases: AppUseCases, logger: Logger): Express {
     const app = express();
+    const appShell = readAppShell(config.staticDir);
 
     app.use(express.json());
     app.use(withTraceId);
@@ -31,12 +55,25 @@ export function createServer(config: Config, useCases: AppUseCases, logger: Logg
             secureCookie: config.secureCookies,
             maxAttempts: AUTH_MAX_ATTEMPTS,
             windowMs: AUTH_WINDOW_MS,
+            resetMaxAttempts: RESET_MAX_ATTEMPTS,
+            resetWindowMs: RESET_WINDOW_MS,
+            resetRequestsPerEmail: RESET_REQUESTS_PER_EMAIL,
+            resetEmailWindowMs: RESET_EMAIL_WINDOW_MS,
         }),
     );
 
     // Carries its own requireAccount, like GET /auth/me: exporting and erasing
     // act on the caller's own account, so they resolve it the same way.
     app.use(accountRouter(useCases.account, useCases.auth, { secureCookie: config.secureCookies }));
+
+    // The reset link in the recovery email is a deep link the browser opens
+    // directly. Serve the app shell for it so the front-end can pick up the
+    // token; every other path still falls through to the session guard.
+    if (appShell !== undefined) {
+        app.get('/reset-password', (_req, res) => {
+            res.type('html').send(appShell);
+        });
+    }
 
     // Items belong to somebody since US-11: no session, no items.
     app.use(requireAccount(useCases.auth), itemsRouter(useCases.items));

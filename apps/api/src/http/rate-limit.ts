@@ -1,4 +1,4 @@
-import type { RequestHandler } from 'express';
+import type { Request, RequestHandler } from 'express';
 
 // Not a domain rule: nothing about an account changes because a caller went too
 // fast. It carries the same three fields the error middleware reads on a domain
@@ -17,6 +17,11 @@ export interface RateLimitOptions {
     maxAttempts: number;
     windowMs: number;
     now?: () => number;
+    // What counts as one client. Defaults to the caller's address. A route
+    // where the abuse is per target rather than per origin -- asking for a
+    // reset link on someone else's address -- passes a selector that keys on
+    // that target instead.
+    key?: (req: Request) => string;
 }
 
 // Beyond this many distinct clients in one window, expired entries are swept.
@@ -31,7 +36,7 @@ const MAX_TRACKED_CLIENTS = 10_000;
 //
 // The clock is injected so a test can move time instead of waiting for it.
 export function rateLimit(options: RateLimitOptions): RequestHandler {
-    const { maxAttempts, windowMs, now = Date.now } = options;
+    const { maxAttempts, windowMs, now = Date.now, key = req => req.ip ?? 'unknown' } = options;
     const windows = new Map<string, { startedAt: number; attempts: number }>();
 
     function sweep(at: number): void {
@@ -42,9 +47,9 @@ export function rateLimit(options: RateLimitOptions): RequestHandler {
 
     return (req, _res, next) => {
         const at = now();
-        // req.ip is only as trustworthy as the proxy configuration in front of
-        // it. Declaring that trust is EN-29's job.
-        const client = req.ip ?? 'unknown';
+        // The default key, req.ip, is only as trustworthy as the proxy
+        // configuration in front of it. Declaring that trust is EN-29's job.
+        const client = key(req);
         const current = windows.get(client);
 
         if (current === undefined || at - current.startedAt >= windowMs) {
