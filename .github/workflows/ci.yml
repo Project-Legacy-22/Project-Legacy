@@ -186,26 +186,20 @@ jobs:
       # ci-dessus. Le gate applique ("Sonar way", seuils documentes dans l ADR
       # correspondant) est impose par le plan gratuit de l organisation :
       # aucun gate personnalise n y est selectionnable.
-      # GitHub ne transmet pas les secrets du depot aux executions declenchees
-      # par Dependabot : elles lisent un magasin distinct, ou SONAR_TOKEN
-      # n existe pas. L analyse ne peut donc pas tourner sur ces pull requests.
+      # Aucune condition sur cette etape. GitHub ne transmet pas les secrets du
+      # depot aux executions declenchees par Dependabot : elles lisent un
+      # magasin distinct, ou SONAR_TOKEN a ete pose separement. Sans lui, ni ce
+      # job ni le controle publie par SonarCloud lui-meme n aboutissaient, et
+      # les deux sont exiges par la protection de dev : la pull request restait
+      # bloquee sur un controle qui n arrivait jamais.
       #
-      # La condition porte sur l etape et non sur le job, volontairement. Sauter
-      # le job entier le fait conclure en "skipped", et un controle requis saute
-      # n est pas satisfait pour GitHub : la pull request passait de rouge a
-      # bloquee, ce qui n est pas mieux. Le job tourne donc toujours, et conclut.
+      # Consequence a connaitre : le jeton existe en deux exemplaires, dans le
+      # magasin Actions et dans celui de Dependabot. Une rotation doit toucher
+      # les deux.
       - name: Analyser avec SonarCloud
-        if: github.actor != 'dependabot[bot]'
         uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f # v8.2.1
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
-      - name: Dire pourquoi l analyse n a pas tourne
-        if: github.actor == 'dependabot[bot]'
-        run: |
-          echo "## Qualite" >> "$GITHUB_STEP_SUMMARY"
-          echo "Analyse non executee : Dependabot n a pas acces a SONAR_TOKEN." >> "$GITHUB_STEP_SUMMARY"
-          echo "Le changement reste juge sur ses tests, son build et son scan de secrets." >> "$GITHUB_STEP_SUMMARY"
 
   secrets:
     name: Secrets
