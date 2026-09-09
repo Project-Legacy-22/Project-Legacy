@@ -11,12 +11,17 @@ memes.
 
 ## Les quatre niveaux qui existent
 
-| Niveau | Commande | Fichiers | Cas |
-|---|---|---|---|
-| `unit` | `npm run test:unit` | 24 | 151 |
-| `http` | `npm run test:http` | 4 | 63 |
-| `dom` | `npm run test:dom` | 13 | 130 |
-| `integration` | `npm run test:integration` | 2 | pile locale requise |
+| Niveau | Commande | Ou vivent ses fichiers |
+|---|---|---|
+| `unit` | `npm run test:unit` | `packages/**`, plus deux fichiers purs de `apps/api/src` |
+| `http` | `npm run test:http` | `apps/api/src/http/routes/**` |
+| `dom` | `npm run test:dom` | `apps/web/src/**` |
+| `integration` | `npm run test:integration` | `apps/api/test/integration/**`, pile locale requise |
+
+Les motifs exacts sont dans `vitest.levels.ts` ; cette colonne les resume. Aucun compte de
+fichiers ni de cas ici : il perimerait au prochain test ajoute, et cette page serait alors fausse
+sans que rien ne le signale -- exactement ce que le garde plus bas existe pour empecher ailleurs.
+Pour les chiffres du jour, `npm test`.
 
 `npm test` lance les trois premiers ensemble et produit **le** rapport de couverture. Il n est
 pas la somme de trois commandes : deux rapports partiels rendraient tout seuil ininterpretable,
