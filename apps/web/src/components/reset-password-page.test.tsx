@@ -5,9 +5,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { labels } from '../labels';
 import {
     createReactTestRoot,
+    focusOrder,
+    nomAccessible,
     getElement,
     setInputValue,
     submitForm,
+    tab,
 } from '../test/react-root';
 import type { ReactTestRoot } from '../test/react-root';
 import type { SubmitResult } from '../hooks/use-session';
@@ -96,6 +99,53 @@ describe('ResetPasswordPage', () => {
 
         expect(document.querySelector('[role="alert"]')?.textContent).toContain('expired');
         expect(document.querySelector('a[href="/"]')?.textContent).toBe(labels.requestNewResetLink);
+    });
+
+    // Le parcours au clavier seul, que rien ne verifiait : la suite posait le
+    // focus par .focus() puis l'affirmait, ce qui ne dit rien de ce qu'une
+    // personne atteint reellement en tabulant.
+    it('se parcourt entierement au clavier, dans l ordre de lecture', async () => {
+        await render();
+        document.body.focus();
+
+        // Le champ puis l'envoi, et rien d'autre : l'echappatoire n'existe pas
+        // tant que rien n'a echoue.
+        const attendu = focusOrder();
+        expect(attendu).toEqual([
+            `input:${labels.newPasswordLabel}`,
+            `button:${labels.resetPassword}`,
+        ]);
+
+        const visites: string[] = [];
+        for (let pas = 0; pas < attendu.length; pas += 1) {
+            const atteint = await tab();
+            if (atteint !== null) {
+                visites.push(`${atteint.tagName.toLowerCase()}:${nomAccessible(atteint)}`);
+            }
+        }
+
+        expect(visites).toEqual(attendu);
+    });
+
+    // Quand le jeton est refuse, la seule issue est de redemander un lien. Elle
+    // apparait alors dans la page, et doit rejoindre le parcours au clavier :
+    // une echappatoire qu'on ne peut pas atteindre sans souris n'en est pas une.
+    it('met l echappatoire a portee du clavier quand le jeton est refuse', async () => {
+        await render(() =>
+            Promise.resolve({ status: 'error', message: labels.resetPasswordFailed }),
+        );
+
+        await setInputValue(getElement<HTMLInputElement>('input[type="password"]'), VALID);
+        await submitForm(getElement('form'));
+        document.body.focus();
+
+        const visites: string[] = [];
+        for (let pas = 0; pas < focusOrder().length; pas += 1) {
+            const atteint = await tab();
+            if (atteint !== null) visites.push(nomAccessible(atteint));
+        }
+
+        expect(visites).toContain(labels.requestNewResetLink);
     });
 
     it('has no automatically detectable WCAG A or AA violation', async () => {
