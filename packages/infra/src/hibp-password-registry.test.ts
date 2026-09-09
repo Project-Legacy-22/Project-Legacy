@@ -98,7 +98,7 @@ describe('createHibpPasswordRegistry', () => {
         const fetch = vi.fn((_url: string, init?: RequestInit) => {
             return new Promise<Response>((_resolve, reject) => {
                 init?.signal?.addEventListener('abort', () => {
-                    reject(init.signal?.reason ?? new Error('aborted'));
+                    reject(new Error('aborted'));
                 });
             });
         }) as unknown as typeof globalThis.fetch;
