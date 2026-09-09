@@ -277,9 +277,12 @@ begin
   -- 16. Account erasure takes an arbitrary account id and therefore stays an
   --     internal backend operation. Exposing it as a public RPC would let the
   --     caller aim it at somebody else.
-  if has_function_privilege('anon', 'public.erase_account(uuid)', 'EXECUTE')
-    or has_function_privilege('authenticated', 'public.erase_account(uuid)', 'EXECUTE')
-    or not has_function_privilege('service_role', 'public.erase_account(uuid)', 'EXECUTE')
+  if (to_regrole('anon') is not null
+      and has_function_privilege('anon', 'public.erase_account(uuid)', 'EXECUTE'))
+    or (to_regrole('authenticated') is not null
+        and has_function_privilege('authenticated', 'public.erase_account(uuid)', 'EXECUTE'))
+    or (to_regrole('service_role') is not null
+        and not has_function_privilege('service_role', 'public.erase_account(uuid)', 'EXECUTE'))
   then
     raise exception 'erase_account must only be executable by service_role';
   end if;
@@ -307,10 +310,10 @@ declare
   event_temoin uuid := '00000000-0000-7000-8000-0000000000c2';
   restant integer;
 begin
-  insert into auth.users (id, email, is_sso_user, is_anonymous)
+  insert into auth.users (id, email)
   values
-    (cible, 'erasure-target@localhost', false, false),
-    (temoin, 'erasure-bystander@localhost', false, false);
+    (cible, 'erasure-target@localhost'),
+    (temoin, 'erasure-bystander@localhost');
 
   select project_id into projet_cible
   from public.project_memberships
@@ -393,10 +396,10 @@ rollback;
 -- fixtures live in a rolled-back transaction, so the script is repeatable.
 begin;
 
-insert into auth.users (id, email, is_sso_user, is_anonymous)
+insert into auth.users (id, email)
 values
-  ('00000000-0000-7000-8000-000000000101', 'rls-alice@example.test', false, false),
-  ('00000000-0000-7000-8000-000000000102', 'rls-bob@example.test', false, false);
+  ('00000000-0000-7000-8000-000000000101', 'rls-alice@example.test'),
+  ('00000000-0000-7000-8000-000000000102', 'rls-bob@example.test');
 
 do $$
 begin

@@ -76,6 +76,23 @@ create index items_project_id_created_at_idx
 alter table public.projects enable row level security;
 alter table public.project_memberships enable row level security;
 
+-- New Supabase projects no longer expose public tables automatically. Keep
+-- browser access limited to the operations protected below by RLS, while the
+-- backend service role retains the table access its repositories need.
+do $$
+begin
+  if to_regrole('authenticated') is not null then
+    execute 'grant select, delete on table public.projects to authenticated';
+    execute 'grant select on table public.project_memberships to authenticated';
+    execute 'grant select, insert, update, delete on table public.items to authenticated';
+  end if;
+
+  if to_regrole('service_role') is not null then
+    execute 'grant select, insert, update, delete on table public.projects, public.project_memberships, public.items to service_role';
+  end if;
+end
+$$;
+
 create policy project_memberships_select_self on public.project_memberships
   for select to authenticated
   using (user_id = (select auth.uid()));
@@ -182,9 +199,23 @@ end
 $$;
 
 revoke execute on function public.create_project_for_owner(uuid, uuid, text)
-  from public, anon, authenticated;
-grant execute on function public.create_project_for_owner(uuid, uuid, text)
-  to service_role;
+  from public;
+
+do $$
+begin
+  if to_regrole('anon') is not null then
+    execute 'revoke execute on function public.create_project_for_owner(uuid, uuid, text) from anon';
+  end if;
+
+  if to_regrole('authenticated') is not null then
+    execute 'revoke execute on function public.create_project_for_owner(uuid, uuid, text) from authenticated';
+  end if;
+
+  if to_regrole('service_role') is not null then
+    execute 'grant execute on function public.create_project_for_owner(uuid, uuid, text) to service_role';
+  end if;
+end
+$$;
 
 -- Extends the existing auth mirror without adding a second trigger whose
 -- partial failure could leave a public user without a project. Updates still
@@ -242,7 +273,20 @@ $$;
 
 revoke execute on function public.create_item_with_event(
   uuid, uuid, uuid, text, uuid, text, timestamptz, jsonb
-) from public, anon, authenticated;
-grant execute on function public.create_item_with_event(
-  uuid, uuid, uuid, text, uuid, text, timestamptz, jsonb
-) to service_role;
+) from public;
+
+do $$
+begin
+  if to_regrole('anon') is not null then
+    execute 'revoke execute on function public.create_item_with_event(uuid, uuid, uuid, text, uuid, text, timestamptz, jsonb) from anon';
+  end if;
+
+  if to_regrole('authenticated') is not null then
+    execute 'revoke execute on function public.create_item_with_event(uuid, uuid, uuid, text, uuid, text, timestamptz, jsonb) from authenticated';
+  end if;
+
+  if to_regrole('service_role') is not null then
+    execute 'grant execute on function public.create_item_with_event(uuid, uuid, uuid, text, uuid, text, timestamptz, jsonb) to service_role';
+  end if;
+end
+$$;

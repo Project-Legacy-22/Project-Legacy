@@ -48,6 +48,20 @@ $$;
 -- database privileges. It is an application-internal operation, never a
 -- public RPC: only the backend service role may invoke it.
 revoke execute on function public.erase_account(uuid)
-  from public, anon, authenticated;
-grant execute on function public.erase_account(uuid)
-  to service_role;
+  from public;
+
+do $$
+begin
+  if to_regrole('anon') is not null then
+    execute 'revoke execute on function public.erase_account(uuid) from anon';
+  end if;
+
+  if to_regrole('authenticated') is not null then
+    execute 'revoke execute on function public.erase_account(uuid) from authenticated';
+  end if;
+
+  if to_regrole('service_role') is not null then
+    execute 'grant execute on function public.erase_account(uuid) to service_role';
+  end if;
+end
+$$;
