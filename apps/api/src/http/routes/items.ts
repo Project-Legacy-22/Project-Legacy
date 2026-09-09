@@ -101,7 +101,7 @@ export function itemsRouter(useCases: ItemUseCases): Router {
 
         useCases
             .removeItem(params.data.id, params.data.projectId, accountOf(res).id)
-            .then(() => res.sendStatus(200))
+            .then(() => res.status(204).end())
             .catch(next);
     };
 
