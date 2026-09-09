@@ -1,0 +1,57 @@
+/* Les couleurs de l'interface, nommees par role et declarees une seule fois.
+ *
+ * Avant ce fichier, la meme valeur etait recopiee dans trois ou quatre feuilles
+ * -- #8a1c16 dans quatre, #172033 dans quatre -- si bien qu'une correction de
+ * contraste demandait de retrouver toutes les copies, sans qu'aucun endroit ne
+ * dise lesquelles avaient ete verifiees.
+ *
+ * Les couples effectivement utilises sont listes dans contrast-pairs.ts et
+ * verifies par contrast.test.ts, qui lit ce fichier. Ajouter un jeton sans
+ * l'inscrire dans cette liste fait echouer la suite : c'est ce qui empeche la
+ * liste de se perimer en silence.
+ */
+:root {
+    /* Surfaces */
+    --surface-page: #e9eef3;
+    --surface-card: #ffffff;
+    --surface-muted: #f7f9fb;
+    --surface-item-done: #f3f6f8;
+    --surface-brand: #12344d;
+    --surface-brand-soft: #e9f6f3;
+    --surface-brand-softer: #edf8f5;
+    --surface-danger-soft: #fff1f0;
+
+    /* Texte */
+    --text-body: #172033;
+    --text-secondary: #39495c;
+    --text-muted: #465568;
+    --text-brand: #184f49;
+    --text-brand-muted: #31665f;
+    --text-brand-badge: #234a45;
+    --text-danger: #8a1c16;
+    --text-danger-strong: #751912;
+    --text-on-brand: #ffffff;
+    --text-on-brand-soft: #b9e7dd;
+    --text-on-brand-muted: #e5edf4;
+
+    /* Bordures */
+    --border-input: #65768a;
+    --border-input-hover: #34465a;
+    --border-invalid: #a5241c;
+    --border-brand: #47736d;
+    --border-danger: #b4534d;
+    --border-danger-soft: #d89a96;
+    --border-muted: #8798a8;
+    --border-panel: #c4ced8;
+    --border-badge: #9aabb8;
+    --border-rule: #d6dee7;
+    --border-item-done: #65768a;
+
+    /* Actions */
+    --action-primary: #0f7169;
+    --action-primary-hover: #0b5c56;
+
+    /* Focus */
+    --focus-ring: #ffffff;
+    --focus-halo: #1d4ed8;
+}
