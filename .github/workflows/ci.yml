@@ -168,6 +168,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: tester
+    # GitHub ne transmet pas les secrets du depot aux executions declenchees par
+    # Dependabot : elles lisent un magasin distinct. SONAR_TOKEN y arrive donc
+    # vide, et l analyse echoue avec "Not authorized or project not found" sans
+    # rien dire de la qualite du changement. Une montee de version se juge sur
+    # ses tests et son audit de securite, pas sur un gate qui n a pas pu tourner.
+    if: github.actor != 'dependabot[bot]'
     steps:
       - uses: actions/checkout@v7
         with:
