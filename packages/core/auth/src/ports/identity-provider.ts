@@ -13,6 +13,12 @@ export interface Session {
 // is a decision, and decisions belong to the use case, not to the adapter.
 export type RegistrationOutcome = 'created' | 'already-registered';
 
+// What a reset attempt did. 'token-rejected' covers an unknown, consumed or
+// expired token alike; 'weak-password' is the provider's own policy refusing
+// the new password after the domain already accepted it. Turning either into a
+// refusal, and keeping the wording indistinguishable, is the use case's job.
+export type PasswordResetOutcome = 'password-changed' | 'token-rejected' | 'weak-password';
+
 // What authentication requires of the outside world, named after the need and
 // not after the technology. packages/infra provides the Supabase Auth
 // implementation (ADR-0008); this interface is what makes replacing it a matter
@@ -31,4 +37,15 @@ export interface IdentityProvider {
     // PersonalDataStore.eraseFor tolerates a second call: a retry must be able
     // to finish what a failed attempt started.
     remove(accountId: string): Promise<void>;
+
+    // Starts a password reset for the address. Resolves the same way whether or
+    // not it is registered: the provider does not disclose which, and the link
+    // is built from the provider's own configured site URL, so no redirect
+    // target enters the domain. Throws only when the provider itself fails.
+    requestPasswordReset(email: string): Promise<void>;
+
+    // Exchanges the token from the reset email, sets the new password, and
+    // revokes every other session of the account. The token is single-use and
+    // time-limited on the provider's side.
+    resetPassword(recoveryToken: string, newPassword: string): Promise<PasswordResetOutcome>;
 }

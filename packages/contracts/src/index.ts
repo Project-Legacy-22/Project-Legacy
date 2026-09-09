@@ -14,6 +14,8 @@ export {
     RegisterAccountBody,
     SignInBody,
     DeleteAccountBody,
+    RequestPasswordResetBody,
+    ResetPasswordBody,
     AccountDto,
     PASSWORD_POLICY,
 } from './auth.js';

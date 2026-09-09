@@ -1,28 +1,73 @@
-import type { IdentityProvider, RegistrationOutcome, Session } from '../../src/index.js';
+import type {
+    IdentityProvider,
+    PasswordResetOutcome,
+    RegistrationOutcome,
+    Session,
+} from '../../src/index.js';
 
 interface StoredAccount {
     id: string;
     email: string;
     password: string;
+    // Bumped whenever every session of the account is revoked. A token carries
+    // the epoch it was minted under, so a stale one stops being recognised.
+    sessionEpoch: number;
+    recovery?: { token: string; expiresAt: number };
 }
 
 // A real, in-process implementation of the port rather than a mock: it accepts
-// registrations, refuses duplicates, checks passwords and hands out tokens it
-// can recognise afterwards. A test using it exercises the same contract the
-// Supabase adapter honours, and keeps working across a refactor.
+// registrations, refuses duplicates, checks passwords, hands out tokens it can
+// recognise afterwards, and runs a single-use, time-limited reset flow. A test
+// using it exercises the same contract the Supabase adapter honours, and keeps
+// working across a refactor.
 //
-// Tokens are "token:<id>". A test that asserts on that string would be asserting
-// on the fake, so no test does; they round-trip the value through identify().
-export function inMemoryIdentityProvider(seed: StoredAccount[] = []): IdentityProvider {
-    const accounts = new Map(seed.map(account => [account.email, account]));
+// Tokens are "token:<id>:<epoch>". A test that asserts on that string would be
+// asserting on the fake, so no test does; they round-trip the value through
+// identify(), and read a reset token through recoveryTokenFor().
+export interface InMemoryIdentityProvider extends IdentityProvider {
+    // Test seam: the reset email is out of reach here, so a test reads the
+    // token the fake would have put in it.
+    recoveryTokenFor(email: string): string | undefined;
+}
+
+interface SeededAccount {
+    id: string;
+    email: string;
+    password: string;
+}
+
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
+
+export function inMemoryIdentityProvider(
+    seed: SeededAccount[] = [],
+    options: { now?: () => number } = {},
+): InMemoryIdentityProvider {
+    const now = options.now ?? Date.now;
+    const accounts = new Map<string, StoredAccount>(
+        seed.map(account => [account.email, { ...account, sessionEpoch: 0 }]),
+    );
     let nextId = seed.length;
+    let nextToken = 0;
 
     function sessionFor(account: StoredAccount): Session {
         return {
             account: { id: account.id, email: account.email },
-            accessToken: `token:${account.id}`,
+            accessToken: `token:${account.id}:${String(account.sessionEpoch)}`,
             expiresInSeconds: 3600,
         };
+    }
+
+    function accountByCurrentToken(accessToken: string): StoredAccount | undefined {
+        return [...accounts.values()].find(
+            account => `token:${account.id}:${String(account.sessionEpoch)}` === accessToken,
+        );
+    }
+
+    function accountByRecoveryToken(token: string): StoredAccount | undefined {
+        return [...accounts.values()].find(({ recovery }) => {
+            if (recovery === undefined) return false;
+            return recovery.token === token && recovery.expiresAt > now();
+        });
     }
 
     return {
@@ -30,7 +75,12 @@ export function inMemoryIdentityProvider(seed: StoredAccount[] = []): IdentityPr
             if (accounts.has(email)) return Promise.resolve('already-registered');
 
             nextId += 1;
-            accounts.set(email, { id: `account-${String(nextId)}`, email, password });
+            accounts.set(email, {
+                id: `account-${String(nextId)}`,
+                email,
+                password,
+                sessionEpoch: 0,
+            });
             return Promise.resolve('created');
         },
 
@@ -42,9 +92,7 @@ export function inMemoryIdentityProvider(seed: StoredAccount[] = []): IdentityPr
         },
 
         identify: (accessToken): Promise<{ id: string; email: string } | undefined> => {
-            const found = [...accounts.values()].find(
-                account => `token:${account.id}` === accessToken,
-            );
+            const found = accountByCurrentToken(accessToken);
 
             return Promise.resolve(
                 found === undefined ? undefined : { id: found.id, email: found.email },
@@ -62,5 +110,34 @@ export function inMemoryIdentityProvider(seed: StoredAccount[] = []): IdentityPr
 
             return Promise.resolve();
         },
+        requestPasswordReset: (email): Promise<void> => {
+            const account = accounts.get(email);
+
+            // No branch on existence beyond issuing the token: an unknown
+            // address does the same amount of nothing a known one's bookkeeping
+            // costs. A fresh request overwrites any pending token.
+            if (account !== undefined) {
+                nextToken += 1;
+                account.recovery = {
+                    token: `reset:${account.id}:${String(nextToken)}`,
+                    expiresAt: now() + RESET_TOKEN_TTL_MS,
+                };
+            }
+
+            return Promise.resolve();
+        },
+
+        resetPassword: (recoveryToken, newPassword): Promise<PasswordResetOutcome> => {
+            const account = accountByRecoveryToken(recoveryToken);
+
+            if (account === undefined) return Promise.resolve('token-rejected');
+
+            account.password = newPassword;
+            delete account.recovery;
+            account.sessionEpoch += 1;
+            return Promise.resolve('password-changed');
+        },
+
+        recoveryTokenFor: (email): string | undefined => accounts.get(email)?.recovery?.token,
     };
 }

@@ -78,6 +78,10 @@ const SIGNUP = 'POST /auth/v1/signup';
 const TOKEN = 'POST /auth/v1/token';
 const USER = 'GET /auth/v1/user';
 const ADMIN_DELETE = `DELETE /auth/v1/admin/users/${UTILISATEUR.id}`;
+const RECOVER = 'POST /auth/v1/recover';
+const VERIFY = 'POST /auth/v1/verify';
+const UPDATE_USER = 'PUT /auth/v1/user';
+const LOGOUT = 'POST /auth/v1/logout';
 
 describe('adaptateur Supabase Auth', () => {
     let faux: FauxFournisseur;
@@ -232,6 +236,132 @@ describe('adaptateur Supabase Auth', () => {
             });
 
             await expect(provider.remove(UTILISATEUR.id)).rejects.toThrow(/remove/);
+        });
+    });
+
+    describe('requestPasswordReset', () => {
+        it('resout quand le fournisseur accepte la demande', async () => {
+            const { provider, faux: serveur } = await adaptateur();
+            serveur.quand(RECOVER, { status: 200, body: {} });
+
+            await expect(provider.requestPasswordReset('alice@example.test')).resolves.toBeUndefined();
+        });
+
+        // GoTrue repond 200 pour une adresse inconnue afin de ne pas divulguer
+        // qui a un compte. L adaptateur ne doit donc pas la traiter en echec.
+        it('resout aussi quand l adresse n a pas de compte', async () => {
+            const { provider, faux: serveur } = await adaptateur();
+            serveur.quand(RECOVER, { status: 200, body: {} });
+
+            await expect(provider.requestPasswordReset('inconnu@example.test')).resolves.toBeUndefined();
+        });
+
+        it('absorbe la limite d envoi du fournisseur sans la faire remonter', async () => {
+            const { provider, faux: serveur } = await adaptateur();
+            serveur.quand(RECOVER, {
+                status: 429,
+                body: { code: 429, error_code: 'over_email_send_rate_limit', msg: 'trop d envois' },
+            });
+
+            await expect(provider.requestPasswordReset('alice@example.test')).resolves.toBeUndefined();
+        });
+
+        it('propage une panne inattendue du fournisseur', async () => {
+            const { provider, faux: serveur } = await adaptateur();
+            serveur.quand(RECOVER, {
+                status: 500,
+                body: { code: 500, error_code: 'unexpected_failure', msg: 'panne' },
+            });
+
+            await expect(provider.requestPasswordReset('alice@example.test')).rejects.toThrow(
+                /requestPasswordReset/,
+            );
+        });
+    });
+
+    describe('resetPassword', () => {
+        function armeLeSucces(serveur: FauxFournisseur) {
+            serveur.quand(VERIFY, { status: 200, body: SESSION });
+            serveur.quand(UPDATE_USER, { status: 200, body: UTILISATEUR });
+            serveur.quand(LOGOUT, { status: 204, body: {} });
+        }
+
+        it('change le mot de passe et revoque les sessions', async () => {
+            const { provider, faux: serveur } = await adaptateur();
+            armeLeSucces(serveur);
+
+            await expect(
+                provider.resetPassword('jeton-de-recuperation', 'NouveauMotDePasse2'),
+            ).resolves.toBe('password-changed');
+        });
+
+        it('rejette un jeton expire ou inconnu', async () => {
+            const { provider, faux: serveur } = await adaptateur();
+            serveur.quand(VERIFY, {
+                status: 403,
+                body: { code: 403, error_code: 'otp_expired', msg: 'Token has expired or is invalid' },
+            });
+
+            await expect(provider.resetPassword('jeton-perime', 'NouveauMotDePasse2')).resolves.toBe(
+                'token-rejected',
+            );
+        });
+
+        it('signale un mot de passe refuse par la politique du fournisseur', async () => {
+            const { provider, faux: serveur } = await adaptateur();
+            serveur.quand(VERIFY, { status: 200, body: SESSION });
+            serveur.quand(UPDATE_USER, {
+                status: 422,
+                body: { code: 422, error_code: 'weak_password', msg: 'Password is too weak' },
+            });
+
+            await expect(provider.resetPassword('jeton', 'MotDePasseFaible1')).resolves.toBe(
+                'weak-password',
+            );
+        });
+
+        // La revocation ayant deja invalide le jeton d acces, GoTrue peut
+        // repondre 401 sur le logout : le mot de passe a bien change.
+        it('reste un succes si la revocation renvoie un jeton deja invalide', async () => {
+            const { provider, faux: serveur } = await adaptateur();
+            serveur.quand(VERIFY, { status: 200, body: SESSION });
+            serveur.quand(UPDATE_USER, { status: 200, body: UTILISATEUR });
+            serveur.quand(LOGOUT, {
+                status: 401,
+                body: { code: 401, error_code: 'bad_jwt', msg: 'invalid JWT' },
+            });
+
+            await expect(provider.resetPassword('jeton', 'NouveauMotDePasse2')).resolves.toBe(
+                'password-changed',
+            );
+        });
+
+        it('echoue plutot que de pretendre au succes quand la revocation tombe en panne', async () => {
+            const { provider, faux: serveur } = await adaptateur();
+            serveur.quand(VERIFY, { status: 200, body: SESSION });
+            serveur.quand(UPDATE_USER, { status: 200, body: UTILISATEUR });
+            serveur.quand(LOGOUT, {
+                status: 500,
+                body: { code: 500, error_code: 'unexpected_failure', msg: 'panne' },
+            });
+
+            await expect(provider.resetPassword('jeton', 'NouveauMotDePasse2')).rejects.toThrow(
+                /resetPassword/,
+            );
+        });
+
+        it('n interpole jamais le jeton dans le message d une panne', async () => {
+            const { provider, faux: serveur } = await adaptateur();
+            serveur.quand(VERIFY, {
+                status: 500,
+                body: { code: 500, error_code: 'unexpected_failure', msg: 'panne' },
+            });
+
+            const erreur = await provider
+                .resetPassword('jeton-tres-secret', 'NouveauMotDePasse2')
+                .catch((error: unknown) => error);
+
+            expect((erreur as Error).message).not.toContain('jeton-tres-secret');
         });
     });
 });

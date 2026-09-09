@@ -1,6 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 
-import type { Account, IdentityProvider, RegistrationOutcome, Session } from '@legacy/core-auth';
+import type {
+    Account,
+    IdentityProvider,
+    PasswordResetOutcome,
+    RegistrationOutcome,
+    Session,
+} from '@legacy/core-auth';
 
 export interface SupabaseAuthSettings {
     url: string;
@@ -25,6 +31,24 @@ const UNUSABLE_TOKEN = new Set(['bad_jwt', 'session_expired', 'session_not_found
 // to finish rather than report a failure for work already done.
 const USER_NOT_FOUND = 404;
 
+// The recovery link was already used, has expired, or never existed. All of
+// them mean the same thing to the caller: ask for a new link.
+const RECOVERY_REJECTED = new Set([
+    'otp_expired',
+    'otp_disabled',
+    'bad_jwt',
+    'session_not_found',
+    'flow_state_not_found',
+    'flow_state_expired',
+    'validation_failed',
+]);
+const WEAK_PASSWORD = 'weak_password';
+
+// GoTrue's own throttle on recovery emails. With the local mail catcher it is
+// inert, but in production it must not surface as a 500: the caller has just
+// been told a link is on its way, and asking again should look identical.
+const EMAIL_RATE_LIMITED = 'over_email_send_rate_limit';
+
 // The cause is attached rather than interpolated: the provider's message can
 // carry the address that was submitted, and this error is going to be logged.
 function fail(operation: string, cause: unknown): never {
@@ -37,17 +61,68 @@ function accountOf(user: { id: string; email?: string | undefined }): Account {
     return { id: user.id, email: user.email };
 }
 
+// A client that keeps no state: the API holds no session of its own, and the
+// caller's token arrives with each request. Persisting or refreshing anything
+// here would mean one shared session for every user of the process.
+function stateless(settings: SupabaseAuthSettings) {
+    return createClient(settings.url, settings.anonKey, {
+        auth: { persistSession: false, autoRefreshToken: false },
+    });
+}
+
+async function requestPasswordReset(settings: SupabaseAuthSettings, email: string): Promise<void> {
+    // GoTrue answers a syntactically valid address the same way whether or not
+    // it has an account, so this call does not disclose which. The recovery
+    // link is built from the site URL configured in supabase/config.toml, so
+    // nothing about routing enters this code.
+    const { error } = await stateless(settings).auth.resetPasswordForEmail(email);
+
+    if (error === null) return;
+    if (error.code === EMAIL_RATE_LIMITED) return;
+
+    return fail('requestPasswordReset', error);
+}
+
+async function resetPassword(
+    settings: SupabaseAuthSettings,
+    recoveryToken: string,
+    newPassword: string,
+): Promise<PasswordResetOutcome> {
+    // A throwaway client: verifyOtp puts the recovered session on the instance
+    // it runs on, and this exchange must not share that state with any other
+    // caller of the process.
+    const scoped = stateless(settings);
+
+    const verified = await scoped.auth.verifyOtp({ type: 'recovery', token_hash: recoveryToken });
+    if (verified.error !== null) {
+        const { code, status } = verified.error;
+        if (code !== undefined && RECOVERY_REJECTED.has(code)) return 'token-rejected';
+        if (status === 401 || status === 403) return 'token-rejected';
+        return fail('resetPassword', verified.error);
+    }
+
+    const updated = await scoped.auth.updateUser({ password: newPassword });
+    if (updated.error !== null) {
+        if (updated.error.code === WEAK_PASSWORD) return 'weak-password';
+        return fail('resetPassword', updated.error);
+    }
+
+    // Global scope revokes every refresh token of the account, including the one
+    // just minted by verifyOtp. GoTrue swallows 401/403/404 here on its own;
+    // anything left is a real failure, and we must not report success when we
+    // cannot confirm the revocation (US-28 criterion 3).
+    const signedOut = await scoped.auth.signOut({ scope: 'global' });
+    if (signedOut.error !== null) return fail('resetPassword', signedOut.error);
+
+    return 'password-changed';
+}
+
 // The Supabase Auth adapter (ADR-0008). It uses the anon key, not the
 // service-role key: sign-up and sign-in are the endpoints that apply the
 // project's password policy and the provider's own rate limits, and the admin
 // API bypasses both.
 export function createSupabaseIdentityProvider(settings: SupabaseAuthSettings): IdentityProvider {
-    const client = createClient(settings.url, settings.anonKey, {
-        // The API is stateless: it holds no session of its own, and the caller's
-        // token arrives with each request. Persisting or refreshing anything
-        // here would mean one shared session for every user of the process.
-        auth: { persistSession: false, autoRefreshToken: false },
-    });
+    const client = stateless(settings);
     // The admin client, used by one method. Kept apart from the one above so
     // that sign-up and sign-in cannot reach the service-role key by accident:
     // the endpoints that apply the password policy and the provider's rate
@@ -110,5 +185,12 @@ export function createSupabaseIdentityProvider(settings: SupabaseAuthSettings): 
         return fail('remove', error);
     }
 
-    return { register, authenticate, identify, remove };
+    return {
+        register,
+        authenticate,
+        identify,
+        remove,
+        requestPasswordReset: email => requestPasswordReset(settings, email),
+        resetPassword: (token, password) => resetPassword(settings, token, password),
+    };
 }

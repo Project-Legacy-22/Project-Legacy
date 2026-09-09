@@ -43,6 +43,22 @@ export const DeleteAccountBody = z.object({
     confirmation: emailSchema,
 });
 
+// Asking for a reset link only needs an address. The reply is the same whether
+// or not it is registered (US-28), so nothing here may reject a well-formed
+// address that simply has no account.
+export const RequestPasswordResetBody = z.object({
+    email: emailSchema,
+});
+
+// Completing a reset carries the token from the email and the new password. The
+// token is opaque: its shape is the identity provider's business, so the
+// boundary only checks that something was sent. The password is held to the
+// full policy, unlike sign-in: this password does not exist yet.
+export const ResetPasswordBody = z.object({
+    token: z.string().min(1),
+    password: z.string().min(PASSWORD_POLICY.minimumLength),
+});
+
 // What a caller may learn about itself. There is no endpoint that returns
 // anybody else's account.
 export const AccountDto = z.object({
@@ -53,4 +69,6 @@ export const AccountDto = z.object({
 export type RegisterAccountBody = z.infer<typeof RegisterAccountBody>;
 export type SignInBody = z.infer<typeof SignInBody>;
 export type DeleteAccountBody = z.infer<typeof DeleteAccountBody>;
+export type RequestPasswordResetBody = z.infer<typeof RequestPasswordResetBody>;
+export type ResetPasswordBody = z.infer<typeof ResetPasswordBody>;
 export type AccountDto = z.infer<typeof AccountDto>;

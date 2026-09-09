@@ -36,6 +36,7 @@ doit être écrit, et dont les affirmations techniques sont sourcées plutôt qu
 | [0007](0007-mecanisme-d-evenements-broker-redis.md) | Redis comme broker d'événements | Accepté | `US-10`, `US-18`, `EN-35` |
 | [0008](0008-strategie-de-session-supabase-auth.md) | Sessions et authentification par Supabase Auth | Accepté | `US-11`, `US-27`, `US-47`, `US-13` |
 | [0009](0009-sonarcloud-comme-outil-de-quality-gate.md) | SonarCloud comme outil de quality gate, seuils du gate intégré | Accepté | `EN-17` |
+| [0010](0010-canal-de-recuperation-de-compte-par-e-mail.md) | Récupération de compte par e-mail, via Supabase Auth | Accepté | `US-28` |
 
 L'ADR-0007 a lui aussi été tranché **contre** la recommandation du backlog, qui proposait un
 bus in-process. Les huit décisions bloquantes (`D-03` à `D-20`) sont désormais couvertes.
