@@ -5,6 +5,8 @@ import {
     makeExportPersonalData,
     makeIdentifyCaller,
     makeRegisterAccount,
+    makeRequestPasswordReset,
+    makeResetPassword,
     makeSignIn,
 } from '@legacy/core-auth';
 import type { IdentityProvider, PersonalDataStore } from '@legacy/core-auth';
@@ -13,6 +15,7 @@ import { makeAddItem, makeChangeItem, makeListItems, makeRemoveItem } from '@leg
 // recopier ici laisserait la copie deriver du contrat qu elle represente.
 import { anAccountWithData } from '../../../../../packages/core/auth/test/builders/personal-data.js';
 import { inMemoryIdentityProvider } from '../../../../../packages/core/auth/test/fakes/in-memory-identity-provider.js';
+import { inMemoryCompromisedPasswords } from '../../../../../packages/core/auth/test/fakes/in-memory-compromised-passwords.js';
 import { inMemoryPersonalDataStore } from '../../../../../packages/core/auth/test/fakes/in-memory-personal-data-store.js';
 
 import { createServer } from '../server.js';
@@ -45,6 +48,14 @@ function useCasesOver(provider: IdentityProvider, store: PersonalDataStore): App
             registerAccount: makeRegisterAccount(provider),
             signIn: makeSignIn(provider),
             identifyCaller: makeIdentifyCaller(provider),
+            // Aucune route exercee ici ne reinitialise de mot de passe. Les cas
+            // d usage sont composes quand meme : AuthUseCases les exige, et un
+            // double vide masquerait un branchement oublie dans le serveur.
+            requestPasswordReset: makeRequestPasswordReset(provider),
+            resetPassword: makeResetPassword({
+                provider,
+                compromisedPasswords: inMemoryCompromisedPasswords(),
+            }),
         },
         account: {
             exportPersonalData: makeExportPersonalData({ store, now: () => MOMENT }),

@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
+    makeEraseAccount,
+    makeExportPersonalData,
     makeIdentifyCaller,
     makeRegisterAccount,
     makeRequestPasswordReset,
@@ -9,6 +11,7 @@ import {
 import { makeAddItem, makeChangeItem, makeListItems, makeRemoveItem } from '@legacy/core-items';
 // The reference fakes for a port live with the port they implement.
 import { inMemoryCompromisedPasswords } from '../../../../../packages/core/auth/test/fakes/in-memory-compromised-passwords.js';
+import { inMemoryPersonalDataStore } from '../../../../../packages/core/auth/test/fakes/in-memory-personal-data-store.js';
 import { inMemoryIdentityProvider } from '../../../../../packages/core/auth/test/fakes/in-memory-identity-provider.js';
 import type { InMemoryIdentityProvider } from '../../../../../packages/core/auth/test/fakes/in-memory-identity-provider.js';
 
@@ -56,6 +59,16 @@ function useCasesOver(provider: InMemoryIdentityProvider, compromised: string[])
                 provider,
                 compromisedPasswords: inMemoryCompromisedPasswords(compromised),
             }),
+        },
+        // Aucune route exercee ici ne touche aux donnees personnelles. Le
+        // groupe est compose sur un magasin vide plutot qu omis : AppUseCases
+        // l exige, et un magasin vide rend visible toute route qui s y mettrait.
+        account: {
+            exportPersonalData: makeExportPersonalData({
+                store: inMemoryPersonalDataStore(),
+                now: () => new Date('2026-09-04T10:00:00.000Z'),
+            }),
+            eraseAccount: makeEraseAccount({ store: inMemoryPersonalDataStore(), identity: provider }),
         },
     };
 }
