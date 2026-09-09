@@ -29,6 +29,8 @@ const auth: AuthApi = {
     register: vi.fn(async () => undefined),
     signIn: vi.fn(async () => ACCOUNT),
     currentAccount: vi.fn(async () => ACCOUNT),
+    requestPasswordReset: vi.fn(async () => undefined),
+    resetPassword: vi.fn(async () => undefined),
 };
 
 beforeEach(() => {

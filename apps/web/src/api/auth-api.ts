@@ -1,5 +1,10 @@
 import { AccountDto, ProblemDetails } from '@legacy/contracts';
-import type { RegisterAccountBody, SignInBody } from '@legacy/contracts';
+import type {
+    RegisterAccountBody,
+    RequestPasswordResetBody,
+    ResetPasswordBody,
+    SignInBody,
+} from '@legacy/contracts';
 
 import { labels } from '../labels';
 import { ApiError } from './items-api';
@@ -16,6 +21,11 @@ export interface AuthApi {
     // Resolves to null when there is no valid session, rather than throwing:
     // arriving without one is the ordinary case on first visit, not a failure.
     currentAccount: (signal: AbortSignal) => Promise<AccountDto | null>;
+    // Asks for a reset link. The reset token and the new password only ever
+    // travel in a request body, never a URL, so neither reaches a log or a
+    // Referer header.
+    requestPasswordReset: (body: RequestPasswordResetBody) => Promise<void>;
+    resetPassword: (body: ResetPasswordBody) => Promise<void>;
 }
 
 const jsonHeaders = {
@@ -83,6 +93,37 @@ export const authApi: AuthApi = {
             return AccountDto.parse(await response.json());
         } catch {
             throw new ApiError(502, labels.unreadableResponse);
+        }
+    },
+
+    async requestPasswordReset(body) {
+        const response = await fetch('/auth/password/forgot', {
+            method: 'POST',
+            headers: jsonHeaders,
+            body: JSON.stringify(body),
+        });
+
+        if (!response.ok) {
+            // One generic message, never the server's detail: the request
+            // screen must not become a way to tell which addresses exist.
+            throw new ApiError(response.status, labels.resetRequestFailed);
+        }
+    },
+
+    async resetPassword(body) {
+        const response = await fetch('/auth/password/reset', {
+            method: 'POST',
+            headers: jsonHeaders,
+            body: JSON.stringify(body),
+        });
+
+        if (!response.ok) {
+            // The detail is surfaced here: "this link has expired" is exactly
+            // what the person on the reset screen needs to read.
+            throw new ApiError(
+                response.status,
+                await problemDetail(response, labels.resetPasswordFailed),
+            );
         }
     },
 };

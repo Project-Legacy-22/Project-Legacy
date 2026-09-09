@@ -43,6 +43,11 @@ function createAuth(): AuthApi {
         register: vi.fn(),
         signIn: vi.fn(),
         currentAccount: vi.fn(async () => ACCOUNT),
+        // Aucun scenario de cette section ne reinitialise de mot de passe. Les
+        // doubles sont fournis quand meme, parce que AuthApi les exige : les
+        // omettre laisserait passer un appel inattendu au lieu de le signaler.
+        requestPasswordReset: vi.fn(),
+        resetPassword: vi.fn(),
     };
 }
 

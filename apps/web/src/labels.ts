@@ -74,6 +74,25 @@ export const labels = {
     deleteAccountConfirmationHelp(email: string): string {
         return `Type ${email} to confirm.`;
     },
+    // Password reset (US-28)
+    forgotPasswordLink: 'Forgot your password?',
+    requestResetTitle: 'Reset your password',
+    requestResetIntro: 'Enter your email address and we will send a link to choose a new password.',
+    requestReset: 'Send reset link',
+    requestingReset: 'Sending…',
+    // Neutral on purpose: the API answers the same way whether or not the
+    // address has an account, and this screen must not undo that.
+    resetRequestAccepted: 'If that address has an account, a reset link is on its way.',
+    resetRequestFailed: 'Unable to send a reset link. Try again in a moment.',
+    backToSignIn: 'Back to sign in',
+    resetPasswordTitle: 'Choose a new password',
+    resetPasswordIntro: 'This link is valid once. After this, every other session is signed out.',
+    newPasswordLabel: 'New password',
+    resetPassword: 'Set new password',
+    resettingPassword: 'Saving…',
+    resetPasswordSucceeded: 'Your password has been changed and every other session was signed out. You can sign in now.',
+    resetPasswordFailed: 'Unable to set a new password.',
+    requestNewResetLink: 'Request a new link',
 
     skipToContent: 'Skip to content',
     productName: 'Legacy 22',
