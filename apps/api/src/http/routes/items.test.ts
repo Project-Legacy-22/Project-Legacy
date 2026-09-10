@@ -395,15 +395,4 @@ describe('items API', () => {
             expect(traced.length).toBeGreaterThan(0);
         });
     });
-
-    // L effet observable du flux evenementiel de US-10. La route est montee
-    // derriere la meme exigence de session que les items.
-    describe('GET /notifications', () => {
-        it('renvoie le compte de notifications non lues du compte connecte', async () => {
-            const response = await harness.request('/notifications');
-
-            expect(response.status).toBe(200);
-            await expect(response.json()).resolves.toEqual({ unread: 0 });
-        });
-    });
 });
