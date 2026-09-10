@@ -8,9 +8,12 @@ import { labels } from '../labels';
 // Arriving with no session is the ordinary first visit, not an error: the state
 // distinguishes "not checked yet" from "checked, nobody signed in", so the app
 // never flashes the sign-in screen at someone who is in fact signed in.
+// `notice` says why the sign-in screen is showing again. It is absent on a
+// first visit, where there is nothing to explain, and carries a sentence when a
+// session that existed has ended (US-27).
 export type SessionState =
     | { status: 'checking' }
-    | { status: 'anonymous' }
+    | { status: 'anonymous'; notice?: string }
     | { status: 'signedIn'; account: AccountDto }
     | { status: 'error'; message: string };
 
@@ -122,12 +125,27 @@ export function useSession(api: AuthApi) {
     const [state, setState] = useSessionCheck(api);
 
     // The account behind this session no longer exists. Erasure (US-13) is the
-    // only caller today; a real sign-out is US-27 and will need the API to drop
-    // the cookie as well, which this does not do. It sits here rather than in
+    // only caller today; a real sign-out is US-47 and will need the API to drop
+    // the cookies as well, which this does not do. It sits here rather than in
     // useSessionActions: it submits nothing and has no failure to report.
     const forget = useCallback(() => {
         setState({ status: 'anonymous' });
     }, [setState]);
 
-    return { state, forget, ...useSessionActions(api, setState) };
+    // The session ended while the page was being used. Handing the sign-in
+    // screen back with a sentence that says why is what US-27 asks for, in
+    // place of a technical error or an interface that keeps asking an API that
+    // will not answer it.
+    //
+    // Only a live session expires. Guarding on that means a refusal still in
+    // flight when somebody signs in again cannot undo the new session.
+    const expire = useCallback(() => {
+        setState(current =>
+            current.status === 'signedIn'
+                ? { status: 'anonymous', notice: labels.sessionExpired }
+                : current,
+        );
+    }, [setState]);
+
+    return { state, forget, expire, ...useSessionActions(api, setState) };
 }

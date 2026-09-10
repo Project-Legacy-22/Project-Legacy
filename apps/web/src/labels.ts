@@ -24,6 +24,9 @@ export const labels = {
     registerAccepted: 'If that address was available, the account now exists. You can sign in.',
     sessionCheckFailed: 'Unable to check the session.',
     checkingSession: 'Checking your session…',
+    // Why this screen is back (US-27). It says what happened rather than what
+    // failed: nothing went wrong, the session reached the end of its life.
+    sessionExpired: 'Your session has expired. Sign in again to pick up where you left off.',
     signedInAs(email: string): string {
         return `Signed in as ${email}`;
     },

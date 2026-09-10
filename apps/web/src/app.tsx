@@ -1,9 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 
 import { accountApi } from './api/account-api';
 import type { AccountApi } from './api/account-api';
 import { authApi } from './api/auth-api';
 import type { AuthApi } from './api/auth-api';
+import { guardSession } from './api/guard-session';
 import { itemsApi } from './api/items-api';
 import type { ItemsApi } from './api/items-api';
 import { notificationsApi } from './api/notifications-api';
@@ -20,12 +21,24 @@ import { labels } from './labels';
 import { saveFile } from './save-file';
 import type { SaveFile } from './save-file';
 
-// The recovery email links here with the token hash as a query parameter. It is
-// read once, on the first render, and then wiped from the address bar so it
-// stops sitting in history or leaking through a Referer on the next navigation.
 function readRecoveryToken(): string | null {
     const params = new URLSearchParams(window.location.search);
     return params.get('type') === 'recovery' ? params.get('token_hash') : null;
+}
+
+// The recovery email links here with the token hash as a query parameter. It is
+// read once, on the first render, and then wiped from the address bar so it
+// stops sitting in history or leaking through a Referer on the next navigation.
+function useRecoveryToken(): string | null {
+    const token = useRef(readRecoveryToken());
+
+    useEffect(() => {
+        if (token.current !== null) {
+            window.history.replaceState(null, '', window.location.pathname);
+        }
+    }, []);
+
+    return token.current;
 }
 
 export interface AppProps {
@@ -39,9 +52,7 @@ export interface AppProps {
 }
 
 interface SignedInAppProps {
-    api: ItemsApi;
-    account: AccountApi;
-    notifications: NotificationsApi;
+    apis: SignedInApis;
     save: SaveFile;
     email: string;
     onDeleted: () => void;
@@ -50,10 +61,10 @@ interface SignedInAppProps {
 // The items screen is mounted in its own component so its data is only fetched
 // once there is a session. Rendering it behind a condition in App would run its
 // hooks anyway and fire a request that can only come back 401.
-function SignedInApp({ api, account, notifications, save, email, onDeleted }: SignedInAppProps) {
-    const state = useItems(api);
-    const personalData = usePersonalData({ api: account, save, onDeleted });
-    const unread = useNotifications(notifications, true);
+function SignedInApp({ apis, save, email, onDeleted }: SignedInAppProps) {
+    const state = useItems(apis.api);
+    const personalData = usePersonalData({ api: apis.account, save, onDeleted });
+    const unread = useNotifications(apis.notifications, true);
 
     return (
         <>
@@ -92,6 +103,32 @@ function SignedInApp({ api, account, notifications, save, email, onDeleted }: Si
     );
 }
 
+interface SignedInApis {
+    api: ItemsApi;
+    account: AccountApi;
+    notifications: NotificationsApi;
+}
+
+// The three clients the signed-in screen uses, each wrapped so that a 401 ends
+// the session in the interface instead of being reported as one more failed
+// request (US-27).
+//
+// Wrapped once and kept: useItems and useNotifications key their effects on the
+// identity of the client they are given, so rebuilding these on every render
+// would refetch on every render.
+function useGuardedApis(apis: SignedInApis, onExpired: () => void): SignedInApis {
+    const { api, account, notifications } = apis;
+
+    return useMemo(
+        () => ({
+            api: guardSession(api, onExpired),
+            account: guardSession(account, onExpired),
+            notifications: guardSession(notifications, onExpired),
+        }),
+        [api, account, notifications, onExpired],
+    );
+}
+
 export function App({
     api = itemsApi,
     auth = authApi,
@@ -100,20 +137,15 @@ export function App({
     save = saveFile,
 }: AppProps) {
     const session = useSession(auth);
-    const recoveryToken = useRef(readRecoveryToken());
-
-    useEffect(() => {
-        if (recoveryToken.current !== null) {
-            window.history.replaceState(null, '', window.location.pathname);
-        }
-    }, []);
+    const recoveryToken = useRecoveryToken();
+    const guarded = useGuardedApis({ api, account, notifications }, session.expire);
 
     // A recovery link wins over everything else, including a live session: the
     // person following it wants to set a new password, not see their items.
-    if (recoveryToken.current !== null) {
+    if (recoveryToken !== null) {
         return (
             <ResetPasswordPage
-                token={recoveryToken.current}
+                token={recoveryToken}
                 isSubmitting={session.isSubmitting}
                 onSubmit={session.resetPassword}
             />
@@ -137,6 +169,7 @@ export function App({
     if (session.state.status === 'anonymous') {
         return (
             <AuthPage
+                notice={session.state.notice}
                 isSubmitting={session.isSubmitting}
                 onSignIn={session.signIn}
                 onRegister={session.register}
@@ -147,9 +180,7 @@ export function App({
 
     return (
         <SignedInApp
-            api={api}
-            account={account}
-            notifications={notifications}
+            apis={guarded}
             save={save}
             email={session.state.account.email}
             onDeleted={session.forget}
