@@ -78,7 +78,7 @@ configuration, que le fichier d'exemple cesserait de décrire.
 |---|---|
 | `SUPABASE_URL` | point d'entrée de la base. Requise : l'API refuse de démarrer sans elle |
 | `SUPABASE_SERVICE_ROLE_KEY` | clé de service utilisée par l'API. Requise |
-| `REDIS_URL` | broker déclaré dans `compose.yaml` |
+| `REDIS_URL` | broker déclaré dans `compose.yaml`. Requise pour qui relaie ou consomme : `start()` de l'API la réclame, le worker refuse de charger sans elle. Un déploiement qui ne fait que servir du HTTP peut s'en passer, aucune route ne touchant au bus |
 | `REDIS_PORT` | port hôte du broker, `6379` par défaut |
 | `WORKER_BLOCK_SECONDS` | attente bloquante du worker entre deux lectures, `5` par défaut |
 | `LOG_LEVEL` | niveau pino parmi `fatal`, `error`, `warn`, `info`, `debug`, `trace`, `silent`. `info` par défaut ; une valeur inconnue empêche le démarrage |

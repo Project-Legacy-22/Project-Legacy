@@ -17,6 +17,9 @@ export const LEVELS = {
         // real service, only git and these patterns.
         'test/*.test.ts',
         'apps/api/src/config.test.ts',
+        // Composition only, plus the one refusal start() owes before it dials
+        // anything: no server and no real service are involved.
+        'apps/api/src/composition-root.test.ts',
         // Same nature as the API's: it validates an environment schema and
         // needs no server or real service.
         'apps/worker/src/config.test.ts',
