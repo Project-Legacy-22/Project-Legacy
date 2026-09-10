@@ -34,6 +34,7 @@ export function createApi(overrides: Partial<ItemsApi> = {}): ItemsApi {
         listItems: async () => itemPage(),
         createItem: async () => firstItem,
         updateItem: async () => firstItem,
+        moveItem: async () => firstItem,
         deleteItem: async () => undefined,
         ...overrides,
     };

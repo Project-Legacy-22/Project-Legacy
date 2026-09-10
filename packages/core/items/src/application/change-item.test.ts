@@ -10,10 +10,11 @@ const OTHER_OWNER_ID = 'owner-7';
 const PROJECT_ID = 'project-1';
 
 describe('changeItem', () => {
-    it('met a jour le nom et l etat termine sans changer le proprietaire', async () => {
+    it('updates the name without changing the Kanban status or owner', async () => {
         const existing = anItem({
             id: 'item-1',
             name: 'Old name',
+            status: 'doing',
             projectId: PROJECT_ID,
             ownerId: OWNER_ID,
         });
@@ -24,13 +25,13 @@ describe('changeItem', () => {
             id: 'item-1',
             projectId: PROJECT_ID,
             memberId: OWNER_ID,
-            changes: { name: 'New name', completed: true },
+            changes: { name: 'New name' },
         });
 
         expect(updated).toEqual({
             id: 'item-1',
             name: 'New name',
-            status: 'done',
+            status: 'doing',
             version: 2,
             projectId: PROJECT_ID,
             ownerId: OWNER_ID,
@@ -46,7 +47,7 @@ describe('changeItem', () => {
             id: 'missing',
             projectId: PROJECT_ID,
             memberId: OWNER_ID,
-            changes: { name: 'New name', completed: true },
+            changes: { name: 'New name' },
         });
 
         await expect(result).rejects.toBeInstanceOf(ItemNotFound);
@@ -68,7 +69,7 @@ describe('changeItem', () => {
             id: 'item-1',
             projectId: PROJECT_ID,
             memberId: OWNER_ID,
-            changes: { name: 'New name', completed: true },
+            changes: { name: 'New name' },
         });
 
         // Le refus est celui d un item inexistant, et rien n a bouge : une
@@ -92,7 +93,7 @@ describe('changeItem', () => {
             id: 'item-1',
             projectId: PROJECT_ID,
             memberId: OWNER_ID,
-            changes: { name: '   ', completed: true },
+            changes: { name: '   ' },
         });
 
         await expect(result).rejects.toBeInstanceOf(InvalidItemName);
@@ -108,31 +109,27 @@ describe('changeItem', () => {
             id: 'item-1',
             projectId: PROJECT_ID,
             memberId: OWNER_ID,
-            changes: { name: 'a'.repeat(MAX_ITEM_NAME_LENGTH + 1), completed: false },
+            changes: { name: 'a'.repeat(MAX_ITEM_NAME_LENGTH + 1) },
         });
 
         await expect(result).rejects.toBeInstanceOf(InvalidItemName);
         expect(await repository.findByIdForMember('item-1', PROJECT_ID, OWNER_ID)).toEqual(existing);
     });
 
-    it('rejoue terminer et rouvrir sans erreur ni evenement supplementaire', async () => {
+    it.each(['todo', 'doing', 'done'] as const)('preserves the %s status when renaming', async (status) => {
         const repository = inMemoryItemRepository([
-            anItem({ id: 'item-1', name: 'Stable name', projectId: PROJECT_ID, ownerId: OWNER_ID }),
+            anItem({ id: 'item-1', name: 'Stable name', status, projectId: PROJECT_ID, ownerId: OWNER_ID }),
         ]);
         const changeItem = makeChangeItem(repository);
-        const changeCompleted = (completed: boolean) =>
-            changeItem({
-                id: 'item-1',
-                projectId: PROJECT_ID,
-                memberId: OWNER_ID,
-                changes: { name: 'Stable name', completed },
-            });
 
-        await changeCompleted(true);
-        await expect(changeCompleted(true)).resolves.toMatchObject({ status: 'done' });
-        await changeCompleted(false);
-        await expect(changeCompleted(false)).resolves.toMatchObject({ status: 'todo' });
+        const updated = await changeItem({
+            id: 'item-1',
+            projectId: PROJECT_ID,
+            memberId: OWNER_ID,
+            changes: { name: 'Renamed' },
+        });
 
+        expect(updated).toMatchObject({ name: 'Renamed', status });
         expect(repository.recordedEvents).toEqual([]);
     });
 });

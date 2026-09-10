@@ -36,6 +36,9 @@ function createApi(): ItemsApi {
         updateItem: vi.fn(async () => {
             throw new Error('not exercised by this suite');
         }),
+        moveItem: vi.fn(async () => {
+            throw new Error('not exercised by this suite');
+        }),
         deleteItem: vi.fn(async () => undefined),
     };
 }

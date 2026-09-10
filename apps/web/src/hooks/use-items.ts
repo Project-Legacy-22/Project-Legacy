@@ -14,7 +14,7 @@ export interface ItemsState {
     hasNextPage: boolean;
     paginationState: ItemsPaginationState;
     addItem: (name: string) => Promise<AddItemResult>;
-    toggleItem: ReturnType<typeof useItemActions>['toggleItem'];
+    moveItem: ReturnType<typeof useItemActions>['moveItem'];
     renameItem: ReturnType<typeof useItemActions>['renameItem'];
     removeItem: ReturnType<typeof useItemActions>['removeItem'];
     loadMore: () => void;
@@ -23,7 +23,7 @@ export interface ItemsState {
 
 export function useItems(api: ItemsApi, projectId: string | null): ItemsState {
     const query = useItemsQuery(api, projectId);
-    const actions = useItemActions(api, projectId, query.setItems);
+    const actions = useItemActions({ api, projectId, setItems: query.setItems, refreshItems: query.refresh });
 
     return {
         items: query.items,
@@ -34,7 +34,7 @@ export function useItems(api: ItemsApi, projectId: string | null): ItemsState {
         hasNextPage: query.hasNextPage,
         paginationState: query.paginationState,
         addItem: actions.addItem,
-        toggleItem: actions.toggleItem,
+        moveItem: actions.moveItem,
         renameItem: actions.renameItem,
         removeItem: actions.removeItem,
         loadMore: () => {

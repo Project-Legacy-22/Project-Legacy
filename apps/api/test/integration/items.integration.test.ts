@@ -54,7 +54,7 @@ describe('items API (integration)', () => {
         expect(response.status).toBe(200);
         expect(created).not.toHaveProperty('ownerId');
         expect(created.name).toBe('Depot integration');
-        expect(created).toMatchObject({ status: 'todo', version: 1, completed: false });
+        expect(created).toMatchObject({ status: 'todo', version: 1 });
     });
 
     describe('isolation entre comptes', () => {
@@ -85,7 +85,7 @@ describe('items API (integration)', () => {
         it('le proprietaire peut le modifier', async () => {
             const response = await asOwner.request(
                 `${itemsOf(owner)}/${itemId}`,
-                json('PUT', { name: 'A moi, renomme', completed: true }),
+                json('PUT', { name: 'A moi, renomme' }),
             );
 
             expect(response.status).toBe(200);
@@ -101,11 +101,11 @@ describe('items API (integration)', () => {
 
             const denied = await asIntruder.request(
                 `${itemsOf(owner)}/${itemId}`,
-                json('PUT', { name: 'Vole', completed: true }),
+                json('PUT', { name: 'Vole' }),
             );
             const missing = await asOwner.request(
                 `${itemsOf(owner)}/${UNKNOWN_ITEM_ID}`,
-                json('PUT', { name: 'Vole', completed: true }),
+                json('PUT', { name: 'Vole' }),
             );
 
             expect(denied.status).toBe(404);

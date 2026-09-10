@@ -1,16 +1,19 @@
-import { useRef, useState } from 'react';
-import type { RefObject } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
+import type { DragEvent, RefObject } from 'react';
 
-import type { ItemDto } from '../api/items-api';
+import type { ItemDto, ItemStatus } from '../api/items-api';
 import { labels } from '../labels';
 import { EditItemForm } from './edit-item-form';
+import { MoveItemForm } from './move-item-form';
 
 export interface ItemRowProps {
     item: ItemDto;
     isPending: boolean;
-    onToggle: (item: ItemDto) => Promise<void>;
+    onMove: (status: ItemStatus) => Promise<boolean>;
     onRename: (item: ItemDto, name: string) => Promise<boolean>;
     onRemove: (item: ItemDto) => Promise<boolean>;
+    onDragStart: (item: ItemDto, event: DragEvent<HTMLLIElement>) => void;
+    onDragEnd: () => void;
 }
 
 interface ItemActionsProps {
@@ -18,20 +21,11 @@ interface ItemActionsProps {
     name: string;
     isPending: boolean;
     editButtonRef: RefObject<HTMLButtonElement | null>;
+    moveButtonRef: RefObject<HTMLButtonElement | null>;
     removeButtonRef: RefObject<HTMLButtonElement | null>;
-    onToggle: () => void;
     onEdit: () => void;
+    onMove: () => void;
     onRemove: () => void;
-}
-
-function toggleAriaLabel(item: ItemDto, name: string): string {
-    if (item.name === null) return labels.unavailableForUnnamedItem;
-    return item.completed ? labels.reopenItem(name) : labels.completeItem(name);
-}
-
-function itemState(item: ItemDto): string {
-    if (item.name === null) return labels.unnamedItemRemediation;
-    return item.completed ? labels.completed : labels.open;
 }
 
 function focusTargetAfterRemoval(button: HTMLButtonElement | null): HTMLElement | null {
@@ -44,19 +38,18 @@ function focusTargetAfterRemoval(button: HTMLButtonElement | null): HTMLElement 
 }
 
 function ItemActions(props: ItemActionsProps) {
-    const toggleLabel = props.item.completed ? labels.reopen : labels.complete;
-
     return (
         <div className="item-actions">
             <button
-                className="button button-secondary item-toggle"
+                ref={props.moveButtonRef}
+                className="button button-secondary item-move"
                 type="button"
-                aria-label={toggleAriaLabel(props.item, props.name)}
-                aria-pressed={props.item.completed}
+                data-move-item-id={props.item.id}
+                aria-label={labels.moveItem(props.name)}
                 disabled={props.isPending || props.item.name === null}
-                onClick={props.onToggle}
+                onClick={props.onMove}
             >
-                {toggleLabel}
+                {labels.move}
             </button>
             <button
                 ref={props.editButtonRef}
@@ -82,58 +75,136 @@ function ItemActions(props: ItemActionsProps) {
     );
 }
 
-export function ItemRow({ item, isPending, onToggle, onRename, onRemove }: ItemRowProps) {
-    const [isEditing, setIsEditing] = useState(false);
+interface ItemRowBodyProps {
+    item: ItemDto;
+    name: string;
+    mode: 'idle' | 'edit' | 'move';
+    isPending: boolean;
+    editButtonRef: RefObject<HTMLButtonElement | null>;
+    moveButtonRef: RefObject<HTMLButtonElement | null>;
+    removeButtonRef: RefObject<HTMLButtonElement | null>;
+    onCancelEdit: () => void;
+    onCancelMove: () => void;
+    onEdit: () => void;
+    onMove: (status: ItemStatus) => Promise<boolean>;
+    onOpenMove: () => void;
+    onRemove: () => void;
+    onRename: (name: string) => Promise<boolean>;
+}
+
+type RestoredAction = 'edit' | 'move';
+
+function useActionFocus(mode: ItemRowBodyProps['mode']) {
     const editButtonRef = useRef<HTMLButtonElement>(null);
+    const moveButtonRef = useRef<HTMLButtonElement>(null);
+    const pendingAction = useRef<RestoredAction | null>(null);
+
+    useLayoutEffect(() => {
+        if (mode !== 'idle' || pendingAction.current === null) return;
+        const target = pendingAction.current === 'edit' ? editButtonRef : moveButtonRef;
+        pendingAction.current = null;
+        target.current?.focus();
+    }, [mode]);
+
+    return { editButtonRef, moveButtonRef, pendingAction };
+}
+
+function ItemRowBody(props: ItemRowBodyProps) {
+    if (props.mode === 'edit') {
+        return (
+            <EditItemForm
+                itemId={props.item.id}
+                initialName={props.item.name ?? ''}
+                isPending={props.isPending}
+                onCancel={props.onCancelEdit}
+                onSave={props.onRename}
+            />
+        );
+    }
+
+    if (props.mode === 'move') {
+        return (
+            <MoveItemForm
+                currentStatus={props.item.status}
+                isPending={props.isPending}
+                itemName={props.name}
+                onCancel={props.onCancelMove}
+                onMove={props.onMove}
+            />
+        );
+    }
+
+    return (
+        <>
+            <div className="item-copy">
+                <p className="item-name">{props.name}</p>
+                <p className="item-state">{labels.itemStatus(props.item.status)}</p>
+                {props.item.name === null && (
+                    <p className="item-remediation">{labels.unnamedItemRemediation}</p>
+                )}
+            </div>
+            <ItemActions
+                item={props.item}
+                name={props.name}
+                isPending={props.isPending}
+                editButtonRef={props.editButtonRef}
+                moveButtonRef={props.moveButtonRef}
+                removeButtonRef={props.removeButtonRef}
+                onEdit={props.onEdit}
+                onMove={props.onOpenMove}
+                onRemove={props.onRemove}
+            />
+        </>
+    );
+}
+
+export function ItemRow(props: ItemRowProps) {
+    const [mode, setMode] = useState<'idle' | 'edit' | 'move'>('idle');
+    const { editButtonRef, moveButtonRef, pendingAction } = useActionFocus(mode);
     const removeButtonRef = useRef<HTMLButtonElement>(null);
-    const name = item.name ?? labels.unnamedItem;
+    const name = props.item.name ?? labels.unnamedItem;
 
     const handleRemove = async () => {
         if (!globalThis.confirm(labels.confirmItemRemoval(name))) return;
         const focusTarget = focusTargetAfterRemoval(removeButtonRef.current);
-
-        if (await onRemove(item)) globalThis.setTimeout(() => focusTarget?.focus(), 0);
+        if (await props.onRemove(props.item)) globalThis.setTimeout(() => focusTarget?.focus(), 0);
     };
 
-    const closeEditor = () => {
-        setIsEditing(false);
-        globalThis.setTimeout(() => editButtonRef.current?.focus(), 0);
+    const close = (target: RestoredAction) => {
+        pendingAction.current = target;
+        setMode('idle');
     };
 
     const handleRename = async (newName: string) => {
-        const saved = await onRename(item, newName);
-        if (saved) closeEditor();
+        const saved = await props.onRename(props.item, newName);
+        if (saved) close('edit');
         return saved;
     };
 
     return (
-        <li className={`todo-item${item.completed ? ' todo-item-completed' : ''}`}>
-            {isEditing ? (
-                <EditItemForm
-                    itemId={item.id}
-                    initialName={item.name ?? ''}
-                    isPending={isPending}
-                    onCancel={closeEditor}
-                    onSave={handleRename}
-                />
-            ) : (
-                <>
-                    <div className="item-copy">
-                        <p className="item-name">{name}</p>
-                        <p className="item-state">{itemState(item)}</p>
-                    </div>
-                    <ItemActions
-                        item={item}
-                        name={name}
-                        isPending={isPending}
-                        editButtonRef={editButtonRef}
-                        removeButtonRef={removeButtonRef}
-                        onToggle={() => void onToggle(item)}
-                        onEdit={() => setIsEditing(true)}
-                        onRemove={() => void handleRemove()}
-                    />
-                </>
-            )}
+        <li
+            className={`todo-item todo-item-${props.item.status}`}
+            draggable={!props.isPending && props.item.name !== null}
+            aria-busy={props.isPending}
+            onDragStart={(event) => props.onDragStart(props.item, event)}
+            onDragEnd={props.onDragEnd}
+        >
+            <ItemRowBody
+                item={props.item}
+                name={name}
+                mode={mode}
+                isPending={props.isPending}
+                editButtonRef={editButtonRef}
+                moveButtonRef={moveButtonRef}
+                removeButtonRef={removeButtonRef}
+                onCancelEdit={() => close('edit')}
+                onCancelMove={() => close('move')}
+                onEdit={() => setMode('edit')}
+                onMove={props.onMove}
+                onOpenMove={() => setMode('move')}
+                onRemove={() => void handleRemove()}
+                onRename={handleRename}
+            />
         </li>
     );
 }

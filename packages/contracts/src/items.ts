@@ -21,7 +21,6 @@ export const CreateItemBody = z.object({
 
 export const UpdateItemBody = z.object({
     name: itemNameSchema,
-    completed: z.boolean(),
 });
 
 export const ItemStatus = z.enum(['todo', 'doing', 'done']);
@@ -39,8 +38,6 @@ export const ItemDto = z.object({
     name: z.string().nullable(),
     status: ItemStatus,
     version: z.number().int().positive(),
-    // Kept until US-15b replaces the inherited checkbox client.
-    completed: z.boolean(),
 });
 
 export const ItemListDto = z.array(ItemDto);

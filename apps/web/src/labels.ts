@@ -1,3 +1,11 @@
+import type { ItemStatus } from '@legacy/contracts';
+
+const ITEM_STATUS_LABELS: Record<ItemStatus, string> = {
+    todo: 'Todo',
+    doing: 'In progress',
+    done: 'Done',
+};
+
 export const labels = {
     // Authentication (US-11b)
     signInTitle: 'Sign in',
@@ -231,13 +239,15 @@ export const labels = {
     allItemsLoaded: 'All items loaded',
     retry: 'Try again',
     emptyItems: 'No items yet. Add one above.',
+    kanbanInstructions: 'Drag tasks between columns, or use each task’s Move button for a keyboard-accessible choice.',
+    move: 'Move',
+    movingItem: 'Moving…',
+    confirmMove: 'Confirm move',
+    moveDestinationLabel: 'Destination column',
+    itemMoveConflict: 'This task changed elsewhere. The latest board has been loaded. Choose a destination and try again.',
+    itemMoveConflictRefreshFailed: 'This task changed elsewhere, but the latest board could not be loaded. Try loading the tasks again.',
     unnamedItem: 'Unnamed item',
     unnamedItemRemediation: 'This legacy item has no name. Remove it and create it again.',
-    unavailableForUnnamedItem: 'Completion unavailable: this legacy item has no name.',
-    completed: 'Completed',
-    open: 'Open',
-    complete: 'Complete',
-    reopen: 'Reopen',
     edit: 'Edit',
     editItemNameLabel: 'Edit item name',
     saveItem: 'Save',
@@ -264,14 +274,29 @@ export const labels = {
     itemCount(count: number): string {
         return `${count} ${count === 1 ? 'item' : 'items'}`;
     },
+    columnItemCount(count: number): string {
+        return `${count} ${count === 1 ? 'task' : 'tasks'}`;
+    },
+    emptyColumn(status: ItemStatus): string {
+        return `No tasks in ${ITEM_STATUS_LABELS[status]}.`;
+    },
+    itemStatus(status: ItemStatus): string {
+        return ITEM_STATUS_LABELS[status];
+    },
+    moveItem(name: string): string {
+        return `Move: ${name}`;
+    },
+    moveItemTo(name: string, status: string): string {
+        return `Move ${name} to ${status}`;
+    },
+    itemMoved(name: string, status: string): string {
+        return `${name} moved to ${status}.`;
+    },
+    itemMoveFailed(name: string, status: string): string {
+        return `${name} could not be moved. It is back in ${status}. Use Move to try again.`;
+    },
     itemsLoaded(count: number): string {
         return `${count} more ${count === 1 ? 'item' : 'items'} loaded.`;
-    },
-    completeItem(name: string): string {
-        return `Complete: ${name}`;
-    },
-    reopenItem(name: string): string {
-        return `Reopen: ${name}`;
     },
     editItem(name: string): string {
         return `Edit: ${name}`;
@@ -284,9 +309,6 @@ export const labels = {
     },
     itemAdded(name: string): string {
         return `${name} added.`;
-    },
-    itemCompletionChanged(name: string, isCompleted: boolean): string {
-        return `${name} marked as ${isCompleted ? 'completed' : 'open'}.`;
     },
     itemRenamed(name: string): string {
         return `${name} saved.`;

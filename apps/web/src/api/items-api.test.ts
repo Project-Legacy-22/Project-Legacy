@@ -10,7 +10,6 @@ const ITEM = {
     name: 'Prepare the review',
     status: 'todo' as const,
     version: 1,
-    completed: false,
 };
 
 function response(body: unknown, status = 200): Response {
@@ -83,19 +82,37 @@ describe('itemsApi', () => {
     });
 
     it('updates the editable item state in its project', async () => {
-        const fetchMock = vi.fn<typeof fetch>(async () => response({ ...ITEM, completed: true }));
+        const renamed = { ...ITEM, name: 'Renamed task', version: 2 };
+        const fetchMock = vi.fn<typeof fetch>(async () => response(renamed));
         vi.stubGlobal('fetch', fetchMock);
 
         await expect(
             itemsApi.updateItem(PROJECT_ID, ITEM_ID, {
-                name: ITEM.name,
-                completed: true,
+                name: 'Renamed task',
             }),
-        ).resolves.toEqual({ ...ITEM, completed: true });
+        ).resolves.toEqual(renamed);
         expect(fetchMock).toHaveBeenCalledWith(`/projects/${PROJECT_ID}/items/${ITEM_ID}`, {
             method: 'PUT',
             headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: ITEM.name, completed: true }),
+            body: JSON.stringify({ name: 'Renamed task' }),
+        });
+    });
+
+    it('moves an item using the status and version observed by the client', async () => {
+        const moved = { ...ITEM, status: 'doing' as const, version: 2 };
+        const fetchMock = vi.fn<typeof fetch>(async () => response(moved));
+        vi.stubGlobal('fetch', fetchMock);
+
+        await expect(
+            itemsApi.moveItem(PROJECT_ID, ITEM_ID, {
+                status: 'doing',
+                version: 1,
+            }),
+        ).resolves.toEqual(moved);
+        expect(fetchMock).toHaveBeenCalledWith(`/projects/${PROJECT_ID}/items/${ITEM_ID}/status`, {
+            method: 'PATCH',
+            headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'doing', version: 1 }),
         });
     });
 

@@ -32,6 +32,7 @@ function createItems(): ItemsApi {
         listItems: vi.fn(async () => page),
         createItem: vi.fn(),
         updateItem: vi.fn(),
+        moveItem: vi.fn(),
         deleteItem: vi.fn(),
     };
 }

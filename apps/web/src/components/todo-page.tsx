@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import type { ItemDto } from '../api/items-api';
+import type { ItemDto, ItemStatus } from '../api/items-api';
 import type { ProjectDto } from '../api/projects-api';
 import { labels } from '../labels';
 import type { AddItemResult, ItemActionFeedback, ItemsLoadState, ItemsPaginationState } from '../hooks/use-items';
@@ -20,7 +20,7 @@ export interface TodoPageProps {
     hasNextPage: boolean;
     paginationState: ItemsPaginationState;
     onAdd: (name: string) => Promise<AddItemResult>;
-    onToggle: (item: ItemDto) => Promise<void>;
+    onMove: (item: ItemDto, status: ItemStatus) => Promise<boolean>;
     onRename: (item: ItemDto, name: string) => Promise<boolean>;
     onRemove: (item: ItemDto) => Promise<boolean>;
     onLoadMore: () => void;
@@ -60,7 +60,7 @@ export function TodoPage(props: TodoPageProps) {
                             pendingItemIds={props.pendingItemIds}
                             hasNextPage={props.hasNextPage}
                             paginationState={props.paginationState}
-                            onToggle={props.onToggle}
+                            onMove={props.onMove}
                             onRename={props.onRename}
                             onRemove={props.onRemove}
                             onLoadMore={props.onLoadMore}
