@@ -98,10 +98,16 @@ export default defineConfig({
                 // Generated from the database schema by `npm run db:types`;
                 // excluded per standards/03-testing.md section 7.
                 'packages/infra/src/database.types.ts',
-                // Declarations only, so there is nothing to execute and nothing
-                // a test could reach. Left in, it reports zero per cent and
-                // drags the figure of whatever change introduced it.
+                // Declarations only, so there is nothing to execute and
+                // nothing a test could reach. Left in, they report zero per
+                // cent and drag the figure of whatever change touched them.
+                //
+                // The three of them carry the vocabulary of view states:
+                // view-state.ts holds the four shapes, the other two give them
+                // the domain names that appear in component props.
                 'apps/web/src/hooks/view-state.ts',
+                'apps/web/src/hooks/items-state.ts',
+                'apps/web/src/hooks/notifications-state.ts',
                 // The Supabase adapters only translate port calls into
                 // supabase-js calls and cannot be exercised without a real
                 // PostgREST endpoint. Their round trip is covered by the
