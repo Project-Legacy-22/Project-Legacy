@@ -26,6 +26,13 @@ import { createServer } from './server.js';
 //
 // The list is read from the running application rather than typed out again
 // here, because a second hand-written list is one more thing to forget.
+//
+// What is compared is reachability, not who answers. /reset-password is
+// rewritten to the static shell rather than to the function: it is a deep link
+// into the single-page application, and the platform serves the shell for it
+// exactly as it does for /. Express keeps its own route for the targets where
+// it serves everything -- the local process and the published image -- and
+// there it is that route which answers.
 
 const RACINE = join(import.meta.dirname, '..', '..', '..', '..');
 
