@@ -127,6 +127,9 @@ async function disconnect(): Promise<void> {
 
 async function save(client: ItemClient, item: Item, event: DomainEvent): Promise<void> {
     if (item.name === null) fail('save', new Error('an item written to storage must have a name'));
+    // makeAddItem checks the caller's membership before reaching this internal
+    // RPC. Only the backend service role may execute it; RLS does not constrain
+    // that role, so the application check must not be removed.
     const { error } = await client.rpc('create_item_with_event', {
         p_item_id: item.id,
         p_user_id: item.ownerId,

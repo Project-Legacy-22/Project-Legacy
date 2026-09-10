@@ -60,7 +60,7 @@ export const labels = {
     deleteAccountTitle: 'Delete my account',
     deleteAccountWarning: 'Deleting your account removes, immediately and for good:',
     deleteAccountLosesAccount: 'your account and the address it is registered with',
-    deleteAccountLosesItems: 'every item you created, including the ones you already removed',
+    deleteAccountLosesItems: 'every item you created, including removed items and items in shared projects; other members will lose access to them',
     deleteAccountLosesProjects: 'your project memberships and every project where you are the last member',
     deleteAccountLosesNotifications: 'every notification you received',
     deleteAccountNoRecovery:
@@ -136,7 +136,7 @@ export const labels = {
     },
     confirmProjectRemoval(name: string, itemCount: number): string {
         const items = `${itemCount} ${itemCount === 1 ? 'item' : 'items'}`;
-        return `Remove ${name}? ${items} will be permanently deleted.`;
+        return `Remove ${name}? ${items} will be permanently deleted, along with any previously removed items.`;
     },
 
     skipToContent: 'Skip to content',

@@ -4,7 +4,7 @@
 --             owner-only item policies with project-membership policies.
 --             New accounts receive a default project in the existing auth
 --             mirror trigger. Deleting a project cascades to its items.
--- Reversible: no. Rolling back would lose project grouping and cannot restore
+-- IRREVERSIBLE: Rolling back would lose project grouping and cannot restore
 --             a deleted project's items.
 
 create table public.projects (

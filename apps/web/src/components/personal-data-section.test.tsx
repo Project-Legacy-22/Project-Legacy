@@ -131,6 +131,17 @@ describe('section des donnees personnelles', () => {
         expect(getElement('.delete-account-warning').textContent).toBe(labels.deleteAccountNoRecovery);
     });
 
+    it('warns that deleting the account also removes its items for other project members', async () => {
+        await afficher(createAccount());
+
+        const losses = getElement('.delete-account-losses');
+        const confirmation = getElement('#delete-account-confirmation');
+
+        expect(losses.textContent).toMatch(/shared projects/);
+        expect(losses.textContent).toMatch(/other members will lose access/);
+        expect(losses.compareDocumentPosition(confirmation) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+    });
+
     describe('export', () => {
         it('remet a la personne le document servi par l API', async () => {
             const save = vi.fn();

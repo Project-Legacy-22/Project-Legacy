@@ -3,7 +3,7 @@
 --             erasure removes the caller's memberships and deletes projects
 --             where that caller is the last member, while preserving shared
 --             projects and the remaining members' data.
--- Reversible: no. The function can be replaced by an older definition, but
+-- IRREVERSIBLE: The function can be replaced by an older definition, but
 --             projects and items erased while this version ran cannot be
 --             reconstructed.
 

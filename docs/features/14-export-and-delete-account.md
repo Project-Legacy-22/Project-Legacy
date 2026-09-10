@@ -69,6 +69,12 @@ the function to the backend service role. Both migrations are irreversible, whic
 of the feature. Their headers say so instead of offering a rollback that would not restore
 anything.
 
+Keeping a shared project does not keep the departing account's items: deleting its `users`
+row cascades to every item that account created, including items other members were using.
+Items created by the remaining members survive. The deletion form explicitly warns the
+account holder that other members will lose access to their items in shared projects;
+no notification is sent to those other members by this feature.
+
 Credentials and sessions live in `auth.users` and are removed through the GoTrue admin
 endpoint, not by deleting that row: deleting it directly would leave GoTrue's own session and
 refresh-token tables behind, and revoking the sessions is the reason the step exists.
@@ -108,7 +114,8 @@ the document is what a person receives.
   announced through the existing polite live region, which stays silent until something
   happens.
 - The whole flow is reachable and operable by keyboard; there is no pointer-only control.
-- The warning names project memberships and projects where the account is the last member.
+- The warning names project memberships, projects where the account is the last member,
+  and the loss of the account's items for other members of shared projects.
 - `autocomplete` is off on the confirmation field. Letting the browser fill it would supply
   the proof of intent the field exists to obtain.
 - Checked by `axe-core` over the full signed-in screen in

@@ -12,9 +12,15 @@ project, existing items are migrated into one project per account, and a member 
 project to work on its shared item list. Creating invitations and changing memberships are
 deliberately left to US-33 (#34); this issue establishes the model those features will use.
 
+Any member can create, read, edit and delete items in that project, including items created
+by another member. The creator identifies whose personal data an item belongs to; it does
+not limit editing rights within the project.
+
 Only an owner can remove a project. The interface names the project and the exact number of
-stored items before asking for confirmation, then the database removes the project and all of
-its items together.
+visible items before asking for confirmation. The count excludes rows with `deleted_at` set,
+just like the item list. Empty projects, including those containing only removed items, stay
+in the project list with a count of zero. Deletion removes the project and all its rows,
+including previously removed items, which the confirmation also warns about.
 
 ## Surface
 
@@ -53,6 +59,12 @@ membership atomically. The API currently reaches PostgREST with the service role
 membership checks in its repositories. RLS is the second line of defence for direct
 authenticated access: projects are visible to members, items are readable and writable by
 members, and projects are deletable only by owners.
+
+For item creation, `makeAddItem` checks the authenticated caller's membership before invoking
+`create_item_with_event`. This internal SQL function does not repeat the membership check:
+execution is revoked from `PUBLIC`, `anon` and `authenticated`, and granted only to the backend
+service role. The application enforces authorization on this path; RLS does not constrain
+the service role and is not a replacement for that check.
 
 Migration `20260908144244_extend_account_erasure_for_projects` completes US-13. Account
 erasure removes the caller's memberships, deletes projects where that caller is the last
@@ -98,9 +110,11 @@ logs, browser persistence or event payloads. The portability export now includes
 visible through the caller's own memberships, the caller's membership rows and each exported
 item's project identifier. It never includes another member's account identifier.
 
-Deleting an account removes its membership rows. A project and its items are physically
-deleted only when no other member remains; shared projects and the remaining members' items
-survive.
+Deleting an account removes its membership rows and every item it created, including items
+in shared projects. Other members lose access to those items. A project itself is deleted
+with all its items only when no other member remains; otherwise the project and items
+created by its remaining members survive. The account-deletion warning states this effect
+before asking for confirmation. This issue does not send a notification to the other members.
 
 ## How to verify
 
