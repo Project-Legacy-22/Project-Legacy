@@ -1,3 +1,4 @@
+import axe from 'axe-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from './app';
@@ -137,5 +138,28 @@ describe('App notifications panel', () => {
         expect(markAsRead).toHaveBeenCalledWith(NOTIFICATION.id);
         expect(document.querySelector('.notification-row button')).toBeNull();
         expect(getElement<HTMLElement>('.notification-status').textContent).toBe(labels.notificationRead);
+    });
+
+    it('has no automatically detectable WCAG A or AA violation with the panel open', async () => {
+        document.documentElement.lang = 'en';
+        document.title = 'Todo list | Legacy 22';
+        const notifications = createNotifications({
+            listNotifications: vi.fn(async (): Promise<NotificationPageDto> => ({
+                notifications: [NOTIFICATION],
+                nextCursor: 'a-cursor',
+            })),
+        });
+        await testRoot.render(<App api={createApi()} auth={createAuth()} notifications={notifications} />);
+
+        await click(getElement<HTMLButtonElement>('.notifications-panel button'));
+        await flushTimers();
+
+        const results = await axe.run(document, {
+            runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21aa'] },
+            // axe documents that this rule cannot produce reliable results in jsdom.
+            rules: { 'color-contrast': { enabled: false } },
+        });
+
+        expect(results.violations.map(violation => violation.id)).toEqual([]);
     });
 });
