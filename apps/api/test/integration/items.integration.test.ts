@@ -54,6 +54,7 @@ describe('items API (integration)', () => {
         expect(response.status).toBe(200);
         expect(created).not.toHaveProperty('ownerId');
         expect(created.name).toBe('Depot integration');
+        expect(created).toMatchObject({ status: 'todo', version: 1, completed: false });
     });
 
     describe('isolation entre comptes', () => {
@@ -140,6 +141,51 @@ describe('items API (integration)', () => {
                 items: { id: string }[];
             };
             expect(stillThere.items.map((item) => item.id)).toContain(itemId);
+        });
+
+        it('deplace un item sans laisser une version perimee ecraser le resultat', async () => {
+            const before = (await (await asOwner.request(itemsOf(owner))).json()) as {
+                items: { id: string; version: number }[];
+            };
+            const version = before.items.find((item) => item.id === itemId)?.version;
+            expect(version).toBeTypeOf('number');
+
+            const moved = await asOwner.request(
+                `${itemsOf(owner)}/${itemId}/status`,
+                json('PATCH', { status: 'doing', version }),
+            );
+            const stale = await asOwner.request(
+                `${itemsOf(owner)}/${itemId}/status`,
+                json('PATCH', { status: 'done', version }),
+            );
+
+            expect(moved.status).toBe(200);
+            expect(stale.status).toBe(409);
+            expect((await stale.json()) as object).toMatchObject({ type: 'item_status_conflict' });
+
+            const after = (await (await asOwner.request(itemsOf(owner))).json()) as {
+                items: { id: string; status: string; version: number }[];
+            };
+            expect(after.items.find((item) => item.id === itemId)).toMatchObject({
+                status: 'doing',
+                version: Number(version) + 1,
+            });
+        });
+
+        it('ne revele pas un item a un non-membre lors d un deplacement', async () => {
+            const denied = await asIntruder.request(
+                `${itemsOf(owner)}/${itemId}/status`,
+                json('PATCH', { status: 'done', version: 1 }),
+            );
+            const missing = await asOwner.request(
+                `${itemsOf(owner)}/${UNKNOWN_ITEM_ID}/status`,
+                json('PATCH', { status: 'done', version: 1 }),
+            );
+
+            expect(denied.status).toBe(404);
+            expect(missing.status).toBe(404);
+            expect((await denied.json()) as object).toMatchObject({ type: 'item_not_found' });
+            expect((await missing.json()) as object).toMatchObject({ type: 'item_not_found' });
         });
 
         it('le proprietaire peut le supprimer', async () => {

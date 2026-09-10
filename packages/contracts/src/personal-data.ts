@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { ProjectRole } from './projects.js';
+import { ItemStatus } from './items.js';
 
 // The copy of an account handed back by the portability endpoint (US-13).
 //
@@ -23,7 +24,8 @@ const ExportedItem = z.object({
     id: z.uuid(),
     projectId: z.uuid(),
     name: z.string().nullable(),
-    completed: z.boolean(),
+    status: ItemStatus,
+    version: z.number().int().positive(),
     createdAt: z.iso.datetime(),
     updatedAt: z.iso.datetime(),
 });

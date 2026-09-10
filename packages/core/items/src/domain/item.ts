@@ -3,6 +3,8 @@
 // anything itself would make the rules untestable without that dependency.
 
 export const MAX_ITEM_NAME_LENGTH = 255;
+export const ITEM_STATUSES = ['todo', 'doing', 'done'] as const;
+export type ItemStatus = (typeof ITEM_STATUSES)[number];
 
 export interface Item {
     id: string;
@@ -10,7 +12,10 @@ export interface Item {
     // validation existed are still there. The invariant below applies when an
     // item is created or changed, not when an existing one is read.
     name: string | null;
-    completed: boolean;
+    status: ItemStatus;
+    // Incremented on every write. A move names the version it observed so a
+    // concurrent move cannot be overwritten without being reported.
+    version: number;
     projectId: string;
     // Every item belongs to a user. The application is single-user for now
     // (D-20), so this is always the system account, but the column is mandatory
@@ -40,6 +45,12 @@ export class InvalidItemName extends DomainError {
 export class ItemNotFound extends DomainError {
     constructor(readonly itemId: string) {
         super('item_not_found', 404, `Item ${itemId} not found`);
+    }
+}
+
+export class ItemStatusConflict extends DomainError {
+    constructor(readonly itemId: string) {
+        super('item_status_conflict', 409, `Item ${itemId} was changed by another request`);
     }
 }
 
@@ -73,7 +84,7 @@ export interface NewItem {
 }
 
 export function createItem(candidate: NewItem): Item {
-    return { ...candidate, name: itemName(candidate.name), completed: false };
+    return { ...candidate, name: itemName(candidate.name), status: 'todo', version: 1 };
 }
 
 // Rebuilding an item from storage is not the same operation as creating one:
@@ -83,14 +94,16 @@ export function createItem(candidate: NewItem): Item {
 export function rehydrateItem(row: {
     id: string;
     name: string | null;
-    completed: boolean;
+    status: ItemStatus;
+    version: number;
     projectId: string;
     ownerId: string;
 }): Item {
     return {
         id: row.id,
         name: row.name,
-        completed: row.completed,
+        status: row.status,
+        version: row.version,
         projectId: row.projectId,
         ownerId: row.ownerId,
     };

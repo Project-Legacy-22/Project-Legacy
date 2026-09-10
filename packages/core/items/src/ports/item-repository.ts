@@ -1,4 +1,4 @@
-import type { Item } from '../domain/item.js';
+import type { Item, ItemStatus } from '../domain/item.js';
 import type { DomainEvent } from '../domain/event.js';
 
 // Where a page stops, and where the next one resumes. The cursor is minted and
@@ -11,6 +11,13 @@ export interface ItemPageQuery {
 export interface ItemPage {
     items: Item[];
     nextCursor: string | undefined;
+}
+
+export interface ItemStatusMove {
+    id: string;
+    projectId: string;
+    status: ItemStatus;
+    expectedVersion: number;
 }
 
 // What the use cases require of the outside world, named after the need and not
@@ -33,5 +40,6 @@ export interface ItemRepository {
     save(item: Item, event: DomainEvent): Promise<void>;
 
     update(item: Item): Promise<void>;
+    moveStatus(move: ItemStatusMove): Promise<Item | undefined>;
     remove(id: string): Promise<void>;
 }

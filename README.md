@@ -171,6 +171,9 @@ est borné à 100, et `cursor` reprend la réponse précédente ; hors de ces bo
 curseur est opaque et désigne la dernière ligne servie plutôt qu'un décalage, pour qu'une
 création concurrente ne fasse ni sauter ni répéter une ligne.
 
+Une tâche possède un statut `todo`, `doing` ou `done`. Le déplacement utilise la version
+renvoyée avec la tâche ; une version périmée reçoit `409` et ne remplace pas l'état stocké.
+
 Deux comportements sont volontaires et ne doivent pas être « corrigés » :
 
 - la création de compte répond de la même façon que l'adresse soit libre ou déjà prise, et

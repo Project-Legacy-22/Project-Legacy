@@ -3,6 +3,7 @@ import type { RequestHandler } from 'express';
 import {
     CreateItemBody,
     UpdateItemBody,
+    MoveItemBody,
     ProjectIdParams,
     ProjectItemIdParams,
     ListItemsQuery,
@@ -21,7 +22,9 @@ function toItemDto(item: Item): ItemDto {
         id: item.id,
         projectId: item.projectId,
         name: item.name,
-        completed: item.completed,
+        status: item.status,
+        version: item.version,
+        completed: item.status === 'done',
     };
 }
 
@@ -47,6 +50,27 @@ function listItems(useCases: ItemUseCases): RequestHandler {
                 cursor: query.data.cursor,
             })
             .then((page) => res.send(toItemPageDto(page)))
+            .catch(next);
+    };
+}
+
+function moveItem(useCases: ItemUseCases): RequestHandler {
+    return (req, res, next) => {
+        const params = ProjectItemIdParams.safeParse(req.params);
+        if (!params.success) return next(params.error);
+
+        const body = MoveItemBody.safeParse(req.body);
+        if (!body.success) return next(body.error);
+
+        useCases
+            .moveItem({
+                id: params.data.id,
+                projectId: params.data.projectId,
+                memberId: accountOf(res).id,
+                status: body.data.status,
+                expectedVersion: body.data.version,
+            })
+            .then((item) => res.send(toItemDto(item)))
             .catch(next);
     };
 }
@@ -108,6 +132,7 @@ export function itemsRouter(useCases: ItemUseCases): Router {
     router.get('/projects/:projectId/items', listItems(useCases));
     router.post('/projects/:projectId/items', add);
     router.put('/projects/:projectId/items/:id', change);
+    router.patch('/projects/:projectId/items/:id/status', moveItem(useCases));
     router.delete('/projects/:projectId/items/:id', remove);
 
     return router;

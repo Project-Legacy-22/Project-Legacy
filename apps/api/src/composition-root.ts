@@ -30,7 +30,7 @@ import {
     makeSignIn,
     makeSignOut,
 } from '@legacy/core-auth';
-import { makeListItems, makeAddItem, makeChangeItem, makeRemoveItem } from '@legacy/core-items';
+import { makeListItems, makeAddItem, makeChangeItem, makeMoveItem, makeRemoveItem } from '@legacy/core-items';
 import {
     makeCountUnreadNotifications,
     makeListNotifications,
@@ -44,6 +44,7 @@ export interface ItemUseCases {
     listItems: ReturnType<typeof makeListItems>;
     addItem: ReturnType<typeof makeAddItem>;
     changeItem: ReturnType<typeof makeChangeItem>;
+    moveItem: ReturnType<typeof makeMoveItem>;
     removeItem: ReturnType<typeof makeRemoveItem>;
 }
 
@@ -200,6 +201,7 @@ export function compose(config: Config): Application {
                 listItems: makeListItems(store),
                 addItem: makeAddItem({ repository: store, newId: uuid, now: () => new Date() }),
                 changeItem: makeChangeItem(store),
+                moveItem: makeMoveItem(store),
                 removeItem: makeRemoveItem(store),
             },
             auth: authUseCases(identity, compromisedPasswords),

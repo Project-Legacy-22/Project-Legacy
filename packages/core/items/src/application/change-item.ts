@@ -24,11 +24,10 @@ export function makeChangeItem(repository: ItemRepository) {
         }
 
         const updated: Item = {
-            id: existing.id,
+            ...existing,
             name: itemName(request.changes.name),
-            completed: request.changes.completed,
-            projectId: existing.projectId,
-            ownerId: existing.ownerId,
+            status: request.changes.completed ? 'done' : 'todo',
+            version: existing.version + 1,
         };
 
         await repository.update(updated);

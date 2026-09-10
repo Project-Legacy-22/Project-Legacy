@@ -80,6 +80,14 @@ export function inMemoryItemRepository(
             items.set(item.id, item);
             return Promise.resolve();
         },
+        moveStatus: ({ id, projectId, status, expectedVersion }) => {
+            const item = items.get(id);
+            if (item?.projectId !== projectId || item.version !== expectedVersion) return Promise.resolve(undefined);
+
+            const moved = { ...item, status, version: item.version + 1 };
+            items.set(id, moved);
+            return Promise.resolve(moved);
+        },
         remove: (id) => {
             items.delete(id);
             return Promise.resolve();

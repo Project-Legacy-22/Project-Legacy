@@ -40,31 +40,34 @@ export type Database = {
     Tables: {
       items: {
         Row: {
-          completed: boolean
           created_at: string
           id: string
           name: string
           project_id: string
+          status: Database["public"]["Enums"]["item_status"]
           updated_at: string
           user_id: string
+          version: number
         }
         Insert: {
-          completed?: boolean
           created_at?: string
           id?: string
           name: string
           project_id: string
+          status?: Database["public"]["Enums"]["item_status"]
           updated_at?: string
           user_id: string
+          version?: number
         }
         Update: {
-          completed?: boolean
           created_at?: string
           id?: string
           name?: string
           project_id?: string
+          status?: Database["public"]["Enums"]["item_status"]
           updated_at?: string
           user_id?: string
+          version?: number
         }
         Relationships: [
           {
@@ -295,7 +298,7 @@ export type Database = {
       uuid_generate_v7: { Args: never; Returns: string }
     }
     Enums: {
-      [_ in never]: never
+      item_status: "todo" | "doing" | "done"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -425,7 +428,9 @@ export const Constants = {
     Enums: {},
   },
   public: {
-    Enums: {},
+    Enums: {
+      item_status: ["todo", "doing", "done"],
+    },
   },
 } as const
 

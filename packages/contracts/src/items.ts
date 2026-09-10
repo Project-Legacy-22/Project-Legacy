@@ -24,12 +24,22 @@ export const UpdateItemBody = z.object({
     completed: z.boolean(),
 });
 
+export const ItemStatus = z.enum(['todo', 'doing', 'done']);
+
+export const MoveItemBody = z.object({
+    status: ItemStatus,
+    version: z.number().int().positive(),
+});
+
 // The legacy database can still contain null names. Responses acknowledge
 // that historical state while every new write remains subject to itemNameSchema.
 export const ItemDto = z.object({
     id: z.uuid(),
     projectId: z.uuid(),
     name: z.string().nullable(),
+    status: ItemStatus,
+    version: z.number().int().positive(),
+    // Kept until US-15b replaces the inherited checkbox client.
     completed: z.boolean(),
 });
 
@@ -63,6 +73,8 @@ export const ItemPageDto = z.object({
 export type ItemIdParams = z.infer<typeof ItemIdParams>;
 export type CreateItemBody = z.infer<typeof CreateItemBody>;
 export type UpdateItemBody = z.infer<typeof UpdateItemBody>;
+export type MoveItemBody = z.infer<typeof MoveItemBody>;
+export type ItemStatus = z.infer<typeof ItemStatus>;
 export type ItemDto = z.infer<typeof ItemDto>;
 export type ItemListDto = z.infer<typeof ItemListDto>;
 export type ListItemsQuery = z.infer<typeof ListItemsQuery>;

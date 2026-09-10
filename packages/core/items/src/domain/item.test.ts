@@ -40,7 +40,8 @@ describe('createItem', () => {
         expect(item).toEqual({
             id: 'item-1',
             name: 'A task',
-            completed: false,
+            status: 'todo',
+            version: 1,
             projectId: 'project-1',
             ownerId: 'owner-1',
         });
@@ -64,7 +65,8 @@ describe('rehydrateItem', () => {
         const item = rehydrateItem({
             id: 'item-1',
             name: null,
-            completed: true,
+            status: 'doing',
+            version: 7,
             projectId: 'project-1',
             ownerId: 'owner-1',
         });
@@ -72,7 +74,8 @@ describe('rehydrateItem', () => {
         expect(item).toEqual({
             id: 'item-1',
             name: null,
-            completed: true,
+            status: 'doing',
+            version: 7,
             projectId: 'project-1',
             ownerId: 'owner-1',
         });

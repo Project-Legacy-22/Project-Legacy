@@ -14,6 +14,7 @@ export function unreachableItemRepository(): ItemRepository {
         findByIdForMember: unreachable,
         save: unreachable,
         update: unreachable,
+        moveStatus: unreachable,
         remove: unreachable,
     };
 }
