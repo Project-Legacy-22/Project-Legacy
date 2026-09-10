@@ -1,4 +1,3 @@
-import { createClient } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { InvalidProjectCursor, rehydrateProject } from '@legacy/core-projects';
 import type { Project, ProjectPage, ProjectPageQuery, ProjectRepository, ProjectRole } from '@legacy/core-projects';
@@ -6,6 +5,8 @@ import type { Project, ProjectPage, ProjectPageQuery, ProjectRepository, Project
 import type { Database } from './database.types.js';
 import { decodeKeysetCursor, encodeKeysetCursor } from './keyset-cursor.js';
 import type { SupabaseSettings } from './supabase-item-repository.js';
+import { adapterFailure, serviceRoleClient } from './adapter.js';
+import type { AdapterFailure } from './adapter.js';
 
 type ProjectClient = SupabaseClient<Database>;
 type ProjectRow = Database['public']['Tables']['projects']['Row'];
@@ -14,9 +15,7 @@ type ProjectResultRow = Pick<ProjectRow, 'id' | 'name' | 'created_at'> & {
     items: { count: number }[];
 };
 
-function fail(operation: string, cause: unknown): never {
-    throw new Error(`projects repository: ${operation} failed`, { cause });
-}
+const fail: AdapterFailure = adapterFailure('projects repository');
 
 function roleOf(row: ProjectResultRow): ProjectRole {
     const role = row.project_memberships[0]?.role;
@@ -64,9 +63,7 @@ async function findPage(client: ProjectClient, memberId: string, page: ProjectPa
 }
 
 export function createSupabaseProjectRepository(settings: SupabaseSettings): ProjectRepository {
-    const client: ProjectClient = createClient<Database>(settings.url, settings.serviceRoleKey, {
-        auth: { persistSession: false, autoRefreshToken: false },
-    });
+    const client: ProjectClient = serviceRoleClient(settings);
 
     return {
         findPageForMember: (memberId, page) => findPage(client, memberId, page),

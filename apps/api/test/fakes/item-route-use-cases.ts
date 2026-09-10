@@ -16,6 +16,7 @@ import { inMemoryCompromisedPasswords } from '../../../../packages/core/auth/tes
 import { inMemoryPersonalDataStore } from '../../../../packages/core/auth/test/fakes/in-memory-personal-data-store.js';
 import { inMemoryProjectRepository } from '../../../../packages/core/projects/test/fakes/in-memory-project-repository.js';
 import type { AppUseCases } from '../../src/composition-root.js';
+import { makeAppUseCases } from './app-use-cases.js';
 
 interface ItemRouteUseCasesOptions {
     repository: ItemRepository;
@@ -29,11 +30,9 @@ export function makeItemRouteUseCases(options: ItemRouteUseCasesOptions): AppUse
     const personalData = inMemoryPersonalDataStore();
     const projects = inMemoryProjectRepository();
 
-    return {
+    return makeAppUseCases({
         notifications: {
             countUnread: () => Promise.resolve(0),
-            listNotifications: () => Promise.reject(new Error('not exercised by this suite')),
-            markNotificationRead: () => Promise.reject(new Error('not exercised by this suite')),
         },
         items: {
             listItems: makeListItems(repository),
@@ -49,13 +48,11 @@ export function makeItemRouteUseCases(options: ItemRouteUseCasesOptions): AppUse
             registerAccount: makeRegisterAccount(provider),
             signIn: makeSignIn(provider),
             identifyCaller: makeIdentifyCaller(provider),
-            renewSession: () => Promise.reject(new Error('not exercised by this suite')),
             requestPasswordReset: makeRequestPasswordReset(provider),
             resetPassword: makeResetPassword({
                 provider,
                 compromisedPasswords: inMemoryCompromisedPasswords(),
             }),
-            signOut: () => Promise.reject(new Error('not exercised by this suite')),
         },
         account: {
             exportPersonalData: makeExportPersonalData({
@@ -75,5 +72,5 @@ export function makeItemRouteUseCases(options: ItemRouteUseCasesOptions): AppUse
             }),
             removeProject: makeRemoveProject(projects),
         },
-    };
+    });
 }

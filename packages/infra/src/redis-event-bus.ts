@@ -2,6 +2,8 @@ import { createClient } from '@redis/client';
 
 import { DomainEvent } from '@legacy/contracts';
 import type { DomainEvent as Event } from '@legacy/contracts';
+import { adapterFailure } from './adapter.js';
+import type { AdapterFailure } from './adapter.js';
 
 // The broker, behind an interface. ADR-0007 chose Redis for what it makes
 // visible -- stop the consumer and the queue grows, restart it and it drains --
@@ -25,9 +27,7 @@ export interface EventBus {
 // is the smaller thing to explain in a review.
 export const EVENT_QUEUE = 'legacy22:events';
 
-function fail(operation: string, cause: unknown): never {
-    throw new Error(`event bus: ${operation} failed`, { cause });
-}
+const fail: AdapterFailure = adapterFailure('event bus');
 
 export interface RedisSettings {
     url: string;

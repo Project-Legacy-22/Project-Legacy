@@ -1,6 +1,5 @@
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
-import prettier from 'eslint-config-prettier';
 import globals from 'globals';
 
 // Complexity ceilings from standards/02-code-style.md section 4. Applied by
@@ -117,5 +116,4 @@ export default tseslint.config(
             'max-lines-per-function': 'off',
         },
     },
-    prettier,
 );

@@ -31,6 +31,7 @@ import type { AppUseCases } from '../../composition-root.js';
 import { recordingLogger } from '../../../../../packages/contracts/test/fakes/recording-logger.js';
 import { listen, testConfig } from '../../../test/http-harness.js';
 import type { Harness } from '../../../test/http-harness.js';
+import { makeAppUseCases } from '../../../test/fakes/app-use-cases.js';
 
 const OWNER_ID = '00000000-0000-7000-8000-000000000001';
 const OTHER_OWNER_ID = '00000000-0000-7000-8000-000000000002';
@@ -54,18 +55,7 @@ function useCasesOver(
 ): AppUseCases {
     const personalData = inMemoryPersonalDataStore();
 
-    return {
-        items: {
-            listItems: () => Promise.reject(new Error('not exercised by this suite')),
-            addItem: () => Promise.reject(new Error('not exercised by this suite')),
-            changeItem: () => Promise.reject(new Error('not exercised by this suite')),
-            removeItem: () => Promise.reject(new Error('not exercised by this suite')),
-        },
-        projects: {
-            listProjects: () => Promise.reject(new Error('not exercised by this suite')),
-            addProject: () => Promise.reject(new Error('not exercised by this suite')),
-            removeProject: () => Promise.reject(new Error('not exercised by this suite')),
-        },
+    return makeAppUseCases({
         notifications: {
             listNotifications: makeListNotifications(repository),
             markNotificationRead: makeMarkNotificationRead(repository),
@@ -75,7 +65,6 @@ function useCasesOver(
             registerAccount: makeRegisterAccount(provider),
             signIn: makeSignIn(provider),
             identifyCaller: makeIdentifyCaller(provider),
-            renewSession: () => Promise.reject(new Error('not exercised by this suite')),
             requestPasswordReset: makeRequestPasswordReset(provider),
             resetPassword: makeResetPassword({
                 provider,
@@ -90,7 +79,7 @@ function useCasesOver(
             }),
             eraseAccount: makeEraseAccount({ store: personalData, identity: provider }),
         },
-    };
+    });
 }
 
 describe('notifications API', () => {

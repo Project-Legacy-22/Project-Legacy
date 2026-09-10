@@ -1,4 +1,3 @@
-import { createClient } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type {
@@ -12,6 +11,8 @@ import type {
 
 import type { Database } from './database.types.js';
 import type { SupabaseSettings } from './supabase-item-repository.js';
+import { adapterFailure, serviceRoleClient } from './adapter.js';
+import type { AdapterFailure } from './adapter.js';
 
 type UserRow = Database['public']['Tables']['users']['Row'];
 type ItemRow = Database['public']['Tables']['items']['Row'];
@@ -27,9 +28,7 @@ type PersonalDataClient = SupabaseClient<Database>;
 // An empty export would be the dangerous outcome here. It is indistinguishable
 // from an account that owns nothing, and a person told they own nothing has no
 // reason to ask again.
-function fail(operation: string, cause: unknown): never {
-    throw new Error(`personal data store: ${operation} failed`, { cause });
-}
+const fail: AdapterFailure = adapterFailure('personal data store');
 
 // PostgREST renders a timestamptz with a numeric offset and microseconds,
 // "2026-09-08T12:00:00.123456+00:00". The export states instants in UTC with a
@@ -138,9 +137,7 @@ async function projectsFor(client: PersonalDataClient, memberships: ProjectMembe
 // of several domains, which no single domain's repository is allowed to know
 // about, and it is the only place in the application that does.
 export function createSupabasePersonalDataStore(settings: SupabaseSettings): PersonalDataStore {
-    const client = createClient<Database>(settings.url, settings.serviceRoleKey, {
-        auth: { persistSession: false, autoRefreshToken: false },
-    });
+    const client = serviceRoleClient(settings);
 
     async function exportFor(accountId: string): Promise<PersonalData | undefined> {
         // Three independent reads, so three requests in flight at once rather

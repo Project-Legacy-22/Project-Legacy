@@ -27,6 +27,7 @@ import { json, listen, testConfig } from '../../../test/http-harness.js';
 import type { Harness } from '../../../test/http-harness.js';
 import { createServer } from '../server.js';
 import { SESSION_COOKIE } from '../session.js';
+import { makeAppUseCases } from '../../../test/fakes/app-use-cases.js';
 
 const ACCOUNT_ID = '00000000-0000-7000-8000-000000000001';
 const OTHER_ACCOUNT_ID = '00000000-0000-7000-8000-000000000002';
@@ -42,11 +43,9 @@ function useCasesOver(
 ): AppUseCases {
     const items = inMemoryItemRepository();
     const personalData = inMemoryPersonalDataStore();
-    return {
+    return makeAppUseCases({
         notifications: {
             countUnread: () => Promise.resolve(0),
-            listNotifications: () => Promise.reject(new Error('not exercised by this suite')),
-            markNotificationRead: () => Promise.reject(new Error('not exercised by this suite')),
         },
         projects: {
             listProjects: makeListProjects(projects),
@@ -70,13 +69,11 @@ function useCasesOver(
             registerAccount: makeRegisterAccount(provider),
             signIn: makeSignIn(provider),
             identifyCaller: makeIdentifyCaller(provider),
-            renewSession: () => Promise.reject(new Error('not exercised by this suite')),
             requestPasswordReset: makeRequestPasswordReset(provider),
             resetPassword: makeResetPassword({
                 provider,
                 compromisedPasswords: inMemoryCompromisedPasswords(),
             }),
-            signOut: () => Promise.reject(new Error('not exercised by this suite')),
         },
         account: {
             exportPersonalData: makeExportPersonalData({
@@ -88,7 +85,7 @@ function useCasesOver(
                 identity: provider,
             }),
         },
-    };
+    });
 }
 
 describe('projects API', () => {

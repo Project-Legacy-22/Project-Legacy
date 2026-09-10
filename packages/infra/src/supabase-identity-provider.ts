@@ -8,6 +8,8 @@ import type {
     RegistrationOutcome,
     Session,
 } from '@legacy/core-auth';
+import { adapterFailure } from './adapter.js';
+import type { AdapterFailure } from './adapter.js';
 
 export interface SupabaseAuthSettings {
     url: string;
@@ -68,9 +70,7 @@ const EMAIL_RATE_LIMITED = 'over_email_send_rate_limit';
 
 // The cause is attached rather than interpolated: the provider's message can
 // carry the address that was submitted, and this error is going to be logged.
-function fail(operation: string, cause: unknown): never {
-    throw new Error(`identity provider: ${operation} failed`, { cause });
-}
+const fail: AdapterFailure = adapterFailure('identity provider');
 
 function accountOf(user: { id: string; email?: string | undefined }): Account {
     if (user.email === undefined) fail('identify', new Error('the provider returned no address'));

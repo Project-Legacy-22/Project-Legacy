@@ -19,7 +19,7 @@ function uuidOf(tail: string): string {
     return `01996f00-0000-7000-8000-${tail.padStart(12, '0')}`;
 }
 
-export function anAccount(overrides: Partial<ExportedAccount> = {}): ExportedAccount {
+function anAccount(overrides: Partial<ExportedAccount> = {}): ExportedAccount {
     return {
         id: uuidOf('1'),
         email: 'alice@example.com',
@@ -59,7 +59,7 @@ export function aProjectMembership(overrides: Partial<ExportedProjectMembership>
     };
 }
 
-export function aNotification(overrides: Partial<ExportedNotification> = {}): ExportedNotification {
+function aNotification(overrides: Partial<ExportedNotification> = {}): ExportedNotification {
     return {
         id: uuidOf('b'),
         itemId: uuidOf('a'),
