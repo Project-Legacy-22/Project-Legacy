@@ -3,6 +3,8 @@
 // anything itself would make the rules untestable without that dependency.
 
 export const MAX_ITEM_NAME_LENGTH = 255;
+export const ITEM_STATUSES = ['todo', 'doing', 'done'] as const;
+export type ItemStatus = (typeof ITEM_STATUSES)[number];
 
 export interface Item {
     id: string;
@@ -10,7 +12,17 @@ export interface Item {
     // validation existed are still there. The invariant below applies when an
     // item is created or changed, not when an existing one is read.
     name: string | null;
-    completed: boolean;
+    status: ItemStatus;
+    // Incremented on every write. A move names the version it observed so a
+    // concurrent move cannot be overwritten without being reported.
+    version: number;
+    projectId: string;
+    // Every item belongs to a user. The application is single-user for now
+    // (D-20), so this is always the system account, but the column is mandatory
+    // from day one so authentication (US-11) and erasure (US-13) do not force a
+    // model change later. A plain string, like `id`: branded id types are a
+    // separate cleanup, not this change.
+    ownerId: string;
 }
 
 export class DomainError extends Error {
@@ -36,6 +48,20 @@ export class ItemNotFound extends DomainError {
     }
 }
 
+export class ItemStatusConflict extends DomainError {
+    constructor(readonly itemId: string) {
+        super('item_status_conflict', 409, `Item ${itemId} was changed by another request`);
+    }
+}
+
+// A cursor handed back by a client is outside data like any other. The refusal
+// lives here so the error middleware finds it with the domain's other refusals.
+export class InvalidItemCursor extends DomainError {
+    constructor() {
+        super('invalid_item_cursor', 400, 'Item cursor was not issued by this API');
+    }
+}
+
 // Enforces the invariant. Every path that writes a name goes through here.
 export function itemName(candidate: string): string {
     const name = candidate.trim();
@@ -50,12 +76,41 @@ export function itemName(candidate: string): string {
     return name;
 }
 
-export function createItem(id: string, name: string): Item {
-    return { id, name: itemName(name), completed: false };
+export interface NewItem {
+    id: string;
+    name: string;
+    projectId: string;
+    ownerId: string;
+}
+
+export function createItem(candidate: NewItem): Item {
+    return { ...candidate, name: itemName(candidate.name), status: 'todo', version: 1 };
 }
 
 // Rebuilding an item from storage is not the same operation as creating one:
-// it must accept what is already persisted, including a null name.
-export function rehydrateItem(id: string, name: string | null, completed: boolean): Item {
-    return { id, name, completed };
+// it must accept what is already persisted, including a null name. A single
+// object rather than four positional arguments, so a row read back cannot be
+// passed in the wrong order.
+export function rehydrateItem(row: {
+    id: string;
+    name: string | null;
+    status: ItemStatus;
+    version: number;
+    projectId: string;
+    ownerId: string;
+}): Item {
+    return {
+        id: row.id,
+        name: row.name,
+        status: row.status,
+        version: row.version,
+        projectId: row.projectId,
+        ownerId: row.ownerId,
+    };
+}
+
+export class ItemProjectNotFound extends DomainError {
+    constructor(readonly projectId: string) {
+        super('project_not_found', 404, `Project ${projectId} not found`);
+    }
 }

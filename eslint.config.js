@@ -1,6 +1,5 @@
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
-import prettier from 'eslint-config-prettier';
 import globals from 'globals';
 
 // Complexity ceilings from standards/02-code-style.md section 4. Applied by
@@ -15,7 +14,15 @@ const complexity = {
 
 export default tseslint.config(
     {
-        ignores: ['**/dist/**', '**/coverage/**', '**/node_modules/**', 'apps/api/src/static/**'],
+        ignores: [
+            '**/dist/**',
+            '**/coverage/**',
+            '**/node_modules/**',
+            'apps/api/src/static/**',
+            // Generated from the database schema by `npm run db:types`. Its
+            // shape is the CLI's to decide, not ours to lint.
+            'packages/infra/src/database.types.ts',
+        ],
     },
     js.configs.recommended,
     // recommendedTypeChecked, not strictTypeChecked: standards/02-code-style.md
@@ -34,8 +41,12 @@ export default tseslint.config(
                 project: [
                     './packages/contracts/tsconfig.json',
                     './packages/core/items/tsconfig.json',
+                    './packages/core/auth/tsconfig.json',
                     './packages/infra/tsconfig.json',
                     './apps/api/tsconfig.json',
+                    // Le point d entree Vercel vit hors des espaces de travail.
+                    './api/tsconfig.json',
+                    './apps/worker/tsconfig.json',
                     // apps/web carries its own project: JSX, DOM libs and the
                     // Vite client types. Omitting it leaves every .tsx file
                     // outside a typed program, and the typed rules then report
@@ -83,20 +94,6 @@ export default tseslint.config(
         },
     },
     {
-        // Each function wraps one callback-style sqlite3/mysql2 driver call
-        // per repository operation; splitting further would trade one large
-        // function for several tiny ones that are only ever called once.
-        // Tracked as follow-up debt (revisit once the driver calls are
-        // promisified) rather than fixed here: out of EN-06's scope.
-        files: [
-            'packages/infra/src/sqlite-item-repository.ts',
-            'packages/infra/src/mysql-item-repository.ts',
-        ],
-        rules: {
-            'max-lines-per-function': 'off',
-        },
-    },
-    {
         // Code de test et son outillage. Les trois regles desactivees ici
         // visent des risques de production qui n existent pas en test.
         //
@@ -119,5 +116,4 @@ export default tseslint.config(
             'max-lines-per-function': 'off',
         },
     },
-    prettier,
 );

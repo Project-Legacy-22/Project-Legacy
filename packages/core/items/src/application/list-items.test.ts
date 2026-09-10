@@ -4,17 +4,86 @@ import { inMemoryItemRepository } from '../../test/fakes/in-memory-item-reposito
 import { anItem } from '../../test/builders/item.js';
 import { makeListItems } from './list-items.js';
 
-describe('listItems', () => {
-    it('renvoie les items persistes', async () => {
-        const items = [anItem({ id: 'item-1' }), anItem({ id: 'item-2' })];
-        const listItems = makeListItems(inMemoryItemRepository(items));
+const OWNER_ID = 'owner-1';
+const OTHER_OWNER_ID = 'owner-2';
+const PROJECT_ID = 'project-1';
+const OTHER_PROJECT_ID = 'project-2';
+const FIRST_PAGE = { limit: 10, cursor: undefined };
 
-        await expect(listItems()).resolves.toEqual(items);
+function threeItemsOf(ownerId: string) {
+    return [
+        anItem({ id: 'item-1', projectId: PROJECT_ID, ownerId }),
+        anItem({ id: 'item-2', projectId: PROJECT_ID, ownerId }),
+        anItem({ id: 'item-3', projectId: PROJECT_ID, ownerId }),
+    ];
+}
+
+describe('listItems', () => {
+    it('ne renvoie que les items du proprietaire demande', async () => {
+        const mine = anItem({
+            id: 'item-1',
+            projectId: PROJECT_ID,
+            ownerId: OWNER_ID,
+        });
+        const theirs = anItem({
+            id: 'item-2',
+            projectId: OTHER_PROJECT_ID,
+            ownerId: OTHER_OWNER_ID,
+        });
+        const listItems = makeListItems(inMemoryItemRepository([mine, theirs]));
+
+        const page = await listItems(PROJECT_ID, OWNER_ID, FIRST_PAGE);
+
+        // Le sien est present autant que celui de l autre est absent : sans
+        // quoi un filtre qui ne renvoie jamais rien passerait ce test.
+        expect(page.items).toEqual([mine]);
     });
 
-    it('renvoie une liste vide quand le depot est vide', async () => {
-        const listItems = makeListItems(inMemoryItemRepository());
+    it('renvoie une page vide quand le depot est vide', async () => {
+        const listItems = makeListItems(inMemoryItemRepository([], [{ projectId: PROJECT_ID, userId: OWNER_ID }]));
 
-        await expect(listItems()).resolves.toEqual([]);
+        await expect(listItems(PROJECT_ID, OWNER_ID, FIRST_PAGE)).resolves.toEqual({
+            items: [],
+            nextCursor: undefined,
+        });
+    });
+
+    it('sert la liste page par page sans repeter ni sauter un item', async () => {
+        const listItems = makeListItems(inMemoryItemRepository(threeItemsOf(OWNER_ID)));
+
+        const first = await listItems(PROJECT_ID, OWNER_ID, {
+            limit: 2,
+            cursor: undefined,
+        });
+        const second = await listItems(PROJECT_ID, OWNER_ID, {
+            limit: 2,
+            cursor: first.nextCursor,
+        });
+
+        expect(first.items.map((item) => item.id)).toEqual(['item-3', 'item-2']);
+        expect(second.items.map((item) => item.id)).toEqual(['item-1']);
+        expect(second.nextCursor).toBeUndefined();
+    });
+
+    it('permet a un membre de lire les items crees par un autre compte', async () => {
+        const shared = anItem({ projectId: PROJECT_ID, ownerId: OTHER_OWNER_ID });
+        const repository = inMemoryItemRepository([shared], [{ projectId: PROJECT_ID, userId: OWNER_ID }]);
+
+        const page = await makeListItems(repository)(PROJECT_ID, OWNER_ID, FIRST_PAGE);
+
+        expect(page.items).toEqual([shared]);
+    });
+
+    it('traite un non-membre comme un projet inexistant', async () => {
+        const repository = inMemoryItemRepository([anItem({ projectId: PROJECT_ID, ownerId: OTHER_OWNER_ID })]);
+
+        await expect(makeListItems(repository)(PROJECT_ID, OWNER_ID, FIRST_PAGE)).rejects.toMatchObject({
+            code: 'project_not_found',
+            httpStatus: 404,
+        });
+        await expect(makeListItems(repository)('missing-project', OWNER_ID, FIRST_PAGE)).rejects.toMatchObject({
+            code: 'project_not_found',
+            httpStatus: 404,
+        });
     });
 });

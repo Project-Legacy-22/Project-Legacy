@@ -29,3 +29,4 @@ logs/
 # Fichiers systeme
 .DS_Store
 Thumbs.db
+.vercel

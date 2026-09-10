@@ -1,0 +1,38 @@
+# La composition locale ne tient pas dans un seul fichier, et c est voulu : la
+# pile Supabase (base, PostgREST, Studio) est orchestree par le CLI Supabase,
+# qui gere ses propres conteneurs et applique les migrations au demarrage.
+# Redeclarer ces services ici les ferait diverger de ce que le CLI attend.
+#
+# Ce fichier declare donc ce que le CLI ne fournit pas : le broker retenu par
+# l ADR-0007. `npm run up` demarre les deux, puis l application par-dessus.
+
+services:
+    redis:
+        image: redis:8-alpine
+        restart: unless-stopped
+        ports:
+            # Expose sur la boucle locale uniquement : un broker sans
+            # authentification ne doit pas etre joignable depuis le reseau.
+            #
+            # Le port hote se surcharge par REDIS_PORT. Le port par defaut est
+            # celui de Redis, mais un poste qui fait deja tourner un Redis
+            # installe en dur ne peut pas le prendre : sans cette variable, la
+            # commande unique echouerait sur ces postes et il faudrait editer
+            # un fichier versionne pour s en sortir.
+            - '127.0.0.1:${REDIS_PORT:-6379}:6379'
+        # Journal d ajout active : les evenements encore en file survivent a un
+        # redemarrage. Sans lui, arreter le poste viderait la file, et la
+        # demonstration de US-10 perdrait justement ce qu elle doit montrer.
+        command: ['redis-server', '--appendonly', 'yes']
+        volumes:
+            - redis-data:/data
+        healthcheck:
+            test: ['CMD', 'redis-cli', 'ping']
+            interval: 5s
+            timeout: 3s
+            retries: 10
+
+volumes:
+    # Volume nomme, gere par Docker : aucun chemin absolu ni repertoire du poste
+    # n apparait ici, et les donnees survivent a `docker compose down`.
+    redis-data:

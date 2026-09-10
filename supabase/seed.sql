@@ -1,0 +1,6 @@
+-- Local development seed data, replayed by `supabase db reset`. It never runs on
+-- a remote database.
+--
+-- The system user that items.user_id depends on is created by the initial
+-- migration, not here, because it must exist in every environment. Demo tasks
+-- for local work belong to EN-43.

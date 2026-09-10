@@ -29,23 +29,55 @@ describe('itemName', () => {
 });
 
 describe('createItem', () => {
-    it('cree un item non termine avec le nom valide', () => {
-        const item = createItem('item-1', ' A task ');
+    it('cree un item non termine avec le nom valide et le proprietaire', () => {
+        const item = createItem({
+            id: 'item-1',
+            name: ' A task ',
+            projectId: 'project-1',
+            ownerId: 'owner-1',
+        });
 
-        expect(item).toEqual({ id: 'item-1', name: 'A task', completed: false });
+        expect(item).toEqual({
+            id: 'item-1',
+            name: 'A task',
+            status: 'todo',
+            version: 1,
+            projectId: 'project-1',
+            ownerId: 'owner-1',
+        });
     });
 
     it('propage le rejet d un nom invalide', () => {
-        const result = () => createItem('item-1', '');
+        const result = () =>
+            createItem({
+                id: 'item-1',
+                name: '',
+                projectId: 'project-1',
+                ownerId: 'owner-1',
+            });
 
         expect(result).toThrow(InvalidItemName);
     });
 });
 
 describe('rehydrateItem', () => {
-    it('accepte un nom nul venant du stockage', () => {
-        const item = rehydrateItem('item-1', null, true);
+    it('accepte un nom nul venant du stockage et conserve le proprietaire', () => {
+        const item = rehydrateItem({
+            id: 'item-1',
+            name: null,
+            status: 'doing',
+            version: 7,
+            projectId: 'project-1',
+            ownerId: 'owner-1',
+        });
 
-        expect(item).toEqual({ id: 'item-1', name: null, completed: true });
+        expect(item).toEqual({
+            id: 'item-1',
+            name: null,
+            status: 'doing',
+            version: 7,
+            projectId: 'project-1',
+            ownerId: 'owner-1',
+        });
     });
 });

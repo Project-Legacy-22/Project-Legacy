@@ -1,15 +1,20 @@
-import { ItemDto, ItemListDto, ProblemDetails } from '@legacy/contracts';
+import { DEFAULT_ITEM_PAGE_SIZE, ItemDto, ItemPageDto, ProblemDetails } from '@legacy/contracts';
 import type { CreateItemBody, UpdateItemBody } from '@legacy/contracts';
 
 import { labels } from '../labels';
 
-export type { ItemDto } from '@legacy/contracts';
+export type { ItemDto, ItemPageDto } from '@legacy/contracts';
+
+export interface ListItemsRequest {
+    signal: AbortSignal;
+    cursor?: string;
+}
 
 export interface ItemsApi {
-    listItems: (signal: AbortSignal) => Promise<readonly ItemDto[]>;
-    createItem: (body: CreateItemBody) => Promise<ItemDto>;
-    updateItem: (id: string, body: UpdateItemBody) => Promise<ItemDto>;
-    deleteItem: (id: string) => Promise<void>;
+    listItems: (projectId: string, request: ListItemsRequest) => Promise<ItemPageDto>;
+    createItem: (projectId: string, body: CreateItemBody) => Promise<ItemDto>;
+    updateItem: (projectId: string, id: string, body: UpdateItemBody) => Promise<ItemDto>;
+    deleteItem: (projectId: string, id: string) => Promise<void>;
 }
 
 export class ApiError extends Error {
@@ -22,17 +27,22 @@ export class ApiError extends Error {
     }
 }
 
-async function errorMessage(response: Response): Promise<string> {
+// Exported for the other API modules: every endpoint answers a failure with the
+// same problem document, so reading one is not the item client's own business.
+// The fallback is a parameter because a caller usually has a better sentence
+// than "the request failed" for the one operation it was attempting.
+export async function errorMessage(response: Response, fallback?: string): Promise<string> {
+    const generic = fallback ?? labels.requestFailed(response.status);
     try {
         const body: unknown = await response.json();
         const problem = ProblemDetails.safeParse(body);
-        return problem.success ? problem.data.detail : labels.requestFailed(response.status);
+        return problem.success ? problem.data.detail : generic;
     } catch {
-        return labels.requestFailed(response.status);
+        return generic;
     }
 }
 
-async function requestJson<T>(
+export async function requestJson<T>(
     input: string,
     init: RequestInit,
     parse: (value: unknown) => T,
@@ -51,25 +61,35 @@ async function requestJson<T>(
     }
 }
 
-const jsonHeaders = {
+export const jsonHeaders = {
     Accept: 'application/json',
     'Content-Type': 'application/json',
 };
 
+function itemsPath(projectId: string, cursor?: string): string {
+    const query = new URLSearchParams({ limit: String(DEFAULT_ITEM_PAGE_SIZE) });
+    if (cursor !== undefined) query.set('cursor', cursor);
+    return `/projects/${encodeURIComponent(projectId)}/items?${query.toString()}`;
+}
+
 export const itemsApi: ItemsApi = {
-    listItems(signal) {
-        return requestJson('/items', { headers: { Accept: 'application/json' }, signal }, value => {
-            const result = ItemListDto.safeParse(value);
-            if (!result.success) throw new ApiError(502, labels.invalidItemList);
-            return result.data;
-        });
+    listItems(projectId, { signal, cursor }) {
+        return requestJson(
+            itemsPath(projectId, cursor),
+            { headers: { Accept: 'application/json' }, signal },
+            (value) => {
+                const result = ItemPageDto.safeParse(value);
+                if (!result.success) throw new ApiError(502, labels.invalidItemList);
+                return result.data;
+            },
+        );
     },
 
-    createItem(body) {
+    createItem(projectId, body) {
         return requestJson(
-            '/items',
+            `/projects/${encodeURIComponent(projectId)}/items`,
             { method: 'POST', headers: jsonHeaders, body: JSON.stringify(body) },
-            value => {
+            (value) => {
                 const result = ItemDto.safeParse(value);
                 if (!result.success) throw new ApiError(502, labels.invalidItem);
                 return result.data;
@@ -77,11 +97,11 @@ export const itemsApi: ItemsApi = {
         );
     },
 
-    updateItem(id, body) {
+    updateItem(projectId, id, body) {
         return requestJson(
-            `/items/${encodeURIComponent(id)}`,
+            `/projects/${encodeURIComponent(projectId)}/items/${encodeURIComponent(id)}`,
             { method: 'PUT', headers: jsonHeaders, body: JSON.stringify(body) },
-            value => {
+            (value) => {
                 const result = ItemDto.safeParse(value);
                 if (!result.success) throw new ApiError(502, labels.invalidItem);
                 return result.data;
@@ -89,8 +109,8 @@ export const itemsApi: ItemsApi = {
         );
     },
 
-    async deleteItem(id) {
-        const response = await fetch(`/items/${encodeURIComponent(id)}`, {
+    async deleteItem(projectId, id) {
+        const response = await fetch(`/projects/${encodeURIComponent(projectId)}/items/${encodeURIComponent(id)}`, {
             method: 'DELETE',
             headers: { Accept: 'application/json' },
         });

@@ -19,10 +19,12 @@ const REDACTED = [
 // The destination is a parameter so a test can read back what was written and
 // assert that redaction actually happened. Left undefined, pino writes to
 // stdout exactly as before.
-export function createLogger(
-    level: string = process.env.LOG_LEVEL ?? 'info',
-    destination?: DestinationStream,
-): Logger {
+//
+// The level is received, never read from the environment. An adapter that
+// reaches for process.env puts a second source of configuration beside the
+// config module, and the two drift: the example file stops describing what the
+// application actually reads. The composition root passes what config parsed.
+export function createLogger(level = 'info', destination?: DestinationStream): Logger {
     const options = {
         level,
         redact: { paths: REDACTED, censor: '[redacted]' },

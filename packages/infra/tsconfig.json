@@ -8,12 +8,24 @@
   "include": [
     "src"
   ],
+  "exclude": [
+    "src/**/*.test.ts"
+  ],
   "references": [
     {
       "path": "../contracts"
     },
     {
       "path": "../core/items"
+    },
+    {
+      "path": "../core/auth"
+    },
+    {
+      "path": "../core/notifications"
+    },
+    {
+      "path": "../core/projects"
     }
   ]
 }

@@ -74,13 +74,9 @@ jobs:
       - name: Installer les dependances
         run: npm ci
 
-      # Les tests d integration (EN-25) auront besoin de Supabase local et de
-      # Redis. Les demarrer des maintenant couterait des minutes d Actions pour
-      # rien : aucun test ne les utilise encore. Le point d accroche est ici.
-      #
-      # - name: Demarrer les services
-      #   run: npx supabase start
-
+      # Les tests d integration (EN-25) tournent dans leur propre job : ils ont
+      # besoin de la pile Supabase locale, que ce job-ci n a aucune raison de
+      # payer pour npm test, execute a chaque changement.
       - name: Executer les tests
         run: npm test
 
@@ -119,6 +115,145 @@ jobs:
           path: coverage/
           retention-days: 7
           if-no-files-found: ignore
+
+  integration:
+    name: Tests d integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: verifier
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Installer les dependances
+        run: npm ci
+
+      # Applique aussi les migrations : c est le CLI, pas ce job, qui sait les
+      # rejouer dans l ordre attendu par la pile qu il demarre.
+      - name: Demarrer la pile Supabase locale
+        run: npx supabase start
+
+      # L application exige le broker au demarrage : sans lui elle remplirait
+      # une outbox que personne ne vide, et mieux vaut qu elle refuse de
+      # demarrer que de le decouvrir en production. Les tests d integration
+      # composent une vraie application, donc ils ont besoin du meme service.
+      # Meme declaration que le developpement local, pour que les deux
+      # environnements ne divergent pas.
+      - name: Demarrer le broker
+        run: docker compose up -d --wait redis
+
+      # Le CLI imprime API_URL / SERVICE_ROLE_KEY / ANON_KEY (format
+      # `CLE="valeur"`) ; scripts/up.mjs fait la meme lecture pour le
+      # developpement local. Ecrites dans GITHUB_ENV, les etapes suivantes du
+      # job les recoivent sans qu aucun secret ne soit imprime : ce sont des
+      # cles locales, generees pour cette pile ephemere.
+      - name: Lire les coordonnees de la pile
+        run: |
+          set -euo pipefail
+          while IFS='=' read -r key value; do
+            valeur="${value%\"}"; valeur="${valeur#\"}"
+            case "$key" in
+              API_URL) echo "SUPABASE_URL=$valeur" >> "$GITHUB_ENV" ;;
+              SERVICE_ROLE_KEY) echo "SUPABASE_SERVICE_ROLE_KEY=$valeur" >> "$GITHUB_ENV" ;;
+              ANON_KEY) echo "SUPABASE_ANON_KEY=$valeur" >> "$GITHUB_ENV" ;;
+            esac
+          done < <(npx supabase status -o env)
+          # Le broker est publie sur la boucle locale par compose.yaml, au port
+          # par defaut : aucun autre Redis ne tourne sur un runner.
+          echo "REDIS_URL=redis://127.0.0.1:6379" >> "$GITHUB_ENV"
+
+      - name: Executer les tests d integration
+        run: |
+          set -euo pipefail
+          debut=$(date +%s)
+          npm run test:integration
+          duree=$(( $(date +%s) - debut ))
+          echo "## Tests d integration" >> "$GITHUB_STEP_SUMMARY"
+          echo "Duree : ${duree}s" >> "$GITHUB_STEP_SUMMARY"
+
+  qualite:
+    name: Qualite (SonarCloud)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: tester
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Un clone superficiel degraderait la pertinence de l analyse
+          # (blame, comparaison du diff de la pull request).
+          fetch-depth: 0
+
+      - name: Recuperer le rapport de couverture
+        uses: actions/download-artifact@v7
+        with:
+          name: couverture
+          path: coverage/
+
+      # sonar-project.properties porte la configuration : organisation, cle du
+      # projet, sources, et le chemin vers coverage/lcov.info recupere
+      # ci-dessus. Le gate applique ("Sonar way", seuils documentes dans l ADR
+      # correspondant) est impose par le plan gratuit de l organisation :
+      # aucun gate personnalise n y est selectionnable.
+      #
+      # sonar.qualitygate.wait fait attendre le verdict du gate et rend un code
+      # de sortie non nul quand il echoue. Sans lui, ce job ne signalait que
+      # l echec du scan : le gate lui-meme n etait bloquant que par le controle
+      # que SonarCloud publie de son cote, et ce controle n apparait jamais sur
+      # une pull request de Dependabot. Le rendre bloquant ici, c est le rendre
+      # bloquant partout, et cesser de dependre d un contexte externe.
+      #
+      # La condition porte sur l etape et non sur le job. Sauter le job entier le
+      # fait conclure en "skipped", et un controle requis saute n est pas
+      # satisfait par GitHub : la pull request passerait de rouge a bloquee.
+      - name: Analyser avec SonarCloud
+        if: github.actor != 'dependabot[bot]'
+        uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f # v8.2.1
+        with:
+          args: -Dsonar.qualitygate.wait=true
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      # Dependabot lit un magasin de secrets distinct, ou le jeton en place est
+      # refuse par SonarCloud. Plutot que de laisser un job rouge que personne ne
+      # peut corriger depuis une pull request de bot, on dit pourquoi l analyse
+      # n a pas tourne. Ces changements restent juges par leurs tests, leur
+      # build et CodeQL.
+      - name: Dire pourquoi l analyse n a pas tourne
+        if: github.actor == 'dependabot[bot]'
+        run: |
+          echo "## Qualite" >> "$GITHUB_STEP_SUMMARY"
+          echo "Analyse non executee : le jeton du magasin Dependabot est refuse par SonarCloud." >> "$GITHUB_STEP_SUMMARY"
+          echo "Le changement reste juge sur ses tests, son build et CodeQL." >> "$GITHUB_STEP_SUMMARY"
+
+  audit:
+    name: Audit des dependances
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: verifier
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Installer les dependances
+        run: npm ci
+
+      # L env global pose npm_config_audit a false pour taire l audit
+      # automatique de npm ci ; il est reactive ici, pour la commande explicite.
+      # --audit-level=high : une vulnerabilite haute ou critique fait echouer le
+      # job et donc le merge (standards/07-quality-gates.md section 5). Les
+      # niveaux inferieurs sont rapportes sans bloquer.
+      - name: Auditer les dependances
+        run: npm audit --audit-level=high
+        env:
+          npm_config_audit: 'true'
 
   construire:
     name: Build
@@ -167,27 +302,21 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # Une image qui se construit mais ne demarre pas ne prouve rien.
-      - name: Verifier qu elle demarre et repond
+      # Le smoke test HTTP complet exige un backend Supabase joignable : depuis
+      # EN-09 l API sonde la base au demarrage et s arrete si elle est absente
+      # (choix delibere, apps/api/src/config.ts et composition-root.ts). Tant que
+      # la pile Supabase locale n est pas demarree en CI -- prevu avec EN-25, cf.
+      # ADR-0004 qui reserve ce cout d Actions aux tests d integration reels --
+      # ce job construit l image et verifie sa forme. Le job base-de-donnees
+      # ci-dessous exerce les migrations. Restauration du smoke suivie par #114.
+      - name: Verifier que l image est bien formee et demarrable
         run: |
           set -euo pipefail
-          docker run -d --name verif -p 3000:3000 \
-            -e SQLITE_DB_LOCATION=/tmp/todo.db legacy-todo:ci
-          for tentative in $(seq 1 20); do
-            if curl -fsS -o /dev/null http://127.0.0.1:3000/items; then
-              echo "L API repond apres $tentative tentative(s)."
-              break
-            fi
-            if [ "$tentative" -eq 20 ]; then
-              echo "::error::L image n a pas repondu en vingt secondes."
-              docker logs verif
-              exit 1
-            fi
-            sleep 1
-          done
-          curl -fsS -o /dev/null http://127.0.0.1:3000/ \
-            || { echo "::error::Le front n est pas servi par l image."; exit 1; }
-          docker rm -f verif >/dev/null
+          conteneur="$(docker create legacy-todo:ci)"
+          docker rm "$conteneur" >/dev/null
+          commande="$(docker image inspect legacy-todo:ci --format '{{json .Config.Cmd}}')"
+          echo "Commande de l image : $commande"
+          echo "$commande" | grep -q 'apps/api/dist/index.js'
 
       - name: Verifier qu elle ne tourne pas en root
         run: |
@@ -198,3 +327,95 @@ jobs:
             exit 1
           fi
           echo "Utilisateur de l image : $utilisateur"
+
+  base-de-donnees:
+    name: Migrations et schema
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: verifier
+    # Un PostgreSQL nu, pas la pile Supabase : le point verifie est que les
+    # migrations s appliquent depuis une base vide et produisent le schema
+    # attendu. Le SQL des migrations est du PostgreSQL standard, il n a pas
+    # besoin de PostgREST ni de l authentification pour etre exerce. Demarrer la
+    # pile complete est reserve aux tests d integration (EN-25, ADR-0004).
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: '5432'
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: postgres
+    steps:
+      - uses: actions/checkout@v7
+
+      # Depuis US-11 les migrations dependent du schema auth de Supabase : le
+      # miroir de auth.users et les politiques qui appellent auth.uid()
+      # (ADR-0008). Un PostgreSQL nu ne l a pas. On pose ici le strict minimum
+      # dont les migrations ont besoin, pas une imitation de GoTrue : le
+      # comportement du fournisseur n est pas exerce dans ce job. Le jour ou ce
+      # fac-simile ne suffit plus, c est que le job doit demarrer la pile
+      # Supabase, ce que l ADR-0004 reserve aux tests d integration (EN-25).
+      - name: Poser le schema auth minimal attendu par les migrations
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          create schema if not exists auth;
+          -- raw_user_meta_data porte le consentement que le miroir lit depuis
+          -- 20260910110000. Le fac-simile s en passait tant qu aucun controle
+          -- n inserait dans auth.users ; les assertions d effacement de US-16 le
+          -- font, et le declencheur echouait alors sur une colonne absente.
+          create table if not exists auth.users (
+            id uuid primary key,
+            email text,
+            raw_user_meta_data jsonb
+          );
+          create or replace function auth.uid() returns uuid
+          language sql stable
+          as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+          -- Les trois roles que Supabase fournit, pas seulement celui dont les
+          -- migrations d aujourd hui se servent. Une migration qui accorde des
+          -- droits a anon ou service_role est valide sur un vrai projet ; ne
+          -- creer qu authenticated la faisait echouer ici sur "role does not
+          -- exist", c est-a-dire sur un manque de la CI et non sur une faute.
+          do $$
+          declare
+            role_name text;
+          begin
+            foreach role_name in array array['anon', 'authenticated', 'service_role'] loop
+              if not exists (select from pg_roles where rolname = role_name) then
+                execute format('create role %I', role_name);
+              end if;
+            end loop;
+          end
+          $$;
+          SQL
+
+      # Ordre lexical = ordre d application, comme le fait la CLI Supabase.
+      # ON_ERROR_STOP fait echouer le job a la premiere instruction rejetee.
+      - name: Appliquer les migrations sur une base vide
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          fichiers=(supabase/migrations/*.sql)
+          if [ ${#fichiers[@]} -eq 0 ]; then
+            echo "::error::Aucune migration dans supabase/migrations."
+            exit 1
+          fi
+          for f in "${fichiers[@]}"; do
+            echo "== $f"
+            psql -v ON_ERROR_STOP=1 -f "$f"
+          done
+
+      - name: Verifier les garanties structurelles du schema
+        run: psql -v ON_ERROR_STOP=1 -f scripts/check-schema.sql

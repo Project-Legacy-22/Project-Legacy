@@ -1,0 +1,16 @@
+{
+  "name": "@legacy/core-auth",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@legacy/contracts": "*"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "development": "./src/index.ts",
+      "default": "./dist/index.js"
+    }
+  }
+}

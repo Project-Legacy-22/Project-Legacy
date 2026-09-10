@@ -23,6 +23,15 @@
       "path": "../../packages/core/items"
     },
     {
+      "path": "../../packages/core/auth"
+    },
+    {
+      "path": "../../packages/core/notifications"
+    },
+    {
+      "path": "../../packages/core/projects"
+    },
+    {
       "path": "../../packages/infra"
     }
   ]

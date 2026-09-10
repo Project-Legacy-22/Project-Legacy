@@ -1,61 +1,99 @@
-import fs from 'node:fs';
 import path from 'node:path';
 
+import { z } from 'zod';
+
 // The only module allowed to read process.env. Everything else receives typed
-// values, so no part of the code has to guess whether a variable was set.
+// values, so no part of the code has to guess whether a variable was set, and
+// a reader looking for what the application expects has one file to open.
+//
+// The persistence target is a single Supabase project reached over HTTPS. The
+// connection is fully described by a URL and two keys, one per adapter.
 
-export interface SqlitePersistenceConfig {
-    driver: 'sqlite';
-    location: string;
-}
+// The levels pino accepts. Enumerating them rather than taking a free string
+// makes a typo fail at startup, naming the variable, instead of reaching pino
+// and configuring a logger nobody asked for.
+const LOG_LEVELS = ['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'] as const;
 
-export interface MysqlPersistenceConfig {
-    driver: 'mysql';
-    host: string;
-    user: string | undefined;
-    password: string | undefined;
-    database: string | undefined;
-}
+const EnvSchema = z.object({
+    SUPABASE_URL: z.string().url(),
+    // Read by the data adapter. It bypasses row-level security, so it never
+    // leaves the server.
+    SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+    // Read by the authentication adapter. Public by design: it is the key a
+    // browser would carry, and what it can reach is what the policies allow.
+    SUPABASE_ANON_KEY: z.string().min(1),
+    // The broker of ADR-0007, and the transport the notification flow will keep
+    // using. Required by whoever relays or consumes -- start() refuses to boot
+    // without it, so a long-running process still cannot fill the outbox with
+    // events nobody delivers.
+    //
+    // Optional in the schema because serving HTTP does not need it: no route
+    // touches the bus, only start() and stop() do. A serverless function that
+    // never relays was refusing to load over a variable it would not have
+    // used, which took the whole deployment down -- /auth/me answered 500 and
+    // the interface said it could not check the session.
+    REDIS_URL: z.string().url().optional(),
+    // Optional: absent, it is `info`. An optional variable is declared here
+    // like every other one, otherwise its default ends up scattered across the
+    // code that consumes it and the example file stops being the reference.
+    LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
+    // Optional: absent, it is `development`. One thing depends on it, the
+    // Secure flag of the session cookie, which a browser drops over plain
+    // http -- and plain http is how the application is served in development.
+    NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+    // The one browser origin allowed to make a cross-origin call. The front is
+    // served from the API's own origin in every environment (the dev proxy
+    // forwards /auth and /items), so this is only ever consulted to refuse
+    // everything else. Optional: absent, it is the Vite dev server. Production
+    // sets the deployed origin. Never a wildcard.
+    WEB_ORIGIN: z.string().url().default('http://localhost:5173'),
+    // How many proxy hops in front of the process to trust when deriving the
+    // caller's address. That address is the rate limiter's client key, so a
+    // wrong value here either lets one client past the limit or lumps every
+    // client behind the proxy into one bucket. Optional: absent, it is 0, which
+    // trusts no forwarded header -- correct for a direct connection and for
+    // development. Behind one reverse proxy in production, set it to 1.
+    TRUST_PROXY: z.coerce.number().int().min(0).default(0),
+});
 
-export type PersistenceConfig = SqlitePersistenceConfig | MysqlPersistenceConfig;
+export type LogLevel = (typeof LOG_LEVELS)[number];
 
 export interface Config {
     port: number;
     staticDir: string;
-    persistence: PersistenceConfig;
-}
-
-// The *_FILE variants are Docker secrets: the variable holds a path to read,
-// not the value itself.
-function readSetting(file: string | undefined, value: string | undefined): string | undefined {
-    return file ? fs.readFileSync(file, 'utf8') : value;
-}
-
-function readPersistence(env: NodeJS.ProcessEnv): PersistenceConfig {
-    const host = readSetting(env.MYSQL_HOST_FILE, env.MYSQL_HOST);
-
-    if (host === undefined) {
-        return {
-            driver: 'sqlite',
-            location: env.SQLITE_DB_LOCATION ?? '/etc/todos/todo.db',
-        };
-    }
-
-    return {
-        driver: 'mysql',
-        host,
-        user: readSetting(env.MYSQL_USER_FILE, env.MYSQL_USER),
-        password: readSetting(env.MYSQL_PASSWORD_FILE, env.MYSQL_PASSWORD),
-        database: readSetting(env.MYSQL_DB_FILE, env.MYSQL_DB),
-    };
+    supabaseUrl: string;
+    supabaseServiceRoleKey: string;
+    supabaseAnonKey: string;
+    logLevel: LogLevel;
+    secureCookies: boolean;
+    redisUrl: string | undefined;
+    webOrigin: string;
+    trustProxy: number;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
+    const parsed = EnvSchema.safeParse(env);
+
+    if (!parsed.success) {
+        // Name every offending variable and refuse to start. A misconfigured
+        // process that boots and fails on the first request is harder to
+        // diagnose than one that never boots.
+        const missing = parsed.error.issues.map(issue => issue.path.join('.')).join(', ');
+        throw new Error(`Invalid environment: ${missing}`);
+    }
+
     return {
         port: 3000,
         // Vite writes its production bundle next to the compiled API output.
         // During development the web app is served separately by Vite.
         staticDir: path.join(import.meta.dirname, 'static'),
-        persistence: readPersistence(env),
+        supabaseUrl: parsed.data.SUPABASE_URL,
+        supabaseServiceRoleKey: parsed.data.SUPABASE_SERVICE_ROLE_KEY,
+        supabaseAnonKey: parsed.data.SUPABASE_ANON_KEY,
+        logLevel: parsed.data.LOG_LEVEL,
+        redisUrl: parsed.data.REDIS_URL,
+        secureCookies: parsed.data.NODE_ENV === 'production',
+        webOrigin: parsed.data.WEB_ORIGIN,
+        trustProxy: parsed.data.TRUST_PROXY,
     };
 }

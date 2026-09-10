@@ -1,0 +1,22 @@
+{
+    "$schema": "https://openapi.vercel.sh/vercel.json",
+    "framework": "vite",
+    "installCommand": "npm ci --include=dev",
+    "buildCommand": "npm run build",
+    "outputDirectory": "apps/api/dist/static",
+    "rewrites": [
+        {
+            "source": "/auth/(.*)",
+            "destination": "/api"
+        },
+        {
+            "source": "/items(.*)",
+            "destination": "/api"
+        },
+        {
+            "source": "/notifications(.*)",
+            "destination": "/api"
+        }
+    ],
+    "ignoreCommand": "if [ -z \"$VERCEL_GIT_PREVIOUS_SHA\" ] || [ \"$VERCEL_GIT_PREVIOUS_SHA\" = \"$VERCEL_GIT_COMMIT_SHA\" ]; then exit 1; fi; git diff --quiet \"$VERCEL_GIT_PREVIOUS_SHA\" HEAD -- api apps packages package-lock.json vercel.json || exit 1; exit 0"
+}

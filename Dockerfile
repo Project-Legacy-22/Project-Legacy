@@ -12,11 +12,6 @@ ARG NODE_VERSION=22.12
 FROM node:${NODE_VERSION}-alpine AS deps
 WORKDIR /app
 
-# sqlite3 se compile depuis les sources sur musl, faute de binaire preconstruit.
-# La chaine de compilation reste dans cette etape et n atteint jamais l image
-# finale. Elle disparaitra avec EN-09, quand Supabase remplacera SQLite.
-RUN apk add --no-cache python3 make g++
-
 # Les manifestes sont copies avant le reste du code : tant qu ils ne changent
 # pas, Docker reutilise la couche d installation, qui est de loin la plus longue.
 COPY package.json package-lock.json ./
@@ -24,6 +19,7 @@ COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
 COPY packages/contracts/package.json packages/contracts/
 COPY packages/core/items/package.json packages/core/items/
+COPY apps/worker/package.json apps/worker/
 COPY packages/infra/package.json packages/infra/
 
 RUN npm ci --omit=dev
@@ -32,13 +28,12 @@ RUN npm ci --omit=dev
 FROM node:${NODE_VERSION}-alpine AS builder
 WORKDIR /app
 
-RUN apk add --no-cache python3 make g++
-
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
 COPY packages/contracts/package.json packages/contracts/
 COPY packages/core/items/package.json packages/core/items/
+COPY apps/worker/package.json apps/worker/
 COPY packages/infra/package.json packages/infra/
 RUN npm ci
 
@@ -60,6 +55,11 @@ USER node
 COPY --chown=node:node --from=deps /app/node_modules ./node_modules
 COPY --chown=node:node --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --chown=node:node --from=builder /app/apps/api/package.json ./apps/api/
+# Le consommateur d evenements voyage dans la meme image que l API : un seul
+# artefact a publier et a versionner, deux commandes pour le demarrer. Sans lui,
+# l image contient un producteur dont personne ne vide la file.
+COPY --chown=node:node --from=builder /app/apps/worker/dist ./apps/worker/dist
+COPY --chown=node:node --from=builder /app/apps/worker/package.json ./apps/worker/
 COPY --chown=node:node --from=builder /app/packages/contracts/dist ./packages/contracts/dist
 COPY --chown=node:node --from=builder /app/packages/contracts/package.json ./packages/contracts/
 COPY --chown=node:node --from=builder /app/packages/core/items/dist ./packages/core/items/dist
@@ -71,4 +71,9 @@ COPY --chown=node:node package.json ./
 # Documente le port ecoute ; le port reel se configure par l environnement.
 EXPOSE 3000
 
+# L API par defaut. Le worker se lance depuis la meme image en remplacant la
+# commande :
+#   docker run --entrypoint node <image> apps/worker/dist/index.js
+# Deux processus distincts, ce que l ADR-0007 demande, sans deuxieme image a
+# construire et a garder synchronisee.
 CMD ["node", "apps/api/dist/index.js"]

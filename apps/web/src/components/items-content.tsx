@@ -1,30 +1,39 @@
 import type { ItemDto } from '../api/items-api';
 import { labels } from '../labels';
-import type { ItemsLoadState } from '../hooks/use-items';
-import { ItemRow } from './item-row';
+import type { ItemsLoadState, ItemsPaginationState } from '../hooks/use-items';
+import { ItemsList } from './items-list';
+import { ItemsPagination } from './items-pagination';
 
 export interface ItemsContentProps {
     items: readonly ItemDto[];
     loadState: ItemsLoadState;
     pendingItemIds: ReadonlySet<string>;
+    hasNextPage: boolean;
+    paginationState: ItemsPaginationState;
     onToggle: (item: ItemDto) => Promise<void>;
+    onRename: (item: ItemDto, name: string) => Promise<boolean>;
     onRemove: (item: ItemDto) => Promise<boolean>;
+    onLoadMore: () => void;
     onRetry: () => void;
+}
+
+function retryItems(onRetry: () => void): void {
+    onRetry();
+    document.querySelector<HTMLElement>('#items-heading')?.focus();
 }
 
 export function ItemsContent({
     items,
     loadState,
     pendingItemIds,
+    hasNextPage,
+    paginationState,
     onToggle,
+    onRename,
     onRemove,
+    onLoadMore,
     onRetry,
 }: ItemsContentProps) {
-    const handleRetry = () => {
-        onRetry();
-        document.querySelector<HTMLElement>('#items-heading')?.focus();
-    };
-
     if (loadState.status === 'loading') {
         return (
             <p className="status-message" role="status">
@@ -37,7 +46,7 @@ export function ItemsContent({
         return (
             <div className="error-message" role="alert">
                 <p>{loadState.message}</p>
-                <button className="button button-secondary" type="button" onClick={handleRetry}>
+                <button className="button button-secondary" type="button" onClick={() => retryItems(onRetry)}>
                     {labels.retry}
                 </button>
             </div>
@@ -47,16 +56,19 @@ export function ItemsContent({
     if (items.length === 0) return <p className="empty-message">{labels.emptyItems}</p>;
 
     return (
-        <ul className="todo-list">
-            {items.map(item => (
-                <ItemRow
-                    key={item.id}
-                    item={item}
-                    isPending={pendingItemIds.has(item.id)}
-                    onToggle={onToggle}
-                    onRemove={onRemove}
-                />
-            ))}
-        </ul>
+        <>
+            <ItemsList
+                items={items}
+                pendingItemIds={pendingItemIds}
+                onToggle={onToggle}
+                onRename={onRename}
+                onRemove={onRemove}
+            />
+            <ItemsPagination
+                hasNextPage={hasNextPage}
+                state={paginationState}
+                onLoadMore={onLoadMore}
+            />
+        </>
     );
 }

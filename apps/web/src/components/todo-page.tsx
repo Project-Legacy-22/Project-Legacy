@@ -1,10 +1,15 @@
+import type { ReactNode } from 'react';
+
 import type { ItemDto } from '../api/items-api';
+import type { ProjectDto } from '../api/projects-api';
 import { labels } from '../labels';
-import type { AddItemResult, ItemActionFeedback, ItemsLoadState } from '../hooks/use-items';
+import type { AddItemResult, ItemActionFeedback, ItemsLoadState, ItemsPaginationState } from '../hooks/use-items';
 import { ActionFeedback } from './action-feedback';
 import { AddItemSection } from './add-item-section';
 import { ItemsSection } from './items-section';
 import { PageHeader } from './page-header';
+import { ProjectsSection } from './projects-section';
+import type { ProjectsSectionProps } from './projects-section';
 
 export interface TodoPageProps {
     items: readonly ItemDto[];
@@ -12,10 +17,21 @@ export interface TodoPageProps {
     feedback: ItemActionFeedback;
     isAdding: boolean;
     pendingItemIds: ReadonlySet<string>;
+    hasNextPage: boolean;
+    paginationState: ItemsPaginationState;
     onAdd: (name: string) => Promise<AddItemResult>;
     onToggle: (item: ItemDto) => Promise<void>;
+    onRename: (item: ItemDto, name: string) => Promise<boolean>;
     onRemove: (item: ItemDto) => Promise<boolean>;
+    onLoadMore: () => void;
     onRetry: () => void;
+    // Sections this page does not own, rendered inside its main landmark. The
+    // alternative was to place them after the page, which would leave content
+    // outside every landmark and out of reach of a screen reader navigating by
+    // region.
+    children?: ReactNode;
+    projects: ProjectsSectionProps;
+    selectedProject: ProjectDto | null;
 }
 
 export function TodoPage(props: TodoPageProps) {
@@ -28,20 +44,32 @@ export function TodoPage(props: TodoPageProps) {
             </a>
             <PageHeader />
             <main id="main-content" className="main-content" tabIndex={-1}>
-                <AddItemSection
-                    isAdding={props.isAdding}
-                    isDisabled={isMutationDisabled}
-                    onAdd={props.onAdd}
-                />
-                <ItemsSection
-                    items={props.items}
-                    loadState={props.loadState}
-                    pendingItemIds={props.pendingItemIds}
-                    onToggle={props.onToggle}
-                    onRemove={props.onRemove}
-                    onRetry={props.onRetry}
-                />
+                <ProjectsSection {...props.projects} />
+                {props.selectedProject === null ? (
+                    <section className="panel" aria-labelledby="no-project-heading">
+                        <h2 id="no-project-heading">{labels.itemsTitle}</h2>
+                        <p className="empty-message">{labels.selectProject}</p>
+                    </section>
+                ) : (
+                    <>
+                        <AddItemSection isAdding={props.isAdding} isDisabled={isMutationDisabled} onAdd={props.onAdd} />
+                        <ItemsSection
+                            projectName={props.selectedProject.name}
+                            items={props.items}
+                            loadState={props.loadState}
+                            pendingItemIds={props.pendingItemIds}
+                            hasNextPage={props.hasNextPage}
+                            paginationState={props.paginationState}
+                            onToggle={props.onToggle}
+                            onRename={props.onRename}
+                            onRemove={props.onRemove}
+                            onLoadMore={props.onLoadMore}
+                            onRetry={props.onRetry}
+                        />
+                    </>
+                )}
                 <ActionFeedback feedback={props.feedback} />
+                {props.children}
             </main>
         </div>
     );
