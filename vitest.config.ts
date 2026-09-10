@@ -1,5 +1,7 @@
 import { defineConfig } from 'vitest/config';
 
+import { LEVELS } from './vitest.levels.js';
+
 export default defineConfig({
     resolve: {
         // Matches the `--conditions=development` flag the dev script passes to
@@ -8,26 +10,48 @@ export default defineConfig({
         conditions: ['development'],
     },
     test: {
-        // Two runtimes, one command, one coverage report. Splitting `test` into
-        // a Node run and a web run would produce two partial reports, and any
-        // threshold read from either would be meaningless.
+        // One command, one coverage report. Splitting `test` itself into
+        // several runs would produce partial reports, and any threshold read
+        // from either would be meaningless -- so the projects below are a way
+        // to run one level alone, never a way to split `npm test`.
+        //
+        // They are named after the level they belong to, not the runtime they
+        // need: `node` and `jsdom` describe an environment, which says nothing
+        // about what a test may assume. docs/testing-levels.md holds the
+        // classification.
         projects: [
             {
                 extends: true,
                 test: {
-                    name: 'node',
-                    include: ['apps/api/**/*.test.ts', 'packages/**/*.test.ts'],
-                    // Its own suite, its own config (vitest.integration.config.ts):
-                    // it needs the local Supabase stack, which npm test must not
-                    // require on every change.
-                    exclude: ['apps/api/test/integration/**'],
+                    // No server, no real service, everything behind a port is a
+                    // hand-written fake. Domain and application cases, the
+                    // shared contracts, the outbound adapters against fakes,
+                    // and the pure helpers of apps/api.
+                    name: 'unit',
+                    include: [...LEVELS.unit],
+                    environment: 'node',
+                },
+            },
+            {
+                extends: true,
+                test: {
+                    // A real Express server on port 0, queried by fetch, with
+                    // fakes behind the ports. Slower than a unit test and
+                    // deliberately so: it is the wiring of a route that is
+                    // under test, not the rule it delegates to.
+                    name: 'http',
+                    include: [...LEVELS.http],
                     environment: 'node',
                 },
             },
             // Referenced by directory so apps/web keeps owning its own runtime
             // setup: jsdom, mock clearing, and whatever its Vite config adds.
+            // Its name is set there, next to that setup.
             './apps/web',
         ],
+        // apps/api/test/integration/** appears in no project above: it has its
+        // own config (vitest.integration.config.ts) because it needs the local
+        // Supabase stack, which npm test must not require on every change.
         coverage: {
             provider: 'v8',
             // text pour la console, html pour l inspection locale,
