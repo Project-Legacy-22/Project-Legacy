@@ -6,6 +6,8 @@ import { authApi } from './api/auth-api';
 import type { AuthApi } from './api/auth-api';
 import { itemsApi } from './api/items-api';
 import type { ItemsApi } from './api/items-api';
+import { notificationsApi } from './api/notifications-api';
+import type { NotificationsApi } from './api/notifications-api';
 import { projectsApi } from './api/projects-api';
 import type { ProjectsApi } from './api/projects-api';
 import { AuthPage } from './components/auth-page';
@@ -13,6 +15,7 @@ import { PersonalDataSection } from './components/personal-data-section';
 import { ResetPasswordPage } from './components/reset-password-page';
 import { TodoPage } from './components/todo-page';
 import { useItems } from './hooks/use-items';
+import { useNotifications } from './hooks/use-notifications';
 import { usePersonalData } from './hooks/use-personal-data';
 import { useSession } from './hooks/use-session';
 import { useProjects } from './hooks/use-projects';
@@ -32,6 +35,7 @@ export interface AppProps {
     api?: ItemsApi;
     auth?: AuthApi;
     account?: AccountApi;
+    notifications?: NotificationsApi;
     // Injected so a test can assert on what a download would have contained
     // without a jsdom that implements object URLs.
     save?: SaveFile;
@@ -41,6 +45,7 @@ export interface AppProps {
 interface SignedInAppProps {
     api: ItemsApi;
     account: AccountApi;
+    notifications: NotificationsApi;
     save: SaveFile;
     projectsApi: ProjectsApi;
     email: string;
@@ -49,14 +54,20 @@ interface SignedInAppProps {
 
 function useProjectItems(api: ItemsApi, projects: ReturnType<typeof useProjects>) {
     const items = useItems(api, projects.selectedProjectId);
+
     const addItem = async (name: string) => {
         const result = await items.addItem(name);
-        if (result.status === 'success') projects.adjustSelectedItemCount(1);
+        if (result.status === 'success') {
+            projects.adjustSelectedItemCount(1);
+        }
         return result;
     };
+
     const removeItem = async (item: Parameters<typeof items.removeItem>[0]) => {
         const removed = await items.removeItem(item);
-        if (removed) projects.adjustSelectedItemCount(-1);
+        if (removed) {
+            projects.adjustSelectedItemCount(-1);
+        }
         return removed;
     };
 
@@ -84,14 +95,23 @@ function projectSectionProps(projects: ReturnType<typeof useProjects>) {
 // The items screen is mounted in its own component so its data is only fetched
 // once there is a session. Rendering it behind a condition in App would run its
 // hooks anyway and fire a request that can only come back 401.
-function SignedInApp({ api, account, save, projectsApi, email, onDeleted }: SignedInAppProps) {
+function SignedInApp({ api, account, notifications, save, projectsApi, email, onDeleted }: SignedInAppProps) {
     const projects = useProjects(projectsApi);
     const items = useProjectItems(api, projects);
     const personalData = usePersonalData({ api: account, save, onDeleted });
+    const unread = useNotifications(notifications, true);
 
     return (
         <>
-            <p className="session-banner">{labels.signedInAs(email)}</p>
+            <p className="session-banner">
+                {labels.signedInAs(email)}
+                {/* role="status" : le compte change tout seul, quand le worker a
+                    traite l evenement. L annoncer sans interrompre la lecture est
+                    exactement ce pour quoi ce role existe. */}
+                <span className="notification-badge" role="status">
+                    {labels.unreadNotifications(unread)}
+                </span>
+            </p>
             <TodoPage
                 items={items.items}
                 loadState={items.loadState}
@@ -124,6 +144,7 @@ export function App({
     api = itemsApi,
     auth = authApi,
     account = accountApi,
+    notifications = notificationsApi,
     save = saveFile,
     projects = projectsApi,
 }: AppProps) {
@@ -177,6 +198,7 @@ export function App({
         <SignedInApp
             api={api}
             account={account}
+            notifications={notifications}
             save={save}
             projectsApi={projects}
             email={session.state.account.email}

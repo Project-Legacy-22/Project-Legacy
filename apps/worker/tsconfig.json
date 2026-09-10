@@ -13,16 +13,10 @@
   ],
   "references": [
     {
-      "path": "../contracts"
+      "path": "../../packages/contracts"
     },
     {
-      "path": "../core/items"
-    },
-    {
-      "path": "../core/auth"
-    },
-    {
-      "path": "../core/projects"
+      "path": "../../packages/infra"
     }
   ]
 }

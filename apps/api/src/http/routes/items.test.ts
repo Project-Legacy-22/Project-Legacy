@@ -10,7 +10,7 @@ import type {
 
 import { createServer } from '../server.js';
 import { SESSION_COOKIE } from '../session.js';
-import { recordingLogger } from '../../../test/fakes/recording-logger.js';
+import { recordingLogger } from '../../../../../packages/contracts/test/fakes/recording-logger.js';
 import { json, listen, testConfig } from '../../../test/http-harness.js';
 import type { Harness } from '../../../test/http-harness.js';
 import { makeItemRouteUseCases } from '../../../test/fakes/item-route-use-cases.js';

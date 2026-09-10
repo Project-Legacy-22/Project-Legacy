@@ -5,6 +5,7 @@ import { App } from './app';
 import type { ItemDto, ItemPageDto, ItemsApi } from './api/items-api';
 import { ApiError } from './api/items-api';
 import type { AccountDto, AuthApi } from './api/auth-api';
+import type { NotificationsApi } from './api/notifications-api';
 import type { ProjectsApi } from './api/projects-api';
 import { click, createReactTestRoot, flushTimers, getElement, setInputValue, submitForm } from './test/react-root';
 import type { ReactTestRoot } from './test/react-root';
@@ -88,10 +89,15 @@ function createProjectsApi(overrides: Partial<ProjectsApi> = {}): ProjectsApi {
     };
 }
 
+function createNotifications(unread = 0): NotificationsApi {
+    return { unreadCount: vi.fn(async () => unread) };
+}
+
 interface AppFixture {
     api?: ItemsApi;
     auth?: AuthApi;
     projects?: ProjectsApi;
+    notifications?: NotificationsApi;
 }
 
 function renderApp(fixture: AppFixture = {}): Promise<void> {
@@ -100,6 +106,7 @@ function renderApp(fixture: AppFixture = {}): Promise<void> {
             api={fixture.api ?? createApi()}
             auth={fixture.auth ?? createAuth()}
             projects={fixture.projects ?? createProjectsApi()}
+            notifications={fixture.notifications ?? createNotifications()}
         />,
     );
 }
@@ -176,7 +183,7 @@ describe('App authentication', () => {
         expect(listItems).not.toHaveBeenCalled();
     });
 
-    it('enonce la politique de mot de passe avant toute saisie, rattachee au champ', async () => {
+    it('enonce le politique de mot de passe avant toute saisie, rattachee au champ', async () => {
         const auth = createAuth({ currentAccount: vi.fn(async () => null) });
         await renderApp({ auth });
 
@@ -317,7 +324,7 @@ describe('App session states', () => {
     it('lets a signed-out visitor ask for a reset link and shows a neutral reply', async () => {
         const requestPasswordReset = vi.fn(async () => undefined);
         const auth = createAuth({ currentAccount: vi.fn(async () => null), requestPasswordReset });
-        await testRoot.render(<App api={createApi()} auth={auth} />);
+        await renderApp({ auth });
 
         await click(getElement<HTMLButtonElement>('.button-quiet:last-of-type'));
         await setInputValue(getElement<HTMLInputElement>('input[type="email"]'), 'ada@example.com');
@@ -339,7 +346,7 @@ describe('App password recovery', () => {
         const resetPassword = vi.fn(async () => undefined);
         const auth = createAuth({ resetPassword });
 
-        await testRoot.render(<App api={createApi()} auth={auth} />);
+        await renderApp({ auth });
 
         expect(getElement<HTMLHeadingElement>('h1').textContent).toBe(labels.resetPasswordTitle);
         expect(window.location.search).toBe('');
@@ -350,7 +357,7 @@ describe('App password recovery', () => {
         window.history.replaceState(null, '', '/?token_hash=abc123&type=recovery');
         const resetPassword = vi.fn(async () => undefined);
         const auth = createAuth({ resetPassword });
-        await testRoot.render(<App api={createApi()} auth={auth} />);
+        await renderApp({ auth });
 
         await setInputValue(
             getElement<HTMLInputElement>('input[type="password"]'),
@@ -363,5 +370,27 @@ describe('App password recovery', () => {
             token: 'abc123',
             password: 'NouveauMotDePasse2',
         });
+    });
+});
+
+describe('App notifications', () => {
+    it('affiche l effet du flux evenementiel une fois connecte', async () => {
+        await renderApp({ notifications: createNotifications(3) });
+        await flushTimers();
+
+        const badge = getElement<HTMLElement>('.notification-badge');
+        expect(badge.textContent).toBe('3 unread notifications');
+        // Annonce sans interrompre : le compte change parce qu un worker a
+        // traite un evenement, pas parce que l utilisateur a agi.
+        expect(badge.getAttribute('role')).toBe('status');
+    });
+
+    it('ne demande pas les notifications tant qu il n y a pas de session', async () => {
+        const notifications = createNotifications();
+        const auth = createAuth({ currentAccount: vi.fn(async () => null) });
+
+        await renderApp({ auth, notifications, projects: createProjectsApi() });
+
+        expect(notifications.unreadCount).not.toHaveBeenCalled();
     });
 });

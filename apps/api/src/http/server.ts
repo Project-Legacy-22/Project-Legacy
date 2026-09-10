@@ -10,6 +10,7 @@ import type { AppUseCases } from '../composition-root.js';
 import { accountRouter } from './routes/account.js';
 import { authRouter } from './routes/auth.js';
 import { itemsRouter } from './routes/items.js';
+import { notificationsRouter } from './routes/notifications.js';
 import { projectsRouter } from './routes/projects.js';
 import { translateErrors } from './error-middleware.js';
 import { requireAccount } from './session.js';
@@ -65,11 +66,7 @@ export function createServer(config: Config, useCases: AppUseCases, logger: Logg
 
     // Carries its own requireAccount, like GET /auth/me: exporting and erasing
     // act on the caller's own account, so they resolve it the same way.
-    app.use(
-        accountRouter(useCases.account, useCases.auth, {
-            secureCookie: config.secureCookies,
-        }),
-    );
+    app.use(accountRouter(useCases.account, useCases.auth, { secureCookie: config.secureCookies }));
 
     // The reset link in the recovery email is a deep link the browser opens
     // directly. Serve the app shell for it so the front-end can pick up the
@@ -82,6 +79,7 @@ export function createServer(config: Config, useCases: AppUseCases, logger: Logg
 
     // Items belong to somebody since US-11: no session, no items.
     app.use(requireAccount(useCases.auth), projectsRouter(useCases.projects), itemsRouter(useCases.items));
+    app.use(requireAccount(useCases.auth), notificationsRouter(useCases.notifications));
 
     // Registered last: express only treats a middleware as an error handler
     // once every route has had its chance to fail.

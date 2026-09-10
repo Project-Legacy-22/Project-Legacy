@@ -9,6 +9,7 @@ export {
     MAX_ITEM_NAME_LENGTH,
     DEFAULT_ITEM_PAGE_SIZE,
     MAX_ITEM_PAGE_SIZE,
+    NotificationSummaryDto,
 } from './items.js';
 export {
     RegisterAccountBody,

@@ -281,6 +281,10 @@ export type Database = {
         Returns: undefined
       }
       erase_account: { Args: { p_user_id: string }; Returns: undefined }
+      record_item_created_notification: {
+        Args: { p_event_id: string; p_item_id: string; p_user_id: string }
+        Returns: boolean
+      }
       uuid_generate_v7: { Args: never; Returns: string }
     }
     Enums: {

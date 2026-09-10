@@ -7,7 +7,8 @@ vers une application Kanban maintenable. Le dépôt utilise TypeScript et des wo
 
 | Commande | Ce qu'elle fait |
 |---|---|
-| `npm run up` | démarre tout : broker, base de données, API et front |
+| `npm run up` | démarre tout : broker, base de données, API, front et worker |
+| `npm run dev:worker` | le worker seul, pour le redémarrer pendant une démonstration |
 | `npm run down` | arrête le broker et la base de données |
 | `npm run lint` | analyse statique sur tout le dépôt, `apps/web` compris |
 | `npm run typecheck` | types de la production et des tests, workspace web, puis contrôle des frontières de couches |
@@ -29,7 +30,8 @@ vers une application Kanban maintenable. Le dépôt utilise TypeScript et des wo
 ```text
 apps/
 ├── api/                 API Express et composition de l'application
-└── web/                 Interface React construite avec Vite
+├── web/                 Interface React construite avec Vite
+└── worker/              Consommateur d'événements, processus distinct
 packages/
 ├── contracts/           Schémas et types partagés aux frontières
 ├── core/auth/           Domaine et cas d'usage de l'authentification
@@ -78,6 +80,7 @@ configuration, que le fichier d'exemple cesserait de décrire.
 | `SUPABASE_SERVICE_ROLE_KEY` | clé de service utilisée par l'API. Requise |
 | `REDIS_URL` | broker déclaré dans `compose.yaml` |
 | `REDIS_PORT` | port hôte du broker, `6379` par défaut |
+| `WORKER_BLOCK_SECONDS` | attente bloquante du worker entre deux lectures, `5` par défaut |
 | `LOG_LEVEL` | niveau pino parmi `fatal`, `error`, `warn`, `info`, `debug`, `trace`, `silent`. `info` par défaut ; une valeur inconnue empêche le démarrage |
 
 Une variable requise absente arrête l'API au démarrage avec un message qui la nomme, plutôt

@@ -19,6 +19,7 @@ export default defineConfig({
             // would put that cookie out of reach and push the token back into
             // JavaScript, which is exactly what httpOnly exists to prevent.
             '/auth': 'http://localhost:3000',
+            '/notifications': 'http://localhost:3000',
         },
     },
 });

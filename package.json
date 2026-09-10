@@ -10,6 +10,7 @@
   "workspaces": [
     "apps/api",
     "apps/web",
+    "apps/worker",
     "packages/contracts",
     "packages/infra",
     "packages/core/items",
@@ -22,6 +23,8 @@
     "dev": "node scripts/dev.mjs",
     "dev:api": "nodemon -L --watch apps/api --watch packages --ext ts --exec \"tsx --env-file-if-exists=.env --conditions=development apps/api/src/index.ts\"",
     "dev:web": "npm run dev --workspace @legacy/web",
+    "dev:worker": "nodemon -L --watch apps/worker --watch packages --ext ts --exec \"tsx --env-file-if-exists=.env --conditions=development apps/worker/src/index.ts\"",
+    "start:worker": "node --env-file-if-exists=.env apps/worker/dist/index.js",
     "build": "tsc --build && npm run build --workspace @legacy/web",
     "start": "node --env-file-if-exists=.env apps/api/dist/index.js",
     "lint": "eslint .",
