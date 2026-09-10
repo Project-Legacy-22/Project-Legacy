@@ -99,6 +99,24 @@ describe('itemsApi', () => {
         });
     });
 
+    it('moves an item using the status and version observed by the client', async () => {
+        const moved = { ...ITEM, status: 'doing' as const, version: 2 };
+        const fetchMock = vi.fn<typeof fetch>(async () => response(moved));
+        vi.stubGlobal('fetch', fetchMock);
+
+        await expect(
+            itemsApi.moveItem(PROJECT_ID, ITEM_ID, {
+                status: 'doing',
+                version: 1,
+            }),
+        ).resolves.toEqual(moved);
+        expect(fetchMock).toHaveBeenCalledWith(`/projects/${PROJECT_ID}/items/${ITEM_ID}/status`, {
+            method: 'PATCH',
+            headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'doing', version: 1 }),
+        });
+    });
+
     it('accepts an empty successful response when permanently deleting an item', async () => {
         const fetchMock = vi.fn<typeof fetch>(async () => new Response(null, { status: 204 }));
         vi.stubGlobal('fetch', fetchMock);

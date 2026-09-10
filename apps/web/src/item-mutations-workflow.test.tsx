@@ -62,6 +62,7 @@ function itemsApi(overrides: Partial<ItemsApi> = {}): ItemsApi {
         listItems: vi.fn(async () => ({ items: [ITEM], nextCursor: null })),
         createItem: vi.fn(),
         updateItem: vi.fn(),
+        moveItem: vi.fn(),
         deleteItem: vi.fn(),
         ...overrides,
     };
