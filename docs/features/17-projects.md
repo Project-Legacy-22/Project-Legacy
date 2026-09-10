@@ -32,6 +32,7 @@ including previously removed items, which the confirmation also warns about.
 | `GET /projects/:projectId/items`        | Lists one page of items in a member project      | session required |
 | `POST /projects/:projectId/items`       | Creates an item in a member project              | session required |
 | `PUT /projects/:projectId/items/:id`    | Replaces an item in a member project             | session required |
+| `PATCH /projects/:projectId/items/:id/status` | Moves an item with optimistic concurrency  | session required |
 | `DELETE /projects/:projectId/items/:id` | Removes an item from a member project            | session required |
 | Projects section                        | Creates, selects, paginates and removes projects | session required |
 

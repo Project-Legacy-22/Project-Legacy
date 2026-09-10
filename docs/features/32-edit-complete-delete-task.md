@@ -16,6 +16,7 @@ for confirmation that names the item, then removes it permanently.
 | Endpoint or screen | Purpose | Auth |
 |---|---|---|
 | `PUT /projects/:projectId/items/:id` | Replaces the editable item state | session required |
+| `PATCH /projects/:projectId/items/:id/status` | Moves an item between Kanban states | session required |
 | `DELETE /projects/:projectId/items/:id` | Permanently removes an item | session required |
 | Item row actions | Rename, complete, reopen or remove an item | session required |
 
@@ -35,6 +36,10 @@ the partial pagination index with an index that has no deletion-state predicate.
 repository operation issues a physical `DELETE`; no hidden row or deletion-state filter
 remains. Project deletion still removes its items through the existing foreign-key cascade.
 
+Migration `20260910164929_item_kanban_status` replaces the boolean with the constrained
+statuses `todo`, `doing` and `done`. Each row also carries a positive version. A status update
+must send the version it read; the write increments it atomically and rejects a stale request.
+
 ## Events
 
 Renaming, completing, reopening and deleting an item publish no event. Repeating a completion
@@ -49,6 +54,7 @@ only mutation in this scope that publishes `item.created.v1`.
 | Invalid identifier, empty name or name over 255 characters | `400 validation_error` | Rejected at the HTTP boundary |
 | Invalid name reaching the domain | `400 invalid_item_name` | The domain enforces the same invariant |
 | Item absent, outside the project or caller not a member | `404 item_not_found` | The response does not disclose whether the item exists |
+| Status move based on a stale version | `409 item_status_conflict` | The latest stored state is preserved |
 | Storage failure | `500 internal_error` | No database detail or submitted value is returned |
 
 The not-found check runs before either write. An inaccessible item and an unknown item produce
@@ -101,5 +107,5 @@ Space, and confirm that the removal prompt includes the item name.
 
 ## Known limits
 
-Items still have the inherited open/completed boolean state. Moving them between Kanban
-columns belongs to US-15 and is not part of this feature.
+The server-side Kanban status belongs to US-15a. The three-column interface and its keyboard
+interaction belong to US-15b and are not part of this feature.
