@@ -12,8 +12,8 @@ import type { FauxFournisseur } from '../test/fakes/gotrue-server.js';
 describe('adaptateur Supabase Auth, renouvellement de session', () => {
     const SESSION_RENOUVELEE = {
         ...SESSION,
-        access_token: 'jeton-acces-2',
-        refresh_token: 'jeton-rafraichissement-2',
+        access_token: 'renewed-access',
+        refresh_token: 'renewed-refresh',
     };
 
     let faux: FauxFournisseur;
@@ -37,12 +37,12 @@ describe('adaptateur Supabase Auth, renouvellement de session', () => {
         const { provider, faux: serveur } = await adaptateur();
         serveur.quand(TOKEN, { status: 200, body: SESSION_RENOUVELEE });
 
-        const session = await provider.refresh('jeton-rafraichissement');
+        const session = await provider.refresh('a-refresh-token');
 
         expect(session).toEqual({
             account: { id: UTILISATEUR.id, email: UTILISATEUR.email },
-            accessToken: 'jeton-acces-2',
-            refreshToken: 'jeton-rafraichissement-2',
+            accessToken: 'renewed-access',
+            refreshToken: 'renewed-refresh',
             expiresInSeconds: 3600,
         });
     });
@@ -61,7 +61,7 @@ describe('adaptateur Supabase Auth, renouvellement de session', () => {
             },
         });
 
-        await expect(provider.refresh('jeton-rafraichissement')).resolves.toBeUndefined();
+        await expect(provider.refresh('a-refresh-token')).resolves.toBeUndefined();
     });
 
     it('ne rend aucune session derriere un jeton que le fournisseur ne connait pas', async () => {
@@ -85,7 +85,7 @@ describe('adaptateur Supabase Auth, renouvellement de session', () => {
             body: { code: 500, error_code: 'unexpected_failure', msg: 'panne' },
         });
 
-        await expect(provider.refresh('jeton-rafraichissement')).rejects.toThrow(/refresh/);
+        await expect(provider.refresh('a-refresh-token')).rejects.toThrow(/refresh/);
     });
 
     // Le message d une erreur d adaptateur part au journal. Il nomme
@@ -99,9 +99,9 @@ describe('adaptateur Supabase Auth, renouvellement de session', () => {
         });
 
         const echec: unknown = await provider
-            .refresh('jeton-rafraichissement')
+            .refresh('a-refresh-token')
             .catch((error: unknown) => error);
 
-        expect(String(echec)).not.toContain('jeton-rafraichissement');
+        expect(String(echec)).not.toContain('a-refresh-token');
     });
 });
