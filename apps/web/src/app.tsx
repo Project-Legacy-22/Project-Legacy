@@ -9,6 +9,7 @@ import type { ItemsApi } from './api/items-api';
 import { notificationsApi } from './api/notifications-api';
 import type { NotificationsApi } from './api/notifications-api';
 import { AuthPage } from './components/auth-page';
+import { NotificationsPanel } from './components/notifications-panel';
 import { PersonalDataSection } from './components/personal-data-section';
 import { ResetPasswordPage } from './components/reset-password-page';
 import { SessionBanner } from './components/session-banner';
@@ -91,6 +92,7 @@ function SignedInApp({
                 isSigningOut={isSigningOut}
                 onSignOut={onSignOut}
             />
+            <NotificationsPanel api={notifications} />
             <TodoPage
                 items={state.items}
                 loadState={state.loadState}
