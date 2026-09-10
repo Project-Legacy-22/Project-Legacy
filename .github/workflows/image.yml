@@ -25,6 +25,16 @@ jobs:
   verifier:
     name: Verifications
     uses: ./.github/workflows/ci.yml
+    # Un workflow appele ne recoit aucun secret du workflow appelant sans cette
+    # ligne, et l analyse SonarCloud en lit un. Sans elle, le scanner recoit un
+    # jeton vide, repond « Not authorized or project not found » et fait echouer
+    # la campagne : la livraison du 10 septembre n a donc publie ni image ni
+    # release. Le symptome ne se voyait pas sur une pull request, ou ci.yml
+    # s execute comme workflow a part entiere et accede aux secrets du depot.
+    #
+    # inherit plutot qu un passage nomme : ci.yml en lira d autres, et une liste
+    # nominative reintroduirait le meme oubli au prochain secret ajoute.
+    secrets: inherit
 
   publier:
     name: Publier sur GHCR
