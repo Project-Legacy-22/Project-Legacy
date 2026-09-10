@@ -35,6 +35,8 @@ export function anItem(overrides: Partial<ExportedItem> = {}): ExportedItem {
         name: 'Prepare the sprint review',
         status: 'todo',
         version: 1,
+        priority: 'normal',
+        dueDate: null,
         createdAt: INSTANT,
         updatedAt: INSTANT,
         ...overrides,

@@ -24,6 +24,8 @@ function toItemDto(item: Item): ItemDto {
         name: item.name,
         status: item.status,
         version: item.version,
+        priority: item.priority,
+        dueDate: item.dueDate,
     };
 }
 
@@ -95,7 +97,10 @@ export function itemsRouter(useCases: ItemUseCases): Router {
         if (!params.success) return next(params.error);
 
         useCases
-            .addItem(body.data.name, params.data.projectId, accountOf(res).id)
+            .addItem(body.data.name, params.data.projectId, accountOf(res).id, {
+                priority: body.data.priority,
+                dueDate: body.data.dueDate,
+            })
             .then((item) => res.send(toItemDto(item)))
             .catch(next);
     };

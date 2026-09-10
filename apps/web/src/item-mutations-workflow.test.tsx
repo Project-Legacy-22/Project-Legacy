@@ -12,6 +12,7 @@ import {
     flushTimers,
     getElement,
     setInputValue,
+    setSelectValue,
     submitForm,
     waitFor,
 } from './test/react-root';
@@ -33,6 +34,8 @@ const ITEM: ItemDto = {
     name: 'Original task',
     status: 'todo',
     version: 1,
+    priority: 'normal',
+    dueDate: null,
 };
 
 const auth: AuthApi = {
@@ -98,7 +101,12 @@ afterEach(async () => {
 
 describe('item mutation workflow', () => {
     it('edits an item from a labelled keyboard form and restores focus', async () => {
-        const updateItem = vi.fn<ItemsApi['updateItem']>(async (_projectId, _id, body) => ({ ...ITEM, ...body }));
+        const updateItem = vi.fn<ItemsApi['updateItem']>(async (_projectId, _id, body) => ({
+            ...ITEM,
+            name: body.name,
+            priority: body.priority ?? ITEM.priority,
+            dueDate: body.dueDate === undefined ? ITEM.dueDate : body.dueDate,
+        }));
         await render(itemsApi({ updateItem }));
 
         await click(buttonWithLabel(labels.editItem('Original task')));
@@ -110,9 +118,11 @@ describe('item mutation workflow', () => {
 
         expect(updateItem).toHaveBeenCalledWith(PROJECT.id, ITEM.id, {
             name: 'Renamed task',
+            priority: 'normal',
+            dueDate: null,
         });
         expect(document.body.textContent).toContain('Renamed task');
-        expect(hasAnnouncement(labels.itemRenamed('Renamed task'))).toBe(true);
+        expect(hasAnnouncement(labels.itemSaved('Renamed task'))).toBe(true);
         await waitFor(() => document.activeElement === buttonWithLabel(labels.editItem('Renamed task')));
         expect(document.activeElement).toBe(buttonWithLabel(labels.editItem('Renamed task')));
     });
@@ -131,6 +141,32 @@ describe('item mutation workflow', () => {
         expect(input.getAttribute('aria-invalid')).toBe('true');
         expect(references.map((id) => document.getElementById(id)?.id)).toEqual(references);
         expect(getElement<HTMLElement>('[role="alert"]').textContent).toBe(labels.itemNameRequired);
+    });
+
+    it('edits priority and due date and renders overdue as text', async () => {
+        const updateItem = vi.fn<ItemsApi['updateItem']>(async (_projectId, _id, body) => ({
+            ...ITEM,
+            name: body.name,
+            priority: body.priority ?? ITEM.priority,
+            dueDate: body.dueDate === undefined ? ITEM.dueDate : body.dueDate,
+            version: 2,
+        }));
+        await render(itemsApi({ updateItem }));
+
+        await click(buttonWithLabel(labels.editItem('Original task')));
+        await setSelectValue(getElement<HTMLSelectElement>(`#edit-item-${ITEM.id}-priority`), 'high');
+        await setInputValue(getElement<HTMLInputElement>(`#edit-item-${ITEM.id}-due-date`), '2020-01-02');
+        await submitForm(getElement<HTMLFormElement>('.item-edit-form'));
+        await flushTimers();
+
+        expect(updateItem).toHaveBeenCalledWith(PROJECT.id, ITEM.id, {
+            name: 'Original task',
+            priority: 'high',
+            dueDate: '2020-01-02',
+        });
+        expect(getElement<HTMLElement>('.item-priority').textContent).toBe('High priority');
+        expect(getElement<HTMLTimeElement>('.item-planning-summary time').dateTime).toBe('2020-01-02');
+        expect(getElement<HTMLElement>('.item-overdue').textContent).toBe('Overdue');
     });
 
     it('names the item before permanent deletion and announces the result', async () => {

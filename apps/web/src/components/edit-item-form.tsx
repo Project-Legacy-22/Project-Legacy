@@ -2,15 +2,20 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 
 import { MAX_ITEM_NAME_LENGTH } from '@legacy/contracts';
+import { UpdateItemBody } from '@legacy/contracts';
+import type { ItemPriority, UpdateItemBody as UpdateItemInput } from '@legacy/contracts';
 
 import { labels } from '../labels';
+import { ItemPlanningFields } from './item-planning-fields';
 
 export interface EditItemFormProps {
     itemId: string;
     initialName: string;
+    initialPriority: ItemPriority;
+    initialDueDate: string | null;
     isPending: boolean;
     onCancel: () => void;
-    onSave: (name: string) => Promise<boolean>;
+    onSave: (changes: UpdateItemInput) => Promise<boolean>;
 }
 
 interface EditItemFieldProps {
@@ -60,18 +65,33 @@ function EditItemField({ inputId, name, validationError, isPending, onChange }: 
     );
 }
 
-export function EditItemForm({ itemId, initialName, isPending, onCancel, onSave }: EditItemFormProps) {
+export function EditItemForm({
+    itemId,
+    initialName,
+    initialPriority,
+    initialDueDate,
+    isPending,
+    onCancel,
+    onSave,
+}: EditItemFormProps) {
     const [name, setName] = useState(initialName);
+    const [priority, setPriority] = useState(initialPriority);
+    const [dueDate, setDueDate] = useState(initialDueDate ?? '');
     const [validationError, setValidationError] = useState<string | null>(null);
     const inputId = `edit-item-${itemId}`;
 
     const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
+        const candidate = UpdateItemBody.safeParse({
+            name,
+            priority,
+            dueDate: dueDate === '' ? null : dueDate,
+        });
         const error = validateName(name);
         setValidationError(error);
-        if (error !== null) return;
+        if (error !== null || !candidate.success) return;
 
-        await onSave(name.trim());
+        await onSave(candidate.data);
     };
 
     return (
@@ -85,6 +105,14 @@ export function EditItemForm({ itemId, initialName, isPending, onCancel, onSave 
                     setName(newName);
                     setValidationError(null);
                 }}
+            />
+            <ItemPlanningFields
+                idPrefix={`edit-item-${itemId}`}
+                priority={priority}
+                dueDate={dueDate}
+                isDisabled={isPending}
+                onPriorityChange={setPriority}
+                onDueDateChange={setDueDate}
             />
             <div className="item-edit-actions">
                 <button className="button button-primary" type="submit" disabled={isPending}>

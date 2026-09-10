@@ -10,6 +10,8 @@ const ITEM = {
     name: 'Prepare the review',
     status: 'todo' as const,
     version: 1,
+    priority: 'normal' as const,
+    dueDate: null,
 };
 
 function response(body: unknown, status = 200): Response {

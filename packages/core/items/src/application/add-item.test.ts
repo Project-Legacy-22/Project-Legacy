@@ -37,10 +37,24 @@ describe('addItem', () => {
             name: 'Buy milk',
             status: 'todo',
             version: 1,
+            priority: 'normal',
+            dueDate: null,
             projectId: PROJECT_ID,
             ownerId: OWNER_ID,
         });
         expect(await repository.findByIdForMember('item-id', PROJECT_ID, OWNER_ID)).toEqual(item);
+    });
+
+    it('persists optional planning values, including a past due date', async () => {
+        const repository = inMemoryItemRepository([], [{ projectId: PROJECT_ID, userId: OWNER_ID }]);
+
+        const item = await addItemWith(repository)('Buy milk', PROJECT_ID, OWNER_ID, {
+            priority: 'high',
+            dueDate: '2020-01-02',
+        });
+
+        expect(item).toMatchObject({ priority: 'high', dueDate: '2020-01-02' });
+        expect(repository.items.get(item.id)).toEqual(item);
     });
 
     // Le proprietaire vient de l appelant : deux appelants differents ne

@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { CreateItemBody, MAX_ITEM_NAME_LENGTH } from '@legacy/contracts';
+import type { CreateItemBody as CreateItemInput, ItemPriority } from '@legacy/contracts';
 
 import { labels } from '../labels';
 import type { AddItemResult } from './items-state';
@@ -8,19 +9,25 @@ import type { AddItemResult } from './items-state';
 interface AddItemFormState {
     inputRef: React.RefObject<HTMLInputElement | null>;
     name: string;
+    priority: ItemPriority;
+    dueDate: string;
     validationError: string | null;
     describedBy: string;
     handleChange: (event: ChangeEvent<HTMLInputElement>) => void;
+    handlePriorityChange: (priority: ItemPriority) => void;
+    handleDueDateChange: (dueDate: string) => void;
     // Le DOM ignore la valeur renvoyee par un gestionnaire de soumission :
     // la declarer void plutot que Promise<void> dit la verite a l appelant.
     handleSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }
 
 export function useAddItemForm(
-    onAdd: (name: string) => Promise<AddItemResult>,
+    onAdd: (body: CreateItemInput) => Promise<AddItemResult>,
 ): AddItemFormState {
     const inputRef = useRef<HTMLInputElement>(null);
     const [name, setName] = useState('');
+    const [priority, setPriority] = useState<ItemPriority>('normal');
+    const [dueDate, setDueDate] = useState('');
     const [validationError, setValidationError] = useState<string | null>(null);
 
     const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -30,7 +37,11 @@ export function useAddItemForm(
 
     const submit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        const candidate = CreateItemBody.safeParse({ name });
+        const candidate = CreateItemBody.safeParse({
+            name,
+            priority,
+            dueDate: dueDate === '' ? null : dueDate,
+        });
 
         if (!candidate.success) {
             const message =
@@ -43,9 +54,11 @@ export function useAddItemForm(
         }
 
         setValidationError(null);
-        const result = await onAdd(candidate.data.name);
+        const result = await onAdd(candidate.data);
         if (result.status === 'success') {
             setName('');
+            setPriority('normal');
+            setDueDate('');
             inputRef.current?.focus();
         } else {
             setValidationError(result.message);
@@ -60,5 +73,16 @@ export function useAddItemForm(
         void submit(event);
     };
 
-    return { inputRef, name, validationError, describedBy, handleChange, handleSubmit };
+    return {
+        inputRef,
+        name,
+        priority,
+        dueDate,
+        validationError,
+        describedBy,
+        handleChange,
+        handlePriorityChange: setPriority,
+        handleDueDateChange: setDueDate,
+        handleSubmit,
+    };
 }

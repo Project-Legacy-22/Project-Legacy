@@ -173,6 +173,9 @@ création concurrente ne fasse ni sauter ni répéter une ligne.
 
 Une tâche possède un statut `todo`, `doing` ou `done`. Le déplacement utilise la version
 renvoyée avec la tâche ; une version périmée reçoit `409` et ne remplace pas l'état stocké.
+Elle porte aussi une priorité `low`, `normal` ou `high`, normale par défaut, et une échéance
+calendaire facultative. Les listes placent les priorités hautes en premier, puis les échéances
+les plus proches ; l'identifiant départage les tâches équivalentes de façon reproductible.
 
 Deux comportements sont volontaires et ne doivent pas être « corrigés » :
 

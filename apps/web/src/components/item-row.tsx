@@ -1,8 +1,10 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import type { DragEvent, RefObject } from 'react';
+import type { UpdateItemBody } from '@legacy/contracts';
 
 import type { ItemDto, ItemStatus } from '../api/items-api';
 import { labels } from '../labels';
+import { formatDueDate, isOverdue } from '../item-due-date';
 import { EditItemForm } from './edit-item-form';
 import { MoveItemForm } from './move-item-form';
 
@@ -10,7 +12,7 @@ export interface ItemRowProps {
     item: ItemDto;
     isPending: boolean;
     onMove: (status: ItemStatus) => Promise<boolean>;
-    onRename: (item: ItemDto, name: string) => Promise<boolean>;
+    onUpdate: (item: ItemDto, changes: UpdateItemBody) => Promise<boolean>;
     onRemove: (item: ItemDto) => Promise<boolean>;
     onDragStart: (item: ItemDto, event: DragEvent<HTMLLIElement>) => void;
     onDragEnd: () => void;
@@ -89,7 +91,7 @@ interface ItemRowBodyProps {
     onMove: (status: ItemStatus) => Promise<boolean>;
     onOpenMove: () => void;
     onRemove: () => void;
-    onRename: (name: string) => Promise<boolean>;
+    onUpdate: (changes: UpdateItemBody) => Promise<boolean>;
 }
 
 type RestoredAction = 'edit' | 'move';
@@ -115,9 +117,11 @@ function ItemRowBody(props: ItemRowBodyProps) {
             <EditItemForm
                 itemId={props.item.id}
                 initialName={props.item.name ?? ''}
+                initialPriority={props.item.priority}
+                initialDueDate={props.item.dueDate}
                 isPending={props.isPending}
                 onCancel={props.onCancelEdit}
-                onSave={props.onRename}
+                onSave={props.onUpdate}
             />
         );
     }
@@ -139,6 +143,22 @@ function ItemRowBody(props: ItemRowBodyProps) {
             <div className="item-copy">
                 <p className="item-name">{props.name}</p>
                 <p className="item-state">{labels.itemStatus(props.item.status)}</p>
+                <p className="item-planning-summary">
+                    <span className={`item-priority item-priority-${props.item.priority}`}>
+                        {labels.itemPriorityDescription(props.item.priority)}
+                    </span>
+                    {props.item.dueDate !== null && (
+                        <>
+                            <span aria-hidden="true"> · </span>
+                            <time dateTime={props.item.dueDate}>
+                                {labels.itemDueDate(formatDueDate(props.item.dueDate))}
+                            </time>
+                            {props.item.status !== 'done' && isOverdue(props.item.dueDate) && (
+                                <span className="item-overdue">{labels.itemOverdue}</span>
+                            )}
+                        </>
+                    )}
+                </p>
                 {props.item.name === null && (
                     <p className="item-remediation">{labels.unnamedItemRemediation}</p>
                 )}
@@ -175,8 +195,8 @@ export function ItemRow(props: ItemRowProps) {
         setMode('idle');
     };
 
-    const handleRename = async (newName: string) => {
-        const saved = await props.onRename(props.item, newName);
+    const handleUpdate = async (changes: UpdateItemBody) => {
+        const saved = await props.onUpdate(props.item, changes);
         if (saved) close('edit');
         return saved;
     };
@@ -203,7 +223,7 @@ export function ItemRow(props: ItemRowProps) {
                 onMove={props.onMove}
                 onOpenMove={() => setMode('move')}
                 onRemove={() => void handleRemove()}
-                onRename={handleRename}
+                onUpdate={handleUpdate}
             />
         </li>
     );

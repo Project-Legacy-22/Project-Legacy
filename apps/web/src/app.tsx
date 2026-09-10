@@ -109,8 +109,8 @@ interface SignedInAppProps {
 function useProjectItems(api: ItemsApi, projects: ReturnType<typeof useProjects>) {
     const items = useItems(api, projects.selectedProjectId);
 
-    const addItem = async (name: string) => {
-        const result = await items.addItem(name);
+    const addItem: typeof items.addItem = async (body) => {
+        const result = await items.addItem(body);
         if (result.status === 'success') {
             projects.adjustSelectedItemCount(1);
         }
@@ -181,7 +181,7 @@ function SignedInApp({
                 paginationState={state.paginationState}
                 onAdd={state.addItem}
                 onMove={state.moveItem}
-                onRename={state.renameItem}
+                onUpdate={state.updateItem}
                 onRemove={state.removeItem}
                 onLoadMore={state.loadMore}
                 onRetry={state.retry}

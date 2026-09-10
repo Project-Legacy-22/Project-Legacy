@@ -1,4 +1,5 @@
 import type { ItemDto, ItemStatus } from '../api/items-api';
+import type { UpdateItemBody } from '@legacy/contracts';
 import { labels } from '../labels';
 import type { ItemsLoadState, ItemsPaginationState } from '../hooks/use-items';
 import { KanbanBoard } from './kanban-board';
@@ -11,7 +12,7 @@ export interface ItemsContentProps {
     hasNextPage: boolean;
     paginationState: ItemsPaginationState;
     onMove: (item: ItemDto, status: ItemStatus) => Promise<boolean>;
-    onRename: (item: ItemDto, name: string) => Promise<boolean>;
+    onUpdate: (item: ItemDto, changes: UpdateItemBody) => Promise<boolean>;
     onRemove: (item: ItemDto) => Promise<boolean>;
     onLoadMore: () => void;
     onRetry: () => void;
@@ -48,7 +49,7 @@ export function ItemsContent({
     hasNextPage,
     paginationState,
     onMove,
-    onRename,
+    onUpdate,
     onRemove,
     onLoadMore,
     onRetry,
@@ -68,7 +69,7 @@ export function ItemsContent({
                 isDisabled={loadState.status !== 'ready'}
                 pendingItemIds={pendingItemIds}
                 onMove={onMove}
-                onRename={onRename}
+                onUpdate={onUpdate}
                 onRemove={onRemove}
             />
             <ItemsPagination

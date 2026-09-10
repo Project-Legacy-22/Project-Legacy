@@ -33,10 +33,43 @@ describe('changeItem', () => {
             name: 'New name',
             status: 'doing',
             version: 2,
+            priority: 'normal',
+            dueDate: null,
             projectId: PROJECT_ID,
             ownerId: OWNER_ID,
         });
         expect(await repository.findByIdForMember('item-1', PROJECT_ID, OWNER_ID)).toEqual(updated);
+    });
+
+    it('updates priority and due date together with the name', async () => {
+        const repository = inMemoryItemRepository([
+            anItem({ id: 'item-1', projectId: PROJECT_ID, ownerId: OWNER_ID }),
+        ]);
+        const changeItem = makeChangeItem(repository);
+
+        const updated = await changeItem({
+            id: 'item-1',
+            projectId: PROJECT_ID,
+            memberId: OWNER_ID,
+            changes: { name: 'Planned', priority: 'high', dueDate: '2020-01-02' },
+        });
+
+        expect(updated).toMatchObject({ name: 'Planned', priority: 'high', dueDate: '2020-01-02' });
+    });
+
+    it('clears an existing due date', async () => {
+        const repository = inMemoryItemRepository([
+            anItem({ id: 'item-1', dueDate: '2026-09-12', projectId: PROJECT_ID, ownerId: OWNER_ID }),
+        ]);
+
+        const updated = await makeChangeItem(repository)({
+            id: 'item-1',
+            projectId: PROJECT_ID,
+            memberId: OWNER_ID,
+            changes: { name: 'Undated', dueDate: null },
+        });
+
+        expect(updated.dueDate).toBeNull();
     });
 
     it('rejette un item introuvable', async () => {

@@ -1,4 +1,5 @@
 import type { ItemsApi } from '../api/items-api';
+import type { CreateItemBody } from '@legacy/contracts';
 import type { AddItemResult, ItemActionFeedback, ItemsLoadState, ItemsPaginationState } from './items-state';
 import { useItemActions } from './use-item-actions';
 import { useItemsQuery } from './use-items-query';
@@ -13,9 +14,9 @@ export interface ItemsState {
     pendingItemIds: ReadonlySet<string>;
     hasNextPage: boolean;
     paginationState: ItemsPaginationState;
-    addItem: (name: string) => Promise<AddItemResult>;
+    addItem: (body: CreateItemBody) => Promise<AddItemResult>;
     moveItem: ReturnType<typeof useItemActions>['moveItem'];
-    renameItem: ReturnType<typeof useItemActions>['renameItem'];
+    updateItem: ReturnType<typeof useItemActions>['updateItem'];
     removeItem: ReturnType<typeof useItemActions>['removeItem'];
     loadMore: () => void;
     retry: () => void;
@@ -35,7 +36,7 @@ export function useItems(api: ItemsApi, projectId: string | null): ItemsState {
         paginationState: query.paginationState,
         addItem: actions.addItem,
         moveItem: actions.moveItem,
-        renameItem: actions.renameItem,
+        updateItem: actions.updateItem,
         removeItem: actions.removeItem,
         loadMore: () => {
             void query.loadMore();

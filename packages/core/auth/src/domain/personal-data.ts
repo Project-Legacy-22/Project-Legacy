@@ -21,6 +21,8 @@ export interface ExportedItem {
     name: string | null;
     status: 'todo' | 'doing' | 'done';
     version: number;
+    priority: 'low' | 'normal' | 'high';
+    dueDate: string | null;
     createdAt: string;
     updatedAt: string;
 }

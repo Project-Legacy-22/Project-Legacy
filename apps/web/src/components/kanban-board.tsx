@@ -2,6 +2,7 @@ import { useLayoutEffect, useState } from 'react';
 import type { DragEvent } from 'react';
 
 import type { ItemDto, ItemStatus } from '../api/items-api';
+import type { UpdateItemBody } from '@legacy/contracts';
 import { labels } from '../labels';
 import { ItemRow } from './item-row';
 
@@ -12,7 +13,7 @@ export interface KanbanBoardProps {
     isDisabled: boolean;
     pendingItemIds: ReadonlySet<string>;
     onMove: (item: ItemDto, status: ItemStatus) => Promise<boolean>;
-    onRename: (item: ItemDto, name: string) => Promise<boolean>;
+    onUpdate: (item: ItemDto, changes: UpdateItemBody) => Promise<boolean>;
     onRemove: (item: ItemDto) => Promise<boolean>;
 }
 
@@ -56,7 +57,7 @@ function KanbanColumn(props: KanbanColumnProps) {
                             item={item}
                             isPending={props.isDisabled || props.pendingItemIds.has(item.id)}
                             onMove={(destination) => props.onMove(item, destination)}
-                            onRename={props.onRename}
+                            onUpdate={props.onUpdate}
                             onRemove={props.onRemove}
                             onDragStart={props.onDragStart}
                             onDragEnd={props.onDragEnd}
