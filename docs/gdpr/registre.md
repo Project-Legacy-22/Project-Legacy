@@ -11,12 +11,15 @@ lecteur non technique, et les durées écrites ici sont celles que la purge auto
 
 | | |
 |---|---|
-| **Responsable** | à compléter avant la mise en ligne |
-| **Contact** | à compléter avant la mise en ligne |
+| **Responsable** | Équipe Legacy 22 (`Project-Legacy-22`) |
+| **Contact** | Seïf Soltane — seif.soltane@epitech.eu |
 
-Ces deux valeurs conditionnent `US-37`, qui ne peut pas publier une politique sans elles.
-Elles sont laissées vides plutôt que devinées : une adresse inventée dans un document
-réglementaire vaut moins que son absence.
+Le responsable est l'équipe, pas une personne : c'est elle qui décide des finalités et des
+moyens, et le règlement désigne à ce titre l'entité, pas un de ses membres. Seïf Soltane est
+le point de contact, comme la réunion de lancement l'a acté.
+
+Ces deux valeurs sont reprises telles quelles par la politique de confidentialité (`US-37`).
+Elles changent ici en premier.
 
 ## Traitements
 
@@ -134,11 +137,10 @@ Les durées ci-dessus sont proposées, argumentées et prêtes à être appliqu�
 `US-39`, qui les implémentera au sprint 3. Trois points demandent une confirmation de
 l'équipe en relecture :
 
-1. **Le responsable de traitement et son contact**, laissés vides ci-dessus. Sans eux,
-   `US-37` ne peut pas publier de politique.
-2. **La région d'hébergement Supabase.** Une instance hors Union européenne impose un
-   encadrement des transferts qu'il faut alors décrire ici.
-3. **Les durées elles-mêmes.** Le compte rendu de lancement proposait « indéfiniment sauf
+1. **La région d'hébergement Supabase.** Une instance hors Union européenne impose un
+   encadrement des transferts qu'il faut alors décrire ici. C'est le seul point qui peut
+   encore changer le contenu d'un traitement.
+2. **Les durées elles-mêmes.** Le compte rendu de lancement proposait « indéfiniment sauf
    demande de l'utilisateur ». Ce n'est pas tenable : la limitation de la conservation est un
    principe du règlement, et une durée indéfinie ne s'écrit pas dans un registre. Les valeurs
    retenues ici sont celles qui paraissent proportionnées à chaque finalité ; l'équipe peut
