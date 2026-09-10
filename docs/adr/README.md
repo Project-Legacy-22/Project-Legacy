@@ -20,6 +20,7 @@ Comment nous écrivons le code, indépendamment des services dont il dépend.
 | [0002](0002-typescript-strict.md) | TypeScript strict sur tout le dépôt | Accepté | `EN-04`, `EN-06` |
 | [0003](0003-decoupage-du-backend-par-domaine.md) | Découpage du backend par domaine, en couches à l'intérieur | Accepté | `EN-04` |
 | [0006](0006-chaine-front-vite-et-react.md) | Vite pour la chaîne front, React conservé | Accepté | `EN-05` |
+| [0011](0011-anglais-pour-le-code-et-l-interface.md) | Anglais pour le code et l'interface, français pour la documentation | Accepté | la migration de nommage, toutes les revues |
 
 L'ADR-0001 a été tranché **contre** la recommandation du backlog, qui proposait le
 mono-utilisateur. Il porte la raison qui a emporté la décision et le coût accepté en échange.
@@ -56,7 +57,6 @@ sprint 1, mais chacun bloque quelque chose plus loin.
 | Effet visible démontrant le flux événementiel | « créer une tâche produit une notification visible » | la démonstration de revue | planning du sprint 2 |
 | Registre d'images | GHCR, déjà lié au dépôt | `EN-08` | sprint 1 |
 | Niveau d'accessibilité visé | WCAG 2.1 AA | critères d'acceptation des US front | sprint 1 |
-| Langue de l'interface, messages d'erreur compris | une seule, tranchée une fois | toutes les US front | sprint 1 |
 | Direction graphique, et qui arbitre | bibliothèque de composants ou CSS maison | toutes les US front | sprint 1 |
 
 Le premier point de ce tableau est le seul qui soit une conséquence directe d'une décision
