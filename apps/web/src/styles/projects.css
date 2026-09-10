@@ -28,23 +28,23 @@
     justify-content: space-between;
     gap: 16px;
     padding: 10px 14px;
-    border: 2px solid #8596a6;
+    border: 2px solid var(--border-input);
     border-radius: 8px;
-    color: #172033;
-    background: #ffffff;
+    color: var(--text-body);
+    background: var(--surface-card);
     text-align: left;
     cursor: pointer;
 }
 
 .project-select:hover {
-    border-color: #184f49;
-    background: #f2faf8;
+    border-color: var(--text-brand);
+    background: var(--surface-brand-soft);
 }
 
 .project-select[aria-pressed='true'] {
-    border-color: #0f7169;
-    background: #e9f6f3;
-    box-shadow: inset 5px 0 0 #0f7169;
+    border-color: var(--action-primary);
+    background: var(--surface-brand-soft);
+    box-shadow: inset 5px 0 0 var(--action-primary);
 }
 
 .project-name {
@@ -54,7 +54,7 @@
 
 .project-count {
     flex: 0 0 auto;
-    color: #465568;
+    color: var(--text-muted);
     font-size: 0.8125rem;
     font-weight: 700;
 }

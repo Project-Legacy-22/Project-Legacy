@@ -40,6 +40,10 @@ export const CONTRAST_PAIRS: readonly ContrastPair[] = [
     { foreground: '--text-brand', background: '--surface-brand-soft', requirement: 'text', where: 'secondary button hovered, auth screen' },
     { foreground: '--text-brand-badge', background: '--surface-brand-softer', requirement: 'text', where: 'task counter' },
 
+    // Projects keep their title and count readable on hovered and selected rows.
+    { foreground: '--text-body', background: '--surface-brand-soft', requirement: 'text', where: 'hovered and selected project title' },
+    { foreground: '--text-muted', background: '--surface-brand-soft', requirement: 'text', where: 'hovered and selected project count' },
+
     // Texte sur une action pleine
     { foreground: '--text-on-brand', background: '--action-primary', requirement: 'text', where: 'primary button' },
     { foreground: '--text-on-brand', background: '--action-primary-hover', requirement: 'text', where: 'primary button hovered' },
@@ -52,6 +56,7 @@ export const CONTRAST_PAIRS: readonly ContrastPair[] = [
     { foreground: '--border-brand', background: '--surface-card', requirement: 'ui', where: 'outline of the secondary button' },
     { foreground: '--border-danger', background: '--surface-card', requirement: 'ui', where: 'outline of the danger button' },
     { foreground: '--action-primary', background: '--surface-card', requirement: 'ui', where: 'border of a task in progress' },
+    { foreground: '--action-primary', background: '--surface-brand-soft', requirement: 'ui', where: 'selected project border and indicator' },
 ];
 
 // The tokens no pair verifies, and why. Each entry is a decision, not an
@@ -93,4 +98,5 @@ export const FOCUS_SURFACES: readonly string[] = [
     '--surface-card',
     '--surface-brand',
     '--action-primary',
+    '--surface-brand-soft',
 ];

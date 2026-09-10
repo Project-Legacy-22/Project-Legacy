@@ -82,6 +82,8 @@ issue.
 - Project creation has a programmatic label, linked help and error text, keyboard submission,
   visible focus and an announced refusal next to the field.
 - Selection uses native buttons with `aria-pressed`; no pointer-only interaction is required.
+- Project rows use the shared colour palette. Automated contrast checks cover titles, counts,
+  the selection indicator and visible focus on hovered and selected rows.
 - Project and item pagination preserve the current content and announce loaded rows.
 - Project deletion uses a native confirmation that names the project and item count. Focus
   moves to the next project, the previous project, or the creation field after deletion.
