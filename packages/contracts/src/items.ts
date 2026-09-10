@@ -66,3 +66,12 @@ export type ItemDto = z.infer<typeof ItemDto>;
 export type ItemListDto = z.infer<typeof ItemListDto>;
 export type ListItemsQuery = z.infer<typeof ListItemsQuery>;
 export type ItemPageDto = z.infer<typeof ItemPageDto>;
+
+// Ce que l interface lit pour montrer l effet du flux evenementiel de US-10.
+// Un compte, pas la liste : l ecran affiche un rappel, et une liste ferait
+// transiter des identifiants d items dont il n a pas l usage.
+export const NotificationSummaryDto = z.object({
+    unread: z.number().int().nonnegative(),
+});
+
+export type NotificationSummaryDto = z.infer<typeof NotificationSummaryDto>;

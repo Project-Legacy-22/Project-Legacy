@@ -6,11 +6,14 @@ import { authApi } from './api/auth-api';
 import type { AuthApi } from './api/auth-api';
 import { itemsApi } from './api/items-api';
 import type { ItemsApi } from './api/items-api';
+import { notificationsApi } from './api/notifications-api';
+import type { NotificationsApi } from './api/notifications-api';
 import { AuthPage } from './components/auth-page';
 import { PersonalDataSection } from './components/personal-data-section';
 import { ResetPasswordPage } from './components/reset-password-page';
 import { TodoPage } from './components/todo-page';
 import { useItems } from './hooks/use-items';
+import { useNotifications } from './hooks/use-notifications';
 import { usePersonalData } from './hooks/use-personal-data';
 import { useSession } from './hooks/use-session';
 import { labels } from './labels';
@@ -29,6 +32,7 @@ export interface AppProps {
     api?: ItemsApi;
     auth?: AuthApi;
     account?: AccountApi;
+    notifications?: NotificationsApi;
     // Injected so a test can assert on what a download would have contained
     // without a jsdom that implements object URLs.
     save?: SaveFile;
@@ -37,6 +41,7 @@ export interface AppProps {
 interface SignedInAppProps {
     api: ItemsApi;
     account: AccountApi;
+    notifications: NotificationsApi;
     save: SaveFile;
     email: string;
     onDeleted: () => void;
@@ -45,13 +50,22 @@ interface SignedInAppProps {
 // The items screen is mounted in its own component so its data is only fetched
 // once there is a session. Rendering it behind a condition in App would run its
 // hooks anyway and fire a request that can only come back 401.
-function SignedInApp({ api, account, save, email, onDeleted }: SignedInAppProps) {
+function SignedInApp({ api, account, notifications, save, email, onDeleted }: SignedInAppProps) {
     const state = useItems(api);
     const personalData = usePersonalData({ api: account, save, onDeleted });
+    const unread = useNotifications(notifications, true);
 
     return (
         <>
-            <p className="session-banner">{labels.signedInAs(email)}</p>
+            <p className="session-banner">
+                {labels.signedInAs(email)}
+                {/* role="status" : le compte change tout seul, quand le worker a
+                    traite l evenement. L annoncer sans interrompre la lecture est
+                    exactement ce pour quoi ce role existe. */}
+                <span className="notification-badge" role="status">
+                    {labels.unreadNotifications(unread)}
+                </span>
+            </p>
             <TodoPage
                 items={state.items}
                 loadState={state.loadState}
@@ -82,6 +96,7 @@ export function App({
     api = itemsApi,
     auth = authApi,
     account = accountApi,
+    notifications = notificationsApi,
     save = saveFile,
 }: AppProps) {
     const session = useSession(auth);
@@ -134,6 +149,7 @@ export function App({
         <SignedInApp
             api={api}
             account={account}
+            notifications={notifications}
             save={save}
             email={session.state.account.email}
             onDeleted={session.forget}

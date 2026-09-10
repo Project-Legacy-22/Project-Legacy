@@ -22,7 +22,7 @@ import type { InMemoryItemRepository } from '../../../../../packages/core/items/
 import { createServer } from '../server.js';
 import { SESSION_COOKIE } from '../session.js';
 import type { AppUseCases } from '../../composition-root.js';
-import { recordingLogger } from '../../../test/fakes/recording-logger.js';
+import { recordingLogger } from '../../../../../packages/contracts/test/fakes/recording-logger.js';
 import { json, listen, testConfig } from '../../../test/http-harness.js';
 import type { Harness } from '../../../test/http-harness.js';
 
@@ -50,6 +50,7 @@ function useCasesOver(repository: ItemRepository, provider: IdentityProvider): A
             changeItem: makeChangeItem(repository),
             removeItem: makeRemoveItem(repository),
         },
+        notifications: { countUnread: () => Promise.resolve(0) },
         auth: {
             registerAccount: makeRegisterAccount(provider),
             signIn: makeSignIn(provider),
@@ -390,6 +391,17 @@ describe('items API', () => {
                 line => (line.fields as { traceId?: string }).traceId === problem.traceId,
             );
             expect(traced.length).toBeGreaterThan(0);
+        });
+    });
+
+    // L effet observable du flux evenementiel de US-10. La route est montee
+    // derriere la meme exigence de session que les items.
+    describe('GET /notifications', () => {
+        it('renvoie le compte de notifications non lues du compte connecte', async () => {
+            const response = await harness.request('/notifications');
+
+            expect(response.status).toBe(200);
+            await expect(response.json()).resolves.toEqual({ unread: 0 });
         });
     });
 });

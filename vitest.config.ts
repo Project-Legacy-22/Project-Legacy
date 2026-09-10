@@ -91,6 +91,10 @@ export default defineConfig({
                 // new code.
                 'apps/api/src/composition-root.ts',
                 'apps/api/src/index.ts',
+                // Le point d entree du worker, pour la meme raison que celui de
+                // l API : il assemble et boucle. Ce qu il decide -- que faire
+                // d un evenement -- vit dans event-consumer.ts, qui est teste.
+                'apps/worker/src/index.ts',
                 // Generated from the database schema by `npm run db:types`;
                 // excluded per standards/03-testing.md section 7.
                 'packages/infra/src/database.types.ts',
@@ -104,6 +108,9 @@ export default defineConfig({
                 // request.
                 'packages/infra/src/supabase-item-repository.ts',
                 'packages/infra/src/supabase-personal-data-store.ts',
+                'packages/infra/src/outbox-store.ts',
+                'packages/infra/src/notification-store.ts',
+                'packages/infra/src/redis-event-bus.ts',
                 // Front composition root: it mounts the app and nothing else,
                 // exactly like the API entry point above.
                 'apps/web/src/main.tsx',
