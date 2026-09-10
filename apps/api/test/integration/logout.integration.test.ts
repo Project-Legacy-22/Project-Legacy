@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
 
 import { createClient } from '@supabase/supabase-js';
+
+import { PRIVACY_POLICY_VERSION } from '@legacy/contracts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { integrationConfig, realApplication, serveAs } from './support.js';
@@ -37,7 +39,7 @@ describe('POST /auth/logout (integration)', () => {
     // left to prove revoked.
     it('rend le jeton de rafraichissement inutilisable', async () => {
         const email = `integration-logout-${randomUUID()}@example.com`;
-        await app.useCases.auth.registerAccount(email, MOT_DE_PASSE);
+        await app.useCases.auth.registerAccount(email, MOT_DE_PASSE, PRIVACY_POLICY_VERSION);
 
         // A client of its own, never through our composed app: this is the
         // only place a refresh token is ever read, precisely because our

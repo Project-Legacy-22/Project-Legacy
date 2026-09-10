@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
+import { PRIVACY_POLICY_VERSION } from '@legacy/contracts';
 import {
     makeEraseAccount,
     makeExportPersonalData,
@@ -100,7 +102,7 @@ describe('API d authentification', () => {
         it('cree un compte utilisable pour se connecter', async () => {
             const inscription = await harness.request(
                 '/auth/register',
-                json('POST', { email: ADRESSE, password: MOT_DE_PASSE }),
+                json('POST', { email: ADRESSE, password: MOT_DE_PASSE, acceptsPrivacyPolicy: true, policyVersion: PRIVACY_POLICY_VERSION }),
             );
             const connexion = await harness.request(
                 '/auth/login',
@@ -119,11 +121,11 @@ describe('API d authentification', () => {
 
             const surAdressePrise = await harness.request(
                 '/auth/register',
-                json('POST', { email: ADRESSE, password: 'AutreMotDePasse7' }),
+                json('POST', { email: ADRESSE, password: 'AutreMotDePasse7', acceptsPrivacyPolicy: true, policyVersion: PRIVACY_POLICY_VERSION }),
             );
             const surAdresseLibre = await harness.request(
                 '/auth/register',
-                json('POST', { email: 'bob@example.com', password: 'AutreMotDePasse7' }),
+                json('POST', { email: 'bob@example.com', password: 'AutreMotDePasse7', acceptsPrivacyPolicy: true, policyVersion: PRIVACY_POLICY_VERSION }),
             );
 
             expect(surAdressePrise.status).toBe(surAdresseLibre.status);
@@ -138,7 +140,7 @@ describe('API d authentification', () => {
         it('n ouvre aucune session', async () => {
             const response = await harness.request(
                 '/auth/register',
-                json('POST', { email: ADRESSE, password: MOT_DE_PASSE }),
+                json('POST', { email: ADRESSE, password: MOT_DE_PASSE, acceptsPrivacyPolicy: true, policyVersion: PRIVACY_POLICY_VERSION }),
             );
 
             expect(response.headers.get('set-cookie')).toBeNull();
@@ -148,7 +150,7 @@ describe('API d authentification', () => {
         it('refuse un mot de passe trop court sans creer de compte', async () => {
             const inscription = await harness.request(
                 '/auth/register',
-                json('POST', { email: ADRESSE, password: 'Court1' }),
+                json('POST', { email: ADRESSE, password: 'Court1', acceptsPrivacyPolicy: true, policyVersion: PRIVACY_POLICY_VERSION }),
             );
             const connexion = await harness.request(
                 '/auth/login',
@@ -162,7 +164,60 @@ describe('API d authentification', () => {
         it('refuse une adresse qui n en est pas une', async () => {
             const response = await harness.request(
                 '/auth/register',
-                json('POST', { email: 'pas-une-adresse', password: MOT_DE_PASSE }),
+                json('POST', { email: 'pas-une-adresse', password: MOT_DE_PASSE, acceptsPrivacyPolicy: true, policyVersion: PRIVACY_POLICY_VERSION }),
+            );
+
+            expect(response.status).toBe(400);
+        });
+    });
+
+    describe('consentement a la politique (US-37)', () => {
+        // Le critere de US-37 : le refus est cote serveur, pas seulement dans
+        // le formulaire. Une requete construite a la main ne doit pas pouvoir
+        // creer un compte sans consentement.
+        it('refuse une inscription sans consentement, et ne cree pas le compte', async () => {
+            const inscription = await harness.request(
+                '/auth/register',
+                json('POST', {
+                    email: ADRESSE,
+                    password: MOT_DE_PASSE,
+                    policyVersion: PRIVACY_POLICY_VERSION,
+                }),
+            );
+            const connexion = await harness.request(
+                '/auth/login',
+                json('POST', { email: ADRESSE, password: MOT_DE_PASSE }),
+            );
+
+            expect(inscription.status).toBe(400);
+            expect(connexion.status).toBe(401);
+        });
+
+        it('refuse un consentement explicitement negatif', async () => {
+            const response = await harness.request(
+                '/auth/register',
+                json('POST', {
+                    email: ADRESSE,
+                    password: MOT_DE_PASSE,
+                    acceptsPrivacyPolicy: false,
+                    policyVersion: PRIVACY_POLICY_VERSION,
+                }),
+            );
+
+            expect(response.status).toBe(400);
+        });
+
+        // Un formulaire laisse ouvert pendant une mise a jour de la politique
+        // enregistrerait sinon un consentement a un texte que personne n a lu.
+        it('refuse une version de politique qui n est pas celle publiee', async () => {
+            const response = await harness.request(
+                '/auth/register',
+                json('POST', {
+                    email: ADRESSE,
+                    password: MOT_DE_PASSE,
+                    acceptsPrivacyPolicy: true,
+                    policyVersion: '2020-01-01',
+                }),
             );
 
             expect(response.status).toBe(400);
@@ -233,7 +288,9 @@ describe('API d authentification', () => {
         it('refuse les tentatives au-dela de la limite de frequence', async () => {
             await serve(compteExistant);
             const tentative = () =>
-                harness.request('/auth/login', json('POST', { email: ADRESSE, password: 'Faux1' }));
+                harness.request(
+                '/auth/login',
+                json('POST', { email: ADRESSE, password: 'Faux1' }));
 
             const reponses = await repeter(11, tentative);
 
@@ -280,7 +337,9 @@ describe('API d authentification', () => {
         });
 
         it('refuse la creation d un item sans session', async () => {
-            const response = await harness.request('/items', json('POST', { name: 'Acheter du pain' }));
+            const response = await harness.request(
+                '/items',
+                json('POST', { name: 'Acheter du pain' }));
 
             expect(response.status).toBe(401);
         });

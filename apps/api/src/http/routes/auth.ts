@@ -115,7 +115,7 @@ export function authRouter(useCases: AuthUseCases, options: AuthRoutesOptions): 
         if (!body.success) return next(body.error);
 
         useCases
-            .registerAccount(body.data.email, body.data.password)
+            .registerAccount(body.data.email, body.data.password, body.data.policyVersion)
             // 201, no body, no session, whether the address was free or already
             // taken. A different status, a different shape or an automatic
             // login would each answer the question "does this address have an

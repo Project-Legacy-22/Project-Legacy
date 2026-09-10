@@ -2,6 +2,7 @@ import { PASSWORD_POLICY } from '@legacy/contracts';
 
 import { labels } from '../labels';
 import { AuthField } from './auth-field';
+import { ConsentField } from './consent-field';
 import { useAuthForm } from '../hooks/use-auth-form';
 import type { AuthMode } from '../hooks/use-auth-form';
 import type { SubmitResult } from '../hooks/use-session';
@@ -12,6 +13,7 @@ export interface AuthFormProps {
     mode: AuthMode;
     isSubmitting: boolean;
     onSubmit: (email: string, password: string) => Promise<SubmitResult>;
+    onOpenPolicy: () => void;
 }
 
 function submitLabel(isRegister: boolean, isSubmitting: boolean): string {
@@ -39,7 +41,7 @@ function Outcome({ outcome }: { outcome: SubmitResult | null }) {
     );
 }
 
-export function AuthForm({ mode, isSubmitting, onSubmit }: AuthFormProps) {
+export function AuthForm({ mode, isSubmitting, onSubmit, onOpenPolicy }: AuthFormProps) {
     const form = useAuthForm(mode, onSubmit);
     const { isRegister, prefix } = form;
 
@@ -73,6 +75,18 @@ export function AuthForm({ mode, isSubmitting, onSubmit }: AuthFormProps) {
                 errorId={`${prefix}-password-error`}
                 disabled={isSubmitting}
             />
+
+            {isRegister && (
+                <ConsentField
+                    id={`${prefix}-consent`}
+                    checked={form.consents}
+                    onChange={form.setConsents}
+                    error={form.errors.consent}
+                    errorId={`${prefix}-consent-error`}
+                    disabled={isSubmitting}
+                    onOpenPolicy={onOpenPolicy}
+                />
+            )}
 
             <button className="button button-primary" type="submit" disabled={isSubmitting}>
                 {submitLabel(isRegister, isSubmitting)}

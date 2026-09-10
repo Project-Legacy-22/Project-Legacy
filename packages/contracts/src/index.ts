@@ -28,6 +28,7 @@ export {
     ResetPasswordBody,
     AccountDto,
     PASSWORD_POLICY,
+    PRIVACY_POLICY_VERSION,
 } from './auth.js';
 export { PersonalDataExportDto } from './personal-data.js';
 export { ITEM_CREATED_V1, ItemCreatedV1, ItemCreatedV1Payload, DomainEvent } from './events.js';

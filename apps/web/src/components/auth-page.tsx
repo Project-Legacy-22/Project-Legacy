@@ -7,6 +7,7 @@ import { RequestResetForm } from './request-reset-form';
 import type { SubmitResult } from '../hooks/use-session';
 
 export interface AuthPageProps {
+    onOpenPolicy: () => void;
     isSubmitting: boolean;
     onSignIn: (email: string, password: string) => Promise<SubmitResult>;
     onRegister: (email: string, password: string) => Promise<SubmitResult>;
@@ -34,6 +35,7 @@ interface SignInOrRegisterProps {
     onRegister: (email: string, password: string) => Promise<SubmitResult>;
     onSwitch: (screen: AuthMode) => void;
     onForgotPassword: () => void;
+    onOpenPolicy: () => void;
 }
 
 function SignInOrRegister({
@@ -43,6 +45,7 @@ function SignInOrRegister({
     onRegister,
     onSwitch,
     onForgotPassword,
+    onOpenPolicy,
 }: SignInOrRegisterProps) {
     return (
         <>
@@ -54,6 +57,7 @@ function SignInOrRegister({
                 mode={screen}
                 isSubmitting={isSubmitting}
                 onSubmit={screen === 'register' ? onRegister : onSignIn}
+                onOpenPolicy={onOpenPolicy}
             />
 
             {/* Buttons, not links: they change what is on screen, they do not
@@ -81,7 +85,13 @@ function SignInOrRegister({
     );
 }
 
-export function AuthPage({ isSubmitting, onSignIn, onRegister, onRequestReset }: AuthPageProps) {
+export function AuthPage({
+    isSubmitting,
+    onSignIn,
+    onRegister,
+    onRequestReset,
+    onOpenPolicy,
+}: AuthPageProps) {
     const [screen, setScreen] = useState<Screen>('signIn');
     const titleRef = useRef<HTMLHeadingElement>(null);
 
@@ -114,6 +124,7 @@ export function AuthPage({ isSubmitting, onSignIn, onRegister, onRequestReset }:
                     onRegister={onRegister}
                     onSwitch={setScreen}
                     onForgotPassword={() => setScreen('requestReset')}
+                    onOpenPolicy={onOpenPolicy}
                 />
             )}
         </main>

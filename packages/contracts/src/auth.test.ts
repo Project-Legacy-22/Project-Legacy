@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
     PASSWORD_POLICY,
+    PRIVACY_POLICY_VERSION,
     RegisterAccountBody,
     RequestPasswordResetBody,
     ResetPasswordBody,
@@ -13,6 +14,8 @@ describe('RegisterAccountBody', () => {
         const parsed = RegisterAccountBody.parse({
             email: '  Alice@Example.COM ',
             password: 'MotDePasse2026',
+            acceptsPrivacyPolicy: true,
+            policyVersion: PRIVACY_POLICY_VERSION,
         });
 
         expect(parsed.email).toBe('alice@example.com');
@@ -20,7 +23,12 @@ describe('RegisterAccountBody', () => {
 
     it('refuse un mot de passe plus court que la politique', () => {
         expect(() =>
-            RegisterAccountBody.parse({ email: 'alice@example.com', password: 'Court1' }),
+            RegisterAccountBody.parse({
+                email: 'alice@example.com',
+                password: 'Court1',
+                acceptsPrivacyPolicy: true,
+                policyVersion: PRIVACY_POLICY_VERSION,
+            }),
         ).toThrow();
     });
 });
@@ -66,5 +74,39 @@ describe('ResetPasswordBody', () => {
 describe('SignInBody', () => {
     it('n impose pas la politique a un mot de passe deja existant', () => {
         expect(() => SignInBody.parse({ email: 'alice@example.com', password: 'court' })).not.toThrow();
+    });
+});
+
+describe('consentement a la politique (US-37)', () => {
+    const valide = {
+        email: 'alice@example.com',
+        password: 'MotDePasse2026',
+        acceptsPrivacyPolicy: true as const,
+        policyVersion: PRIVACY_POLICY_VERSION,
+    };
+
+    it('accepte une inscription qui consent a la version publiee', () => {
+        expect(RegisterAccountBody.parse(valide).policyVersion).toBe(PRIVACY_POLICY_VERSION);
+    });
+
+    // literal(true) plutot que boolean() : false et l absence du champ sont
+    // refuses tous les deux, et le champ est nomme dans l erreur.
+    it('refuse un consentement absent ou negatif', () => {
+        expect(() =>
+            RegisterAccountBody.parse({
+                email: valide.email,
+                password: valide.password,
+                policyVersion: valide.policyVersion,
+            }),
+        ).toThrow();
+        expect(() =>
+            RegisterAccountBody.parse({ ...valide, acceptsPrivacyPolicy: false }),
+        ).toThrow();
+    });
+
+    // Un formulaire laisse ouvert pendant une mise a jour enregistrerait sinon
+    // un consentement a un texte que personne n a lu.
+    it('refuse une version qui n est pas celle publiee', () => {
+        expect(() => RegisterAccountBody.parse({ ...valide, policyVersion: '2020-01-01' })).toThrow();
     });
 });

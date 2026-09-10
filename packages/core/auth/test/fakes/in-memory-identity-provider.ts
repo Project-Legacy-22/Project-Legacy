@@ -46,6 +46,8 @@ export function inMemoryIdentityProvider(
     const accounts = new Map<string, StoredAccount>(
         seed.map(account => [account.email, { ...account, sessionEpoch: 0 }]),
     );
+    // What each registration consented to, so a test can assert on it.
+    const consentedVersions = new Map<string, string>();
     let nextId = seed.length;
     let nextToken = 0;
 
@@ -71,8 +73,9 @@ export function inMemoryIdentityProvider(
     }
 
     return {
-        register: (email, password): Promise<RegistrationOutcome> => {
+        register: (email, password, policyVersion): Promise<RegistrationOutcome> => {
             if (accounts.has(email)) return Promise.resolve('already-registered');
+            consentedVersions.set(email, policyVersion);
 
             nextId += 1;
             accounts.set(email, {

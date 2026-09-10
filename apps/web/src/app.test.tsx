@@ -267,6 +267,7 @@ describe('App session states', () => {
             getElement<HTMLInputElement>('input[type="password"]'),
             'un-mot-de-passe-valide',
         );
+        await click(getElement<HTMLInputElement>('input[type="checkbox"]'));
         await submitForm(getElement<HTMLFormElement>('form.auth-form'));
         await flushTimers();
 
