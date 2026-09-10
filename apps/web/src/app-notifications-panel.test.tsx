@@ -49,6 +49,7 @@ function createAuth(): AuthApi {
         currentAccount: vi.fn(async () => ACCOUNT),
         requestPasswordReset: vi.fn(async () => undefined),
         resetPassword: vi.fn(async () => undefined),
+        signOut: vi.fn(async () => undefined),
     };
 }
 
