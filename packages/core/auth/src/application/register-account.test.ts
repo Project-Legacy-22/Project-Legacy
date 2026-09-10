@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { PRIVACY_POLICY_VERSION } from '@legacy/contracts';
+
 import { inMemoryIdentityProvider } from '../../test/fakes/in-memory-identity-provider.js';
 import { InvalidEmailAddress, WeakPassword } from '../domain/account.js';
 import { makeRegisterAccount } from './register-account.js';
@@ -14,7 +16,7 @@ describe('registerAccount', () => {
         const registerAccount = makeRegisterAccount(provider);
         const signIn = makeSignIn(provider);
 
-        await registerAccount(ADRESSE, MOT_DE_PASSE);
+        await registerAccount(ADRESSE, MOT_DE_PASSE, PRIVACY_POLICY_VERSION);
         const session = await signIn(ADRESSE, MOT_DE_PASSE);
 
         expect(session.account.email).toBe(ADRESSE);
@@ -27,8 +29,8 @@ describe('registerAccount', () => {
         const provider = inMemoryIdentityProvider();
         const registerAccount = makeRegisterAccount(provider);
 
-        const premiere = await registerAccount(ADRESSE, MOT_DE_PASSE);
-        const seconde = await registerAccount(ADRESSE, 'AutreMotDePasse7');
+        const premiere = await registerAccount(ADRESSE, MOT_DE_PASSE, PRIVACY_POLICY_VERSION);
+        const seconde = await registerAccount(ADRESSE, 'AutreMotDePasse7', PRIVACY_POLICY_VERSION);
 
         expect(seconde).toEqual(premiere);
     });
@@ -38,8 +40,8 @@ describe('registerAccount', () => {
         const registerAccount = makeRegisterAccount(provider);
         const signIn = makeSignIn(provider);
 
-        await registerAccount(ADRESSE, MOT_DE_PASSE);
-        await registerAccount(ADRESSE, 'AutreMotDePasse7');
+        await registerAccount(ADRESSE, MOT_DE_PASSE, PRIVACY_POLICY_VERSION);
+        await registerAccount(ADRESSE, 'AutreMotDePasse7', PRIVACY_POLICY_VERSION);
 
         await expect(signIn(ADRESSE, 'AutreMotDePasse7')).rejects.toThrow();
         await expect(signIn(ADRESSE, MOT_DE_PASSE)).resolves.toBeDefined();
@@ -50,7 +52,7 @@ describe('registerAccount', () => {
         const registerAccount = makeRegisterAccount(provider);
         const signIn = makeSignIn(provider);
 
-        await registerAccount('  Alice@Example.COM ', MOT_DE_PASSE);
+        await registerAccount('  Alice@Example.COM ', MOT_DE_PASSE, PRIVACY_POLICY_VERSION);
 
         await expect(signIn(ADRESSE, MOT_DE_PASSE)).resolves.toBeDefined();
     });
@@ -60,7 +62,7 @@ describe('registerAccount', () => {
         const registerAccount = makeRegisterAccount(provider);
         const signIn = makeSignIn(provider);
 
-        await expect(registerAccount(ADRESSE, 'court1A')).rejects.toBeInstanceOf(WeakPassword);
+        await expect(registerAccount(ADRESSE, 'court1A', PRIVACY_POLICY_VERSION)).rejects.toBeInstanceOf(WeakPassword);
         await expect(signIn(ADRESSE, 'court1A')).rejects.toThrow();
     });
 
@@ -68,7 +70,7 @@ describe('registerAccount', () => {
         const provider = inMemoryIdentityProvider();
         const registerAccount = makeRegisterAccount(provider);
 
-        await expect(registerAccount('pas-une-adresse', MOT_DE_PASSE)).rejects.toBeInstanceOf(
+        await expect(registerAccount('pas-une-adresse', MOT_DE_PASSE, PRIVACY_POLICY_VERSION)).rejects.toBeInstanceOf(
             InvalidEmailAddress,
         );
     });

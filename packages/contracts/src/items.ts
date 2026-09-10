@@ -28,6 +28,7 @@ export const UpdateItemBody = z.object({
 // that historical state while every new write remains subject to itemNameSchema.
 export const ItemDto = z.object({
     id: z.uuid(),
+    projectId: z.uuid(),
     name: z.string().nullable(),
     completed: z.boolean(),
 });

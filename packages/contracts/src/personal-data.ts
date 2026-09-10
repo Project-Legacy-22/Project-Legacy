@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { ProjectRole } from './projects.js';
+
 // The copy of an account handed back by the portability endpoint (US-13).
 //
 // This is a response shape rather than an input one, and it is declared here
@@ -17,16 +19,28 @@ const ExportedAccount = z.object({
     createdAt: z.iso.datetime(),
 });
 
-// Soft-deleted items are exported too, with the date they were removed. They
-// are still stored personal data; leaving them out would make the export a
-// description of what the interface shows rather than of what is held.
 const ExportedItem = z.object({
     id: z.uuid(),
+    projectId: z.uuid(),
     name: z.string().nullable(),
     completed: z.boolean(),
     createdAt: z.iso.datetime(),
     updatedAt: z.iso.datetime(),
-    deletedAt: z.iso.datetime().nullable(),
+});
+
+const ExportedProject = z.object({
+    id: z.uuid(),
+    name: z.string(),
+    createdAt: z.iso.datetime(),
+    updatedAt: z.iso.datetime(),
+});
+
+// Only the caller's membership rows are exported. Including the identifiers of
+// other members would disclose somebody else's personal data in this copy.
+const ExportedProjectMembership = z.object({
+    projectId: z.uuid(),
+    role: ProjectRole,
+    createdAt: z.iso.datetime(),
 });
 
 // Notifications carry no message text: the wording belongs to the interface
@@ -46,6 +60,8 @@ export const PersonalDataExportDto = z.object({
     // which is the recent one.
     exportedAt: z.iso.datetime(),
     account: ExportedAccount,
+    projects: z.array(ExportedProject),
+    projectMemberships: z.array(ExportedProjectMembership),
     items: z.array(ExportedItem),
     notifications: z.array(ExportedNotification),
 });

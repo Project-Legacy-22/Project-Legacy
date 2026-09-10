@@ -5,22 +5,26 @@ import {
     makeExportPersonalData,
     makeIdentifyCaller,
     makeRegisterAccount,
+    makeRenewSession,
     makeRequestPasswordReset,
     makeResetPassword,
     makeSignIn,
+    makeSignOut,
 } from '@legacy/core-auth';
 import type { IdentityProvider, PersonalDataStore } from '@legacy/core-auth';
 import { makeAddItem, makeChangeItem, makeListItems, makeRemoveItem } from '@legacy/core-items';
+import { makeAddProject, makeListProjects, makeRemoveProject } from '@legacy/core-projects';
 // Les doublures de reference vivent avec le port qu elles implementent. Les
 // recopier ici laisserait la copie deriver du contrat qu elle represente.
 import { anAccountWithData } from '../../../../../packages/core/auth/test/builders/personal-data.js';
 import { inMemoryIdentityProvider } from '../../../../../packages/core/auth/test/fakes/in-memory-identity-provider.js';
 import { inMemoryCompromisedPasswords } from '../../../../../packages/core/auth/test/fakes/in-memory-compromised-passwords.js';
 import { inMemoryPersonalDataStore } from '../../../../../packages/core/auth/test/fakes/in-memory-personal-data-store.js';
+import { inMemoryProjectRepository } from '../../../../../packages/core/projects/test/fakes/in-memory-project-repository.js';
 
 import { createServer } from '../server.js';
 import type { AppUseCases } from '../../composition-root.js';
-import { recordingLogger } from '../../../test/fakes/recording-logger.js';
+import { recordingLogger } from '../../../../../packages/contracts/test/fakes/recording-logger.js';
 import { unreachableItemRepository } from '../../../test/fakes/unreachable-item-repository.js';
 import { json, listen, testConfig } from '../../../test/http-harness.js';
 import type { Harness } from '../../../test/http-harness.js';
@@ -36,18 +40,29 @@ const BOB = anAccountWithData('bob@example.com', 2);
 // attendu, ce que le test verrait.
 function useCasesOver(provider: IdentityProvider, store: PersonalDataStore): AppUseCases {
     const repository = unreachableItemRepository();
+    const projects = inMemoryProjectRepository();
 
     return {
         items: {
             listItems: makeListItems(repository),
-            addItem: makeAddItem({ repository, newId: () => ITEM_ID, now: () => MOMENT }),
+            addItem: makeAddItem({
+                repository,
+                newId: () => ITEM_ID,
+                now: () => MOMENT,
+            }),
             changeItem: makeChangeItem(repository),
             removeItem: makeRemoveItem(repository),
+        },
+        notifications: {
+            countUnread: () => Promise.resolve(0),
+            listNotifications: () => Promise.reject(new Error('not exercised by this suite')),
+            markNotificationRead: () => Promise.reject(new Error('not exercised by this suite')),
         },
         auth: {
             registerAccount: makeRegisterAccount(provider),
             signIn: makeSignIn(provider),
             identifyCaller: makeIdentifyCaller(provider),
+            renewSession: makeRenewSession(provider),
             // Aucune route exercee ici ne reinitialise de mot de passe. Les cas
             // d usage sont composes quand meme : AuthUseCases les exige, et un
             // double vide masquerait un branchement oublie dans le serveur.
@@ -56,10 +71,21 @@ function useCasesOver(provider: IdentityProvider, store: PersonalDataStore): App
                 provider,
                 compromisedPasswords: inMemoryCompromisedPasswords(),
             }),
+            // Aucune route exercee ici ne se deconnecte. Compose pour la meme
+            // raison que resetPassword ci-dessus.
+            signOut: makeSignOut(provider),
         },
         account: {
             exportPersonalData: makeExportPersonalData({ store, now: () => MOMENT }),
             eraseAccount: makeEraseAccount({ store, identity: provider }),
+        },
+        projects: {
+            listProjects: makeListProjects(projects),
+            addProject: makeAddProject({
+                repository: projects,
+                newId: () => ITEM_ID,
+            }),
+            removeProject: makeRemoveProject(projects),
         },
     };
 }
@@ -70,7 +96,7 @@ describe('API des donnees personnelles', () => {
     beforeEach(async () => {
         const logger = recordingLogger();
         const provider = inMemoryIdentityProvider(
-            [ALICE, BOB].map(compte => ({
+            [ALICE, BOB].map((compte) => ({
                 id: compte.account.id,
                 email: compte.account.email,
                 password: MOT_DE_PASSE,
@@ -86,10 +112,7 @@ describe('API des donnees personnelles', () => {
     // La session est obtenue par l API plutot que fabriquee : le cookie est
     // httpOnly, et sa forme appartient a la couche HTTP, pas au test.
     async function sessionDe(email: string): Promise<string> {
-        const connexion = await harness.request(
-            '/auth/login',
-            json('POST', { email, password: MOT_DE_PASSE }),
-        );
+        const connexion = await harness.request('/auth/login', json('POST', { email, password: MOT_DE_PASSE }));
 
         return (connexion.headers.get('set-cookie') ?? '').split(';')[0] ?? '';
     }
@@ -126,19 +149,19 @@ describe('API des donnees personnelles', () => {
         });
 
         // Le critere de portabilite : un export reduit au compte est un echec
-        // de l issue. Les trois tables que l application remplit aujourd hui
+        // de l issue. Les cinq tables que l application remplit aujourd hui
         // doivent y figurer.
-        it('couvre le compte, ses items et ses notifications', async () => {
+        it('couvre le compte, ses projets, ses appartenances, ses items et ses notifications', async () => {
             const cookie = await sessionDe(ALICE.account.email);
 
             const corps: unknown = await (await exporter(cookie)).json();
             const copie = PersonalDataExportDto.parse(corps);
 
             expect(copie.account.email).toBe(ALICE.account.email);
-            expect(copie.items.map(item => item.id)).toEqual([ALICE.itemId]);
-            expect(copie.notifications.map(notification => notification.id)).toEqual([
-                ALICE.notificationId,
-            ]);
+            expect(copie.projects.map((project) => project.id)).toEqual([ALICE.projectId]);
+            expect(copie.projectMemberships.map((membership) => membership.projectId)).toEqual([ALICE.projectId]);
+            expect(copie.items.map((item) => item.id)).toEqual([ALICE.itemId]);
+            expect(copie.notifications.map((notification) => notification.id)).toEqual([ALICE.notificationId]);
         });
 
         // Le critere d isolation, enonce sur le document servi : c est ce
@@ -151,16 +174,14 @@ describe('API des donnees personnelles', () => {
 
             expect(document).not.toContain(BOB.account.email);
             expect(document).not.toContain(BOB.account.id);
+            expect(document).not.toContain(BOB.projectId);
             expect(document).not.toContain(BOB.itemId);
         });
     });
 
     describe('DELETE /auth/me', () => {
         it('refuse un appel sans session', async () => {
-            const response = await harness.request(
-                '/auth/me',
-                json('DELETE', { confirmation: ALICE.account.email }),
-            );
+            const response = await harness.request('/auth/me', json('DELETE', { confirmation: ALICE.account.email }));
 
             expect(response.status).toBe(401);
         });
@@ -176,7 +197,9 @@ describe('API des donnees personnelles', () => {
         it('refuse une confirmation qui n est pas l adresse du compte', async () => {
             const cookie = await sessionDe(ALICE.account.email);
 
-            const response = await supprimer(cookie, { confirmation: BOB.account.email });
+            const response = await supprimer(cookie, {
+                confirmation: BOB.account.email,
+            });
 
             expect(response.status).toBe(422);
         });
@@ -184,7 +207,9 @@ describe('API des donnees personnelles', () => {
         it('supprime le compte et vide le cookie de session', async () => {
             const cookie = await sessionDe(ALICE.account.email);
 
-            const response = await supprimer(cookie, { confirmation: ALICE.account.email });
+            const response = await supprimer(cookie, {
+                confirmation: ALICE.account.email,
+            });
 
             expect(response.status).toBe(204);
             expect(response.headers.get('set-cookie')).toContain('session=;');
@@ -196,7 +221,9 @@ describe('API des donnees personnelles', () => {
             const cookie = await sessionDe(ALICE.account.email);
 
             await supprimer(cookie, { confirmation: ALICE.account.email });
-            const apres = await harness.request('/auth/me', { headers: { Cookie: cookie } });
+            const apres = await harness.request('/auth/me', {
+                headers: { Cookie: cookie },
+            });
 
             expect(apres.status).toBe(401);
         });

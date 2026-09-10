@@ -13,12 +13,13 @@ export default defineConfig({
         port: 5173,
         strictPort: true,
         proxy: {
-            '/items': 'http://localhost:3000',
+            '/projects': 'http://localhost:3000',
             // Served from the same origin as the app, so the browser carries
             // the session cookie by itself. Calling the API on another origin
             // would put that cookie out of reach and push the token back into
             // JavaScript, which is exactly what httpOnly exists to prevent.
             '/auth': 'http://localhost:3000',
+            '/notifications': 'http://localhost:3000',
         },
     },
 });

@@ -1,0 +1,11 @@
+{
+  "name": "@legacy/worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@legacy/contracts": "*",
+    "@legacy/infra": "*",
+    "zod": "^4.5.4"
+  }
+}

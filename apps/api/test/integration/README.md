@@ -11,16 +11,19 @@ pour de vrai.
 
 - `support.ts` — compose une vraie `Application` (`composition-root.ts`),
   inscrit et connecte de vrais comptes par l'authentification réelle.
-- `items.integration.test.ts` — l'API HTTP réelle : CRUD, isolation entre
-  comptes, telle que l'application elle-même l'applique (rôle de service,
-  filtrage `user_id` en couche applicative).
+- `projects.integration.test.ts` — projet par défaut, création avec appartenance,
+  visibilité des membres, refus des non-membres et cascade de suppression.
+- `project-counts.integration.test.ts` — compteur aligné sur les tâches visibles,
+  y compris pour un projet vide ou contenant uniquement des tâches supprimées
+  logiquement. Exerce le vrai agrégat PostgREST utilisé par l'API.
+- `items.integration.test.ts` — l'API HTTP réelle : CRUD sous un projet et
+  isolation entre membres et non-membres, telle que l'application l'applique.
 - `row-level-security.integration.test.ts` — les politiques RLS elles-mêmes,
   atteintes directement via PostgREST avec la clé publique et le jeton d'un
   vrai compte, sans passer par l'API ni par le rôle de service. C'est la seule
   suite qui exerce réellement ce que
-  `supabase/migrations/20260904103000_authentication_and_row_level_security.sql`
-  pose : le filet de sécurité si le rôle de service fuit ou si un client
-  interroge PostgREST directement.
+  les migrations d'authentification et de projets posent : le filet de sécurité
+  si le rôle de service fuit ou si un client interroge PostgREST directement.
 
 ## Lancer
 
@@ -37,7 +40,7 @@ tôt, en les nommant, si l'un manque.
 
 ## Isolation
 
-Chaque test crée son propre compte (adresse générée, `crypto.randomUUID()`) et
-ses propres items : aucun test ne dépend d'un état laissé par un autre, ni de
+Chaque suite crée ses propres comptes (adresse générée, `crypto.randomUUID()`)
+et chaque test crée les projets ou items qu'il exerce. Aucun test ne dépend de
 l'ordre d'exécution. Un `npm run db:reset` entre deux lancements n'est jamais
 nécessaire pour que la suite passe, seulement pour repartir d'une base vide.

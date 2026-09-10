@@ -16,12 +16,13 @@ export interface ItemPage {
 // What the use cases require of the outside world, named after the need and not
 // after the technology. packages/infra provides the implementations.
 //
-// Every read names an owner (US-12). There is deliberately no way to ask this
-// port for an item without saying on whose behalf: one forgotten argument at a
-// call site would otherwise hand a caller someone else's items.
+// Every read names a project and the member on whose behalf it is made. There is
+// deliberately no unscoped lookup: one forgotten argument at a call site would
+// otherwise hand a caller another project's items.
 export interface ItemRepository {
-    findPageByOwner(ownerId: string, page: ItemPageQuery): Promise<ItemPage>;
-    findByIdForOwner(id: string, ownerId: string): Promise<Item | undefined>;
+    isProjectMember(projectId: string, memberId: string): Promise<boolean>;
+    findPageForMember(projectId: string, memberId: string, page: ItemPageQuery): Promise<ItemPage | undefined>;
+    findByIdForMember(id: string, projectId: string, memberId: string): Promise<Item | undefined>;
 
     // The item and the event announcing it are written together or not at all.
     // They are one argument list rather than two calls because the guarantee is

@@ -3,7 +3,7 @@ import { Router } from 'express';
 import type { RequestHandler } from 'express';
 
 import type { AccountUseCases, AuthUseCases } from '../../composition-root.js';
-import { accountOf, clearSessionCookie, requireAccount } from '../session.js';
+import { accountOf, clearSessionCookies, requireAccount } from '../session.js';
 
 export interface AccountRoutesOptions {
     secureCookie: boolean;
@@ -57,7 +57,7 @@ export function accountRouter(
         useCases
             .eraseAccount(accountOf(res), body.data.confirmation)
             .then(() => {
-                clearSessionCookie(res, options.secureCookie);
+                clearSessionCookies(res, options.secureCookie);
                 // Nothing to return: there is no longer an account to describe,
                 // and a body echoing what was deleted would be a last copy of
                 // it.
@@ -66,8 +66,10 @@ export function accountRouter(
             .catch(next);
     };
 
-    router.get('/auth/me/export', requireAccount(auth), exportPersonalData);
-    router.delete('/auth/me', requireAccount(auth), eraseAccount);
+    const session = requireAccount(auth, options.secureCookie);
+
+    router.get('/auth/me/export', session, exportPersonalData);
+    router.delete('/auth/me', session, eraseAccount);
 
     return router;
 }

@@ -1,4 +1,10 @@
-import type { ExportedAccount, ExportedItem, ExportedNotification } from '../../src/index.js';
+import type {
+    ExportedAccount,
+    ExportedItem,
+    ExportedNotification,
+    ExportedProject,
+    ExportedProjectMembership,
+} from '../../src/index.js';
 import type { SeededAccount } from '../fakes/in-memory-personal-data-store.js';
 
 // Builders for the rows US-13 exports and erases. Identifiers are real uuids:
@@ -25,11 +31,30 @@ export function anAccount(overrides: Partial<ExportedAccount> = {}): ExportedAcc
 export function anItem(overrides: Partial<ExportedItem> = {}): ExportedItem {
     return {
         id: uuidOf('a'),
+        projectId: uuidOf('d'),
         name: 'Prepare the sprint review',
         completed: false,
         createdAt: INSTANT,
         updatedAt: INSTANT,
-        deletedAt: null,
+        ...overrides,
+    };
+}
+
+export function aProject(overrides: Partial<ExportedProject> = {}): ExportedProject {
+    return {
+        id: uuidOf('d'),
+        name: 'Sprint planning',
+        createdAt: INSTANT,
+        updatedAt: INSTANT,
+        ...overrides,
+    };
+}
+
+export function aProjectMembership(overrides: Partial<ExportedProjectMembership> = {}): ExportedProjectMembership {
+    return {
+        projectId: uuidOf('d'),
+        role: 'owner',
+        createdAt: INSTANT,
         ...overrides,
     };
 }
@@ -48,6 +73,7 @@ export function aNotification(overrides: Partial<ExportedNotification> = {}): Ex
 // The identifiers of the rows below, exposed alongside them so a test can name
 // the one it is looking for without indexing into an array.
 export interface AccountWithData extends SeededAccount {
+    projectId: string;
     itemId: string;
     notificationId: string;
     eventId: string;
@@ -62,12 +88,16 @@ export function anAccountWithData(email: string, seed: number): AccountWithData 
     const itemId = uuidOf(`a${suffix}`);
     const notificationId = uuidOf(`b${suffix}`);
     const eventId = uuidOf(`c${suffix}`);
+    const projectId = uuidOf(`d${suffix}`);
 
     return {
         account: anAccount({ id: uuidOf(`1${suffix}`), email }),
-        items: [anItem({ id: itemId })],
+        projects: [aProject({ id: projectId })],
+        projectMemberships: [aProjectMembership({ projectId })],
+        items: [anItem({ id: itemId, projectId })],
         notifications: [aNotification({ id: notificationId, itemId, eventId })],
         outboxEventIds: [eventId],
+        projectId,
         itemId,
         notificationId,
         eventId,

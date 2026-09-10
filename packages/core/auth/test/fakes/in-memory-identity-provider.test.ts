@@ -67,3 +67,67 @@ describe('inMemoryIdentityProvider recovery flow', () => {
         expect(p.recoveryTokenFor('bob@example.com')).toBeUndefined();
     });
 });
+
+// La rotation que decrit l ADR-0008, modelisee ici pour que les suites de cas
+// d usage et d API s appuient dessus. Ce qui est fixe est le contrat du
+// fournisseur, pas la comptabilite de ce fichier : un jeton ne sert qu une
+// fois, un jeton d acces expire seul, et une reutilisation hors intervalle
+// termine la session.
+describe('inMemoryIdentityProvider session rotation', () => {
+    const HEURE_MS = 60 * 60 * 1000;
+    const APRES_L_INTERVALLE_MS = 11_000;
+
+    it('rend un jeton de rafraichissement different a chaque echange', async () => {
+        const p = provider();
+        const session = await p.authenticate(ADRESSE, ANCIEN);
+
+        const renouvelee = await p.refresh(session?.refreshToken ?? '');
+
+        expect(renouvelee?.refreshToken).toBeDefined();
+        expect(renouvelee?.refreshToken).not.toBe(session?.refreshToken);
+    });
+
+    it('laisse le jeton de rafraichissement survivre a l expiration du jeton d acces', async () => {
+        let instant = 1_000_000;
+        const p = provider(() => instant);
+        const session = await p.authenticate(ADRESSE, ANCIEN);
+
+        instant += HEURE_MS + 1;
+
+        await expect(p.identify(session?.accessToken ?? '')).resolves.toBeUndefined();
+        await expect(p.refresh(session?.refreshToken ?? '')).resolves.toBeDefined();
+    });
+
+    it('rend la meme session a un rejeu dans l intervalle de reprise', async () => {
+        let instant = 1_000_000;
+        const p = provider(() => instant);
+        const session = await p.authenticate(ADRESSE, ANCIEN);
+
+        const premier = await p.refresh(session?.refreshToken ?? '');
+        instant += 9_000;
+        const second = await p.refresh(session?.refreshToken ?? '');
+
+        expect(second?.accessToken).toBe(premier?.accessToken);
+        expect(second?.refreshToken).toBe(premier?.refreshToken);
+    });
+
+    it('termine la session et revoque ses jetons sur une reutilisation hors intervalle', async () => {
+        let instant = 1_000_000;
+        const p = provider(() => instant);
+        const session = await p.authenticate(ADRESSE, ANCIEN);
+        const renouvelee = await p.refresh(session?.refreshToken ?? '');
+
+        instant += APRES_L_INTERVALLE_MS;
+        const reutilisation = await p.refresh(session?.refreshToken ?? '');
+
+        expect(reutilisation).toBeUndefined();
+        await expect(p.identify(renouvelee?.accessToken ?? '')).resolves.toBeUndefined();
+        await expect(p.refresh(renouvelee?.refreshToken ?? '')).resolves.toBeUndefined();
+    });
+
+    it('rejette un jeton de rafraichissement qu il n a jamais emis', async () => {
+        const p = provider();
+
+        await expect(p.refresh('refresh:account-1:999')).resolves.toBeUndefined();
+    });
+});

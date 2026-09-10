@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import { createClient } from '@supabase/supabase-js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -41,17 +43,14 @@ describe('politiques RLS sur items (sans role de service)', () => {
         // Through the real use case, service-role-backed, exactly as the API
         // itself creates an item: this file is not testing how the row gets
         // there, only who PostgREST lets read, write or erase it afterwards.
-        const item = await app.useCases.items.addItem('Vu par PostgREST', owner.id);
+        const item = await app.useCases.items.addItem('Vu par PostgREST', owner.projectId, owner.id);
         itemId = item.id;
     });
 
     afterAll(() => app.stop());
 
     it('le proprietaire lit sa ligne directement via PostgREST', async () => {
-        const { data, error } = await postgrestAs(owner.accessToken)
-            .from('items')
-            .select('id')
-            .eq('id', itemId);
+        const { data, error } = await postgrestAs(owner.accessToken).from('items').select('id').eq('id', itemId);
 
         expect(error).toBeNull();
         expect(data).toEqual([{ id: itemId }]);
@@ -61,13 +60,23 @@ describe('politiques RLS sur items (sans role de service)', () => {
     // sans droit ne renvoie pas une erreur, elle renvoie un ensemble vide,
     // comme si la ligne n existait pas pour cet appelant.
     it('un autre compte ne recoit rien pour la meme ligne', async () => {
-        const { data, error } = await postgrestAs(intruder.accessToken)
-            .from('items')
-            .select('id')
-            .eq('id', itemId);
+        const { data, error } = await postgrestAs(intruder.accessToken).from('items').select('id').eq('id', itemId);
 
         expect(error).toBeNull();
         expect(data).toEqual([]);
+    });
+
+    it('un autre compte ne voit ni le projet ni son appartenance', async () => {
+        const client = postgrestAs(intruder.accessToken);
+        const [projects, memberships] = await Promise.all([
+            client.from('projects').select('id').eq('id', owner.projectId),
+            client.from('project_memberships').select('project_id').eq('project_id', owner.projectId),
+        ]);
+
+        expect(projects.error).toBeNull();
+        expect(projects.data).toEqual([]);
+        expect(memberships.error).toBeNull();
+        expect(memberships.data).toEqual([]);
     });
 
     it('un autre compte ne peut pas la modifier, et elle reste intacte', async () => {
@@ -81,26 +90,16 @@ describe('politiques RLS sur items (sans role de service)', () => {
         // sans erreur, plutot qu un refus explicite.
         expect(data).toEqual([]);
 
-        const { data: intacte } = await postgrestAs(owner.accessToken)
-            .from('items')
-            .select('name')
-            .eq('id', itemId);
+        const { data: intacte } = await postgrestAs(owner.accessToken).from('items').select('name').eq('id', itemId);
         expect(intacte).toEqual([{ name: 'Vu par PostgREST' }]);
     });
 
     it('un autre compte ne peut pas la supprimer', async () => {
-        const { data } = await postgrestAs(intruder.accessToken)
-            .from('items')
-            .delete()
-            .eq('id', itemId)
-            .select();
+        const { data } = await postgrestAs(intruder.accessToken).from('items').delete().eq('id', itemId).select();
 
         expect(data).toEqual([]);
 
-        const { data: toujoursLa } = await postgrestAs(owner.accessToken)
-            .from('items')
-            .select('id')
-            .eq('id', itemId);
+        const { data: toujoursLa } = await postgrestAs(owner.accessToken).from('items').select('id').eq('id', itemId);
         expect(toujoursLa).toEqual([{ id: itemId }]);
     });
 
@@ -109,7 +108,11 @@ describe('politiques RLS sur items (sans role de service)', () => {
     it('un compte ne peut pas creer une ligne au nom d un autre', async () => {
         const { data, error } = await postgrestAs(intruder.accessToken)
             .from('items')
-            .insert({ user_id: owner.id, name: 'Usurpe' })
+            .insert({
+                user_id: owner.id,
+                project_id: owner.projectId,
+                name: 'Usurpe',
+            })
             .select();
 
         expect(data).toBeNull();
@@ -119,10 +122,107 @@ describe('politiques RLS sur items (sans role de service)', () => {
     it('un compte peut creer une ligne en son propre nom', async () => {
         const { data, error } = await postgrestAs(intruder.accessToken)
             .from('items')
-            .insert({ user_id: intruder.id, name: 'A moi, via PostgREST' })
+            .insert({
+                user_id: intruder.id,
+                project_id: intruder.projectId,
+                name: 'A moi, via PostgREST',
+            })
             .select('id');
 
         expect(error).toBeNull();
         expect(data).toHaveLength(1);
+    });
+});
+
+describe('politiques RLS sur notifications (sans role de service)', () => {
+    let app: Awaited<ReturnType<typeof realApplication>>;
+    let owner: RealAccount;
+    let intruder: RealAccount;
+    let notificationId: string;
+
+    // Seedee avec le role de service, exactement comme le worker le ferait en
+    // consommant un evenement (record_item_created_notification) : ce fichier
+    // teste qui PostgREST laisse lire ou ecrire une fois la ligne posee, pas
+    // comment elle y arrive.
+    async function seedNotification(ownerId: string, itemId: string): Promise<string> {
+        const config = integrationConfig();
+        const service = createClient(config.supabaseUrl, config.supabaseServiceRoleKey, {
+            auth: { persistSession: false, autoRefreshToken: false },
+        });
+
+        const eventId = randomUUID();
+        const { error } = await service.rpc('record_item_created_notification', {
+            p_event_id: eventId,
+            p_user_id: ownerId,
+            p_item_id: itemId,
+        });
+        if (error) throw new Error('setup: could not seed a notification', { cause: error });
+
+        const { data } = await service
+            .from('notifications')
+            .select('id')
+            .eq('event_id', eventId)
+            .single();
+        return (data as { id: string }).id;
+    }
+
+    beforeAll(async () => {
+        app = realApplication();
+        await app.start();
+        owner = await registerAndSignIn(app, MOT_DE_PASSE);
+        intruder = await registerAndSignIn(app, MOT_DE_PASSE);
+        const item = await app.useCases.items.addItem('Vu par PostgREST', owner.projectId, owner.id);
+        notificationId = await seedNotification(owner.id, item.id);
+    });
+
+    afterAll(() => app.stop());
+
+    it('le proprietaire lit sa notification directement via PostgREST', async () => {
+        const { data, error } = await postgrestAs(owner.accessToken)
+            .from('notifications')
+            .select('id')
+            .eq('id', notificationId);
+
+        expect(error).toBeNull();
+        expect(data).toEqual([{ id: notificationId }]);
+    });
+
+    it('un autre compte ne recoit rien pour la meme ligne', async () => {
+        const { data, error } = await postgrestAs(intruder.accessToken)
+            .from('notifications')
+            .select('id')
+            .eq('id', notificationId);
+
+        expect(error).toBeNull();
+        expect(data).toEqual([]);
+    });
+
+    it('le proprietaire peut la marquer comme lue directement via PostgREST', async () => {
+        const { data, error } = await postgrestAs(owner.accessToken)
+            .from('notifications')
+            .update({ read_at: new Date().toISOString() })
+            .eq('id', notificationId)
+            .select();
+
+        expect(error).toBeNull();
+        expect(data).toHaveLength(1);
+    });
+
+    it('un autre compte ne peut pas creer une notification', async () => {
+        const { data, error } = await postgrestAs(intruder.accessToken)
+            .from('notifications')
+            .insert({
+                id: randomUUID(),
+                user_id: intruder.id,
+                item_id: randomUUID(),
+                event_id: randomUUID(),
+            })
+            .select();
+
+        // Aucune politique d insertion n existe pour ce role : la table
+        // n accepte une nouvelle ligne que par record_item_created_notification,
+        // en SECURITY DEFINER.
+        expect(data).toBeNull();
+        expect(error).not.toBeNull();
     });
 });

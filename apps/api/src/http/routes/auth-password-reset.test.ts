@@ -4,20 +4,24 @@ import {
     makeExportPersonalData,
     makeIdentifyCaller,
     makeRegisterAccount,
+    makeRenewSession,
     makeRequestPasswordReset,
     makeResetPassword,
     makeSignIn,
+    makeSignOut,
 } from '@legacy/core-auth';
 import { makeAddItem, makeChangeItem, makeListItems, makeRemoveItem } from '@legacy/core-items';
+import { makeAddProject, makeListProjects, makeRemoveProject } from '@legacy/core-projects';
 // The reference fakes for a port live with the port they implement.
 import { inMemoryCompromisedPasswords } from '../../../../../packages/core/auth/test/fakes/in-memory-compromised-passwords.js';
 import { inMemoryPersonalDataStore } from '../../../../../packages/core/auth/test/fakes/in-memory-personal-data-store.js';
 import { inMemoryIdentityProvider } from '../../../../../packages/core/auth/test/fakes/in-memory-identity-provider.js';
 import type { InMemoryIdentityProvider } from '../../../../../packages/core/auth/test/fakes/in-memory-identity-provider.js';
+import { inMemoryProjectRepository } from '../../../../../packages/core/projects/test/fakes/in-memory-project-repository.js';
 
 import { createServer } from '../server.js';
 import type { AppUseCases } from '../../composition-root.js';
-import { recordingLogger } from '../../../test/fakes/recording-logger.js';
+import { recordingLogger } from '../../../../../packages/contracts/test/fakes/recording-logger.js';
 import { unreachableItemRepository } from '../../../test/fakes/unreachable-item-repository.js';
 import { json, listen, testConfig } from '../../../test/http-harness.js';
 import type { Harness } from '../../../test/http-harness.js';
@@ -38,6 +42,7 @@ const COMPTE = [{ id: ACCOUNT_ID, email: ADRESSE, password: ANCIEN }];
 
 function useCasesOver(provider: InMemoryIdentityProvider, compromised: string[]): AppUseCases {
     const repository = unreachableItemRepository();
+    const projects = inMemoryProjectRepository();
 
     return {
         items: {
@@ -50,15 +55,22 @@ function useCasesOver(provider: InMemoryIdentityProvider, compromised: string[])
             changeItem: makeChangeItem(repository),
             removeItem: makeRemoveItem(repository),
         },
+        notifications: {
+            countUnread: () => Promise.resolve(0),
+            listNotifications: () => Promise.reject(new Error('not exercised by this suite')),
+            markNotificationRead: () => Promise.reject(new Error('not exercised by this suite')),
+        },
         auth: {
             registerAccount: makeRegisterAccount(provider),
             signIn: makeSignIn(provider),
             identifyCaller: makeIdentifyCaller(provider),
+            renewSession: makeRenewSession(provider),
             requestPasswordReset: makeRequestPasswordReset(provider),
             resetPassword: makeResetPassword({
                 provider,
                 compromisedPasswords: inMemoryCompromisedPasswords(compromised),
             }),
+            signOut: makeSignOut(provider),
         },
         // Aucune route exercee ici ne touche aux donnees personnelles. Le
         // groupe est compose sur un magasin vide plutot qu omis : AppUseCases
@@ -69,6 +81,11 @@ function useCasesOver(provider: InMemoryIdentityProvider, compromised: string[])
                 now: () => new Date('2026-09-04T10:00:00.000Z'),
             }),
             eraseAccount: makeEraseAccount({ store: inMemoryPersonalDataStore(), identity: provider }),
+        },
+        projects: {
+            listProjects: makeListProjects(projects),
+            addProject: makeAddProject({ repository: projects, newId: () => ACCOUNT_ID }),
+            removeProject: makeRemoveProject(projects),
         },
     };
 }

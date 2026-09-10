@@ -42,31 +42,38 @@ export type Database = {
         Row: {
           completed: boolean
           created_at: string
-          deleted_at: string | null
           id: string
           name: string
+          project_id: string
           updated_at: string
           user_id: string
         }
         Insert: {
           completed?: boolean
           created_at?: string
-          deleted_at?: string | null
           id?: string
           name: string
+          project_id: string
           updated_at?: string
           user_id: string
         }
         Update: {
           completed?: boolean
           created_at?: string
-          deleted_at?: string | null
           id?: string
           name?: string
+          project_id?: string
           updated_at?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "items_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "items_user_id_fkey"
             columns: ["user_id"]
@@ -170,23 +177,86 @@ export type Database = {
         }
         Relationships: []
       }
+      project_memberships: {
+        Row: {
+          created_at: string
+          project_id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          project_id: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          project_id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_memberships_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_memberships_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           created_at: string
           email: string
           id: string
+          policy_accepted_at: string | null
+          policy_version: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           email: string
           id?: string
+          policy_accepted_at?: string | null
+          policy_version?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           email?: string
           id?: string
+          policy_accepted_at?: string | null
+          policy_version?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -204,11 +274,24 @@ export type Database = {
           p_name: string
           p_occurred_at: string
           p_payload: Json
+          p_project_id: string
           p_user_id: string
         }
         Returns: undefined
       }
+      create_project_for_owner: {
+        Args: { p_name: string; p_project_id: string; p_user_id: string }
+        Returns: undefined
+      }
       erase_account: { Args: { p_user_id: string }; Returns: undefined }
+      mark_notification_read: {
+        Args: { p_account_id: string; p_id: string }
+        Returns: boolean
+      }
+      record_item_created_notification: {
+        Args: { p_event_id: string; p_item_id: string; p_user_id: string }
+        Returns: boolean
+      }
       uuid_generate_v7: { Args: never; Returns: string }
     }
     Enums: {

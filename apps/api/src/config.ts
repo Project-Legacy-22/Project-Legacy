@@ -22,6 +22,10 @@ const EnvSchema = z.object({
     // Read by the authentication adapter. Public by design: it is the key a
     // browser would carry, and what it can reach is what the policies allow.
     SUPABASE_ANON_KEY: z.string().min(1),
+    // The broker of ADR-0007. Required: the relay has nowhere to publish
+    // without it, and an API that starts anyway would fill the outbox with
+    // events nobody ever delivers.
+    REDIS_URL: z.string().url(),
     // Optional: absent, it is `info`. An optional variable is declared here
     // like every other one, otherwise its default ends up scattered across the
     // code that consumes it and the example file stops being the reference.
@@ -30,6 +34,19 @@ const EnvSchema = z.object({
     // Secure flag of the session cookie, which a browser drops over plain
     // http -- and plain http is how the application is served in development.
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+    // The one browser origin allowed to make a cross-origin call. The front is
+    // served from the API's own origin in every environment (the dev proxy
+    // forwards /auth and /items), so this is only ever consulted to refuse
+    // everything else. Optional: absent, it is the Vite dev server. Production
+    // sets the deployed origin. Never a wildcard.
+    WEB_ORIGIN: z.string().url().default('http://localhost:5173'),
+    // How many proxy hops in front of the process to trust when deriving the
+    // caller's address. That address is the rate limiter's client key, so a
+    // wrong value here either lets one client past the limit or lumps every
+    // client behind the proxy into one bucket. Optional: absent, it is 0, which
+    // trusts no forwarded header -- correct for a direct connection and for
+    // development. Behind one reverse proxy in production, set it to 1.
+    TRUST_PROXY: z.coerce.number().int().min(0).default(0),
 });
 
 export type LogLevel = (typeof LOG_LEVELS)[number];
@@ -42,6 +59,9 @@ export interface Config {
     supabaseAnonKey: string;
     logLevel: LogLevel;
     secureCookies: boolean;
+    redisUrl: string;
+    webOrigin: string;
+    trustProxy: number;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -64,6 +84,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
         supabaseServiceRoleKey: parsed.data.SUPABASE_SERVICE_ROLE_KEY,
         supabaseAnonKey: parsed.data.SUPABASE_ANON_KEY,
         logLevel: parsed.data.LOG_LEVEL,
+        redisUrl: parsed.data.REDIS_URL,
         secureCookies: parsed.data.NODE_ENV === 'production',
+        webOrigin: parsed.data.WEB_ORIGIN,
+        trustProxy: parsed.data.TRUST_PROXY,
     };
 }

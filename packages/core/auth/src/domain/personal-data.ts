@@ -17,13 +17,24 @@ export interface ExportedAccount {
 
 export interface ExportedItem {
     id: string;
+    projectId: string;
     name: string | null;
     completed: boolean;
     createdAt: string;
     updatedAt: string;
-    // Set when the item was removed from the list. Removed is not erased: the
-    // row is still held, so it is still exported.
-    deletedAt: string | null;
+}
+
+export interface ExportedProject {
+    id: string;
+    name: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface ExportedProjectMembership {
+    projectId: string;
+    role: 'owner' | 'member';
+    createdAt: string;
 }
 
 export interface ExportedNotification {
@@ -36,6 +47,8 @@ export interface ExportedNotification {
 
 export interface PersonalData {
     account: ExportedAccount;
+    projects: ExportedProject[];
+    projectMemberships: ExportedProjectMembership[];
     items: ExportedItem[];
     notifications: ExportedNotification[];
 }

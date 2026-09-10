@@ -23,6 +23,7 @@
     "test/**/*.test.ts",
     "vitest.levels.ts",
     "apps/api/**/*.test.ts",
+    "apps/worker/**/*.test.ts",
     "apps/api/**/test/**/*.ts",
     "packages/**/*.test.ts",
     "packages/**/test/**/*.ts"

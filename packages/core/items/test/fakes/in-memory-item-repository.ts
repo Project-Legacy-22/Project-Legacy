@@ -15,22 +15,43 @@ export interface InMemoryItemRepository extends ItemRepository {
     items: Map<string, Item>;
 }
 
-export function inMemoryItemRepository(seed: Item[] = []): InMemoryItemRepository {
-    const items = new Map(seed.map(item => [item.id, item]));
+export interface ProjectMembership {
+    projectId: string;
+    userId: string;
+}
+
+export function inMemoryItemRepository(
+    seed: Item[] = [],
+    additionalMemberships: ProjectMembership[] = [],
+): InMemoryItemRepository {
+    const items = new Map(seed.map((item) => [item.id, item]));
     const recordedEvents: DomainEvent[] = [];
+    const memberships = [
+        ...seed.map((item) => ({
+            projectId: item.projectId,
+            userId: item.ownerId,
+        })),
+        ...additionalMemberships,
+    ];
 
     // Most recent first, like the adapter, insertion order standing in for
     // creation order: a fake that ordered otherwise would prove nothing.
-    function ownedBy(ownerId: string): Item[] {
-        return [...items.values()].filter(item => item.ownerId === ownerId).reverse();
+    function isMember(projectId: string, userId: string): boolean {
+        return memberships.some((membership) => membership.projectId === projectId && membership.userId === userId);
+    }
+
+    function inProject(projectId: string): Item[] {
+        return [...items.values()].filter((item) => item.projectId === projectId).reverse();
     }
 
     return {
         recordedEvents,
         items,
-        findPageByOwner: (ownerId, { limit, cursor }) => {
-            const owned = ownedBy(ownerId);
-            const from = cursor === undefined ? 0 : owned.findIndex(item => item.id === cursor) + 1;
+        isProjectMember: (projectId, memberId) => Promise.resolve(isMember(projectId, memberId)),
+        findPageForMember: (projectId, memberId, { limit, cursor }) => {
+            if (!isMember(projectId, memberId)) return Promise.resolve(undefined);
+            const projectItems = inProject(projectId);
+            const from = cursor === undefined ? 0 : projectItems.findIndex((item) => item.id === cursor) + 1;
 
             // Refused rather than silently answered with the first page,
             // exactly as the adapter refuses a cursor it did not mint.
@@ -38,28 +59,28 @@ export function inMemoryItemRepository(seed: Item[] = []): InMemoryItemRepositor
                 return Promise.reject(new InvalidItemCursor());
             }
 
-            const page = owned.slice(from, from + limit);
+            const page = projectItems.slice(from, from + limit);
             const last = page.at(-1);
 
             return Promise.resolve({
                 items: page,
-                nextCursor: from + limit < owned.length && last !== undefined ? last.id : undefined,
+                nextCursor: from + limit < projectItems.length && last !== undefined ? last.id : undefined,
             });
         },
-        findByIdForOwner: (id, ownerId) => {
+        findByIdForMember: (id, projectId, memberId) => {
             const item = items.get(id);
-            return Promise.resolve(item?.ownerId === ownerId ? item : undefined);
+            return Promise.resolve(item?.projectId === projectId && isMember(projectId, memberId) ? item : undefined);
         },
         save: (item, event) => {
             items.set(item.id, item);
             recordedEvents.push(event);
             return Promise.resolve();
         },
-        update: item => {
+        update: (item) => {
             items.set(item.id, item);
             return Promise.resolve();
         },
-        remove: id => {
+        remove: (id) => {
             items.delete(id);
             return Promise.resolve();
         },
@@ -69,8 +90,11 @@ export function inMemoryItemRepository(seed: Item[] = []): InMemoryItemRepositor
 // A repository whose writes fail. Used to check that a failed write announces
 // nothing: with a single atomic call there is no window in which the event
 // could have been recorded on its own.
-export function failingItemRepository(reason = 'storage unavailable'): InMemoryItemRepository {
-    const repository = inMemoryItemRepository();
+export function failingItemRepository(
+    reason = 'storage unavailable',
+    memberships: ProjectMembership[] = [],
+): InMemoryItemRepository {
+    const repository = inMemoryItemRepository([], memberships);
 
     return {
         ...repository,

@@ -1,8 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { createClient } from '@supabase/supabase-js';
+
+import type { Database } from '../../../../packages/infra/src/database.types.js';
 
 import { json } from '../http-harness.js';
 import type { Harness } from '../http-harness.js';
-import { realApplication, registerAndSignIn, serveAs } from './support.js';
+import { integrationConfig, realApplication, registerAndSignIn, serveAs } from './support.js';
 import type { RealAccount } from './support.js';
 
 // Against the real stack (Postgres, PostgREST, GoTrue, migrations applied),
@@ -16,6 +19,7 @@ import type { RealAccount } from './support.js';
 // exercised separately in row-level-security.integration.test.ts: this file
 // tests the API's own authorization, that file tests the database's.
 const MOT_DE_PASSE = 'IntegrationTest2026';
+const UNKNOWN_ITEM_ID = '22222222-2222-4222-8222-222222222222';
 
 describe('items API (integration)', () => {
     let app: Awaited<ReturnType<typeof realApplication>>;
@@ -23,6 +27,10 @@ describe('items API (integration)', () => {
     let intruder: RealAccount;
     let asOwner: Harness;
     let asIntruder: Harness;
+
+    function itemsOf(account: RealAccount): string {
+        return `/projects/${account.projectId}/items`;
+    }
 
     beforeAll(async () => {
         app = realApplication();
@@ -40,7 +48,7 @@ describe('items API (integration)', () => {
     });
 
     it('cree un item et le renvoie sans le proprietaire', async () => {
-        const response = await asOwner.request('/items', json('POST', { name: 'Depot integration' }));
+        const response = await asOwner.request(itemsOf(owner), json('POST', { name: 'Depot integration' }));
         const created = (await response.json()) as Record<string, unknown>;
 
         expect(response.status).toBe(200);
@@ -52,29 +60,30 @@ describe('items API (integration)', () => {
         let itemId: string;
 
         beforeAll(async () => {
-            const response = await asOwner.request('/items', json('POST', { name: 'A moi' }));
+            const response = await asOwner.request(itemsOf(owner), json('POST', { name: 'A moi' }));
             itemId = ((await response.json()) as { id: string }).id;
         });
 
         it('le proprietaire voit son item dans la liste', async () => {
-            const page = (await (await asOwner.request('/items')).json()) as {
+            const page = (await (await asOwner.request(itemsOf(owner))).json()) as {
                 items: { id: string }[];
             };
 
-            expect(page.items.map(item => item.id)).toContain(itemId);
+            expect(page.items.map((item) => item.id)).toContain(itemId);
         });
 
         it('un autre compte ne voit pas cet item dans sa liste', async () => {
-            const page = (await (await asIntruder.request('/items')).json()) as {
-                items: { id: string }[];
-            };
+            const response = await asIntruder.request(itemsOf(owner));
 
-            expect(page.items.map(item => item.id)).not.toContain(itemId);
+            expect(response.status).toBe(404);
+            expect((await response.json()) as object).toMatchObject({
+                type: 'project_not_found',
+            });
         });
 
         it('le proprietaire peut le modifier', async () => {
             const response = await asOwner.request(
-                `/items/${itemId}`,
+                `${itemsOf(owner)}/${itemId}`,
                 json('PUT', { name: 'A moi, renomme', completed: true }),
             );
 
@@ -84,34 +93,69 @@ describe('items API (integration)', () => {
         // Meme reponse qu un item inexistant : voir items.test.ts pour la
         // meme regle deja exercee contre des doublures.
         it('un autre compte ne peut pas le modifier, et ne le change pas', async () => {
-            const response = await asIntruder.request(
-                `/items/${itemId}`,
+            const before = (await (await asOwner.request(itemsOf(owner))).json()) as {
+                items: { id: string }[];
+            };
+            expect(before.items.map((item) => item.id)).toContain(itemId);
+
+            const denied = await asIntruder.request(
+                `${itemsOf(owner)}/${itemId}`,
+                json('PUT', { name: 'Vole', completed: true }),
+            );
+            const missing = await asOwner.request(
+                `${itemsOf(owner)}/${UNKNOWN_ITEM_ID}`,
                 json('PUT', { name: 'Vole', completed: true }),
             );
 
-            expect(response.status).toBe(404);
+            expect(denied.status).toBe(404);
+            expect(missing.status).toBe(404);
+            expect((await denied.json()) as object).toMatchObject({ type: 'item_not_found' });
+            expect((await missing.json()) as object).toMatchObject({ type: 'item_not_found' });
 
-            const stillMine = (await (await asOwner.request('/items')).json()) as {
+            const stillMine = (await (await asOwner.request(itemsOf(owner))).json()) as {
                 items: { id: string; name: string }[];
             };
-            expect(stillMine.items.find(item => item.id === itemId)?.name).toBe('A moi, renomme');
+            expect(stillMine.items.find((item) => item.id === itemId)?.name).toBe('A moi, renomme');
         });
 
         it('un autre compte ne peut pas le supprimer, et il reste present', async () => {
-            const response = await asIntruder.request(`/items/${itemId}`, { method: 'DELETE' });
-
-            expect(response.status).toBe(404);
-
-            const stillThere = (await (await asOwner.request('/items')).json()) as {
+            const before = (await (await asOwner.request(itemsOf(owner))).json()) as {
                 items: { id: string }[];
             };
-            expect(stillThere.items.map(item => item.id)).toContain(itemId);
+            expect(before.items.map((item) => item.id)).toContain(itemId);
+
+            const denied = await asIntruder.request(`${itemsOf(owner)}/${itemId}`, {
+                method: 'DELETE',
+            });
+            const missing = await asOwner.request(`${itemsOf(owner)}/${UNKNOWN_ITEM_ID}`, {
+                method: 'DELETE',
+            });
+
+            expect(denied.status).toBe(404);
+            expect(missing.status).toBe(404);
+            expect((await denied.json()) as object).toMatchObject({ type: 'item_not_found' });
+            expect((await missing.json()) as object).toMatchObject({ type: 'item_not_found' });
+
+            const stillThere = (await (await asOwner.request(itemsOf(owner))).json()) as {
+                items: { id: string }[];
+            };
+            expect(stillThere.items.map((item) => item.id)).toContain(itemId);
         });
 
         it('le proprietaire peut le supprimer', async () => {
-            const response = await asOwner.request(`/items/${itemId}`, { method: 'DELETE' });
+            const response = await asOwner.request(`${itemsOf(owner)}/${itemId}`, {
+                method: 'DELETE',
+            });
 
-            expect(response.status).toBe(200);
+            expect(response.status).toBe(204);
+
+            const config = integrationConfig();
+            const database = createClient<Database>(config.supabaseUrl, config.supabaseServiceRoleKey, {
+                auth: { persistSession: false, autoRefreshToken: false },
+            });
+            const stored = await database.from('items').select('id').eq('id', itemId).maybeSingle();
+            expect(stored.error).toBeNull();
+            expect(stored.data).toBeNull();
         });
     });
 });

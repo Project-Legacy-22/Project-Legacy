@@ -72,6 +72,17 @@ export class SessionRequired extends AuthError {
     }
 }
 
+// A session that existed and will not be renewed: its refresh token was
+// consumed, revoked or is past its lifetime. Told apart from SessionRequired
+// because the two owe the caller different sentences -- one asks a visitor to
+// sign in, the other tells someone who was signed in why they no longer are
+// (US-27). Neither ever names the token that was presented.
+export class SessionExpired extends AuthError {
+    constructor() {
+        super('session_expired', 401, 'Your session has expired. Sign in again.');
+    }
+}
+
 // A session vouched for an account the application no longer holds. It means
 // the two stores have drifted, not that the caller did anything wrong, so it is
 // reported as an absent resource and never as a rejected credential.

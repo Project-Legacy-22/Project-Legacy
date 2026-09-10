@@ -1,9 +1,4 @@
-import {
-    DEFAULT_ITEM_PAGE_SIZE,
-    ItemDto,
-    ItemPageDto,
-    ProblemDetails,
-} from '@legacy/contracts';
+import { DEFAULT_ITEM_PAGE_SIZE, ItemDto, ItemPageDto, ProblemDetails } from '@legacy/contracts';
 import type { CreateItemBody, UpdateItemBody } from '@legacy/contracts';
 
 import { labels } from '../labels';
@@ -16,10 +11,10 @@ export interface ListItemsRequest {
 }
 
 export interface ItemsApi {
-    listItems: (request: ListItemsRequest) => Promise<ItemPageDto>;
-    createItem: (body: CreateItemBody) => Promise<ItemDto>;
-    updateItem: (id: string, body: UpdateItemBody) => Promise<ItemDto>;
-    deleteItem: (id: string) => Promise<void>;
+    listItems: (projectId: string, request: ListItemsRequest) => Promise<ItemPageDto>;
+    createItem: (projectId: string, body: CreateItemBody) => Promise<ItemDto>;
+    updateItem: (projectId: string, id: string, body: UpdateItemBody) => Promise<ItemDto>;
+    deleteItem: (projectId: string, id: string) => Promise<void>;
 }
 
 export class ApiError extends Error {
@@ -38,7 +33,6 @@ export class ApiError extends Error {
 // than "the request failed" for the one operation it was attempting.
 export async function errorMessage(response: Response, fallback?: string): Promise<string> {
     const generic = fallback ?? labels.requestFailed(response.status);
-
     try {
         const body: unknown = await response.json();
         const problem = ProblemDetails.safeParse(body);
@@ -48,7 +42,7 @@ export async function errorMessage(response: Response, fallback?: string): Promi
     }
 }
 
-async function requestJson<T>(
+export async function requestJson<T>(
     input: string,
     init: RequestInit,
     parse: (value: unknown) => T,
@@ -67,23 +61,23 @@ async function requestJson<T>(
     }
 }
 
-const jsonHeaders = {
+export const jsonHeaders = {
     Accept: 'application/json',
     'Content-Type': 'application/json',
 };
 
-function itemsPath(cursor?: string): string {
+function itemsPath(projectId: string, cursor?: string): string {
     const query = new URLSearchParams({ limit: String(DEFAULT_ITEM_PAGE_SIZE) });
     if (cursor !== undefined) query.set('cursor', cursor);
-    return `/items?${query.toString()}`;
+    return `/projects/${encodeURIComponent(projectId)}/items?${query.toString()}`;
 }
 
 export const itemsApi: ItemsApi = {
-    listItems({ signal, cursor }) {
+    listItems(projectId, { signal, cursor }) {
         return requestJson(
-            itemsPath(cursor),
+            itemsPath(projectId, cursor),
             { headers: { Accept: 'application/json' }, signal },
-            value => {
+            (value) => {
                 const result = ItemPageDto.safeParse(value);
                 if (!result.success) throw new ApiError(502, labels.invalidItemList);
                 return result.data;
@@ -91,11 +85,11 @@ export const itemsApi: ItemsApi = {
         );
     },
 
-    createItem(body) {
+    createItem(projectId, body) {
         return requestJson(
-            '/items',
+            `/projects/${encodeURIComponent(projectId)}/items`,
             { method: 'POST', headers: jsonHeaders, body: JSON.stringify(body) },
-            value => {
+            (value) => {
                 const result = ItemDto.safeParse(value);
                 if (!result.success) throw new ApiError(502, labels.invalidItem);
                 return result.data;
@@ -103,11 +97,11 @@ export const itemsApi: ItemsApi = {
         );
     },
 
-    updateItem(id, body) {
+    updateItem(projectId, id, body) {
         return requestJson(
-            `/items/${encodeURIComponent(id)}`,
+            `/projects/${encodeURIComponent(projectId)}/items/${encodeURIComponent(id)}`,
             { method: 'PUT', headers: jsonHeaders, body: JSON.stringify(body) },
-            value => {
+            (value) => {
                 const result = ItemDto.safeParse(value);
                 if (!result.success) throw new ApiError(502, labels.invalidItem);
                 return result.data;
@@ -115,8 +109,8 @@ export const itemsApi: ItemsApi = {
         );
     },
 
-    async deleteItem(id) {
-        const response = await fetch(`/items/${encodeURIComponent(id)}`, {
+    async deleteItem(projectId, id) {
+        const response = await fetch(`/projects/${encodeURIComponent(projectId)}/items/${encodeURIComponent(id)}`, {
             method: 'DELETE',
             headers: { Accept: 'application/json' },
         });
