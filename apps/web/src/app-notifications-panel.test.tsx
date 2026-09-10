@@ -1,3 +1,4 @@
+import { act } from 'react';
 import axe from 'axe-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -8,6 +9,21 @@ import type { NotificationDto, NotificationPageDto, NotificationsApi } from './a
 import { click, createReactTestRoot, flushTimers, getElement } from './test/react-root';
 import type { ReactTestRoot } from './test/react-root';
 import { labels } from './labels';
+
+interface Deferred<T> {
+    promise: Promise<T>;
+    resolve: (value: T) => void;
+}
+
+function deferred<T>(): Deferred<T> {
+    let resolve: Deferred<T>['resolve'] = () => {
+        throw new Error('Deferred promise was not initialized.');
+    };
+    const promise = new Promise<T>(promiseResolve => {
+        resolve = promiseResolve;
+    });
+    return { promise, resolve };
+}
 
 let testRoot: ReactTestRoot;
 
@@ -138,6 +154,127 @@ describe('App notifications panel', () => {
         expect(markAsRead).toHaveBeenCalledWith(NOTIFICATION.id);
         expect(document.querySelector('.notification-row button')).toBeNull();
         expect(getElement<HTMLElement>('.notification-status').textContent).toBe(labels.notificationRead);
+    });
+
+    it('charge la page suivante et l annonce', async () => {
+        const secondNotification: NotificationDto = {
+            ...NOTIFICATION,
+            id: '33333333-3333-4333-8333-333333333333',
+        };
+        const listNotifications = vi
+            .fn<NotificationsApi['listNotifications']>()
+            .mockResolvedValueOnce({ notifications: [NOTIFICATION], nextCursor: 'a-cursor' })
+            .mockResolvedValueOnce({ notifications: [secondNotification], nextCursor: null });
+        const notifications = createNotifications({ listNotifications });
+        await testRoot.render(<App api={createApi()} auth={createAuth()} notifications={notifications} />);
+
+        await click(getElement<HTMLButtonElement>('.notifications-panel button'));
+        await flushTimers();
+        await click(getElement<HTMLButtonElement>('.notifications-pagination button'));
+        await flushTimers();
+
+        expect(listNotifications).toHaveBeenLastCalledWith(
+            expect.objectContaining({ cursor: 'a-cursor' }),
+        );
+        expect(document.querySelectorAll('.notification-row')).toHaveLength(2);
+        expect(document.querySelector('.pagination-status')?.textContent).toBe(
+            labels.notificationsLoaded(1),
+        );
+    });
+
+    it('signale un echec de chargement de la liste', async () => {
+        const notifications = createNotifications({
+            listNotifications: vi.fn(async () => {
+                throw new Error('panne du serveur');
+            }),
+        });
+        await testRoot.render(<App api={createApi()} auth={createAuth()} notifications={notifications} />);
+
+        await click(getElement<HTMLButtonElement>('.notifications-panel button'));
+        await flushTimers();
+
+        expect(getElement<HTMLElement>('#notifications-panel-content [role="alert"]').textContent).toBe(
+            labels.loadNotificationsFailed,
+        );
+    });
+
+    it('signale un echec de chargement de la suite, avec un bouton pour ressayer', async () => {
+        const listNotifications = vi
+            .fn<NotificationsApi['listNotifications']>()
+            .mockResolvedValueOnce({ notifications: [NOTIFICATION], nextCursor: 'a-cursor' })
+            .mockRejectedValueOnce(new Error('panne du serveur'));
+        const notifications = createNotifications({ listNotifications });
+        await testRoot.render(<App api={createApi()} auth={createAuth()} notifications={notifications} />);
+
+        await click(getElement<HTMLButtonElement>('.notifications-panel button'));
+        await flushTimers();
+        await click(getElement<HTMLButtonElement>('.notifications-pagination button'));
+        await flushTimers();
+
+        expect(getElement<HTMLElement>('.pagination-error').textContent).toBe(
+            labels.loadMoreNotificationsFailed,
+        );
+        expect(getElement<HTMLButtonElement>('.notifications-pagination button').textContent).toBe(
+            labels.retryLoadingMoreNotifications,
+        );
+    });
+
+    it('signale un echec de marquage comme lu, sans retirer le bouton', async () => {
+        const notifications = createNotifications({
+            listNotifications: vi.fn(async (): Promise<NotificationPageDto> => ({
+                notifications: [NOTIFICATION],
+                nextCursor: null,
+            })),
+            markAsRead: vi.fn(async () => {
+                throw new Error('panne du serveur');
+            }),
+        });
+        await testRoot.render(<App api={createApi()} auth={createAuth()} notifications={notifications} />);
+
+        await click(getElement<HTMLButtonElement>('.notifications-panel button'));
+        await flushTimers();
+        await click(getElement<HTMLButtonElement>('.notification-row button'));
+        await flushTimers();
+
+        expect(getElement<HTMLElement>('#notifications-panel-content [role="alert"]').textContent).toBe(
+            labels.markNotificationReadFailed,
+        );
+        expect(document.querySelector('.notification-row button')).not.toBeNull();
+    });
+
+    it('n ajoute pas une page perimee quand le panneau est ferme puis rouvert pendant un chargement de suite', async () => {
+        const staleNext = deferred<NotificationPageDto>();
+        const secondNotification: NotificationDto = {
+            ...NOTIFICATION,
+            id: '33333333-3333-4333-8333-333333333333',
+            createdAt: '2026-09-10T12:00:00.000Z',
+        };
+        const listNotifications = vi
+            .fn<NotificationsApi['listNotifications']>()
+            .mockResolvedValueOnce({ notifications: [NOTIFICATION], nextCursor: 'a-cursor' })
+            .mockImplementationOnce(() => staleNext.promise)
+            .mockResolvedValueOnce({ notifications: [secondNotification], nextCursor: null });
+        const notifications = createNotifications({ listNotifications });
+        await testRoot.render(<App api={createApi()} auth={createAuth()} notifications={notifications} />);
+
+        const toggle = getElement<HTMLButtonElement>('.notifications-panel button');
+        await click(toggle);
+        await flushTimers();
+        await click(getElement<HTMLButtonElement>('.notifications-pagination button'));
+        await click(toggle);
+        await click(toggle);
+        await flushTimers();
+
+        await act(async () => {
+            staleNext.resolve({ notifications: [NOTIFICATION], nextCursor: null });
+            await staleNext.promise;
+        });
+        await flushTimers();
+
+        expect(document.querySelectorAll('.notification-row')).toHaveLength(1);
+        expect(document.querySelector('.notification-row')?.textContent).toContain(
+            new Date(secondNotification.createdAt).toLocaleString(),
+        );
     });
 
     it('has no automatically detectable WCAG A or AA violation with the panel open', async () => {

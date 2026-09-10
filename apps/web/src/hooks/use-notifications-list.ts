@@ -53,7 +53,18 @@ function useNotificationsPagination(api: NotificationsApi, setNotifications: Set
         }
     }, [api, nextCursor, setNotifications]);
 
-    return { setNextCursor, hasNextPage: nextCursor !== null, paginationState, loadMore };
+    // Called when a fresh initial load starts (the panel just (re)opened): any
+    // load-more still in flight from a previous opening is for a page that no
+    // longer exists once the list is reloaded, and letting it land later would
+    // append a stale page onto the fresh one.
+    const reset = useCallback(() => {
+        requestController.current?.abort();
+        requestController.current = null;
+        setNextCursor(null);
+        setPaginationState({ status: 'idle', announcement: '' });
+    }, []);
+
+    return { setNextCursor, reset, hasNextPage: nextCursor !== null, paginationState, loadMore };
 }
 
 // Split out of useNotificationsList for the same reason as the pagination
@@ -103,6 +114,7 @@ export function useNotificationsList(api: NotificationsApi, isEnabled: boolean) 
         if (!isEnabled) return;
 
         const controller = new AbortController();
+        pagination.reset();
         setLoadState({ status: 'loading' });
 
         api.listNotifications({ signal: controller.signal })
@@ -118,7 +130,7 @@ export function useNotificationsList(api: NotificationsApi, isEnabled: boolean) 
             });
 
         return () => controller.abort();
-    }, [api, isEnabled, pagination.setNextCursor]);
+    }, [api, isEnabled, pagination.reset, pagination.setNextCursor]);
 
     return {
         notifications,
