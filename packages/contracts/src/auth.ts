@@ -17,6 +17,15 @@ export const PASSWORD_POLICY = {
     requiresDigit: true,
 } as const;
 
+// The version of the privacy policy currently published. It travels with a
+// registration and is stored with the account, so a later change to the text
+// leaves a record of what each person actually agreed to.
+//
+// Bumped whenever the policy's substance changes -- a new purpose, a new
+// recipient, a different retention -- and never for wording. It lives with the
+// contracts because the interface renders it and the API records it.
+export const PRIVACY_POLICY_VERSION = '2026-09-10';
+
 // One canonical form for an address, so that Foo@Example.com and
 // foo@example.com cannot become two accounts.
 const emailSchema = z.string().trim().toLowerCase().pipe(z.email().max(254));
@@ -24,6 +33,15 @@ const emailSchema = z.string().trim().toLowerCase().pipe(z.email().max(254));
 export const RegisterAccountBody = z.object({
     email: emailSchema,
     password: z.string().min(PASSWORD_POLICY.minimumLength),
+    // Consent is refused at the boundary, not merely unchecked in the form: a
+    // request built by hand must not be able to create an account without it.
+    // `literal(true)` rather than `boolean()` so that `false` and an absent
+    // field are both rejected, with the field named.
+    acceptsPrivacyPolicy: z.literal(true),
+    // Which version was on screen when the box was ticked. Sent by the client
+    // and checked against the published one: a form left open across a policy
+    // change would otherwise record consent to a text its reader never saw.
+    policyVersion: z.literal(PRIVACY_POLICY_VERSION),
 });
 
 // Signing in only requires a non-empty password. An account created under an

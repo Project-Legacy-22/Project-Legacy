@@ -11,7 +11,15 @@ import type { IdentityProvider } from '../ports/identity-provider.js';
 // reported by the port is therefore read and dropped on purpose: the port stays
 // honest about what happened, and hiding it is this use case's job.
 export function makeRegisterAccount(provider: IdentityProvider) {
-    return async function registerAccount(email: string, password: string): Promise<void> {
-        await provider.register(emailAddress(email), checkedPassword(password));
+    return async function registerAccount(
+        email: string,
+        password: string,
+        policyVersion: string,
+    ): Promise<void> {
+        // The version is carried through untouched. Which version is current,
+        // and whether the one offered matches it, is decided at the boundary
+        // where the published text is known; the use case only makes sure it
+        // reaches the account.
+        await provider.register(emailAddress(email), checkedPassword(password), policyVersion);
     };
 }

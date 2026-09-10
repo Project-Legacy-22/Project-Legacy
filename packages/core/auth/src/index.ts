@@ -6,6 +6,7 @@ export {
     InvalidCredentials,
     InvalidEmailAddress,
     InvalidResetToken,
+    SessionExpired,
     SessionRequired,
     WeakPassword,
 } from './domain/account.js';
@@ -36,9 +37,11 @@ export type { PersonalDataStore } from './ports/personal-data-store.js';
 export { makeRegisterAccount } from './application/register-account.js';
 export { makeSignIn } from './application/sign-in.js';
 export { makeIdentifyCaller } from './application/identify-caller.js';
+export { makeRenewSession } from './application/renew-session.js';
 export { makeExportPersonalData } from './application/export-personal-data.js';
 export type { ExportPersonalDataDependencies } from './application/export-personal-data.js';
 export { makeEraseAccount } from './application/erase-account.js';
 export type { EraseAccountDependencies } from './application/erase-account.js';
 export { makeRequestPasswordReset } from './application/request-password-reset.js';
 export { makeResetPassword } from './application/reset-password.js';
+export { makeSignOut } from './application/sign-out.js';

@@ -16,6 +16,14 @@ import { translateErrors } from './error-middleware.js';
 import { requireAccount } from './session.js';
 import { withTraceId } from './trace.js';
 import { logRequests } from './request-log.js';
+import { securityHeaders } from './security-headers.js';
+import { cors } from './cors.js';
+
+// The largest body any route accepts is an email and a password, or a task
+// title. 16 KiB leaves room for every legitimate request and rejects a payload
+// meant to exhaust memory. A refusal is turned into a 413 by the error
+// middleware rather than a generic 500.
+const MAX_BODY_SIZE = '16kb';
 
 // Ten attempts per five minutes and per address, across sign-up and sign-in
 // together. Loose enough that nobody legitimate meets it by mistyping a
@@ -47,8 +55,21 @@ export function createServer(config: Config, useCases: AppUseCases, logger: Logg
     const app = express();
     const appShell = readAppShell(config.staticDir);
 
-    app.use(express.json());
+    // req.ip, and therefore the rate limiter's client key, is only as
+    // trustworthy as this setting: it says how many proxy hops in front of the
+    // process may set X-Forwarded-For.
+    app.set('trust proxy', config.trustProxy);
+    // helmet also removes it, but disabling it at the source means no code path
+    // can put it back.
+    app.disable('x-powered-by');
+
+    // Before the body parser: a body that is too large or not JSON is refused
+    // by express.json() with a next(error), and the error middleware needs the
+    // trace id to already be on the response to report that refusal.
     app.use(withTraceId);
+    app.use(securityHeaders());
+    app.use(cors(config.webOrigin));
+    app.use(express.json({ limit: MAX_BODY_SIZE }));
     app.use(logRequests(logger));
     app.use(express.static(config.staticDir));
 
@@ -77,9 +98,16 @@ export function createServer(config: Config, useCases: AppUseCases, logger: Logg
         });
     }
 
-    // Items belong to somebody since US-11: no session, no items.
-    app.use(requireAccount(useCases.auth), projectsRouter(useCases.projects), itemsRouter(useCases.items));
-    app.use(requireAccount(useCases.auth), notificationsRouter(useCases.notifications));
+    // Items belong to somebody since US-11: no session, no items. The guard
+    // also renews the session it is given when it can, so an hour-long access
+    // token does not interrupt what somebody is doing (US-27).
+    //
+    // One instance for the three routers rather than one each: the guard holds
+    // no state, and building it three times would only make three closures.
+    const session = requireAccount(useCases.auth, config.secureCookies);
+
+    app.use(session, projectsRouter(useCases.projects), itemsRouter(useCases.items));
+    app.use(session, notificationsRouter(useCases.notifications));
 
     // Registered last: express only treats a middleware as an error handler
     // once every route has had its chance to fail.

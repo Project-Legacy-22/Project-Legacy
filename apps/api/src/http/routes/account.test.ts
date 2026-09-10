@@ -5,9 +5,11 @@ import {
     makeExportPersonalData,
     makeIdentifyCaller,
     makeRegisterAccount,
+    makeRenewSession,
     makeRequestPasswordReset,
     makeResetPassword,
     makeSignIn,
+    makeSignOut,
 } from '@legacy/core-auth';
 import type { IdentityProvider, PersonalDataStore } from '@legacy/core-auth';
 import { makeAddItem, makeChangeItem, makeListItems, makeRemoveItem } from '@legacy/core-items';
@@ -51,11 +53,16 @@ function useCasesOver(provider: IdentityProvider, store: PersonalDataStore): App
             changeItem: makeChangeItem(repository),
             removeItem: makeRemoveItem(repository),
         },
-        notifications: { countUnread: () => Promise.resolve(0) },
+        notifications: {
+            countUnread: () => Promise.resolve(0),
+            listNotifications: () => Promise.reject(new Error('not exercised by this suite')),
+            markNotificationRead: () => Promise.reject(new Error('not exercised by this suite')),
+        },
         auth: {
             registerAccount: makeRegisterAccount(provider),
             signIn: makeSignIn(provider),
             identifyCaller: makeIdentifyCaller(provider),
+            renewSession: makeRenewSession(provider),
             // Aucune route exercee ici ne reinitialise de mot de passe. Les cas
             // d usage sont composes quand meme : AuthUseCases les exige, et un
             // double vide masquerait un branchement oublie dans le serveur.
@@ -64,6 +71,9 @@ function useCasesOver(provider: IdentityProvider, store: PersonalDataStore): App
                 provider,
                 compromisedPasswords: inMemoryCompromisedPasswords(),
             }),
+            // Aucune route exercee ici ne se deconnecte. Compose pour la meme
+            // raison que resetPassword ci-dessus.
+            signOut: makeSignOut(provider),
         },
         account: {
             exportPersonalData: makeExportPersonalData({ store, now: () => MOMENT }),

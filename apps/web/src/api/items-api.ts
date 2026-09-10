@@ -42,7 +42,11 @@ export async function errorMessage(response: Response, fallback?: string): Promi
     }
 }
 
-export async function requestJson<T>(input: string, init: RequestInit, parse: (value: unknown) => T): Promise<T> {
+export async function requestJson<T>(
+    input: string,
+    init: RequestInit,
+    parse: (value: unknown) => T,
+): Promise<T> {
     const response = await fetch(input, init);
 
     if (!response.ok) {

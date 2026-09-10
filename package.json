@@ -15,6 +15,7 @@
     "packages/infra",
     "packages/core/items",
     "packages/core/auth",
+    "packages/core/notifications",
     "packages/core/projects"
   ],
   "scripts": {

@@ -24,11 +24,18 @@ import {
     makeExportPersonalData,
     makeIdentifyCaller,
     makeRegisterAccount,
+    makeRenewSession,
     makeRequestPasswordReset,
     makeResetPassword,
     makeSignIn,
+    makeSignOut,
 } from '@legacy/core-auth';
 import { makeListItems, makeAddItem, makeChangeItem, makeRemoveItem } from '@legacy/core-items';
+import {
+    makeCountUnreadNotifications,
+    makeListNotifications,
+    makeMarkNotificationRead,
+} from '@legacy/core-notifications';
 import { makeAddProject, makeListProjects, makeRemoveProject } from '@legacy/core-projects';
 
 import type { Config } from './config.js';
@@ -44,8 +51,10 @@ export interface AuthUseCases {
     registerAccount: ReturnType<typeof makeRegisterAccount>;
     signIn: ReturnType<typeof makeSignIn>;
     identifyCaller: ReturnType<typeof makeIdentifyCaller>;
+    renewSession: ReturnType<typeof makeRenewSession>;
     requestPasswordReset: ReturnType<typeof makeRequestPasswordReset>;
     resetPassword: ReturnType<typeof makeResetPassword>;
+    signOut: ReturnType<typeof makeSignOut>;
 }
 
 // Kept apart from AuthUseCases, which requireAccount receives on every request
@@ -63,7 +72,9 @@ export interface ProjectUseCases {
 }
 
 export interface NotificationUseCases {
-    countUnread: (userId: string) => Promise<number>;
+    listNotifications: ReturnType<typeof makeListNotifications>;
+    markNotificationRead: ReturnType<typeof makeMarkNotificationRead>;
+    countUnread: ReturnType<typeof makeCountUnreadNotifications>;
 }
 
 export interface AppUseCases {
@@ -148,6 +159,24 @@ function startRelay(dependencies: RelayDependencies): NodeJS.Timeout {
     return timer;
 }
 
+// Assembled apart from compose, which stays a list of what is wired to what:
+// this is the group that gains a use case with every authentication story, and
+// it is the only one whose members all share a single adapter.
+function authUseCases(
+    identity: Adapters['identity'],
+    compromisedPasswords: ReturnType<typeof createHibpPasswordRegistry>,
+): AuthUseCases {
+    return {
+        registerAccount: makeRegisterAccount(identity),
+        signIn: makeSignIn(identity),
+        identifyCaller: makeIdentifyCaller(identity),
+        renewSession: makeRenewSession(identity),
+        requestPasswordReset: makeRequestPasswordReset(identity),
+        resetPassword: makeResetPassword({ provider: identity, compromisedPasswords }),
+        signOut: makeSignOut(identity),
+    };
+}
+
 export function compose(config: Config): Application {
     const { store, identity, personalData, projects, outbox, notifications, bus } = createAdapters(config);
     const logger = createLogger(config.logLevel);
@@ -168,13 +197,7 @@ export function compose(config: Config): Application {
                 changeItem: makeChangeItem(store),
                 removeItem: makeRemoveItem(store),
             },
-            auth: {
-                registerAccount: makeRegisterAccount(identity),
-                signIn: makeSignIn(identity),
-                identifyCaller: makeIdentifyCaller(identity),
-                requestPasswordReset: makeRequestPasswordReset(identity),
-                resetPassword: makeResetPassword({ provider: identity, compromisedPasswords }),
-            },
+            auth: authUseCases(identity, compromisedPasswords),
             account: {
                 exportPersonalData: makeExportPersonalData({
                     store: personalData,
@@ -188,7 +211,9 @@ export function compose(config: Config): Application {
                 removeProject: makeRemoveProject(projects),
             },
             notifications: {
-                countUnread: userId => notifications.countUnread(userId),
+                listNotifications: makeListNotifications(notifications),
+                markNotificationRead: makeMarkNotificationRead(notifications),
+                countUnread: makeCountUnreadNotifications(notifications),
             },
         },
         // start() no longer creates the schema -- that is what migrations are

@@ -46,6 +46,9 @@ function createAuth(): AuthApi {
         // omettre laisserait passer un appel inattendu au lieu de le signaler.
         requestPasswordReset: vi.fn(),
         resetPassword: vi.fn(),
+        // Personne ne se deconnecte dans cette section : meme raison que
+        // ci-dessus.
+        signOut: vi.fn(),
     };
 }
 

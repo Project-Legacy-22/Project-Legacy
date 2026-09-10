@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
+
+import { PRIVACY_POLICY_VERSION } from '@legacy/contracts';
 import type { Dispatch, SetStateAction } from 'react';
 
 import { ApiError } from '../api/items-api';
@@ -8,9 +10,12 @@ import { labels } from '../labels';
 // Arriving with no session is the ordinary first visit, not an error: the state
 // distinguishes "not checked yet" from "checked, nobody signed in", so the app
 // never flashes the sign-in screen at someone who is in fact signed in.
+// `notice` says why the sign-in screen is showing again. It is absent on a
+// first visit, where there is nothing to explain, and carries a sentence when a
+// session that existed has ended (US-27).
 export type SessionState =
     | { status: 'checking' }
-    | { status: 'anonymous' }
+    | { status: 'anonymous'; notice?: string }
     | { status: 'signedIn'; account: AccountDto }
     | { status: 'error'; message: string };
 
@@ -64,6 +69,69 @@ function useSessionCheck(api: AuthApi): [SessionState, Dispatch<SetStateAction<S
     return [state, setState];
 }
 
+// Split out of useSessionActions to keep that hook under the project's
+// line-per-function ceiling, like useSignOut below it.
+function useSignIn(
+    api: AuthApi,
+    guarded: (action: () => Promise<SubmitResult>) => Promise<SubmitResult>,
+    setState: Dispatch<SetStateAction<SessionState>>,
+) {
+    return useCallback(
+        (email: string, password: string): Promise<SubmitResult> =>
+            guarded(async () => {
+                try {
+                    setState({ status: 'signedIn', account: await api.signIn({ email, password }) });
+                    return { status: 'success' };
+                } catch (error) {
+                    return { status: 'error', message: messageOf(error, labels.signInRejected) };
+                }
+            }),
+        [api, guarded, setState],
+    );
+}
+
+// Split out of useSessionActions to keep that hook under the project's
+// line-per-function ceiling.
+//
+// Always ends signed out, whether or not the call to the API itself
+// succeeded: the cookie is cleared server-side regardless (auth-api.ts), and
+// there is nothing left to retry that the shared-computer scenario this
+// exists for should wait on.
+function useSignOut(
+    api: AuthApi,
+    guarded: (action: () => Promise<SubmitResult>) => Promise<SubmitResult>,
+    setState: Dispatch<SetStateAction<SessionState>>,
+) {
+    return useCallback(
+        (): Promise<SubmitResult> =>
+            guarded(async () => {
+                try {
+                    await api.signOut();
+                } catch {
+                    // Swallowed on purpose: see the comment above this hook.
+                    // A rejection here must not become an unhandled one at
+                    // the button's onClick, which does not await this call.
+                } finally {
+                    setState({ status: 'anonymous' });
+                }
+                return { status: 'success' };
+            }),
+        [api, guarded, setState],
+    );
+}
+
+// The version is read from the contract rather than passed by the form: the box
+// the reader ticked and the version recorded must be the same one, and a prop
+// would let them drift.
+function registerWithConsent(api: AuthApi, email: string, password: string): Promise<void> {
+    return api.register({
+        email,
+        password,
+        acceptsPrivacyPolicy: true,
+        policyVersion: PRIVACY_POLICY_VERSION,
+    });
+}
+
 function useSessionActions(api: AuthApi, setState: Dispatch<SetStateAction<SessionState>>) {
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -79,18 +147,8 @@ function useSessionActions(api: AuthApi, setState: Dispatch<SetStateAction<Sessi
         [],
     );
 
-    const signIn = useCallback(
-        (email: string, password: string): Promise<SubmitResult> =>
-            guarded(async () => {
-                try {
-                    setState({ status: 'signedIn', account: await api.signIn({ email, password }) });
-                    return { status: 'success' };
-                } catch (error) {
-                    return { status: 'error', message: messageOf(error, labels.signInRejected) };
-                }
-            }),
-        [api, guarded, setState],
-    );
+    const signIn = useSignIn(api, guarded, setState);
+    const signOut = useSignOut(api, guarded, setState);
 
     const run = useCallback(
         (call: () => Promise<unknown>, success: string, fallback: string): Promise<SubmitResult> =>
@@ -101,8 +159,12 @@ function useSessionActions(api: AuthApi, setState: Dispatch<SetStateAction<Sessi
     return {
         isSubmitting,
         signIn,
+        signOut,
+        // The version is read from the contract rather than passed by the form:
+        // the box the reader ticked and the version recorded must be the same
+        // one, and going through a prop would let them drift.
         register: (email: string, password: string) =>
-            run(() => api.register({ email, password }), labels.registerAccepted, labels.registerFailed),
+            run(() => registerWithConsent(api, email, password), labels.registerAccepted, labels.registerFailed),
         requestPasswordReset: (email: string) =>
             run(
                 () => api.requestPasswordReset({ email }),
@@ -122,12 +184,27 @@ export function useSession(api: AuthApi) {
     const [state, setState] = useSessionCheck(api);
 
     // The account behind this session no longer exists. Erasure (US-13) is the
-    // only caller today; a real sign-out is US-27 and will need the API to drop
-    // the cookie as well, which this does not do. It sits here rather than in
+    // only caller today; a real sign-out is US-47 and will need the API to drop
+    // the cookies as well, which this does not do. It sits here rather than in
     // useSessionActions: it submits nothing and has no failure to report.
     const forget = useCallback(() => {
         setState({ status: 'anonymous' });
     }, [setState]);
 
-    return { state, forget, ...useSessionActions(api, setState) };
+    // The session ended while the page was being used. Handing the sign-in
+    // screen back with a sentence that says why is what US-27 asks for, in
+    // place of a technical error or an interface that keeps asking an API that
+    // will not answer it.
+    //
+    // Only a live session expires. Guarding on that means a refusal still in
+    // flight when somebody signs in again cannot undo the new session.
+    const expire = useCallback(() => {
+        setState(current =>
+            current.status === 'signedIn'
+                ? { status: 'anonymous', notice: labels.sessionExpired }
+                : current,
+        );
+    }, [setState]);
+
+    return { state, forget, expire, ...useSessionActions(api, setState) };
 }

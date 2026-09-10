@@ -22,6 +22,9 @@
       "path": "../core/auth"
     },
     {
+      "path": "../core/notifications"
+    },
+    {
       "path": "../core/projects"
     }
   ]

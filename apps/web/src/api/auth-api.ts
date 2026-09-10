@@ -26,6 +26,11 @@ export interface AuthApi {
     // Referer header.
     requestPasswordReset: (body: RequestPasswordResetBody) => Promise<void>;
     resetPassword: (body: ResetPasswordBody) => Promise<void>;
+    // The cookie is cleared server-side whether or not this call itself
+    // succeeds (see apps/api/src/http/routes/auth.ts), which is why the hook
+    // above it does not need a distinct failure path: by the time a response
+    // exists, the browser has already lost the session either way.
+    signOut: () => Promise<void>;
 }
 
 const jsonHeaders = {
@@ -124,6 +129,14 @@ export const authApi: AuthApi = {
                 response.status,
                 await problemDetail(response, labels.resetPasswordFailed),
             );
+        }
+    },
+
+    async signOut() {
+        const response = await fetch('/auth/logout', { method: 'POST' });
+
+        if (!response.ok) {
+            throw new ApiError(response.status, labels.signOutFailed);
         }
     },
 };

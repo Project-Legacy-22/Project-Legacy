@@ -30,7 +30,11 @@ export function makeItemRouteUseCases(options: ItemRouteUseCasesOptions): AppUse
     const projects = inMemoryProjectRepository();
 
     return {
-        notifications: { countUnread: () => Promise.resolve(0) },
+        notifications: {
+            countUnread: () => Promise.resolve(0),
+            listNotifications: () => Promise.reject(new Error('not exercised by this suite')),
+            markNotificationRead: () => Promise.reject(new Error('not exercised by this suite')),
+        },
         items: {
             listItems: makeListItems(repository),
             addItem: makeAddItem({
@@ -45,11 +49,13 @@ export function makeItemRouteUseCases(options: ItemRouteUseCasesOptions): AppUse
             registerAccount: makeRegisterAccount(provider),
             signIn: makeSignIn(provider),
             identifyCaller: makeIdentifyCaller(provider),
+            renewSession: () => Promise.reject(new Error('not exercised by this suite')),
             requestPasswordReset: makeRequestPasswordReset(provider),
             resetPassword: makeResetPassword({
                 provider,
                 compromisedPasswords: inMemoryCompromisedPasswords(),
             }),
+            signOut: () => Promise.reject(new Error('not exercised by this suite')),
         },
         account: {
             exportPersonalData: makeExportPersonalData({

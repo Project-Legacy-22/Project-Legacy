@@ -43,7 +43,11 @@ function useCasesOver(
     const items = inMemoryItemRepository();
     const personalData = inMemoryPersonalDataStore();
     return {
-        notifications: { countUnread: () => Promise.resolve(0) },
+        notifications: {
+            countUnread: () => Promise.resolve(0),
+            listNotifications: () => Promise.reject(new Error('not exercised by this suite')),
+            markNotificationRead: () => Promise.reject(new Error('not exercised by this suite')),
+        },
         projects: {
             listProjects: makeListProjects(projects),
             addProject: makeAddProject({
@@ -66,11 +70,13 @@ function useCasesOver(
             registerAccount: makeRegisterAccount(provider),
             signIn: makeSignIn(provider),
             identifyCaller: makeIdentifyCaller(provider),
+            renewSession: () => Promise.reject(new Error('not exercised by this suite')),
             requestPasswordReset: makeRequestPasswordReset(provider),
             resetPassword: makeResetPassword({
                 provider,
                 compromisedPasswords: inMemoryCompromisedPasswords(),
             }),
+            signOut: () => Promise.reject(new Error('not exercised by this suite')),
         },
         account: {
             exportPersonalData: makeExportPersonalData({

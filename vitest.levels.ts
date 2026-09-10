@@ -25,7 +25,12 @@ export const LEVELS = {
 
     // A real Express server on port 0, queried by fetch, fakes behind the
     // ports.
-    http: ['apps/api/src/http/routes/**/*.test.ts'],
+    http: [
+        'apps/api/src/http/routes/**/*.test.ts',
+        // Boots the same real server, for what the whole app answers rather
+        // than one route: headers, CORS, body limits.
+        'apps/api/src/http/security.test.ts',
+    ],
 
     // Components mounted in jsdom, queried through src/test/react-root.tsx.
     //

@@ -47,6 +47,9 @@ export function createAuth(overrides: Partial<AuthApi> = {}): AuthApi {
         currentAccount: async () => ACCOUNT,
         requestPasswordReset: async () => undefined,
         resetPassword: async () => undefined,
+        // Required by AuthApi since #174. No suite driving this fixture signs
+        // out; the ones that do build their own double.
+        signOut: async () => undefined,
         ...overrides,
     };
 }

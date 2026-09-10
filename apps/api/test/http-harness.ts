@@ -35,6 +35,11 @@ export const testConfig: Config = {
     // Le relais n est pas demarre par ce harnais : la valeur ne sert qu au type.
     redisUrl: 'redis://127.0.0.1:6379',
     secureCookies: false,
+    // Le front de developpement. Une suite CORS peut la surcharger.
+    webOrigin: 'http://localhost:5173',
+    // Aucun proxy devant le harness : req.ip est l adresse de la connexion.
+    // Une suite qui exerce X-Forwarded-For remonte cette valeur.
+    trustProxy: 0,
 };
 
 export function json(method: string, body: unknown): TestRequestInit {

@@ -18,6 +18,10 @@ import { makeItemRouteUseCases } from '../../../test/fakes/item-route-use-cases.
 const GENERATED_ID = '33333333-3333-4333-8333-333333333333';
 const OWNER_ID = '00000000-0000-7000-8000-000000000001';
 const OTHER_OWNER_ID = '00000000-0000-7000-8000-000000000002';
+
+// Identifiers are UUIDs by contract (packages/contracts ItemIdParams), so the
+// fixtures use real ones: a readable string such as 'item-1' would be rejected
+// at the boundary, and the test would prove nothing about the route behind it.
 const PROJECT_ID = '00000000-0000-7000-8000-000000000010';
 const UNKNOWN_PROJECT_ID = '00000000-0000-7000-8000-000000000099';
 const EXISTING_ID = '11111111-1111-4111-8111-111111111111';

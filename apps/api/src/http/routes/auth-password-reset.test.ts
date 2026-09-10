@@ -4,9 +4,11 @@ import {
     makeExportPersonalData,
     makeIdentifyCaller,
     makeRegisterAccount,
+    makeRenewSession,
     makeRequestPasswordReset,
     makeResetPassword,
     makeSignIn,
+    makeSignOut,
 } from '@legacy/core-auth';
 import { makeAddItem, makeChangeItem, makeListItems, makeRemoveItem } from '@legacy/core-items';
 import { makeAddProject, makeListProjects, makeRemoveProject } from '@legacy/core-projects';
@@ -53,16 +55,22 @@ function useCasesOver(provider: InMemoryIdentityProvider, compromised: string[])
             changeItem: makeChangeItem(repository),
             removeItem: makeRemoveItem(repository),
         },
-        notifications: { countUnread: () => Promise.resolve(0) },
+        notifications: {
+            countUnread: () => Promise.resolve(0),
+            listNotifications: () => Promise.reject(new Error('not exercised by this suite')),
+            markNotificationRead: () => Promise.reject(new Error('not exercised by this suite')),
+        },
         auth: {
             registerAccount: makeRegisterAccount(provider),
             signIn: makeSignIn(provider),
             identifyCaller: makeIdentifyCaller(provider),
+            renewSession: makeRenewSession(provider),
             requestPasswordReset: makeRequestPasswordReset(provider),
             resetPassword: makeResetPassword({
                 provider,
                 compromisedPasswords: inMemoryCompromisedPasswords(compromised),
             }),
+            signOut: makeSignOut(provider),
         },
         // Aucune route exercee ici ne touche aux donnees personnelles. Le
         // groupe est compose sur un magasin vide plutot qu omis : AppUseCases

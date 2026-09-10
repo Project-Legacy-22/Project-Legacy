@@ -37,8 +37,14 @@ function deferred<T>(): Deferred<T> {
     return { promise, resolve };
 }
 
+// Signed in by default: the item tests below are about the item workflow, and
+// making each of them sign in first would test the session over and over.
 function createNotifications(unread = 0): NotificationsApi {
-    return { unreadCount: vi.fn(async () => unread) };
+    return {
+        unreadCount: vi.fn(async () => unread),
+        listNotifications: vi.fn(async () => ({ notifications: [], nextCursor: null })),
+        markAsRead: vi.fn(async () => undefined),
+    };
 }
 
 interface AppFixture {
@@ -241,7 +247,11 @@ describe('App session states', () => {
 
         await click(getElement<HTMLButtonElement>('.button-quiet'));
         await setInputValue(getElement<HTMLInputElement>('input[type="email"]'), 'ada@example.com');
-        await setInputValue(getElement<HTMLInputElement>('input[type="password"]'), 'un-mot-de-passe-valide');
+        await setInputValue(
+            getElement<HTMLInputElement>('input[type="password"]'),
+            'un-mot-de-passe-valide',
+        );
+        await click(getElement<HTMLInputElement>('input[type="checkbox"]'));
         await submitForm(getElement<HTMLFormElement>('form.auth-form'));
         await flushTimers();
 

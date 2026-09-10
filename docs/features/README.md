@@ -25,4 +25,8 @@ the acceptance criteria: it describes the feature as it now behaves, in the pres
 | [#14](14-export-and-delete-account.md) | Export and delete my personal data | GDPR |
 | [#15](15-accessibility-audit.md) | Accessibility audit of the delivered screens | A11y |
 | [#17](17-projects.md) | Group my items by project | Projects |
-| [#29](29-password-reset.md) | Reset a forgotten password | Auth |
+| [#19](19-notifications.md) | Notifications | Notifications |
+| [#28](28-session-lifetime.md) | Stay signed in between visits, and be signed out cleanly | Auth |
+| [#29](29-password-reset.md) | Password reset | Auth |
+| [#30](30-api-hardening.md) | API security hardening | Quality |
+| [#48](48-logout.md) | Sign out | Auth |
