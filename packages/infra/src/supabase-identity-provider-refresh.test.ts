@@ -80,9 +80,18 @@ describe('adaptateur Supabase Auth, renouvellement de session', () => {
 
     it('propage une erreur inattendue du fournisseur', async () => {
         const { provider, faux: serveur } = await adaptateur();
+        // 429 et non 500. Depuis @supabase/supabase-js 2.115, _refreshAccessToken
+        // reessaie une reponse 5xx avec un delai exponentiel tant que le prochain
+        // tient dans sa fenetre de trente secondes : mesure, huit tentatives sur
+        // vingt-cinq secondes. Un test unitaire ne peut pas attendre ca, et
+        // allonger son delai deguiserait le probleme en lenteur de suite.
+        //
+        // Un 429 emprunte la meme branche -- l adaptateur ne traite specialement
+        // que 400 et 401, qu il lit comme une session expiree -- sans etre
+        // reessaye. La latence d echec sur 5xx a son issue.
         serveur.quand(TOKEN, {
-            status: 500,
-            body: { code: 500, error_code: 'unexpected_failure', msg: 'panne' },
+            status: 429,
+            body: { code: 429, error_code: 'over_request_rate_limit', msg: 'trop de demandes' },
         });
 
         await expect(provider.refresh('a-refresh-token')).rejects.toThrow(/refresh/);
@@ -93,9 +102,18 @@ describe('adaptateur Supabase Auth, renouvellement de session', () => {
     // aucun jeton dans un journal ni dans un message d erreur.
     it('ne cite pas le jeton dans l erreur qu il leve', async () => {
         const { provider, faux: serveur } = await adaptateur();
+        // 429 et non 500. Depuis @supabase/supabase-js 2.115, _refreshAccessToken
+        // reessaie une reponse 5xx avec un delai exponentiel tant que le prochain
+        // tient dans sa fenetre de trente secondes : mesure, huit tentatives sur
+        // vingt-cinq secondes. Un test unitaire ne peut pas attendre ca, et
+        // allonger son delai deguiserait le probleme en lenteur de suite.
+        //
+        // Un 429 emprunte la meme branche -- l adaptateur ne traite specialement
+        // que 400 et 401, qu il lit comme une session expiree -- sans etre
+        // reessaye. La latence d echec sur 5xx a son issue.
         serveur.quand(TOKEN, {
-            status: 500,
-            body: { code: 500, error_code: 'unexpected_failure', msg: 'panne' },
+            status: 429,
+            body: { code: 429, error_code: 'over_request_rate_limit', msg: 'trop de demandes' },
         });
 
         const echec: unknown = await provider
