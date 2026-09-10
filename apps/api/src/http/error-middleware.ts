@@ -1,6 +1,7 @@
 import { ZodError } from 'zod';
 import { AuthError } from '@legacy/core-auth';
 import { DomainError } from '@legacy/core-items';
+import { NotificationError } from '@legacy/core-notifications';
 import type { Logger, ProblemDetails } from '@legacy/contracts';
 import type { ErrorRequestHandler } from 'express';
 
@@ -19,12 +20,13 @@ function describe(error: ZodError): string {
 // Each domain names its own errors -- a core package may not import another --
 // so the middleware knows all of them. They agree on three fields, which is
 // what makes one translation enough.
-type Reported = AuthError | DomainError | TooManyAttempts;
+type Reported = AuthError | DomainError | NotificationError | TooManyAttempts;
 
 function isReported(error: unknown): error is Reported {
     return (
         error instanceof AuthError ||
         error instanceof DomainError ||
+        error instanceof NotificationError ||
         error instanceof TooManyAttempts
     );
 }
