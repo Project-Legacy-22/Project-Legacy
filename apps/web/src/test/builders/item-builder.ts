@@ -10,7 +10,8 @@ export function anItem(overrides: Partial<ItemDto> = {}): ItemDto {
         name: 'A test item',
         status: 'todo',
         version: 1,
-        completed: false,
+        priority: 'normal',
+        dueDate: null,
         ...overrides,
     };
 }

@@ -1,6 +1,13 @@
 .add-form {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(180px, 1fr) minmax(280px, 1fr) auto;
+    align-items: end;
+    gap: 14px;
+}
+
+.item-planning-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: end;
     gap: 14px;
 }
@@ -30,7 +37,8 @@ label {
     font-weight: 700;
 }
 
-input {
+input,
+select {
     width: 100%;
     min-height: 46px;
     padding: 10px 12px;
@@ -40,7 +48,8 @@ input {
     background: #ffffff;
 }
 
-input:hover:not(:disabled) {
+input:hover:not(:disabled),
+select:hover:not(:disabled) {
     border-color: #34465a;
 }
 
@@ -102,7 +111,8 @@ input[aria-invalid="true"] {
 
 .button:disabled,
 .button[aria-disabled='true'],
-input:disabled {
+input:disabled,
+select:disabled {
     cursor: not-allowed;
     opacity: 0.62;
 }
@@ -135,6 +145,10 @@ input:disabled {
 }
 
 @media (max-width: 620px) {
+    .item-planning-fields {
+        grid-template-columns: 1fr;
+    }
+
     .add-form .button-primary,
     .item-actions .button {
         flex: 1;

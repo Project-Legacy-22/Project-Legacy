@@ -11,6 +11,78 @@
     font-weight: 800;
 }
 
+.kanban-region {
+    display: grid;
+    gap: 16px;
+}
+
+.kanban-instructions {
+    margin: 0;
+    color: #39495c;
+    line-height: 1.5;
+}
+
+.kanban-board {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
+    gap: 16px;
+}
+
+.kanban-column {
+    min-width: 0;
+    padding: 14px;
+    border: 2px solid #c4ced8;
+    border-radius: 8px;
+    background: #f7f9fb;
+    transition:
+        border-color 140ms ease,
+        background-color 140ms ease;
+}
+
+.kanban-column-drop-target {
+    border-color: #0f7169;
+    background: #e9f6f3;
+}
+
+.kanban-column-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.kanban-column-heading h3 {
+    margin: 0;
+    color: #172033;
+    font-size: 1rem;
+}
+
+.kanban-count {
+    display: grid;
+    min-width: 32px;
+    min-height: 32px;
+    place-items: center;
+    border: 1px solid #9aabb8;
+    border-radius: 999px;
+    color: #234a45;
+    background: #edf8f5;
+    font-size: 0.8125rem;
+    font-weight: 800;
+}
+
+.kanban-empty {
+    min-height: 74px;
+    margin: 0;
+    padding: 12px;
+    border: 1px dashed #8798a8;
+    border-radius: 6px;
+    color: #465568;
+    background: #ffffff;
+    line-height: 1.45;
+}
+
 .todo-list {
     display: grid;
     gap: 12px;
@@ -23,17 +95,31 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    gap: 18px;
-    padding: 16px;
+    gap: 14px;
+    padding: 14px;
     border: 1px solid #c4ced8;
     border-left: 5px solid #0f7169;
     border-radius: 8px;
     background: #ffffff;
+    cursor: grab;
+    transition:
+        border-color 140ms ease,
+        background-color 140ms ease,
+        opacity 140ms ease;
 }
 
-.todo-item-completed {
+.todo-item-doing {
+    border-left-color: #b4534d;
+}
+
+.todo-item-done {
     border-left-color: #65768a;
     background: #f3f6f8;
+}
+
+.todo-item[aria-busy='true'] {
+    cursor: wait;
+    opacity: 0.68;
 }
 
 .item-copy {
@@ -48,7 +134,7 @@
     line-height: 1.45;
 }
 
-.todo-item-completed .item-name {
+.todo-item-done .item-name {
     text-decoration: line-through;
     text-decoration-thickness: 2px;
 }
@@ -60,6 +146,52 @@
     font-weight: 700;
 }
 
+.item-planning-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 5px;
+    margin: 8px 0 0;
+    color: var(--text-secondary);
+    font-size: 0.8125rem;
+    line-height: 1.45;
+}
+
+.item-priority,
+.item-overdue {
+    display: inline-flex;
+    padding: 3px 7px;
+    border-radius: 999px;
+    font-weight: 800;
+}
+
+.item-priority-high,
+.item-overdue {
+    color: var(--text-danger-strong);
+    background: var(--surface-danger-soft);
+}
+
+.item-priority-normal {
+    color: var(--text-brand);
+    background: var(--surface-brand-soft);
+}
+
+.item-priority-low {
+    color: var(--text-secondary);
+    background: var(--surface-item-done);
+}
+
+.item-overdue {
+    margin-left: 3px;
+}
+
+.item-remediation {
+    margin: 8px 0 0;
+    color: var(--text-danger);
+    font-size: 0.8125rem;
+    line-height: 1.45;
+}
+
 .item-actions {
     display: flex;
     flex-wrap: wrap;
@@ -69,13 +201,26 @@
 .item-edit-form {
     display: grid;
     grid-column: 1 / -1;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: 1fr;
     align-items: end;
     gap: 14px;
 }
 
+.move-item-form {
+    display: grid;
+    grid-column: 1 / -1;
+    gap: 12px;
+}
+
+.move-item-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
 .item-edit-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
 }
 
@@ -88,7 +233,7 @@
 
 .pagination-error {
     margin: 0;
-    color: #8a1c16;
+    color: var(--text-danger);
     font-weight: 700;
     line-height: 1.45;
     text-align: center;
@@ -117,5 +262,11 @@
 
     .item-edit-actions .button {
         flex: 1;
+    }
+}
+
+@media (max-width: 960px) {
+    .kanban-board {
+        grid-template-columns: 1fr;
     }
 }

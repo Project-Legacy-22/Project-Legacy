@@ -30,6 +30,8 @@ function anItem(ownerId = OWNER_ID): Item {
         name: 'Prepare the review',
         status: 'todo',
         version: 1,
+        priority: 'normal',
+        dueDate: null,
     };
 }
 
@@ -75,7 +77,7 @@ describe('PATCH /projects/:projectId/items/:id/status', () => {
         );
 
         expect(response.status).toBe(200);
-        await expect(response.json()).resolves.toMatchObject({ status: 'doing', version: 2, completed: false });
+        await expect(response.json()).resolves.toMatchObject({ status: 'doing', version: 2 });
         expect(store.items.get(EXISTING_ID)).toMatchObject({ status: 'doing', version: 2 });
     });
 

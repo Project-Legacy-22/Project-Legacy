@@ -1,7 +1,8 @@
-import type { ItemDto } from '../api/items-api';
+import type { ItemDto, ItemStatus } from '../api/items-api';
+import type { UpdateItemBody } from '@legacy/contracts';
 import { labels } from '../labels';
 import type { ItemsLoadState, ItemsPaginationState } from '../hooks/use-items';
-import { ItemsList } from './items-list';
+import { KanbanBoard } from './kanban-board';
 import { ItemsPagination } from './items-pagination';
 
 export interface ItemsContentProps {
@@ -10,8 +11,8 @@ export interface ItemsContentProps {
     pendingItemIds: ReadonlySet<string>;
     hasNextPage: boolean;
     paginationState: ItemsPaginationState;
-    onToggle: (item: ItemDto) => Promise<void>;
-    onRename: (item: ItemDto, name: string) => Promise<boolean>;
+    onMove: (item: ItemDto, status: ItemStatus) => Promise<boolean>;
+    onUpdate: (item: ItemDto, changes: UpdateItemBody) => Promise<boolean>;
     onRemove: (item: ItemDto) => Promise<boolean>;
     onLoadMore: () => void;
     onRetry: () => void;
@@ -22,46 +23,53 @@ function retryItems(onRetry: () => void): void {
     document.querySelector<HTMLElement>('#items-heading')?.focus();
 }
 
+function LoadingItems() {
+    return (
+        <p className="status-message" role="status">
+            {labels.loadingItems}
+        </p>
+    );
+}
+
+function ItemsError({ message, onRetry }: { message: string; onRetry: () => void }) {
+    return (
+        <div className="error-message" role="alert">
+            <p>{message}</p>
+            <button className="button button-secondary" type="button" onClick={() => retryItems(onRetry)}>
+                {labels.retry}
+            </button>
+        </div>
+    );
+}
+
 export function ItemsContent({
     items,
     loadState,
     pendingItemIds,
     hasNextPage,
     paginationState,
-    onToggle,
-    onRename,
+    onMove,
+    onUpdate,
     onRemove,
     onLoadMore,
     onRetry,
 }: ItemsContentProps) {
-    if (loadState.status === 'loading') {
-        return (
-            <p className="status-message" role="status">
-                {labels.loadingItems}
-            </p>
-        );
-    }
+    if (loadState.status === 'loading' && items.length === 0) return <LoadingItems />;
 
     if (loadState.status === 'error') {
-        return (
-            <div className="error-message" role="alert">
-                <p>{loadState.message}</p>
-                <button className="button button-secondary" type="button" onClick={() => retryItems(onRetry)}>
-                    {labels.retry}
-                </button>
-            </div>
-        );
+        return <ItemsError message={loadState.message} onRetry={onRetry} />;
     }
-
-    if (items.length === 0) return <p className="empty-message">{labels.emptyItems}</p>;
 
     return (
         <>
-            <ItemsList
+            {loadState.status === 'loading' && <LoadingItems />}
+            {items.length === 0 && <p className="empty-message">{labels.emptyItems}</p>}
+            <KanbanBoard
                 items={items}
+                isDisabled={loadState.status !== 'ready'}
                 pendingItemIds={pendingItemIds}
-                onToggle={onToggle}
-                onRename={onRename}
+                onMove={onMove}
+                onUpdate={onUpdate}
                 onRemove={onRemove}
             />
             <ItemsPagination

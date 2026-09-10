@@ -173,6 +173,9 @@ création concurrente ne fasse ni sauter ni répéter une ligne.
 
 Une tâche possède un statut `todo`, `doing` ou `done`. Le déplacement utilise la version
 renvoyée avec la tâche ; une version périmée reçoit `409` et ne remplace pas l'état stocké.
+Elle porte aussi une priorité `low`, `normal` ou `high`, normale par défaut, et une échéance
+calendaire facultative. Les listes placent les priorités hautes en premier, puis les échéances
+les plus proches ; l'identifiant départage les tâches équivalentes de façon reproductible.
 
 Deux comportements sont volontaires et ne doivent pas être « corrigés » :
 
@@ -222,6 +225,9 @@ en arrière.
 Détail complet dans [docs/features/14-export-and-delete-account.md](docs/features/14-export-and-delete-account.md).
 Le regroupement par projet est décrit dans
 [docs/features/17-projects.md](docs/features/17-projects.md).
+
+Le tableau Kanban et ses déplacements accessibles sont décrits dans
+[docs/features/16-kanban-move.md](docs/features/16-kanban-move.md).
 La modification, la complétion et la suppression des tâches sont décrites dans
 [docs/features/32-edit-complete-delete-task.md](docs/features/32-edit-complete-delete-task.md).
 

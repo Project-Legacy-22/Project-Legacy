@@ -5,6 +5,8 @@ const DEFAULTS: Item = {
     name: 'A sample item',
     status: 'todo',
     version: 1,
+    priority: 'normal',
+    dueDate: null,
     projectId: '00000000-0000-7000-8000-000000000010',
     ownerId: '00000000-0000-7000-8000-000000000001',
 };

@@ -17,6 +17,7 @@ function createApi(): ItemsApi {
         listItems: vi.fn(async () => ({ items: [anItem({})], nextCursor: null })),
         createItem: vi.fn(async () => anItem({})),
         updateItem: vi.fn(async () => anItem({})),
+        moveItem: vi.fn(async () => anItem({})),
         deleteItem: vi.fn(async () => undefined),
     };
 }

@@ -24,7 +24,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
     font: inherit;
 }
 
@@ -34,7 +35,8 @@ button {
 
 button,
 a,
-input {
+input,
+select {
     -webkit-tap-highlight-color: transparent;
 }
 

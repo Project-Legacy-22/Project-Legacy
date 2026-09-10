@@ -31,6 +31,7 @@ function itemsApi(overrides: Partial<ItemsApi> = {}): ItemsApi {
         listItems: vi.fn(async () => page()),
         createItem: vi.fn(async () => ITEM),
         updateItem: vi.fn(async () => ITEM),
+        moveItem: vi.fn(async () => ITEM),
         deleteItem: vi.fn(async () => undefined),
         ...overrides,
     };

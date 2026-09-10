@@ -1,11 +1,11 @@
+import { Buffer } from 'node:buffer';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { InvalidItemCursor, rehydrateItem } from '@legacy/core-items';
-import type { DomainEvent, Item, ItemPage, ItemPageQuery, ItemStatusMove } from '@legacy/core-items';
+import { InvalidItemCursor, ITEM_PRIORITIES, rehydrateItem } from '@legacy/core-items';
+import type { DomainEvent, Item, ItemPage, ItemPageQuery, ItemPriority, ItemStatusMove } from '@legacy/core-items';
 
 import type { Database } from './database.types.js';
 import type { ItemStore } from './item-store.js';
-import { decodeKeysetCursor, encodeKeysetCursor } from './keyset-cursor.js';
 import { adapterFailure, serviceRoleClient } from './adapter.js';
 import type { AdapterFailure } from './adapter.js';
 
@@ -28,25 +28,72 @@ function toItem(row: ItemRow): Item {
         name: row.name,
         status: row.status,
         version: row.version,
+        priority: row.priority,
+        dueDate: row.due_date,
         projectId: row.project_id,
         ownerId: row.user_id,
     });
 }
 
-// A page is located by its last row, not by an offset that would shift under a
-// concurrent insert. created_at alone is not unique -- two rows written in one
-// transaction share it -- so the position is the pair, which is also the order
-// items_project_id_created_at_idx serves. Encoded, so no client pins the ordering.
-function encodeCursor(row: ItemRow): string {
-    return encodeKeysetCursor({ createdAt: row.created_at, id: row.id });
+interface ItemPosition {
+    priority: ItemPriority;
+    dueDate: string | null;
+    id: string;
 }
 
-// The predicate for a position strictly before the cursor. base64url decoding
-// never fails, so the shape it decodes to is what proves the cursor is ours. The
-// timestamp is quoted: PostgREST reads ',' '.' and ':' as filter syntax.
-function beforeCursor(cursor: string): string {
-    const { createdAt, id } = decodeKeysetCursor(cursor, () => new InvalidItemCursor());
-    return `created_at.lt."${createdAt}",and(created_at.eq."${createdAt}",id.lt.${id})`;
+const UUID_PATTERN = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+function isCalendarDate(value: unknown): value is string {
+    if (typeof value !== 'string' || !DATE_PATTERN.test(value)) return false;
+    const [year, month, day] = value.split('-').map(Number);
+    const date = new Date(Date.UTC(year ?? 0, (month ?? 0) - 1, day));
+    return date.toISOString().slice(0, 10) === value;
+}
+
+function isPosition(value: unknown): value is ItemPosition {
+    if (typeof value !== 'object' || value === null) return false;
+    const candidate = value as Record<string, unknown>;
+    return Object.keys(candidate).length === 3
+        && typeof candidate.priority === 'string'
+        && ITEM_PRIORITIES.includes(candidate.priority as ItemPriority)
+        && (candidate.dueDate === null || isCalendarDate(candidate.dueDate))
+        && typeof candidate.id === 'string'
+        && UUID_PATTERN.test(candidate.id);
+}
+
+// A page is located by its last row, not by an offset that would shift under a
+// concurrent insert. The cursor carries every sort key and remains opaque to
+// callers. The UUID is the final unique key, so equivalent tasks never change
+// order between requests.
+function encodeCursor(row: ItemRow): string {
+    return Buffer.from(JSON.stringify({
+        priority: row.priority,
+        dueDate: row.due_date,
+        id: row.id,
+    }), 'utf8').toString('base64url');
+}
+
+function decodeCursor(cursor: string): ItemPosition {
+    try {
+        const value: unknown = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8'));
+        if (isPosition(value)) return value;
+    } catch {
+        // The domain error below is the only cursor failure exposed to callers.
+    }
+    throw new InvalidItemCursor();
+}
+
+// The predicate starts strictly after the supplied position in the public
+// order: high-to-low priority, nearest dated task first, undated tasks last,
+// then UUID. Each interpolated value has been validated above before it reaches
+// PostgREST filter syntax.
+function afterCursor(cursor: string): string {
+    const { priority, dueDate, id } = decodeCursor(cursor);
+    if (dueDate === null) {
+        return `priority.lt.${priority},and(priority.eq.${priority},due_date.is.null,id.gt.${id})`;
+    }
+    return `priority.lt.${priority},and(priority.eq.${priority},or(due_date.gt.${dueDate},and(due_date.eq.${dueDate},id.gt.${id}),due_date.is.null))`;
 }
 
 // The reads sit outside the factory: they need nothing from it but the client.
@@ -64,12 +111,13 @@ async function findPage(request: PageRequest): Promise<ItemPage | undefined> {
     if (!(await isProjectMember(client, projectId, memberId))) return undefined;
 
     const inProject = client.from('items').select('*').eq('project_id', projectId);
-    const positioned = page.cursor === undefined ? inProject : inProject.or(beforeCursor(page.cursor));
+    const positioned = page.cursor === undefined ? inProject : inProject.or(afterCursor(page.cursor));
 
     // One row more than asked: its presence is what says there is a next page.
     const { data, error } = await positioned
-        .order('created_at', { ascending: false })
-        .order('id', { ascending: false })
+        .order('priority', { ascending: false })
+        .order('due_date', { ascending: true, nullsFirst: false })
+        .order('id', { ascending: true })
         .limit(page.limit + 1);
     if (error) fail('findPageForMember', error);
 
@@ -134,6 +182,12 @@ async function save(client: ItemClient, item: Item, event: DomainEvent): Promise
         p_user_id: item.ownerId,
         p_project_id: item.projectId,
         p_name: item.name,
+        p_priority: item.priority,
+        // Supabase's generator does not represent nullable Postgres function
+        // arguments. The SQL parameter accepts NULL and the integration suite
+        // exercises that path for the default undated item.
+        // @ts-expect-error p_due_date is nullable in the database function
+        p_due_date: item.dueDate,
         p_event_id: event.id,
         p_event_name: event.name,
         p_occurred_at: event.occurredAt,
@@ -146,7 +200,13 @@ async function update(client: ItemClient, item: Item): Promise<void> {
     if (item.name === null) fail('update', new Error('an item written to storage must have a name'));
     const { error } = await client
         .from('items')
-        .update({ name: item.name, status: item.status, version: item.version })
+        .update({
+            name: item.name,
+            status: item.status,
+            version: item.version,
+            priority: item.priority,
+            due_date: item.dueDate,
+        })
         .eq('id', item.id);
     if (error) fail('update', error);
 }

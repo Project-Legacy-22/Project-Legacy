@@ -21,20 +21,22 @@ function isAbortError(error: unknown): boolean {
     return error instanceof DOMException && error.name === 'AbortError';
 }
 
-async function loadItems(context: LoadItemsContext) {
+async function loadItems(context: LoadItemsContext): Promise<boolean> {
     const { api, signal, setItems, setLoadState } = context;
     setLoadState({ status: 'loading' });
 
     try {
         const page = await api.listItems(context.projectId, { signal });
-        if (signal.aborted) return;
+        if (signal.aborted) return false;
         setItems(page.items);
         context.setNextCursor(page.nextCursor);
         setLoadState({ status: 'ready' });
+        return true;
     } catch (error) {
-        if (signal.aborted || isAbortError(error)) return;
+        if (signal.aborted || isAbortError(error)) return false;
         const message = error instanceof ApiError ? error.message : labels.loadItemsFailed;
         setLoadState({ status: 'error', message });
+        return false;
     }
 }
 
@@ -120,6 +122,40 @@ function useItemPagination(api: ItemsApi, projectId: string | null, setItems: Se
     };
 }
 
+interface RefreshItemsOptions {
+    api: ItemsApi;
+    projectId: string | null;
+    setItems: SetItems;
+    setLoadState: Dispatch<SetStateAction<ItemsLoadState>>;
+    pagination: ReturnType<typeof useItemPagination>;
+}
+
+function useRefreshItems(options: RefreshItemsOptions): () => Promise<boolean> {
+    const controllerRef = useRef<AbortController | null>(null);
+    useEffect(() => () => controllerRef.current?.abort(), [options.projectId]);
+
+    return useCallback(async () => {
+        if (options.projectId === null) return false;
+        controllerRef.current?.abort();
+        const controller = new AbortController();
+        controllerRef.current = controller;
+        options.pagination.reset();
+
+        try {
+            return await loadItems({
+                api: options.api,
+                projectId: options.projectId,
+                signal: controller.signal,
+                setItems: options.setItems,
+                setLoadState: options.setLoadState,
+                setNextCursor: options.pagination.setNextCursor,
+            });
+        } finally {
+            if (controllerRef.current === controller) controllerRef.current = null;
+        }
+    }, [options]);
+}
+
 export function useItemsQuery(api: ItemsApi, projectId: string | null) {
     const [items, setItems] = useState<readonly ItemDto[]>([]);
     const [loadState, setLoadState] = useState<ItemsLoadState>({
@@ -127,6 +163,7 @@ export function useItemsQuery(api: ItemsApi, projectId: string | null) {
     });
     const [loadAttempt, setLoadAttempt] = useState(0);
     const pagination = useItemPagination(api, projectId, setItems);
+    const refresh = useRefreshItems({ api, projectId, setItems, setLoadState, pagination });
 
     useEffect(() => {
         const controller = new AbortController();
@@ -148,7 +185,6 @@ export function useItemsQuery(api: ItemsApi, projectId: string | null) {
     }, [api, loadAttempt, pagination.reset, pagination.setNextCursor, projectId]);
 
     const retry = useCallback(() => setLoadAttempt((attempt) => attempt + 1), []);
-
     return {
         items,
         setItems,
@@ -157,5 +193,6 @@ export function useItemsQuery(api: ItemsApi, projectId: string | null) {
         paginationState: pagination.paginationState,
         loadMore: pagination.loadMore,
         retry,
+        refresh,
     };
 }

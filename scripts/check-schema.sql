@@ -137,6 +137,55 @@ begin
     raise exception 'items.completed must be replaced by the Kanban status';
   end if;
 
+  -- 5 ter. Planning values are constrained in storage. Priority is mandatory
+  -- and defaults to normal; an optional due date is a calendar date without a
+  -- time component. The list index ends in a unique key so its order is stable.
+  if (
+    select udt_name
+    from information_schema.columns
+    where table_schema = 'public' and table_name = 'items' and column_name = 'priority'
+  ) <> 'item_priority' or (
+    select is_nullable
+    from information_schema.columns
+    where table_schema = 'public' and table_name = 'items' and column_name = 'priority'
+  ) <> 'NO' or coalesce((
+    select column_default
+    from information_schema.columns
+    where table_schema = 'public' and table_name = 'items' and column_name = 'priority'
+  ), '') not ilike '%normal%' then
+    raise exception 'items.priority must use item_priority, be NOT NULL and default to normal';
+  end if;
+
+  if (
+    select data_type
+    from information_schema.columns
+    where table_schema = 'public' and table_name = 'items' and column_name = 'due_date'
+  ) <> 'date' or (
+    select is_nullable
+    from information_schema.columns
+    where table_schema = 'public' and table_name = 'items' and column_name = 'due_date'
+  ) <> 'YES' then
+    raise exception 'items.due_date must be an optional calendar date';
+  end if;
+
+  if (
+    select array_agg(enumlabel::text order by enumsortorder)
+    from pg_enum
+    where enumtypid = 'public.item_priority'::regtype
+  ) <> array['low', 'normal', 'high'] then
+    raise exception 'item_priority must contain low, normal and high';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_indexes
+    where schemaname = 'public'
+      and indexname = 'items_project_id_priority_due_date_id_idx'
+      and indexdef ilike '%project_id%priority%due_date%id%'
+  ) then
+    raise exception 'the stable item planning order must be indexed';
+  end if;
+
   -- 6. users.email is unique.
   if not exists (
     select 1

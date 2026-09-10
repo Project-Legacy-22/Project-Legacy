@@ -60,9 +60,22 @@ describe('listItems', () => {
             cursor: first.nextCursor,
         });
 
-        expect(first.items.map((item) => item.id)).toEqual(['item-3', 'item-2']);
-        expect(second.items.map((item) => item.id)).toEqual(['item-1']);
+        expect(first.items.map((item) => item.id)).toEqual(['item-1', 'item-2']);
+        expect(second.items.map((item) => item.id)).toEqual(['item-3']);
         expect(second.nextCursor).toBeUndefined();
+    });
+
+    it('orders priority, then due date, then id reproducibly', async () => {
+        const listItems = makeListItems(inMemoryItemRepository([
+            anItem({ id: 'item-4', priority: 'normal', dueDate: null, projectId: PROJECT_ID, ownerId: OWNER_ID }),
+            anItem({ id: 'item-3', priority: 'high', dueDate: '2026-09-20', projectId: PROJECT_ID, ownerId: OWNER_ID }),
+            anItem({ id: 'item-2', priority: 'high', dueDate: '2026-09-12', projectId: PROJECT_ID, ownerId: OWNER_ID }),
+            anItem({ id: 'item-1', priority: 'high', dueDate: '2026-09-12', projectId: PROJECT_ID, ownerId: OWNER_ID }),
+        ]));
+
+        const page = await listItems(PROJECT_ID, OWNER_ID, FIRST_PAGE);
+
+        expect(page.items.map((item) => item.id)).toEqual(['item-1', 'item-2', 'item-3', 'item-4']);
     });
 
     it('permet a un membre de lire les items crees par un autre compte', async () => {

@@ -1,10 +1,11 @@
-import { itemName, ItemNotFound } from '../domain/item.js';
-import type { Item } from '../domain/item.js';
+import { itemDueDate, itemName, ItemNotFound } from '../domain/item.js';
+import type { Item, ItemPriority } from '../domain/item.js';
 import type { ItemRepository } from '../ports/item-repository.js';
 
 export interface ItemChanges {
     name: string;
-    completed: boolean;
+    priority?: ItemPriority | undefined;
+    dueDate?: string | null | undefined;
 }
 
 export interface ChangeItemRequest {
@@ -26,7 +27,8 @@ export function makeChangeItem(repository: ItemRepository) {
         const updated: Item = {
             ...existing,
             name: itemName(request.changes.name),
-            status: request.changes.completed ? 'done' : 'todo',
+            priority: request.changes.priority ?? existing.priority,
+            dueDate: request.changes.dueDate === undefined ? existing.dueDate : itemDueDate(request.changes.dueDate),
             version: existing.version + 1,
         };
 

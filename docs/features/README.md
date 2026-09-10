@@ -24,8 +24,10 @@ the acceptance criteria: it describes the feature as it now behaves, in the pres
 |---|---|---|
 | [#14](14-export-and-delete-account.md) | Export and delete my personal data | GDPR |
 | [#15](15-accessibility-audit.md) | Accessibility audit of the delivered screens | A11y |
+| [#16](16-kanban-move.md) | Move tasks across the Kanban board | Tasks |
 | [#17](17-projects.md) | Group my items by project | Projects |
 | [#19](19-notifications.md) | Notifications | Notifications |
+| [#20](20-priority-due-date.md) | Prioritize and schedule tasks | Tasks |
 | [#28](28-session-lifetime.md) | Stay signed in between visits, and be signed out cleanly | Auth |
 | [#29](29-password-reset.md) | Password reset | Auth |
 | [#30](30-api-hardening.md) | API security hardening | Quality |

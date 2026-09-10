@@ -5,6 +5,8 @@
 export const MAX_ITEM_NAME_LENGTH = 255;
 export const ITEM_STATUSES = ['todo', 'doing', 'done'] as const;
 export type ItemStatus = (typeof ITEM_STATUSES)[number];
+export const ITEM_PRIORITIES = ['low', 'normal', 'high'] as const;
+export type ItemPriority = (typeof ITEM_PRIORITIES)[number];
 
 export interface Item {
     id: string;
@@ -16,6 +18,10 @@ export interface Item {
     // Incremented on every write. A move names the version it observed so a
     // concurrent move cannot be overwritten without being reported.
     version: number;
+    priority: ItemPriority;
+    // A calendar date deliberately has no time component. Keeping the ISO form
+    // in the domain prevents an implicit Date conversion from shifting it.
+    dueDate: string | null;
     projectId: string;
     // Every item belongs to a user. The application is single-user for now
     // (D-20), so this is always the system account, but the column is mandatory
@@ -39,6 +45,12 @@ export class DomainError extends Error {
 export class InvalidItemName extends DomainError {
     constructor(reason: string) {
         super('invalid_item_name', 400, `Item name ${reason}`);
+    }
+}
+
+export class InvalidItemDueDate extends DomainError {
+    constructor() {
+        super('invalid_item_due_date', 400, 'Item due date must be a calendar date');
     }
 }
 
@@ -76,15 +88,38 @@ export function itemName(candidate: string): string {
     return name;
 }
 
+const ITEM_DUE_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+export function itemDueDate(candidate: string | null | undefined): string | null {
+    if (candidate === null || candidate === undefined) return null;
+    if (!ITEM_DUE_DATE_PATTERN.test(candidate)) throw new InvalidItemDueDate();
+
+    const [year, month, day] = candidate.split('-').map(Number);
+    const parsed = new Date(Date.UTC(year ?? 0, (month ?? 0) - 1, day));
+    if (parsed.toISOString().slice(0, 10) !== candidate) throw new InvalidItemDueDate();
+    return candidate;
+}
+
 export interface NewItem {
     id: string;
     name: string;
     projectId: string;
     ownerId: string;
+    priority?: ItemPriority | undefined;
+    dueDate?: string | null | undefined;
 }
 
 export function createItem(candidate: NewItem): Item {
-    return { ...candidate, name: itemName(candidate.name), status: 'todo', version: 1 };
+    return {
+        id: candidate.id,
+        name: itemName(candidate.name),
+        status: 'todo',
+        version: 1,
+        priority: candidate.priority ?? 'normal',
+        dueDate: itemDueDate(candidate.dueDate),
+        projectId: candidate.projectId,
+        ownerId: candidate.ownerId,
+    };
 }
 
 // Rebuilding an item from storage is not the same operation as creating one:
@@ -96,6 +131,8 @@ export function rehydrateItem(row: {
     name: string | null;
     status: ItemStatus;
     version: number;
+    priority: ItemPriority;
+    dueDate: string | null;
     projectId: string;
     ownerId: string;
 }): Item {
@@ -104,6 +141,8 @@ export function rehydrateItem(row: {
         name: row.name,
         status: row.status,
         version: row.version,
+        priority: row.priority,
+        dueDate: row.dueDate,
         projectId: row.projectId,
         ownerId: row.ownerId,
     };

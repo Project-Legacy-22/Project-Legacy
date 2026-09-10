@@ -11,17 +11,23 @@ export const MAX_ITEM_NAME_LENGTH = 255;
 
 const itemNameSchema = z.string().trim().min(1).max(MAX_ITEM_NAME_LENGTH);
 
+export const ItemPriority = z.enum(['low', 'normal', 'high']);
+export const ItemDueDate = z.iso.date();
+
 export const ItemIdParams = z.object({
     id: z.uuid(),
 });
 
 export const CreateItemBody = z.object({
     name: itemNameSchema,
+    priority: ItemPriority.optional(),
+    dueDate: ItemDueDate.nullable().optional(),
 });
 
 export const UpdateItemBody = z.object({
     name: itemNameSchema,
-    completed: z.boolean(),
+    priority: ItemPriority.optional(),
+    dueDate: ItemDueDate.nullable().optional(),
 });
 
 export const ItemStatus = z.enum(['todo', 'doing', 'done']);
@@ -39,8 +45,8 @@ export const ItemDto = z.object({
     name: z.string().nullable(),
     status: ItemStatus,
     version: z.number().int().positive(),
-    // Kept until US-15b replaces the inherited checkbox client.
-    completed: z.boolean(),
+    priority: ItemPriority,
+    dueDate: ItemDueDate.nullable(),
 });
 
 export const ItemListDto = z.array(ItemDto);
@@ -75,6 +81,7 @@ export type CreateItemBody = z.infer<typeof CreateItemBody>;
 export type UpdateItemBody = z.infer<typeof UpdateItemBody>;
 export type MoveItemBody = z.infer<typeof MoveItemBody>;
 export type ItemStatus = z.infer<typeof ItemStatus>;
+export type ItemPriority = z.infer<typeof ItemPriority>;
 export type ItemDto = z.infer<typeof ItemDto>;
 export type ItemListDto = z.infer<typeof ItemListDto>;
 export type ListItemsQuery = z.infer<typeof ListItemsQuery>;

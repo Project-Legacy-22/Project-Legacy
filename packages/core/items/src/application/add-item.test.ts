@@ -30,17 +30,34 @@ describe('addItem', () => {
     it('persiste un item avec l id injecte et le proprietaire fourni', async () => {
         const repository = inMemoryItemRepository([], [{ projectId: PROJECT_ID, userId: OWNER_ID }]);
 
-        const item = await addItemWith(repository)('Buy milk', PROJECT_ID, OWNER_ID);
+        const item = await addItemWith(repository)({ name: 'Buy milk', projectId: PROJECT_ID, ownerId: OWNER_ID });
 
         expect(item).toEqual({
             id: 'item-id',
             name: 'Buy milk',
             status: 'todo',
             version: 1,
+            priority: 'normal',
+            dueDate: null,
             projectId: PROJECT_ID,
             ownerId: OWNER_ID,
         });
         expect(await repository.findByIdForMember('item-id', PROJECT_ID, OWNER_ID)).toEqual(item);
+    });
+
+    it('persists optional planning values, including a past due date', async () => {
+        const repository = inMemoryItemRepository([], [{ projectId: PROJECT_ID, userId: OWNER_ID }]);
+
+        const item = await addItemWith(repository)({
+            name: 'Buy milk',
+            projectId: PROJECT_ID,
+            ownerId: OWNER_ID,
+            priority: 'high',
+            dueDate: '2020-01-02',
+        });
+
+        expect(item).toMatchObject({ priority: 'high', dueDate: '2020-01-02' });
+        expect(repository.items.get(item.id)).toEqual(item);
     });
 
     // Le proprietaire vient de l appelant : deux appelants differents ne
@@ -48,7 +65,11 @@ describe('addItem', () => {
     it('attribue l item a l appelant et pas a un compte fixe', async () => {
         const repository = inMemoryItemRepository([], [{ projectId: PROJECT_ID, userId: OTHER_OWNER_ID }]);
 
-        const item = await addItemWith(repository)('Buy milk', PROJECT_ID, OTHER_OWNER_ID);
+        const item = await addItemWith(repository)({
+            name: 'Buy milk',
+            projectId: PROJECT_ID,
+            ownerId: OTHER_OWNER_ID,
+        });
 
         expect(item.ownerId).toBe(OTHER_OWNER_ID);
     });
@@ -56,7 +77,7 @@ describe('addItem', () => {
     it('annonce la creation par un evenement versionne', async () => {
         const repository = inMemoryItemRepository([], [{ projectId: PROJECT_ID, userId: OWNER_ID }]);
 
-        await addItemWith(repository)('Buy milk', PROJECT_ID, OWNER_ID);
+        await addItemWith(repository)({ name: 'Buy milk', projectId: PROJECT_ID, ownerId: OWNER_ID });
 
         expect(repository.recordedEvents).toEqual([
             {
@@ -71,7 +92,9 @@ describe('addItem', () => {
     it('refuse un titre vide sans toucher au depot', async () => {
         const repository = inMemoryItemRepository([], [{ projectId: PROJECT_ID, userId: OWNER_ID }]);
 
-        await expect(addItemWith(repository)('   ', PROJECT_ID, OWNER_ID)).rejects.toBeInstanceOf(InvalidItemName);
+        await expect(
+            addItemWith(repository)({ name: '   ', projectId: PROJECT_ID, ownerId: OWNER_ID }),
+        ).rejects.toBeInstanceOf(InvalidItemName);
         expect(repository.items.size).toBe(0);
         expect(repository.recordedEvents).toHaveLength(0);
     });
@@ -82,7 +105,9 @@ describe('addItem', () => {
     it('n annonce rien quand l enregistrement echoue', async () => {
         const repository = failingItemRepository('storage unavailable', [{ projectId: PROJECT_ID, userId: OWNER_ID }]);
 
-        await expect(addItemWith(repository)('Buy milk', PROJECT_ID, OWNER_ID)).rejects.toThrow('storage unavailable');
+        await expect(
+            addItemWith(repository)({ name: 'Buy milk', projectId: PROJECT_ID, ownerId: OWNER_ID }),
+        ).rejects.toThrow('storage unavailable');
         expect(repository.recordedEvents).toHaveLength(0);
     });
 });

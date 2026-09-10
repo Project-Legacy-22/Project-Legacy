@@ -1,9 +1,9 @@
 import { DEFAULT_ITEM_PAGE_SIZE, ItemDto, ItemPageDto, ProblemDetails } from '@legacy/contracts';
-import type { CreateItemBody, UpdateItemBody } from '@legacy/contracts';
+import type { CreateItemBody, MoveItemBody, UpdateItemBody } from '@legacy/contracts';
 
 import { labels } from '../labels';
 
-export type { ItemDto, ItemPageDto } from '@legacy/contracts';
+export type { ItemDto, ItemPageDto, ItemPriority, ItemStatus } from '@legacy/contracts';
 
 export interface ListItemsRequest {
     signal: AbortSignal;
@@ -14,6 +14,7 @@ export interface ItemsApi {
     listItems: (projectId: string, request: ListItemsRequest) => Promise<ItemPageDto>;
     createItem: (projectId: string, body: CreateItemBody) => Promise<ItemDto>;
     updateItem: (projectId: string, id: string, body: UpdateItemBody) => Promise<ItemDto>;
+    moveItem: (projectId: string, id: string, body: MoveItemBody) => Promise<ItemDto>;
     deleteItem: (projectId: string, id: string) => Promise<void>;
 }
 
@@ -101,6 +102,18 @@ export const itemsApi: ItemsApi = {
         return requestJson(
             `/projects/${encodeURIComponent(projectId)}/items/${encodeURIComponent(id)}`,
             { method: 'PUT', headers: jsonHeaders, body: JSON.stringify(body) },
+            (value) => {
+                const result = ItemDto.safeParse(value);
+                if (!result.success) throw new ApiError(502, labels.invalidItem);
+                return result.data;
+            },
+        );
+    },
+
+    moveItem(projectId, id, body) {
+        return requestJson(
+            `/projects/${encodeURIComponent(projectId)}/items/${encodeURIComponent(id)}/status`,
+            { method: 'PATCH', headers: jsonHeaders, body: JSON.stringify(body) },
             (value) => {
                 const result = ItemDto.safeParse(value);
                 if (!result.success) throw new ApiError(502, labels.invalidItem);

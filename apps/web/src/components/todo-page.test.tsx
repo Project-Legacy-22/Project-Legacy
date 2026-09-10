@@ -5,7 +5,7 @@ import { labels } from '../labels';
 import type { AddItemResult } from '../hooks/use-items';
 import type { AddProjectResult } from '../hooks/use-projects';
 import { anItem } from '../test/builders/item-builder';
-import { click, createReactTestRoot, getElement } from '../test/react-root';
+import { click, createReactTestRoot, flushTimers, getElement } from '../test/react-root';
 import type { ReactTestRoot } from '../test/react-root';
 import { TodoPage } from './todo-page';
 import type { TodoPageProps } from './todo-page';
@@ -30,8 +30,8 @@ function pageProps(overrides: Partial<TodoPageProps> = {}): TodoPageProps {
         hasNextPage: true,
         paginationState: { status: 'idle', announcement: '' },
         onAdd: vi.fn(async (): Promise<AddItemResult> => ({ status: 'success' })),
-        onToggle: vi.fn(async () => undefined),
-        onRename: vi.fn(async () => true),
+        onMove: vi.fn(async () => true),
+        onUpdate: vi.fn(async () => true),
         onRemove: vi.fn(async () => true),
         onLoadMore: vi.fn(),
         onRetry: vi.fn(),
@@ -85,8 +85,20 @@ describe('TodoPage accessibility', () => {
             runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21aa'] },
             rules: { 'color-contrast': { enabled: false } },
         });
+        await click(getElement<HTMLButtonElement>('.item-edit-actions .button-secondary'));
+        await flushTimers();
+        await click(getElement<HTMLButtonElement>('.item-move'));
+        const moving = await axe.run(document, {
+            runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21aa'] },
+            rules: { 'color-contrast': { enabled: false } },
+        });
 
-        expect([...initial.violations, ...editing.violations].map((violation) => violation.id)).toEqual([]);
+        expect(
+            [...initial.violations, ...editing.violations, ...moving.violations].map((violation) => ({
+                id: violation.id,
+                targets: violation.nodes.flatMap((node) => node.target),
+            })),
+        ).toEqual([]);
     });
 
     it('links every input help reference to an existing element', async () => {
@@ -125,7 +137,7 @@ describe('TodoPage accessibility', () => {
         });
 
         expect(document.querySelector('.empty-message')?.textContent).toBe(labels.emptyItems);
-        expect(document.querySelector('.todo-list')).toBeNull();
+        expect(document.querySelectorAll('.kanban-column')).toHaveLength(3);
     });
 
     it('moves focus to the list heading before retry removes its button', async () => {
