@@ -20,6 +20,21 @@ export type RegistrationOutcome = 'created' | 'already-registered';
 // refusal, and keeping the wording indistinguishable, is the use case's job.
 export type PasswordResetOutcome = 'password-changed' | 'token-rejected' | 'weak-password';
 
+// What a signed-in password change did. 'weak-password' is the provider's own
+// policy refusing the new password after the domain already accepted it; the
+// current password is proven by the use case before this outcome is possible.
+export type PasswordChangeOutcome = 'password-changed' | 'weak-password';
+
+// What starting an email change did. 'address-unavailable' means the new
+// address already has an account. The use case answers the two the same way:
+// a form that said which is a way to tell which addresses are registered
+// (US-36, same rule as RegistrationOutcome).
+export type EmailChangeOutcome = 'confirmation-requested' | 'address-unavailable';
+
+// What confirming an email change did. 'token-rejected' covers an unknown,
+// spent or expired confirmation token alike.
+export type EmailChangeConfirmation = 'confirmed' | 'token-rejected';
+
 // What authentication requires of the outside world, named after the need and
 // not after the technology. packages/infra provides the Supabase Auth
 // implementation (ADR-0008); this interface is what makes replacing it a matter
@@ -73,4 +88,32 @@ export interface IdentityProvider {
     // the same as one it just revoked -- the goal state, this token cannot be
     // renewed, is already reached.
     signOut(accessToken: string): Promise<void>;
+
+    // Sets a new password for the account these tokens belong to and revokes
+    // every OTHER session of it, keeping this one. The current password is not
+    // this method's concern: the use case proves it with authenticate() first.
+    // Both cookie tokens are needed because the change acts as the caller, not
+    // as an administrator -- the same reason resetPassword acts through a
+    // scoped session.
+    changePassword(
+        accessToken: string,
+        refreshToken: string,
+        newPassword: string,
+    ): Promise<PasswordChangeOutcome>;
+
+    // Starts an email change for the account these tokens belong to. The
+    // provider emails a confirmation link to the new address (and, where it is
+    // configured to, the current one); the address of record does not change
+    // until the link is followed. Resolves the same way whether the new address
+    // is free or already registered. Throws only when the provider itself fails.
+    changeEmail(
+        accessToken: string,
+        refreshToken: string,
+        newEmail: string,
+    ): Promise<EmailChangeOutcome>;
+
+    // Exchanges the token from an email-change confirmation link. Single-use and
+    // time-limited on the provider's side. Unknown, spent and expired are not
+    // told apart, for the same reason a reset token's states are not.
+    confirmEmailChange(token: string): Promise<EmailChangeConfirmation>;
 }
