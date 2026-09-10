@@ -6,7 +6,7 @@ import {
     click,
     createReactTestRoot,
     focusOrder,
-    nomAccessible,
+    accessibleName,
     getElement,
     setInputValue,
     submitForm,
@@ -80,18 +80,18 @@ describe('RequestResetForm', () => {
         expect(onBack).toHaveBeenCalledOnce();
     });
 
-    // Le parcours au clavier seul. Rien ne le verifiait jusqu'ici : la suite
-    // posait le focus par .focus() puis l'affirmait, ce qui ne dit rien de ce
-    // qu'une personne atteint reellement en tabulant.
-    it('se parcourt entierement au clavier, dans l ordre de lecture', async () => {
+    // The keyboard path on its own. Nothing verified it until now: the suite
+    // placed focus with .focus() then asserted it, which says nothing about
+    // what a person actually reaches by tabbing.
+    it('can be walked end to end with the keyboard, in reading order', async () => {
         await render();
         document.body.focus();
 
-        // Le champ d'abord, puis l'envoi, puis le retour : l'action principale
-        // precede l'echappatoire. Les noms accessibles plutot que les balises,
-        // sans quoi deux boutons seraient indiscernables et l'ordre non verifie.
-        const attendu = focusOrder();
-        expect(attendu).toEqual([
+        // The field first, then submit, then back: the main action comes
+        // before the escape. Accessible names rather than tags, without which
+        // two buttons would be indistinguishable and the order unverified.
+        const expected = focusOrder();
+        expect(expected).toEqual([
             `input:${labels.emailLabel}`,
             `button:${labels.requestReset}`,
             `button:${labels.backToSignIn}`,
@@ -99,38 +99,38 @@ describe('RequestResetForm', () => {
 
         // Puis que tabuler visite bien cet ordre-la, et pas seulement que le
         // DOM le declare : les deux peuvent diverger.
-        const visites: string[] = [];
-        for (let pas = 0; pas < attendu.length; pas += 1) {
-            const atteint = await tab();
-            if (atteint !== null) {
-                visites.push(`${atteint.tagName.toLowerCase()}:${nomAccessible(atteint)}`);
+        const visited: string[] = [];
+        for (let step = 0; step < expected.length; step += 1) {
+            const reached = await tab();
+            if (reached !== null) {
+                visited.push(`${reached.tagName.toLowerCase()}:${accessibleName(reached)}`);
             }
         }
 
-        expect(visites).toEqual(attendu);
+        expect(visited).toEqual(expected);
     });
 
-    // La soumission a la touche entree ne se teste pas ici : jsdom n'implemente
-    // pas la soumission implicite, et un test qui appellerait submitForm apres
-    // avoir simule la touche passerait meme si le comportement n'existait pas.
-    // Ce qui est verifiable, et suffisant, est sa condition structurelle : le
-    // formulaire porte un bouton de type submit, et un seul. Sans lui, entree
-    // ne ferait rien dans un vrai navigateur ; avec deux, le navigateur
-    // choisirait le premier. La verification a l'usage revient a EN-26.
-    it('reunit la condition de la soumission au clavier', async () => {
+    // Submission by the Enter key is not tested here: jsdom does not implement
+    // implicit submission, and a test calling submitForm after simulating the
+    // key would pass even if the behaviour did not exist.
+    //
+    // What is verifiable, and enough, is its structural condition: the form
+    // carries a submit button, and exactly one. Without it, Enter would do
+    // nothing in a real browser; with two, the browser would pick the first.
+    // Verifying it in use belongs to EN-26.
+    it('meets the condition for keyboard submission', async () => {
         await render();
 
-        const soumissions = document.querySelectorAll('form button[type="submit"]');
+        const submits = document.querySelectorAll('form button[type="submit"]');
 
-        expect(soumissions).toHaveLength(1);
-        expect(getElement('form').contains(soumissions[0] ?? null)).toBe(true);
+        expect(submits).toHaveLength(1);
+        expect(getElement('form').contains(submits[0] ?? null)).toBe(true);
     });
 
-    // Le bouton de retour n'est pas un submit : sans son type explicite il
-    // enverrait le formulaire au lieu de revenir en arriere, ce qui est la
-    // faute la plus courante et la plus silencieuse sur un formulaire a deux
-    // boutons.
-    it('ne fait pas du retour un second bouton d envoi', async () => {
+    // The back button is not a submit: without its explicit type it would
+    // send the form instead of going back, which is the most common and the
+    // most silent mistake on a two-button form.
+    it('does not make the back button a second submit', async () => {
         await render();
 
         expect(getElement('.button-quiet').getAttribute('type')).toBe('button');

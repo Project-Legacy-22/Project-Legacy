@@ -64,19 +64,19 @@ export async function flushTimers(): Promise<void> {
     await act(async () => new Promise(resolve => globalThis.setTimeout(resolve, 0)));
 }
 
-// Le clavier.
+// The keyboard.
 //
-// jsdom n'implemente pas la navigation sequentielle : appuyer sur Tab n'y
-// deplace rien. Ces quatre aides la simulent, ce qui est une simulation et non
-// le navigateur -- elles ignorent inert, le shadow DOM, contenteditable et les
-// iframes, dont aucun n'existe dans cette interface. Le jour ou l'un d'eux
-// apparait, ce commentaire est le rappel qu'il faut revoir ces aides.
+// jsdom does not implement sequential navigation: pressing Tab moves nothing
+// there. These four helpers simulate it, and a simulation is not a browser --
+// they ignore inert, the shadow DOM, contenteditable and iframes, none of
+// which exists in this interface. The day one of them appears, this comment is
+// the reminder that these helpers need revisiting.
 //
-// Elles vivent ici plutot que dans @testing-library/user-event : ce sont
-// quarante lignes, la suite interroge le DOM par selecteur, et introduire un
-// second idiome pour la moitie des tests couterait plus que ce qu'il apporte.
-// Le jour ou un tableau Kanban amenera un roving tabindex, la question se
-// reposera -- et la, la dependance gagnera sa place.
+// They live here rather than in @testing-library/user-event: forty lines, and
+// the suite already queries the DOM by selector, so a second idiom for half
+// the tests would cost more than it brings. The day a Kanban board brings a
+// roving tabindex, the question comes back -- and there, the dependency earns
+// its place.
 
 const FOCUSABLES = [
     'a[href]',
@@ -93,99 +93,100 @@ export async function pressKey(
     init: KeyboardEventInit = {},
 ): Promise<void> {
     await act(async () => {
-        const commun = { key, bubbles: true, cancelable: true, ...init };
-        element.dispatchEvent(new KeyboardEvent('keydown', commun));
-        element.dispatchEvent(new KeyboardEvent('keyup', commun));
+        const common = { key, bubbles: true, cancelable: true, ...init };
+        element.dispatchEvent(new KeyboardEvent('keydown', common));
+        element.dispatchEvent(new KeyboardEvent('keyup', common));
         await Promise.resolve();
     });
 }
 
-// Ce que Tab visiterait, dans l'ordre du document.
+// What Tab would visit, in document order.
 //
-// aria-disabled ne retire pas de l'ordre de tabulation, contrairement a
-// disabled : c'est tout l'interet du choix fait sur le bouton de pagination,
-// qui garde le focus au lieu de le perdre en devenant inerte.
+// aria-disabled does not remove an element from the tab order, unlike
+// disabled: that is the whole point of the choice made on the pagination
+// button, which keeps focus instead of losing it by turning inert.
 export function tabbables(root: ParentNode = document): HTMLElement[] {
-    const candidats = [...root.querySelectorAll<HTMLElement>(FOCUSABLES)];
+    const candidates = [...root.querySelectorAll<HTMLElement>(FOCUSABLES)];
 
-    const positif = candidats.find(element => Number(element.getAttribute('tabindex')) > 0);
-    if (positif !== undefined) {
-        // Un tabindex positif reordonne le parcours sans que le DOM le montre.
-        // Il n'y en a aucun aujourd'hui ; le jour ou il y en a un, ces aides
-        // mentiraient. Mieux vaut echouer bruyamment que rendre un ordre faux.
-        throw new Error(`tabindex positif sur ${positif.tagName.toLowerCase()} : ordre non simulable.`);
+    const positive = candidates.find(element => Number(element.getAttribute('tabindex')) > 0);
+    if (positive !== undefined) {
+        // A positive tabindex reorders the path without the DOM showing it.
+        // There is none today; the day there is one, these helpers would lie.
+        // Failing loudly beats returning an order that is wrong.
+        throw new Error(
+            `positive tabindex on ${positive.tagName.toLowerCase()}: order cannot be simulated.`,
+        );
     }
 
-    return candidats.filter(element => {
+    return candidates.filter(element => {
         if (element.hasAttribute('disabled')) return false;
         if (element.getAttribute('tabindex') === '-1') return false;
-        // Un element retire de l'affichage par .visually-hidden reste focusable
-        // -- c'est le cas du lien d'evitement -- donc on ne filtre pas dessus.
+        // An element hidden from view by .visually-hidden stays focusable --
+        // the skip link is exactly that -- so it is not filtered out here.
         return true;
     });
 }
 
 export async function tab({ shift = false } = {}): Promise<HTMLElement | null> {
-    const parcours = tabbables();
-    const courant = document.activeElement;
-    const depart = courant instanceof HTMLElement ? parcours.indexOf(courant) : -1;
+    const path = tabbables();
+    const current = document.activeElement;
+    const start = current instanceof HTMLElement ? path.indexOf(current) : -1;
 
-    // Depuis le body, Tab entre par le premier et Maj+Tab par le dernier.
-    const suivant = shift
-        ? (depart <= 0 ? parcours.length : depart) - 1
-        : (depart + 1) % parcours.length;
+    // From the body, Tab enters at the first stop and Shift+Tab at the last.
+    const next = shift ? (start <= 0 ? path.length : start) - 1 : (start + 1) % path.length;
 
-    const cible = parcours[suivant] ?? null;
-    if (cible !== null) await act(async () => cible.focus());
-    return cible;
+    const target = path[next] ?? null;
+    if (target !== null) await act(async () => target.focus());
+    return target;
 }
 
-// Le nom accessible, resolu dans l'ordre ou l'arbre d'accessibilite le fait :
-// aria-label, puis aria-labelledby, puis l'etiquette associee, puis le contenu.
+// The accessible name, resolved in the order the accessibility tree resolves
+// it: aria-label, then aria-labelledby, then the associated label, then the
+// content.
 //
-// L'etiquette compte parce qu'un champ n'a pas de contenu textuel : sans elle,
-// tous les champs d'un formulaire portent le meme nom vide et deviennent
-// indistinguables dans un ordre de tabulation. Un test qui les compare passerait
-// alors meme si deux champs etaient echanges.
+// The label matters because a field has no text content: without it, every
+// field of a form carries the same empty name and they become
+// indistinguishable in a tab order. A test comparing that order would then
+// pass even after two fields had been swapped.
 
-// Une source ne nomme rien quand elle est absente, et pas davantage quand elle
-// est vide : un aria-label rempli d'espaces est un oubli, pas un nom. C'est ce
-// que ?? seul ne voyait pas, un champ recevant alors la chaine vide.
-function premierNonVide(...sources: (string | null | undefined)[]): string {
+// A source names nothing when it is absent, and no more when it is empty: an
+// aria-label full of spaces is an oversight, not a name. That is what ?? alone
+// did not see, a field then receiving the empty string.
+function firstNonEmpty(...sources: (string | null | undefined)[]): string {
     for (const source of sources) {
-        const propre = source?.trim();
-        if (propre !== undefined && propre !== '') return propre;
+        const trimmed = source?.trim();
+        if (trimmed !== undefined && trimmed !== '') return trimmed;
     }
     return '';
 }
 
-// Seuls les controles de formulaire portent une etiquette associee, et c'est
-// leur seul nom : ils n'ont pas de contenu textuel.
-function etiquetteAssociee(element: HTMLElement): string | null | undefined {
-    const controle =
+// Only form controls carry an associated label, and it is their only name:
+// they have no text content.
+function associatedLabel(element: HTMLElement): string | null | undefined {
+    const isFormControl =
         element instanceof HTMLInputElement ||
         element instanceof HTMLSelectElement ||
         element instanceof HTMLTextAreaElement;
 
-    return controle ? element.labels?.[0]?.textContent : undefined;
+    return isFormControl ? element.labels?.[0]?.textContent : undefined;
 }
 
-export function nomAccessible(element: HTMLElement): string {
+export function accessibleName(element: HTMLElement): string {
     const reference = element.getAttribute('aria-labelledby');
 
-    return premierNonVide(
+    return firstNonEmpty(
         element.getAttribute('aria-label'),
         reference === null ? undefined : document.getElementById(reference)?.textContent,
-        etiquetteAssociee(element),
+        associatedLabel(element),
         element.textContent,
         element.getAttribute('name'),
     );
 }
 
-// L'ordre de tabulation sous une forme lisible dans un echec de test :
-// le nom accessible plutot que le noeud, qui ne dit rien une fois affiche.
+// The tab order in a form that reads in a test failure: the accessible name
+// rather than the node, which says nothing once printed.
 export function focusOrder(root: ParentNode = document): string[] {
     return tabbables(root).map(
-        element => `${element.tagName.toLowerCase()}:${nomAccessible(element).slice(0, 40)}`,
+        element => `${element.tagName.toLowerCase()}:${accessibleName(element).slice(0, 40)}`,
     );
 }

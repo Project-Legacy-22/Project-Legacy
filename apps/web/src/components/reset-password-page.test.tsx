@@ -6,7 +6,7 @@ import { labels } from '../labels';
 import {
     createReactTestRoot,
     focusOrder,
-    nomAccessible,
+    accessibleName,
     getElement,
     setInputValue,
     submitForm,
@@ -101,36 +101,36 @@ describe('ResetPasswordPage', () => {
         expect(document.querySelector('a[href="/"]')?.textContent).toBe(labels.requestNewResetLink);
     });
 
-    // Le parcours au clavier seul, que rien ne verifiait : la suite posait le
-    // focus par .focus() puis l'affirmait, ce qui ne dit rien de ce qu'une
-    // personne atteint reellement en tabulant.
-    it('se parcourt entierement au clavier, dans l ordre de lecture', async () => {
+    // The keyboard path on its own, which nothing verified: the suite placed
+    // focus with .focus() then asserted it, which says nothing about what a
+    // person actually reaches by tabbing.
+    it('can be walked end to end with the keyboard, in reading order', async () => {
         await render();
         document.body.focus();
 
-        // Le champ puis l'envoi, et rien d'autre : l'echappatoire n'existe pas
-        // tant que rien n'a echoue.
-        const attendu = focusOrder();
-        expect(attendu).toEqual([
+        // The field then submit, and nothing else: the escape does not exist
+        // until something has failed.
+        const expected = focusOrder();
+        expect(expected).toEqual([
             `input:${labels.newPasswordLabel}`,
             `button:${labels.resetPassword}`,
         ]);
 
-        const visites: string[] = [];
-        for (let pas = 0; pas < attendu.length; pas += 1) {
-            const atteint = await tab();
-            if (atteint !== null) {
-                visites.push(`${atteint.tagName.toLowerCase()}:${nomAccessible(atteint)}`);
+        const visited: string[] = [];
+        for (let step = 0; step < expected.length; step += 1) {
+            const reached = await tab();
+            if (reached !== null) {
+                visited.push(`${reached.tagName.toLowerCase()}:${accessibleName(reached)}`);
             }
         }
 
-        expect(visites).toEqual(attendu);
+        expect(visited).toEqual(expected);
     });
 
-    // Quand le jeton est refuse, la seule issue est de redemander un lien. Elle
-    // apparait alors dans la page, et doit rejoindre le parcours au clavier :
-    // une echappatoire qu'on ne peut pas atteindre sans souris n'en est pas une.
-    it('met l echappatoire a portee du clavier quand le jeton est refuse', async () => {
+    // When the token is refused, the only way out is to ask for a new link. It
+    // then appears in the page, and must join the keyboard path: an escape
+    // nobody can reach without a mouse is not an escape.
+    it('puts the escape within keyboard reach when the token is refused', async () => {
         await render(() =>
             Promise.resolve({ status: 'error', message: labels.resetPasswordFailed }),
         );
@@ -139,13 +139,13 @@ describe('ResetPasswordPage', () => {
         await submitForm(getElement('form'));
         document.body.focus();
 
-        const visites: string[] = [];
-        for (let pas = 0; pas < focusOrder().length; pas += 1) {
-            const atteint = await tab();
-            if (atteint !== null) visites.push(nomAccessible(atteint));
+        const visited: string[] = [];
+        for (let step = 0; step < focusOrder().length; step += 1) {
+            const reached = await tab();
+            if (reached !== null) visited.push(accessibleName(reached));
         }
 
-        expect(visites).toContain(labels.requestNewResetLink);
+        expect(visited).toContain(labels.requestNewResetLink);
     });
 
     it('has no automatically detectable WCAG A or AA violation', async () => {
