@@ -100,6 +100,28 @@ export const labels = {
     unreadNotifications(count: number): string {
         return count === 1 ? '1 unread notification' : `${String(count)} unread notifications`;
     },
+    // Notifications list (US-18)
+    showNotifications: 'Show notifications',
+    hideNotifications: 'Hide notifications',
+    notificationsTitle: 'Notifications',
+    emptyNotifications: 'No notifications yet.',
+    notificationItemCreated: 'A new item was created.',
+    notificationRead: 'Read',
+    notificationUnread: 'Unread',
+    markNotificationRead: 'Mark as read',
+    markingNotificationRead: 'Marking as read…',
+    markNotificationReadFailed: 'Unable to mark this notification as read.',
+    loadingNotifications: 'Loading notifications…',
+    loadMoreNotifications: 'Load more notifications',
+    loadingMoreNotifications: 'Loading more notifications…',
+    retryLoadingMoreNotifications: 'Try loading more again',
+    allNotificationsLoaded: 'All notifications loaded',
+    loadNotificationsFailed: 'Unable to load the notification list.',
+    loadMoreNotificationsFailed: 'Unable to load more notifications.',
+    invalidNotificationList: 'The server returned an invalid notification list.',
+    notificationsLoaded(count: number): string {
+        return `${count} more ${count === 1 ? 'notification' : 'notifications'} loaded.`;
+    },
 
     skipToContent: 'Skip to content',
     productName: 'Legacy 22',

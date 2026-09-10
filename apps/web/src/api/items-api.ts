@@ -48,7 +48,7 @@ export async function errorMessage(response: Response, fallback?: string): Promi
     }
 }
 
-async function requestJson<T>(
+export async function requestJson<T>(
     input: string,
     init: RequestInit,
     parse: (value: unknown) => T,
