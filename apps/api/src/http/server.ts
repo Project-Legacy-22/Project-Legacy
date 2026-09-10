@@ -10,6 +10,7 @@ import type { AppUseCases } from '../composition-root.js';
 import { accountRouter } from './routes/account.js';
 import { authRouter } from './routes/auth.js';
 import { itemsRouter } from './routes/items.js';
+import { notificationsRouter } from './routes/notifications.js';
 import { translateErrors } from './error-middleware.js';
 import { requireAccount } from './session.js';
 import { withTraceId } from './trace.js';
@@ -98,6 +99,7 @@ export function createServer(config: Config, useCases: AppUseCases, logger: Logg
 
     // Items belong to somebody since US-11: no session, no items.
     app.use(requireAccount(useCases.auth), itemsRouter(useCases.items));
+    app.use(requireAccount(useCases.auth), notificationsRouter(useCases.notifications));
 
     // Registered last: express only treats a middleware as an error handler
     // once every route has had its chance to fail.

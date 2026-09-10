@@ -10,6 +10,7 @@ import {
     makeRequestPasswordReset,
     makeResetPassword,
     makeSignIn,
+    makeSignOut,
 } from '@legacy/core-auth';
 // The reference fakes for a port live with the port they implement. Copying one
 // here would let the copy drift from the contract it is supposed to stand for.
@@ -22,7 +23,7 @@ import type { InMemoryItemRepository } from '../../../../../packages/core/items/
 import { createServer } from '../server.js';
 import { SESSION_COOKIE } from '../session.js';
 import type { AppUseCases } from '../../composition-root.js';
-import { recordingLogger } from '../../../test/fakes/recording-logger.js';
+import { recordingLogger } from '../../../../../packages/contracts/test/fakes/recording-logger.js';
 import { json, listen, testConfig } from '../../../test/http-harness.js';
 import type { Harness } from '../../../test/http-harness.js';
 
@@ -50,6 +51,11 @@ function useCasesOver(repository: ItemRepository, provider: IdentityProvider): A
             changeItem: makeChangeItem(repository),
             removeItem: makeRemoveItem(repository),
         },
+        notifications: {
+            countUnread: () => Promise.resolve(0),
+            listNotifications: () => Promise.reject(new Error('not exercised by this suite')),
+            markNotificationRead: () => Promise.reject(new Error('not exercised by this suite')),
+        },
         auth: {
             registerAccount: makeRegisterAccount(provider),
             signIn: makeSignIn(provider),
@@ -59,6 +65,7 @@ function useCasesOver(repository: ItemRepository, provider: IdentityProvider): A
                 provider,
                 compromisedPasswords: inMemoryCompromisedPasswords(),
             }),
+            signOut: makeSignOut(provider),
         },
         account: {
             exportPersonalData: makeExportPersonalData({

@@ -1,12 +1,14 @@
 import { randomUUID } from 'node:crypto';
 
+import { PRIVACY_POLICY_VERSION } from '@legacy/contracts';
+
 import { loadConfig } from '../../src/config.js';
 import type { Config } from '../../src/config.js';
 import { compose } from '../../src/composition-root.js';
 import type { Application } from '../../src/composition-root.js';
 import { createServer } from '../../src/http/server.js';
 import { SESSION_COOKIE } from '../../src/http/session.js';
-import { recordingLogger } from '../fakes/recording-logger.js';
+import { recordingLogger } from '../../../../packages/contracts/test/fakes/recording-logger.js';
 import { listen } from '../http-harness.js';
 import type { Harness } from '../http-harness.js';
 
@@ -51,7 +53,7 @@ export async function registerAndSignIn(app: Application, password: string): Pro
     // reuse it.
     const email = `integration-${randomUUID()}@example.com`;
 
-    await app.useCases.auth.registerAccount(email, password);
+    await app.useCases.auth.registerAccount(email, password, PRIVACY_POLICY_VERSION);
     const session = await app.useCases.auth.signIn(email, password);
 
     return {

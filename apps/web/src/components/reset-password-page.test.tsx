@@ -5,9 +5,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { labels } from '../labels';
 import {
     createReactTestRoot,
+    focusOrder,
+    accessibleName,
     getElement,
     setInputValue,
     submitForm,
+    tab,
 } from '../test/react-root';
 import type { ReactTestRoot } from '../test/react-root';
 import type { SubmitResult } from '../hooks/use-session';
@@ -96,6 +99,53 @@ describe('ResetPasswordPage', () => {
 
         expect(document.querySelector('[role="alert"]')?.textContent).toContain('expired');
         expect(document.querySelector('a[href="/"]')?.textContent).toBe(labels.requestNewResetLink);
+    });
+
+    // The keyboard path on its own, which nothing verified: the suite placed
+    // focus with .focus() then asserted it, which says nothing about what a
+    // person actually reaches by tabbing.
+    it('can be walked end to end with the keyboard, in reading order', async () => {
+        await render();
+        document.body.focus();
+
+        // The field then submit, and nothing else: the escape does not exist
+        // until something has failed.
+        const expected = focusOrder();
+        expect(expected).toEqual([
+            `input:${labels.newPasswordLabel}`,
+            `button:${labels.resetPassword}`,
+        ]);
+
+        const visited: string[] = [];
+        for (let step = 0; step < expected.length; step += 1) {
+            const reached = await tab();
+            if (reached !== null) {
+                visited.push(`${reached.tagName.toLowerCase()}:${accessibleName(reached)}`);
+            }
+        }
+
+        expect(visited).toEqual(expected);
+    });
+
+    // When the token is refused, the only way out is to ask for a new link. It
+    // then appears in the page, and must join the keyboard path: an escape
+    // nobody can reach without a mouse is not an escape.
+    it('puts the escape within keyboard reach when the token is refused', async () => {
+        await render(() =>
+            Promise.resolve({ status: 'error', message: labels.resetPasswordFailed }),
+        );
+
+        await setInputValue(getElement<HTMLInputElement>('input[type="password"]'), VALID);
+        await submitForm(getElement('form'));
+        document.body.focus();
+
+        const visited: string[] = [];
+        for (let step = 0; step < focusOrder().length; step += 1) {
+            const reached = await tab();
+            if (reached !== null) visited.push(accessibleName(reached));
+        }
+
+        expect(visited).toContain(labels.requestNewResetLink);
     });
 
     it('has no automatically detectable WCAG A or AA violation', async () => {

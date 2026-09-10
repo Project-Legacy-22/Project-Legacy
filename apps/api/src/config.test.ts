@@ -5,6 +5,7 @@ import { loadConfig } from './config.js';
 const VALID_ENV = {
     SUPABASE_URL: 'http://127.0.0.1:54321',
     SUPABASE_SERVICE_ROLE_KEY: 'a-service-role-key',
+    REDIS_URL: 'redis://127.0.0.1:6379',
     SUPABASE_ANON_KEY: 'an-anon-key',
 };
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { accountApi } from './api/account-api';
 import type { AccountApi } from './api/account-api';
@@ -6,13 +6,21 @@ import { authApi } from './api/auth-api';
 import type { AuthApi } from './api/auth-api';
 import { itemsApi } from './api/items-api';
 import type { ItemsApi } from './api/items-api';
+import { notificationsApi } from './api/notifications-api';
+import type { NotificationsApi } from './api/notifications-api';
 import { AuthPage } from './components/auth-page';
+import { NotificationsPanel } from './components/notifications-panel';
+import { PrivacyPolicyPage } from './components/privacy-policy-page';
+import { SiteFooter } from './components/site-footer';
 import { PersonalDataSection } from './components/personal-data-section';
 import { ResetPasswordPage } from './components/reset-password-page';
+import { SessionBanner } from './components/session-banner';
 import { TodoPage } from './components/todo-page';
 import { useItems } from './hooks/use-items';
+import { useNotifications } from './hooks/use-notifications';
 import { usePersonalData } from './hooks/use-personal-data';
 import { useSession } from './hooks/use-session';
+import type { SubmitResult } from './hooks/use-session';
 import { labels } from './labels';
 import { saveFile } from './save-file';
 import type { SaveFile } from './save-file';
@@ -25,10 +33,32 @@ function readRecoveryToken(): string | null {
     return params.get('type') === 'recovery' ? params.get('token_hash') : null;
 }
 
+// Split out of App to keep that function under the project's line-per-function
+// ceiling: reading the token and clearing it from the address bar is one
+// self-contained concern.
+function useRecoveryToken(): string | null {
+    const recoveryToken = useRef(readRecoveryToken());
+
+    useEffect(() => {
+        if (recoveryToken.current !== null) {
+            window.history.replaceState(null, '', window.location.pathname);
+        }
+    }, []);
+
+    return recoveryToken.current;
+}
+
+// The policy is linkable, so it can be sent to somebody who has no account and
+// so a browser reload stays on it.
+function readsPolicy(): boolean {
+    return new URLSearchParams(window.location.search).has('privacy');
+}
+
 export interface AppProps {
     api?: ItemsApi;
     auth?: AuthApi;
     account?: AccountApi;
+    notifications?: NotificationsApi;
     // Injected so a test can assert on what a download would have contained
     // without a jsdom that implements object URLs.
     save?: SaveFile;
@@ -37,21 +67,40 @@ export interface AppProps {
 interface SignedInAppProps {
     api: ItemsApi;
     account: AccountApi;
+    notifications: NotificationsApi;
     save: SaveFile;
     email: string;
+    isSigningOut: boolean;
     onDeleted: () => void;
+    onSignOut: () => Promise<SubmitResult>;
 }
 
 // The items screen is mounted in its own component so its data is only fetched
 // once there is a session. Rendering it behind a condition in App would run its
 // hooks anyway and fire a request that can only come back 401.
-function SignedInApp({ api, account, save, email, onDeleted }: SignedInAppProps) {
+function SignedInApp({
+    api,
+    account,
+    notifications,
+    save,
+    email,
+    isSigningOut,
+    onDeleted,
+    onSignOut,
+}: SignedInAppProps) {
     const state = useItems(api);
     const personalData = usePersonalData({ api: account, save, onDeleted });
+    const unread = useNotifications(notifications, true);
 
     return (
         <>
-            <p className="session-banner">{labels.signedInAs(email)}</p>
+            <SessionBanner
+                email={email}
+                unread={unread}
+                isSigningOut={isSigningOut}
+                onSignOut={onSignOut}
+            />
+            <NotificationsPanel api={notifications} />
             <TodoPage
                 items={state.items}
                 loadState={state.loadState}
@@ -78,27 +127,77 @@ function SignedInApp({ api, account, save, email, onDeleted }: SignedInAppProps)
     );
 }
 
-export function App({
-    api = itemsApi,
-    auth = authApi,
-    account = accountApi,
-    save = saveFile,
-}: AppProps) {
-    const session = useSession(auth);
-    const recoveryToken = useRef(readRecoveryToken());
+// Extracted so App stays a sequence of decisions rather than a mix of decisions
+// and markup.
+function AnonymousScreen({
+    session,
+    onOpenPolicy,
+}: {
+    session: ReturnType<typeof useSession>;
+    onOpenPolicy: () => void;
+}) {
+    return (
+        <>
+            <AuthPage
+                isSubmitting={session.isSubmitting}
+                onSignIn={session.signIn}
+                onRegister={session.register}
+                onRequestReset={session.requestPasswordReset}
+                onOpenPolicy={onOpenPolicy}
+            />
+            <SiteFooter onOpenPolicy={onOpenPolicy} />
+        </>
+    );
+}
 
-    useEffect(() => {
-        if (recoveryToken.current !== null) {
-            window.history.replaceState(null, '', window.location.pathname);
-        }
-    }, []);
+function PolicyScreen({ onBack, onOpenPolicy }: { onBack: () => void; onOpenPolicy: () => void }) {
+    return (
+        <>
+            <PrivacyPolicyPage onBack={onBack} />
+            <SiteFooter onOpenPolicy={onOpenPolicy} />
+        </>
+    );
+}
+
+function SignedInScreen({ onOpenPolicy, ...props }: SignedInAppProps & { onOpenPolicy: () => void }) {
+    return (
+        <>
+            <SignedInApp {...props} />
+            <SiteFooter onOpenPolicy={onOpenPolicy} />
+        </>
+    );
+}
+
+// The real clients, in one place. Spread over the props rather than written as
+// five default parameters: each default is a branch, and five of them push this
+// component past the complexity a reader can hold.
+const REAL: Required<AppProps> = {
+    api: itemsApi,
+    auth: authApi,
+    account: accountApi,
+    notifications: notificationsApi,
+    save: saveFile,
+};
+
+export function App(props: AppProps) {
+    const { api, auth, account, notifications, save } = { ...REAL, ...props };
+    const session = useSession(auth);
+    const recoveryToken = useRecoveryToken();
+    // The policy is a screen, not a route: this application chooses what to
+    // show by state, and it must be readable before an account exists.
+    const [showsPolicy, setShowsPolicy] = useState(readsPolicy());
+    const openPolicy = () => setShowsPolicy(true);
+
+    if (showsPolicy) {
+        return <PolicyScreen onBack={() => setShowsPolicy(false)} onOpenPolicy={openPolicy} />;
+    }
 
     // A recovery link wins over everything else, including a live session: the
     // person following it wants to set a new password, not see their items.
-    if (recoveryToken.current !== null) {
+    if (recoveryToken !== null) {
         return (
             <ResetPasswordPage
-                token={recoveryToken.current}
+                token={recoveryToken}
                 isSubmitting={session.isSubmitting}
                 onSubmit={session.resetPassword}
             />
@@ -120,23 +219,20 @@ export function App({
     // items screen and relying on the API to refuse it. Both guards are needed:
     // this one for what is displayed, the API's for what is served.
     if (session.state.status === 'anonymous') {
-        return (
-            <AuthPage
-                isSubmitting={session.isSubmitting}
-                onSignIn={session.signIn}
-                onRegister={session.register}
-                onRequestReset={session.requestPasswordReset}
-            />
-        );
+        return <AnonymousScreen session={session} onOpenPolicy={openPolicy} />;
     }
 
     return (
-        <SignedInApp
+        <SignedInScreen
             api={api}
             account={account}
+            notifications={notifications}
             save={save}
             email={session.state.account.email}
+            isSigningOut={session.isSubmitting}
             onDeleted={session.forget}
+            onOpenPolicy={openPolicy}
+            onSignOut={session.signOut}
         />
     );
 }

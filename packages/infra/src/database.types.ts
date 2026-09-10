@@ -175,18 +175,24 @@ export type Database = {
           created_at: string
           email: string
           id: string
+          policy_accepted_at: string | null
+          policy_version: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           email: string
           id?: string
+          policy_accepted_at?: string | null
+          policy_version?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           email?: string
           id?: string
+          policy_accepted_at?: string | null
+          policy_version?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -209,6 +215,14 @@ export type Database = {
         Returns: undefined
       }
       erase_account: { Args: { p_user_id: string }; Returns: undefined }
+      mark_notification_read: {
+        Args: { p_account_id: string; p_id: string }
+        Returns: boolean
+      }
+      record_item_created_notification: {
+        Args: { p_event_id: string; p_item_id: string; p_user_id: string }
+        Returns: boolean
+      }
       uuid_generate_v7: { Args: never; Returns: string }
     }
     Enums: {

@@ -11,8 +11,9 @@ import { Router } from 'express';
 import type { RequestHandler } from 'express';
 
 import type { AuthUseCases } from '../../composition-root.js';
+import { readCookie } from '../cookies.js';
 import { rateLimit } from '../rate-limit.js';
-import { accountOf, requireAccount, setSessionCookie } from '../session.js';
+import { SESSION_COOKIE, accountOf, clearSessionCookie, requireAccount, setSessionCookie } from '../session.js';
 
 export interface AuthRoutesOptions {
     secureCookie: boolean;
@@ -75,6 +76,24 @@ function resetPasswordHandler(useCases: AuthUseCases): RequestHandler {
     };
 }
 
+// No requireAccount: the two acceptance-criteria responses -- a valid session
+// signed out, and no session to begin with -- have to be the same response,
+// not a 401 on one side and a 204 on the other. The cookie is cleared before
+// the provider is ever asked, so the browser has already lost it even if that
+// call fails; a real failure still reaches the error middleware; only the
+// difference between "had a session" and "did not" is deliberately hidden.
+function logoutHandler(useCases: AuthUseCases, secureCookie: boolean): RequestHandler {
+    return (req, res, next) => {
+        const token = readCookie(req.headers.cookie, SESSION_COOKIE);
+        clearSessionCookie(res, secureCookie);
+
+        useCases
+            .signOut(token)
+            .then(() => res.status(204).end())
+            .catch(next);
+    };
+}
+
 export function authRouter(useCases: AuthUseCases, options: AuthRoutesOptions): Router {
     const router = Router();
     // One budget for both endpoints. Guessing passwords and probing which
@@ -96,7 +115,7 @@ export function authRouter(useCases: AuthUseCases, options: AuthRoutesOptions): 
         if (!body.success) return next(body.error);
 
         useCases
-            .registerAccount(body.data.email, body.data.password)
+            .registerAccount(body.data.email, body.data.password, body.data.policyVersion)
             // 201, no body, no session, whether the address was free or already
             // taken. A different status, a different shape or an automatic
             // login would each answer the question "does this address have an
@@ -127,6 +146,7 @@ export function authRouter(useCases: AuthUseCases, options: AuthRoutesOptions): 
     router.get('/auth/me', requireAccount(useCases), me);
     router.post('/auth/password/forgot', resetLimit, resetPerEmail, forgotPasswordHandler(useCases));
     router.post('/auth/password/reset', resetLimit, resetPasswordHandler(useCases));
+    router.post('/auth/logout', logoutHandler(useCases, options.secureCookie));
 
     return router;
 }

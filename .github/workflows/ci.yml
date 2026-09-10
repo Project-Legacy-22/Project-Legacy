@@ -137,6 +137,15 @@ jobs:
       - name: Demarrer la pile Supabase locale
         run: npx supabase start
 
+      # L application exige le broker au demarrage : sans lui elle remplirait
+      # une outbox que personne ne vide, et mieux vaut qu elle refuse de
+      # demarrer que de le decouvrir en production. Les tests d integration
+      # composent une vraie application, donc ils ont besoin du meme service.
+      # Meme declaration que le developpement local, pour que les deux
+      # environnements ne divergent pas.
+      - name: Demarrer le broker
+        run: docker compose up -d --wait redis
+
       # Le CLI imprime API_URL / SERVICE_ROLE_KEY / ANON_KEY (format
       # `CLE="valeur"`) ; scripts/up.mjs fait la meme lecture pour le
       # developpement local. Ecrites dans GITHUB_ENV, les etapes suivantes du
@@ -153,6 +162,9 @@ jobs:
               ANON_KEY) echo "SUPABASE_ANON_KEY=$valeur" >> "$GITHUB_ENV" ;;
             esac
           done < <(npx supabase status -o env)
+          # Le broker est publie sur la boucle locale par compose.yaml, au port
+          # par defaut : aucun autre Redis ne tourne sur un runner.
+          echo "REDIS_URL=redis://127.0.0.1:6379" >> "$GITHUB_ENV"
 
       - name: Executer les tests d integration
         run: |

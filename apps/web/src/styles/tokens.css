@@ -1,0 +1,56 @@
+/* The colours of the interface, named by role and declared once.
+ *
+ * The values are copied verbatim from the six stylesheets: this file changes
+ * nothing on screen, it gives every colour a name so that contrast-pairs.ts
+ * can state a requirement about it and contrast.test.ts can verify it.
+ *
+ * A token is added here before being used anywhere, and never the other way
+ * round: contrast.test.ts refuses a hexadecimal written in a stylesheet that
+ * is not one of the values below, and refuses a token that no pair and no
+ * exemption mentions.
+ */
+:root {
+    /* Surfaces */
+    --surface-page: #e9eef3;
+    --surface-card: #ffffff;
+    --surface-muted: #f7f9fb;
+    --surface-item-done: #f3f6f8;
+    --surface-brand: #12344d;
+    --surface-brand-soft: #e9f6f3;
+    --surface-brand-softer: #edf8f5;
+    --surface-danger-soft: #fff1f0;
+
+    /* Text */
+    --text-body: #172033;
+    --text-secondary: #39495c;
+    --text-muted: #465568;
+    --text-brand: #184f49;
+    --text-brand-muted: #31665f;
+    --text-brand-badge: #234a45;
+    --text-danger: #8a1c16;
+    --text-danger-strong: #751912;
+    --text-on-brand: #ffffff;
+    --text-on-brand-soft: #b9e7dd;
+    --text-on-brand-muted: #e5edf4;
+
+    /* Borders */
+    --border-input: #65768a;
+    --border-input-hover: #34465a;
+    --border-invalid: #a5241c;
+    --border-brand: #47736d;
+    --border-danger: #b4534d;
+    --border-danger-soft: #d89a96;
+    --border-muted: #8798a8;
+    --border-panel: #c4ced8;
+    --border-badge: #9aabb8;
+    --border-rule: #d6dee7;
+    --border-item-done: #65768a;
+
+    /* Actions */
+    --action-primary: #0f7169;
+    --action-primary-hover: #0b5c56;
+
+    /* Focus */
+    --focus-ring: #ffffff;
+    --focus-halo: #1d4ed8;
+}

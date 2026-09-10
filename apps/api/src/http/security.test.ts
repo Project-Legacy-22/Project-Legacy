@@ -7,6 +7,7 @@ import {
     makeRequestPasswordReset,
     makeResetPassword,
     makeSignIn,
+    makeSignOut,
 } from '@legacy/core-auth';
 import type { IdentityProvider } from '@legacy/core-auth';
 import { makeAddItem, makeChangeItem, makeListItems, makeRemoveItem } from '@legacy/core-items';
@@ -19,7 +20,7 @@ import { inMemoryPersonalDataStore } from '../../../../packages/core/auth/test/f
 import { createServer } from './server.js';
 import type { Config } from '../config.js';
 import type { AppUseCases } from '../composition-root.js';
-import { recordingLogger } from '../../test/fakes/recording-logger.js';
+import { recordingLogger } from '../../../../packages/contracts/test/fakes/recording-logger.js';
 import { unreachableItemRepository } from '../../test/fakes/unreachable-item-repository.js';
 import { json, listen, testConfig } from '../../test/http-harness.js';
 import type { Harness } from '../../test/http-harness.js';
@@ -49,12 +50,21 @@ function appUseCases(authenticate?: IdentityProvider['authenticate']): AppUseCas
             changeItem: makeChangeItem(repository),
             removeItem: makeRemoveItem(repository),
         },
+        // Required by AppUseCases since #202. This suite exercises headers,
+        // CORS and body limits, never a notification route.
+        notifications: {
+            listNotifications: () => Promise.reject(new Error('not exercised by this suite')),
+            markNotificationRead: () => Promise.reject(new Error('not exercised by this suite')),
+            countUnread: () => Promise.reject(new Error('not exercised by this suite')),
+        },
         auth: {
             registerAccount: makeRegisterAccount(provider),
             signIn: makeSignIn(signInProvider),
             identifyCaller: makeIdentifyCaller(provider),
             requestPasswordReset: makeRequestPasswordReset(provider),
             resetPassword: makeResetPassword({ provider, compromisedPasswords: inMemoryCompromisedPasswords() }),
+            // Required by AuthUseCases since #174; no case here exercises it.
+            signOut: makeSignOut(provider),
         },
         account: {
             exportPersonalData: makeExportPersonalData({

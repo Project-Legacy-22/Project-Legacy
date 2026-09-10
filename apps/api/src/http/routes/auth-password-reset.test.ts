@@ -7,6 +7,7 @@ import {
     makeRequestPasswordReset,
     makeResetPassword,
     makeSignIn,
+    makeSignOut,
 } from '@legacy/core-auth';
 import { makeAddItem, makeChangeItem, makeListItems, makeRemoveItem } from '@legacy/core-items';
 // The reference fakes for a port live with the port they implement.
@@ -17,7 +18,7 @@ import type { InMemoryIdentityProvider } from '../../../../../packages/core/auth
 
 import { createServer } from '../server.js';
 import type { AppUseCases } from '../../composition-root.js';
-import { recordingLogger } from '../../../test/fakes/recording-logger.js';
+import { recordingLogger } from '../../../../../packages/contracts/test/fakes/recording-logger.js';
 import { unreachableItemRepository } from '../../../test/fakes/unreachable-item-repository.js';
 import { json, listen, testConfig } from '../../../test/http-harness.js';
 import type { Harness } from '../../../test/http-harness.js';
@@ -50,6 +51,11 @@ function useCasesOver(provider: InMemoryIdentityProvider, compromised: string[])
             changeItem: makeChangeItem(repository),
             removeItem: makeRemoveItem(repository),
         },
+        notifications: {
+            countUnread: () => Promise.resolve(0),
+            listNotifications: () => Promise.reject(new Error('not exercised by this suite')),
+            markNotificationRead: () => Promise.reject(new Error('not exercised by this suite')),
+        },
         auth: {
             registerAccount: makeRegisterAccount(provider),
             signIn: makeSignIn(provider),
@@ -59,6 +65,7 @@ function useCasesOver(provider: InMemoryIdentityProvider, compromised: string[])
                 provider,
                 compromisedPasswords: inMemoryCompromisedPasswords(compromised),
             }),
+            signOut: makeSignOut(provider),
         },
         // Aucune route exercee ici ne touche aux donnees personnelles. Le
         // groupe est compose sur un magasin vide plutot qu omis : AppUseCases

@@ -5,6 +5,7 @@ import { App } from './app';
 import type { ItemDto, ItemPageDto, ItemsApi } from './api/items-api';
 import { ApiError } from './api/items-api';
 import type { AccountDto, AuthApi } from './api/auth-api';
+import type { NotificationsApi } from './api/notifications-api';
 import {
     click,
     createReactTestRoot,
@@ -69,7 +70,16 @@ function createAuth(overrides: Partial<AuthApi> = {}): AuthApi {
         currentAccount: vi.fn(async () => ACCOUNT),
         requestPasswordReset: vi.fn(async () => undefined),
         resetPassword: vi.fn(async () => undefined),
+        signOut: vi.fn(async () => undefined),
         ...overrides,
+    };
+}
+
+function createNotifications(unread = 0): NotificationsApi {
+    return {
+        unreadCount: vi.fn(async () => unread),
+        listNotifications: vi.fn(async () => ({ notifications: [], nextCursor: null })),
+        markAsRead: vi.fn(async () => undefined),
     };
 }
 
@@ -97,7 +107,7 @@ describe('App item workflow', () => {
         const createItem = vi.fn(async () => firstItem);
         const api = createApi({ listItems: vi.fn(() => listRequest.promise), createItem });
 
-        await testRoot.render(<App api={api} auth={createAuth()} />);
+        await testRoot.render(<App api={api} auth={createAuth()} notifications={createNotifications()} />);
         const addButton = getElement<HTMLButtonElement>('.button-primary');
         expect(addButton.disabled).toBe(true);
         await click(addButton);
@@ -115,7 +125,9 @@ describe('App item workflow', () => {
         const api = createApi({
             listItems: vi.fn(async () => itemPage([firstItem, secondItem])),
         });
-        await testRoot.render(<App api={api} auth={createAuth()} />);
+        await testRoot.render(
+            <App api={api} auth={createAuth()} notifications={createNotifications()} />,
+        );
 
         const firstRemove = getElement<HTMLButtonElement>('.button-danger');
         firstRemove.focus();
@@ -134,7 +146,7 @@ describe('App authentication', () => {
         const api = createApi({ listItems });
         const auth = createAuth({ currentAccount: vi.fn(async () => null) });
 
-        await testRoot.render(<App api={api} auth={auth} />);
+        await testRoot.render(<App api={api} auth={auth} notifications={createNotifications()} />);
 
         expect(document.querySelector('form.auth-form')).not.toBeNull();
         // Le garde est cote interface : la requete n est meme pas tentee, au
@@ -144,7 +156,7 @@ describe('App authentication', () => {
 
     it('enonce la politique de mot de passe avant toute saisie, rattachee au champ', async () => {
         const auth = createAuth({ currentAccount: vi.fn(async () => null) });
-        await testRoot.render(<App api={createApi()} auth={auth} />);
+        await testRoot.render(<App api={createApi()} auth={auth} notifications={createNotifications()} />);
 
         await click(getElement<HTMLButtonElement>('.button-quiet'));
 
@@ -162,7 +174,7 @@ describe('App authentication', () => {
                 throw new ApiError(401, 'Email address or password is incorrect.');
             }),
         });
-        await testRoot.render(<App api={createApi()} auth={auth} />);
+        await testRoot.render(<App api={createApi()} auth={auth} notifications={createNotifications()} />);
 
         await fillSignInForm('ada@example.com', 'mauvais-mot-de-passe');
 
@@ -174,7 +186,7 @@ describe('App authentication', () => {
 
     it('atteint l espace de l utilisateur apres une connexion reussie', async () => {
         const auth = createAuth({ currentAccount: vi.fn(async () => null) });
-        await testRoot.render(<App api={createApi()} auth={auth} />);
+        await testRoot.render(<App api={createApi()} auth={auth} notifications={createNotifications()} />);
 
         await fillSignInForm('ada@example.com', 'un-mot-de-passe-valide');
         await flushTimers();
@@ -185,7 +197,7 @@ describe('App authentication', () => {
 
     it('associe une etiquette a chaque champ et n annonce aucune erreur avant soumission', async () => {
         const auth = createAuth({ currentAccount: vi.fn(async () => null) });
-        await testRoot.render(<App api={createApi()} auth={auth} />);
+        await testRoot.render(<App api={createApi()} auth={auth} notifications={createNotifications()} />);
 
         for (const input of document.querySelectorAll<HTMLInputElement>('form.auth-form input')) {
             expect(document.querySelector(`label[for="${input.id}"]`)).not.toBeNull();
@@ -196,7 +208,7 @@ describe('App authentication', () => {
 
     it('rattache l erreur au champ concerne et l annonce', async () => {
         const auth = createAuth({ currentAccount: vi.fn(async () => null) });
-        await testRoot.render(<App api={createApi()} auth={auth} />);
+        await testRoot.render(<App api={createApi()} auth={auth} notifications={createNotifications()} />);
 
         await submitForm(getElement<HTMLFormElement>('form.auth-form'));
 
@@ -213,7 +225,7 @@ describe('App session states', () => {
         const pending = deferred<AccountDto | null>();
         const auth = createAuth({ currentAccount: vi.fn(() => pending.promise) });
 
-        await testRoot.render(<App api={createApi()} auth={auth} />);
+        await testRoot.render(<App api={createApi()} auth={auth} notifications={createNotifications()} />);
 
         // La session est portee par un cookie httpOnly : la page ne peut pas la
         // lire. Montrer le formulaire pendant la verification le ferait
@@ -236,7 +248,7 @@ describe('App session states', () => {
             }),
         });
 
-        await testRoot.render(<App api={createApi()} auth={auth} />);
+        await testRoot.render(<App api={createApi()} auth={auth} notifications={createNotifications()} />);
 
         expect(getElement<HTMLElement>('[role="alert"]').textContent).toBe(
             'Unable to check the session.',
@@ -247,7 +259,7 @@ describe('App session states', () => {
     it('confirme une inscription sans reveler si l adresse existait deja', async () => {
         const register = vi.fn(async () => undefined);
         const auth = createAuth({ currentAccount: vi.fn(async () => null), register });
-        await testRoot.render(<App api={createApi()} auth={auth} />);
+        await testRoot.render(<App api={createApi()} auth={auth} notifications={createNotifications()} />);
 
         await click(getElement<HTMLButtonElement>('.button-quiet'));
         await setInputValue(getElement<HTMLInputElement>('input[type="email"]'), 'ada@example.com');
@@ -255,6 +267,7 @@ describe('App session states', () => {
             getElement<HTMLInputElement>('input[type="password"]'),
             'un-mot-de-passe-valide',
         );
+        await click(getElement<HTMLInputElement>('input[type="checkbox"]'));
         await submitForm(getElement<HTMLFormElement>('form.auth-form'));
         await flushTimers();
 
@@ -268,7 +281,7 @@ describe('App session states', () => {
     it('refuse un mot de passe trop court sans appeler le serveur', async () => {
         const register = vi.fn(async () => undefined);
         const auth = createAuth({ currentAccount: vi.fn(async () => null), register });
-        await testRoot.render(<App api={createApi()} auth={auth} />);
+        await testRoot.render(<App api={createApi()} auth={auth} notifications={createNotifications()} />);
 
         await click(getElement<HTMLButtonElement>('.button-quiet'));
         await setInputValue(getElement<HTMLInputElement>('input[type="email"]'), 'ada@example.com');
@@ -330,5 +343,29 @@ describe('App password recovery', () => {
             token: 'abc123',
             password: 'NouveauMotDePasse2',
         });
+    });
+});
+
+describe('App notifications', () => {
+    it('affiche l effet du flux evenementiel une fois connecte', async () => {
+        await testRoot.render(
+            <App api={createApi()} auth={createAuth()} notifications={createNotifications(3)} />,
+        );
+        await flushTimers();
+
+        const badge = getElement<HTMLElement>('.notification-badge');
+        expect(badge.textContent).toBe('3 unread notifications');
+        // Annonce sans interrompre : le compte change parce qu un worker a
+        // traite un evenement, pas parce que l utilisateur a agi.
+        expect(badge.getAttribute('role')).toBe('status');
+    });
+
+    it('ne demande pas les notifications tant qu il n y a pas de session', async () => {
+        const notifications = createNotifications();
+        const auth = createAuth({ currentAccount: vi.fn(async () => null) });
+
+        await testRoot.render(<App api={createApi()} auth={auth} notifications={notifications} />);
+
+        expect(notifications.unreadCount).not.toHaveBeenCalled();
     });
 });

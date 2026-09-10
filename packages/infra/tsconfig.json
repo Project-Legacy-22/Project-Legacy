@@ -8,6 +8,9 @@
   "include": [
     "src"
   ],
+  "exclude": [
+    "src/**/*.test.ts"
+  ],
   "references": [
     {
       "path": "../contracts"
@@ -17,6 +20,9 @@
     },
     {
       "path": "../core/auth"
+    },
+    {
+      "path": "../core/notifications"
     }
   ]
 }

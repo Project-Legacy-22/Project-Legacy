@@ -14,6 +14,8 @@
     "@legacy/contracts": "*",
     "@legacy/core-auth": "*",
     "@legacy/core-items": "*",
+    "@legacy/core-notifications": "*",
+    "@redis/client": "^6.2.1",
     "@supabase/supabase-js": "2.105.0",
     "pino": "^10.3.1"
   }

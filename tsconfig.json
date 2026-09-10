@@ -11,10 +11,16 @@
       "path": "packages/core/auth"
     },
     {
+      "path": "packages/core/notifications"
+    },
+    {
       "path": "packages/infra"
     },
     {
       "path": "apps/api"
+    },
+    {
+      "path": "apps/worker"
     }
   ]
 }

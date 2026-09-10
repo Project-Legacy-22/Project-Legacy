@@ -24,7 +24,14 @@ export type PasswordResetOutcome = 'password-changed' | 'token-rejected' | 'weak
 // implementation (ADR-0008); this interface is what makes replacing it a matter
 // of writing another adapter.
 export interface IdentityProvider {
-    register(email: string, password: string): Promise<RegistrationOutcome>;
+    // The policy version travels with the registration so the adapter can hand
+    // it to the account creation itself: recorded afterwards, a consent could
+    // be missing from an account that exists.
+    register(
+        email: string,
+        password: string,
+        policyVersion: string,
+    ): Promise<RegistrationOutcome>;
     authenticate(email: string, password: string): Promise<Session | undefined>;
     identify(accessToken: string): Promise<Account | undefined>;
 
@@ -48,4 +55,12 @@ export interface IdentityProvider {
     // revokes every other session of the account. The token is single-use and
     // time-limited on the provider's side.
     resetPassword(recoveryToken: string, newPassword: string): Promise<PasswordResetOutcome>;
+
+    // Revokes this one session's refresh token, so it cannot be exchanged for
+    // a new access token again: signs the caller out of the browser that
+    // asked, not every browser signed in as them (that is `remove`'s job, and
+    // resetPassword's). A token the provider no longer recognises is treated
+    // the same as one it just revoked -- the goal state, this token cannot be
+    // renewed, is already reached.
+    signOut(accessToken: string): Promise<void>;
 }

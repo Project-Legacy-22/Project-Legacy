@@ -22,6 +22,10 @@ const EnvSchema = z.object({
     // Read by the authentication adapter. Public by design: it is the key a
     // browser would carry, and what it can reach is what the policies allow.
     SUPABASE_ANON_KEY: z.string().min(1),
+    // The broker of ADR-0007. Required: the relay has nowhere to publish
+    // without it, and an API that starts anyway would fill the outbox with
+    // events nobody ever delivers.
+    REDIS_URL: z.string().url(),
     // Optional: absent, it is `info`. An optional variable is declared here
     // like every other one, otherwise its default ends up scattered across the
     // code that consumes it and the example file stops being the reference.
@@ -55,6 +59,7 @@ export interface Config {
     supabaseAnonKey: string;
     logLevel: LogLevel;
     secureCookies: boolean;
+    redisUrl: string;
     webOrigin: string;
     trustProxy: number;
 }
@@ -79,6 +84,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
         supabaseServiceRoleKey: parsed.data.SUPABASE_SERVICE_ROLE_KEY,
         supabaseAnonKey: parsed.data.SUPABASE_ANON_KEY,
         logLevel: parsed.data.LOG_LEVEL,
+        redisUrl: parsed.data.REDIS_URL,
         secureCookies: parsed.data.NODE_ENV === 'production',
         webOrigin: parsed.data.WEB_ORIGIN,
         trustProxy: parsed.data.TRUST_PROXY,

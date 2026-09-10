@@ -40,3 +40,4 @@ export { makeEraseAccount } from './application/erase-account.js';
 export type { EraseAccountDependencies } from './application/erase-account.js';
 export { makeRequestPasswordReset } from './application/request-password-reset.js';
 export { makeResetPassword } from './application/reset-password.js';
+export { makeSignOut } from './application/sign-out.js';

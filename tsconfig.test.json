@@ -17,7 +17,13 @@
   // resolution rejects. Its own tsconfig covers its tests, and `npm run
   // typecheck` runs it in the same command.
   "include": [
+    // The root test/ directory and the level patterns it reads. They are test
+    // support code that happens to live at the root, next to the configs that
+    // consume the same patterns.
+    "test/**/*.test.ts",
+    "vitest.levels.ts",
     "apps/api/**/*.test.ts",
+    "apps/worker/**/*.test.ts",
     "apps/api/**/test/**/*.ts",
     "packages/**/*.test.ts",
     "packages/**/test/**/*.ts"

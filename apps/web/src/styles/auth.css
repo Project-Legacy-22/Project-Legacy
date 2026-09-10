@@ -51,7 +51,92 @@
 }
 
 .session-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     margin: 0 0 16px;
+}
+
+.session-banner p {
+    margin: 0;
     color: #465568;
     font-size: 0.9375rem;
+}
+
+/* Compte de notifications, dans le bandeau de session. Discret : il signale un
+   effet, il ne reclame pas d action. */
+.notification-badge {
+    margin-left: 12px;
+    padding: 2px 10px;
+    border-radius: 999px;
+    color: #184f49;
+    background: #e9f6f3;
+    font-size: 0.8125rem;
+    font-weight: 700;
+}
+
+/* Consent (US-37). The box and its label sit on one line so the label is the
+   click target the checkbox deserves; the policy link and the error go below,
+   where a screen reader meets them after the choice they qualify. */
+.consent-field {
+    margin-top: 4px;
+}
+
+.consent-line {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.consent-line input {
+    width: auto;
+    min-height: 0;
+    margin-top: 3px;
+    flex: none;
+}
+
+.consent-line label {
+    margin-bottom: 0;
+    font-weight: 600;
+}
+
+.consent-policy-link {
+    margin-top: 6px;
+    padding-left: 0;
+}
+
+.site-footer {
+    width: min(100% - 32px, 60rem);
+    margin: 32px auto 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-rule);
+}
+
+.policy-page {
+    width: min(100% - 32px, 46rem);
+    margin: 48px auto;
+    line-height: 1.6;
+}
+
+.policy-page h2 {
+    margin-top: 28px;
+}
+
+.policy-page ul {
+    padding-left: 22px;
+}
+
+.policy-page li {
+    margin-bottom: 6px;
+}
+
+.policy-version {
+    margin-top: 0;
+    color: var(--text-muted);
+    font-size: 0.9375rem;
+}
+
+.session-banner .button-quiet {
+    margin-top: 0;
 }
