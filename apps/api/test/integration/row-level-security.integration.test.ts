@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import { createClient } from '@supabase/supabase-js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -124,5 +126,98 @@ describe('politiques RLS sur items (sans role de service)', () => {
 
         expect(error).toBeNull();
         expect(data).toHaveLength(1);
+    });
+});
+
+describe('politiques RLS sur notifications (sans role de service)', () => {
+    let app: Awaited<ReturnType<typeof realApplication>>;
+    let owner: RealAccount;
+    let intruder: RealAccount;
+    let notificationId: string;
+
+    // Seedee avec le role de service, exactement comme le worker le ferait en
+    // consommant un evenement (record_item_created_notification) : ce fichier
+    // teste qui PostgREST laisse lire ou ecrire une fois la ligne posee, pas
+    // comment elle y arrive.
+    async function seedNotification(ownerId: string, itemId: string): Promise<string> {
+        const config = integrationConfig();
+        const service = createClient(config.supabaseUrl, config.supabaseServiceRoleKey, {
+            auth: { persistSession: false, autoRefreshToken: false },
+        });
+
+        const eventId = randomUUID();
+        const { error } = await service.rpc('record_item_created_notification', {
+            p_event_id: eventId,
+            p_user_id: ownerId,
+            p_item_id: itemId,
+        });
+        if (error) throw new Error('setup: could not seed a notification', { cause: error });
+
+        const { data } = await service
+            .from('notifications')
+            .select('id')
+            .eq('event_id', eventId)
+            .single();
+        return (data as { id: string }).id;
+    }
+
+    beforeAll(async () => {
+        app = realApplication();
+        await app.start();
+        owner = await registerAndSignIn(app, MOT_DE_PASSE);
+        intruder = await registerAndSignIn(app, MOT_DE_PASSE);
+        const item = await app.useCases.items.addItem('Vu par PostgREST', owner.id);
+        notificationId = await seedNotification(owner.id, item.id);
+    });
+
+    afterAll(() => app.stop());
+
+    it('le proprietaire lit sa notification directement via PostgREST', async () => {
+        const { data, error } = await postgrestAs(owner.accessToken)
+            .from('notifications')
+            .select('id')
+            .eq('id', notificationId);
+
+        expect(error).toBeNull();
+        expect(data).toEqual([{ id: notificationId }]);
+    });
+
+    it('un autre compte ne recoit rien pour la meme ligne', async () => {
+        const { data, error } = await postgrestAs(intruder.accessToken)
+            .from('notifications')
+            .select('id')
+            .eq('id', notificationId);
+
+        expect(error).toBeNull();
+        expect(data).toEqual([]);
+    });
+
+    it('le proprietaire peut la marquer comme lue directement via PostgREST', async () => {
+        const { data, error } = await postgrestAs(owner.accessToken)
+            .from('notifications')
+            .update({ read_at: new Date().toISOString() })
+            .eq('id', notificationId)
+            .select();
+
+        expect(error).toBeNull();
+        expect(data).toHaveLength(1);
+    });
+
+    it('un autre compte ne peut pas creer une notification', async () => {
+        const { data, error } = await postgrestAs(intruder.accessToken)
+            .from('notifications')
+            .insert({
+                id: randomUUID(),
+                user_id: intruder.id,
+                item_id: randomUUID(),
+                event_id: randomUUID(),
+            })
+            .select();
+
+        // Aucune politique d insertion n existe pour ce role : la table
+        // n accepte une nouvelle ligne que par record_item_created_notification,
+        // en SECURITY DEFINER.
+        expect(data).toBeNull();
+        expect(error).not.toBeNull();
     });
 });
