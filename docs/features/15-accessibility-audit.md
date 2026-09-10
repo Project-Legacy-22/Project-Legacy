@@ -1,6 +1,6 @@
 # Accessibility audit of the delivered screens
 
-- **Issue**: #181
+- **Issue**: #15 (`US-14`), audited as #181 (`US-14a`), reported by #193
 - **Epic**: A11y
 - **Delivered**: 2026-09-10
 - **Decisions that apply**: `D-15` (WCAG 2.1 AA as the target) — **still unratified**
