@@ -24,7 +24,14 @@ export type PasswordResetOutcome = 'password-changed' | 'token-rejected' | 'weak
 // implementation (ADR-0008); this interface is what makes replacing it a matter
 // of writing another adapter.
 export interface IdentityProvider {
-    register(email: string, password: string): Promise<RegistrationOutcome>;
+    // The policy version travels with the registration so the adapter can hand
+    // it to the account creation itself: recorded afterwards, a consent could
+    // be missing from an account that exists.
+    register(
+        email: string,
+        password: string,
+        policyVersion: string,
+    ): Promise<RegistrationOutcome>;
     authenticate(email: string, password: string): Promise<Session | undefined>;
     identify(accessToken: string): Promise<Account | undefined>;
 

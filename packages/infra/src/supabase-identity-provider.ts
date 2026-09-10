@@ -121,6 +121,34 @@ async function resetPassword(
 // service-role key: sign-up and sign-in are the endpoints that apply the
 // project's password policy and the provider's own rate limits, and the admin
 // API bypasses both.
+interface Registration {
+    email: string;
+    password: string;
+    policyVersion: string;
+}
+
+async function registerWith(
+    client: ReturnType<typeof stateless>,
+    { email, password, policyVersion }: Registration,
+): Promise<RegistrationOutcome> {
+    // Email confirmation is disabled, so a successful sign-up also returns a
+    // session. It is discarded: registering does not log anybody in, and the
+    // response must not differ from the one an existing address produces.
+    // The consent rides along as user metadata, so the mirror trigger reads
+    // it in the transaction that creates the account. Written by a second
+    // call afterwards, it could be missing from an account that exists.
+    const { error } = await client.auth.signUp({
+        email,
+        password,
+        options: { data: { policy_version: policyVersion } },
+    });
+
+    if (error === null) return 'created';
+    if (error.code === ALREADY_REGISTERED) return 'already-registered';
+
+    return fail('register', error);
+}
+
 export function createSupabaseIdentityProvider(settings: SupabaseAuthSettings): IdentityProvider {
     const client = stateless(settings);
     // The admin client, used by one method. Kept apart from the one above so
@@ -131,17 +159,9 @@ export function createSupabaseIdentityProvider(settings: SupabaseAuthSettings): 
         auth: { persistSession: false, autoRefreshToken: false },
     });
 
-    async function register(email: string, password: string): Promise<RegistrationOutcome> {
-        // Email confirmation is disabled, so a successful sign-up also returns a
-        // session. It is discarded: registering does not log anybody in, and the
-        // response must not differ from the one an existing address produces.
-        const { error } = await client.auth.signUp({ email, password });
+    const register = (email: string, password: string, policyVersion: string) =>
+        registerWith(client, { email, password, policyVersion });
 
-        if (error === null) return 'created';
-        if (error.code === ALREADY_REGISTERED) return 'already-registered';
-
-        return fail('register', error);
-    }
 
     async function authenticate(email: string, password: string): Promise<Session | undefined> {
         const result = await client.auth.signInWithPassword({ email, password });

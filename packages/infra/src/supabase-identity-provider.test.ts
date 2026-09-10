@@ -2,6 +2,8 @@ import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { PRIVACY_POLICY_VERSION } from '@legacy/contracts';
+
 import { createSupabaseIdentityProvider } from './supabase-identity-provider.js';
 
 // A stand-in for GoTrue, served over real HTTP on a free port. The adapter is
@@ -105,7 +107,7 @@ describe('adaptateur Supabase Auth', () => {
             const { provider, faux: serveur } = await adaptateur();
             serveur.quand(SIGNUP, { status: 200, body: SESSION });
 
-            await expect(provider.register('alice@example.test', 'MotDePasse2026')).resolves.toBe(
+            await expect(provider.register('alice@example.test', 'MotDePasse2026', PRIVACY_POLICY_VERSION)).resolves.toBe(
                 'created',
             );
         });
@@ -117,7 +119,7 @@ describe('adaptateur Supabase Auth', () => {
                 body: { code: 422, error_code: 'user_already_exists', msg: 'User already registered' },
             });
 
-            await expect(provider.register('alice@example.test', 'MotDePasse2026')).resolves.toBe(
+            await expect(provider.register('alice@example.test', 'MotDePasse2026', PRIVACY_POLICY_VERSION)).resolves.toBe(
                 'already-registered',
             );
         });
@@ -130,7 +132,7 @@ describe('adaptateur Supabase Auth', () => {
                 body: { code: 503, error_code: 'service_unavailable', msg: 'indisponible' },
             });
 
-            await expect(provider.register('alice@example.test', 'MotDePasse2026')).rejects.toThrow(
+            await expect(provider.register('alice@example.test', 'MotDePasse2026', PRIVACY_POLICY_VERSION)).rejects.toThrow(
                 /register/,
             );
         });

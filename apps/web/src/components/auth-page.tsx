@@ -7,6 +7,7 @@ import { RequestResetForm } from './request-reset-form';
 import type { SubmitResult } from '../hooks/use-session';
 
 export interface AuthPageProps {
+    onOpenPolicy: () => void;
     isSubmitting: boolean;
     onSignIn: (email: string, password: string) => Promise<SubmitResult>;
     onRegister: (email: string, password: string) => Promise<SubmitResult>;
@@ -27,7 +28,7 @@ function intro(screen: Screen): string {
     return labels.signInIntro;
 }
 
-export function AuthPage({ isSubmitting, onSignIn, onRegister, onRequestReset }: AuthPageProps) {
+export function AuthPage({ isSubmitting, onSignIn, onRegister, onRequestReset, onOpenPolicy }: AuthPageProps) {
     const [screen, setScreen] = useState<Screen>('signIn');
 
     return (
@@ -51,6 +52,7 @@ export function AuthPage({ isSubmitting, onSignIn, onRegister, onRequestReset }:
                         mode={screen}
                         isSubmitting={isSubmitting}
                         onSubmit={screen === 'register' ? onRegister : onSignIn}
+                        onOpenPolicy={onOpenPolicy}
                     />
 
                     {/* Buttons, not links: they change what is on screen, they

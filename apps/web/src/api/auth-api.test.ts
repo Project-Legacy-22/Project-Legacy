@@ -2,9 +2,18 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { authApi } from './auth-api';
 import { ApiError } from './items-api';
+import { PRIVACY_POLICY_VERSION } from '@legacy/contracts';
+
 import { labels } from '../labels';
 
 const ACCOUNT = { id: '5b1f0f4a-9d3f-4d0e-9e2a-6c0f5a3b1d77', email: 'ada@example.com' };
+const REGISTRATION = {
+    email: 'ada@example.com',
+    password: 'un-mot-de-passe-valide',
+    acceptsPrivacyPolicy: true as const,
+    policyVersion: PRIVACY_POLICY_VERSION,
+} as const;
+
 const CREDENTIALS = { email: 'ada@example.com', password: 'un-mot-de-passe-valide' };
 
 function response(body: unknown, status = 200): Response {
@@ -77,7 +86,7 @@ describe('authApi.register', () => {
     it('aboutit sur une reponse sans corps', async () => {
         stubFetch(new Response(null, { status: 201 }));
 
-        await expect(authApi.register(CREDENTIALS)).resolves.toBeUndefined();
+        await expect(authApi.register(REGISTRATION)).resolves.toBeUndefined();
     });
 
     it('remonte le detail du serveur quand la creation echoue', async () => {
@@ -95,7 +104,7 @@ describe('authApi.register', () => {
             ),
         );
 
-        await expect(authApi.register(CREDENTIALS)).rejects.toEqual(
+        await expect(authApi.register(REGISTRATION)).rejects.toEqual(
             new ApiError(400, 'Password is too short.'),
         );
     });
@@ -103,7 +112,7 @@ describe('authApi.register', () => {
     it('retombe sur un message generique quand le corps n est pas exploitable', async () => {
         stubFetch(new Response('pas du json', { status: 500 }));
 
-        await expect(authApi.register(CREDENTIALS)).rejects.toEqual(
+        await expect(authApi.register(REGISTRATION)).rejects.toEqual(
             new ApiError(500, labels.registerFailed),
         );
     });

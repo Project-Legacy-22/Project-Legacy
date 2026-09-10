@@ -98,6 +98,44 @@ export const labels = {
         return count === 1 ? '1 unread notification' : `${String(count)} unread notifications`;
     },
 
+    // Privacy policy and consent (US-37). The wording restates
+    // docs/gdpr/registre.md; that file changes first, this one follows.
+    consentLabel: 'I have read the privacy policy and agree to it',
+    consentRequired: 'You must agree to the privacy policy to create an account.',
+    readPrivacyPolicy: 'Read the privacy policy',
+    privacyPolicy: 'Privacy policy',
+    privacyPolicyTitle: 'Privacy policy',
+    policyBack: 'Back',
+    policyControllerTitle: 'Who is responsible',
+    policyControllerBody:
+        'The Legacy 22 team decides what this application collects and why. For any question about your data, or to exercise the rights below, write to',
+    policyWhatTitle: 'What is collected',
+    policyWhatIntro: 'Only what the service needs to work:',
+    policyWhatAccount: 'Your email address, and a password stored as a hash that cannot be read back.',
+    policyWhatItems: 'The items you write, their state, and when you created or changed them.',
+    policyWhatNotifications: 'The notifications you received, as identifiers only.',
+    policyWhatLogs: 'Technical logs of requests: method, path, status and duration.',
+    policyWhyTitle: 'Why',
+    policyWhyBody:
+        'Your account and your items exist to provide the service you signed up for. The logs exist to diagnose failures and notice abuse. Nothing here is used for advertising, profiling or resale.',
+    policyHowLongTitle: 'How long it is kept',
+    policyHowLongAccount: 'Your account, for as long as it exists. Deleting it erases everything immediately.',
+    policyHowLongItems: 'An item you remove is erased for good after thirty days.',
+    policyHowLongNotifications: 'Notifications are erased after ninety days.',
+    policyHowLongLogs: 'Logs are kept thirty days.',
+    policyRecipientsTitle: 'Who else sees it',
+    policyRecipientsIntro: 'Three providers process data on our behalf, and nobody else:',
+    policyRecipientSupabase: 'Supabase, which hosts the database and handles sign-in.',
+    policyRecipientVercel: 'Vercel, which serves the application and collects its logs.',
+    policyRecipientHibp:
+        'Have I Been Pwned, which receives five characters of a hash when you set a new password, so we can refuse one that appears in a known breach. It identifies nobody and nothing is stored.',
+    policyRightsTitle: 'Your rights',
+    policyRightsBody:
+        'You can download everything held about you, and delete your account outright, from the application itself. Both are immediate. For anything else, write to the address above.',
+    privacyPolicyVersion(version: string): string {
+        return `Version ${version}`;
+    },
+
     skipToContent: 'Skip to content',
     productName: 'Legacy 22',
     pageTitle: 'Todo list',

@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
+
+import { PRIVACY_POLICY_VERSION } from '@legacy/contracts';
 import type { Dispatch, SetStateAction } from 'react';
 
 import { ApiError } from '../api/items-api';
@@ -64,6 +66,18 @@ function useSessionCheck(api: AuthApi): [SessionState, Dispatch<SetStateAction<S
     return [state, setState];
 }
 
+// The version is read from the contract rather than passed by the form: the box
+// the reader ticked and the version recorded must be the same one, and a prop
+// would let them drift.
+function registerWithConsent(api: AuthApi, email: string, password: string): Promise<void> {
+    return api.register({
+        email,
+        password,
+        acceptsPrivacyPolicy: true,
+        policyVersion: PRIVACY_POLICY_VERSION,
+    });
+}
+
 function useSessionActions(api: AuthApi, setState: Dispatch<SetStateAction<SessionState>>) {
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -101,8 +115,11 @@ function useSessionActions(api: AuthApi, setState: Dispatch<SetStateAction<Sessi
     return {
         isSubmitting,
         signIn,
+        // The version is read from the contract rather than passed by the form:
+        // the box the reader ticked and the version recorded must be the same
+        // one, and going through a prop would let them drift.
         register: (email: string, password: string) =>
-            run(() => api.register({ email, password }), labels.registerAccepted, labels.registerFailed),
+            run(() => registerWithConsent(api, email, password), labels.registerAccepted, labels.registerFailed),
         requestPasswordReset: (email: string) =>
             run(
                 () => api.requestPasswordReset({ email }),
