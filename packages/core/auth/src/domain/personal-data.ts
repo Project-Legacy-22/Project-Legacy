@@ -19,7 +19,8 @@ export interface ExportedItem {
     id: string;
     projectId: string;
     name: string | null;
-    completed: boolean;
+    status: 'todo' | 'doing' | 'done';
+    version: number;
     createdAt: string;
     updatedAt: string;
 }

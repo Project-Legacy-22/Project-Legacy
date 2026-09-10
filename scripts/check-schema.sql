@@ -106,6 +106,37 @@ begin
     raise exception 'items.project_id must be the leading column of an index';
   end if;
 
+  -- 5 bis. Kanban state is constrained in storage and every row carries a
+  -- version for optimistic concurrency. The inherited boolean is gone.
+  if (
+    select udt_name
+    from information_schema.columns
+    where table_schema = 'public' and table_name = 'items' and column_name = 'status'
+  ) <> 'item_status' then
+    raise exception 'items.status must use the item_status enum';
+  end if;
+
+  if (
+    select is_nullable
+    from information_schema.columns
+    where table_schema = 'public' and table_name = 'items' and column_name = 'version'
+  ) <> 'NO' or not exists (
+    select 1
+    from pg_constraint c
+    where c.conrelid = 'public.items'::regclass
+      and c.conname = 'items_version_positive_chk'
+  ) then
+    raise exception 'items.version must be positive and NOT NULL';
+  end if;
+
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public' and table_name = 'items' and column_name = 'completed'
+  ) then
+    raise exception 'items.completed must be replaced by the Kanban status';
+  end if;
+
   -- 6. users.email is unique.
   if not exists (
     select 1
@@ -489,7 +520,7 @@ begin
   end if;
 
   update public.items
-  set completed = true
+  set status = 'doing'
   where id = '00000000-0000-7000-8000-000000000301';
   get diagnostics affected = row_count;
   if affected <> 1 then
@@ -497,7 +528,7 @@ begin
   end if;
 
   update public.items
-  set completed = true
+  set status = 'doing'
   where id = '00000000-0000-7000-8000-000000000302';
   get diagnostics affected = row_count;
   if affected <> 0 then

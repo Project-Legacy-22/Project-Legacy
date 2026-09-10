@@ -2,6 +2,8 @@ export {
     ItemIdParams,
     CreateItemBody,
     UpdateItemBody,
+    MoveItemBody,
+    ItemStatus,
     ItemDto,
     ItemListDto,
     ItemPageDto,

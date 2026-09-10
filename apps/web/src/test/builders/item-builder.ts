@@ -8,6 +8,8 @@ export function anItem(overrides: Partial<ItemDto> = {}): ItemDto {
         id: DEFAULT_ITEM_ID,
         projectId: DEFAULT_PROJECT_ID,
         name: 'A test item',
+        status: 'todo',
+        version: 1,
         completed: false,
         ...overrides,
     };

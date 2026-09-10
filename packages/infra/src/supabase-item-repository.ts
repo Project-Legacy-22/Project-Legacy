@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { InvalidItemCursor, rehydrateItem } from '@legacy/core-items';
-import type { DomainEvent, Item, ItemPage, ItemPageQuery } from '@legacy/core-items';
+import type { DomainEvent, Item, ItemPage, ItemPageQuery, ItemStatusMove } from '@legacy/core-items';
 
 import type { Database } from './database.types.js';
 import type { ItemStore } from './item-store.js';
@@ -26,7 +26,8 @@ function toItem(row: ItemRow): Item {
     return rehydrateItem({
         id: row.id,
         name: row.name,
-        completed: row.completed,
+        status: row.status,
+        version: row.version,
         projectId: row.project_id,
         ownerId: row.user_id,
     });
@@ -145,9 +146,22 @@ async function update(client: ItemClient, item: Item): Promise<void> {
     if (item.name === null) fail('update', new Error('an item written to storage must have a name'));
     const { error } = await client
         .from('items')
-        .update({ name: item.name, completed: item.completed })
+        .update({ name: item.name, status: item.status, version: item.version })
         .eq('id', item.id);
     if (error) fail('update', error);
+}
+
+async function moveStatus(client: ItemClient, move: ItemStatusMove): Promise<Item | undefined> {
+    const { data, error } = await client
+        .from('items')
+        .update({ status: move.status, version: move.expectedVersion + 1 })
+        .eq('id', move.id)
+        .eq('project_id', move.projectId)
+        .eq('version', move.expectedVersion)
+        .select('*')
+        .maybeSingle();
+    if (error) fail('moveStatus', error);
+    return data ? toItem(data) : undefined;
 }
 
 async function remove(client: ItemClient, id: string): Promise<void> {
@@ -174,6 +188,7 @@ export function createSupabaseItemStore(settings: SupabaseSettings): ItemStore {
         findByIdForMember: (id, projectId, memberId) => findForMember({ client, id, projectId, memberId }),
         save: (item, event) => save(client, item, event),
         update: (item) => update(client, item),
+        moveStatus: (move) => moveStatus(client, move),
         remove: (id) => remove(client, id),
     };
 }

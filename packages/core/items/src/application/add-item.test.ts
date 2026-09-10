@@ -35,7 +35,8 @@ describe('addItem', () => {
         expect(item).toEqual({
             id: 'item-id',
             name: 'Buy milk',
-            completed: false,
+            status: 'todo',
+            version: 1,
             projectId: PROJECT_ID,
             ownerId: OWNER_ID,
         });

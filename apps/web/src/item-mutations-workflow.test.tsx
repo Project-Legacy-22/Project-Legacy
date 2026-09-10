@@ -31,6 +31,8 @@ const ITEM: ItemDto = {
     id: '8f80ec8b-8cbf-4d0f-92b5-6297404875f1',
     projectId: PROJECT.id,
     name: 'Original task',
+    status: 'todo',
+    version: 1,
     completed: false,
 };
 

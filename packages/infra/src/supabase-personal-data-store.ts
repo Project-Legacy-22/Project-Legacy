@@ -51,7 +51,8 @@ function toItem(row: ItemRow): ExportedItem {
         id: row.id,
         projectId: row.project_id,
         name: row.name,
-        completed: row.completed,
+        status: row.status,
+        version: row.version,
         createdAt: toInstant(row.created_at),
         updatedAt: toInstant(row.updated_at),
     };

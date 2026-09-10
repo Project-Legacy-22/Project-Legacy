@@ -37,7 +37,8 @@ function anItemOf(candidate: { id: string; ownerId: string; name?: string; proje
     return {
         id: candidate.id,
         name: candidate.name ?? 'Acheter du pain',
-        completed: false,
+        status: 'todo',
+        version: 1,
         projectId: candidate.projectId ?? PROJECT_ID,
         ownerId: candidate.ownerId,
     };
@@ -141,6 +142,8 @@ describe('items API', () => {
                 id: GENERATED_ID,
                 projectId: PROJECT_ID,
                 name: 'Acheter du pain',
+                status: 'todo',
+                version: 1,
                 completed: false,
             });
             expect(store.items.get(GENERATED_ID)).toMatchObject({
@@ -192,7 +195,8 @@ describe('items API', () => {
             expect(response.status).toBe(200);
             expect(store.items.get(EXISTING_ID)).toMatchObject({
                 name: 'Nouveau nom',
-                completed: true,
+                status: 'done',
+                version: 2,
                 ownerId: OTHER_OWNER_ID,
             });
         });

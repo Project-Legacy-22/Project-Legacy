@@ -8,6 +8,8 @@ const ITEM = {
     id: ITEM_ID,
     projectId: PROJECT_ID,
     name: 'Prepare the review',
+    status: 'todo' as const,
+    version: 1,
     completed: false,
 };
 

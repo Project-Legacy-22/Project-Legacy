@@ -14,7 +14,6 @@ describe('changeItem', () => {
         const existing = anItem({
             id: 'item-1',
             name: 'Old name',
-            completed: false,
             projectId: PROJECT_ID,
             ownerId: OWNER_ID,
         });
@@ -31,7 +30,8 @@ describe('changeItem', () => {
         expect(updated).toEqual({
             id: 'item-1',
             name: 'New name',
-            completed: true,
+            status: 'done',
+            version: 2,
             projectId: PROJECT_ID,
             ownerId: OWNER_ID,
         });
@@ -129,9 +129,9 @@ describe('changeItem', () => {
             });
 
         await changeCompleted(true);
-        await expect(changeCompleted(true)).resolves.toMatchObject({ completed: true });
+        await expect(changeCompleted(true)).resolves.toMatchObject({ status: 'done' });
         await changeCompleted(false);
-        await expect(changeCompleted(false)).resolves.toMatchObject({ completed: false });
+        await expect(changeCompleted(false)).resolves.toMatchObject({ status: 'todo' });
 
         expect(repository.recordedEvents).toEqual([]);
     });
