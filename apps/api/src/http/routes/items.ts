@@ -24,7 +24,6 @@ function toItemDto(item: Item): ItemDto {
         name: item.name,
         status: item.status,
         version: item.version,
-        completed: item.status === 'done',
     };
 }
 

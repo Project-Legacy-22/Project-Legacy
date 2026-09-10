@@ -144,7 +144,6 @@ describe('items API', () => {
                 name: 'Acheter du pain',
                 status: 'todo',
                 version: 1,
-                completed: false,
             });
             expect(store.items.get(GENERATED_ID)).toMatchObject({
                 projectId: PROJECT_ID,
@@ -189,13 +188,13 @@ describe('items API', () => {
 
             const response = await harness.request(
                 `${ITEMS_PATH}/${EXISTING_ID}`,
-                json('PUT', { name: 'Nouveau nom', completed: true }),
+                json('PUT', { name: 'Nouveau nom' }),
             );
 
             expect(response.status).toBe(200);
             expect(store.items.get(EXISTING_ID)).toMatchObject({
                 name: 'Nouveau nom',
-                status: 'done',
+                status: 'todo',
                 version: 2,
                 ownerId: OTHER_OWNER_ID,
             });
@@ -213,11 +212,11 @@ describe('items API', () => {
 
             const denied = await harness.request(
                 `${ITEMS_PATH}/${EXISTING_ID}`,
-                json('PUT', { name: 'Modifie', completed: true }),
+                json('PUT', { name: 'Modifie' }),
             );
             const unknown = await harness.request(
                 `/projects/${UNKNOWN_PROJECT_ID}/items/${EXISTING_ID}`,
-                json('PUT', { name: 'Modifie', completed: true }),
+                json('PUT', { name: 'Modifie' }),
             );
 
             expect(denied.status).toBe(404);
@@ -232,12 +231,12 @@ describe('items API', () => {
             expect(await store.findByIdForMember(EXISTING_ID, PROJECT_ID, OTHER_OWNER_ID)).toEqual(inaccessible);
             const denied = await harness.request(
                 `${ITEMS_PATH}/${EXISTING_ID}`,
-                json('PUT', { name: 'Modifie', completed: true }),
+                json('PUT', { name: 'Modifie' }),
             );
             await reseed([], [{ projectId: PROJECT_ID, userId: OWNER_ID }]);
             const missing = await harness.request(
                 `${ITEMS_PATH}/${UNKNOWN_ID}`,
-                json('PUT', { name: 'Modifie', completed: true }),
+                json('PUT', { name: 'Modifie' }),
             );
 
             expect(denied.status).toBe(404);
@@ -252,11 +251,11 @@ describe('items API', () => {
 
             const empty = await harness.request(
                 `${ITEMS_PATH}/${EXISTING_ID}`,
-                json('PUT', { name: '   ', completed: true }),
+                json('PUT', { name: '   ' }),
             );
             const overlong = await harness.request(
                 `${ITEMS_PATH}/${EXISTING_ID}`,
-                json('PUT', { name: 'a'.repeat(256), completed: true }),
+                json('PUT', { name: 'a'.repeat(256) }),
             );
 
             expect(empty.status).toBe(400);
@@ -266,10 +265,10 @@ describe('items API', () => {
 
         it('rejects an invalid identifier and an incomplete body', async () => {
             expect(
-                (await harness.request(`${ITEMS_PATH}/pas-un-uuid`, json('PUT', { name: 'Nom', completed: true })))
+                (await harness.request(`${ITEMS_PATH}/pas-un-uuid`, json('PUT', { name: 'Nom' })))
                     .status,
             ).toBe(400);
-            expect((await harness.request(`${ITEMS_PATH}/${UNKNOWN_ID}`, json('PUT', { name: 'Nom' }))).status).toBe(
+            expect((await harness.request(`${ITEMS_PATH}/${UNKNOWN_ID}`, json('PUT', {}))).status).toBe(
                 400,
             );
         });

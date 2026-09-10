@@ -33,7 +33,6 @@ const ITEM: ItemDto = {
     name: 'Original task',
     status: 'todo',
     version: 1,
-    completed: false,
 };
 
 const auth: AuthApi = {
@@ -111,7 +110,6 @@ describe('item mutation workflow', () => {
 
         expect(updateItem).toHaveBeenCalledWith(PROJECT.id, ITEM.id, {
             name: 'Renamed task',
-            completed: false,
         });
         expect(document.body.textContent).toContain('Renamed task');
         expect(hasAnnouncement(labels.itemRenamed('Renamed task'))).toBe(true);
@@ -133,26 +131,6 @@ describe('item mutation workflow', () => {
         expect(input.getAttribute('aria-invalid')).toBe('true');
         expect(references.map((id) => document.getElementById(id)?.id)).toEqual(references);
         expect(getElement<HTMLElement>('[role="alert"]').textContent).toBe(labels.itemNameRequired);
-    });
-
-    it('can complete and reopen the same item from visible buttons', async () => {
-        const updateItem = vi.fn<ItemsApi['updateItem']>(async (_projectId, _id, body) => ({ ...ITEM, ...body }));
-        await render(itemsApi({ updateItem }));
-
-        await click(buttonWithLabel(labels.completeItem('Original task')));
-        await flushTimers();
-        await click(buttonWithLabel(labels.reopenItem('Original task')));
-        await flushTimers();
-
-        expect(updateItem).toHaveBeenNthCalledWith(1, PROJECT.id, ITEM.id, {
-            name: 'Original task',
-            completed: true,
-        });
-        expect(updateItem).toHaveBeenNthCalledWith(2, PROJECT.id, ITEM.id, {
-            name: 'Original task',
-            completed: false,
-        });
-        expect(hasAnnouncement(labels.itemCompletionChanged('Original task', false))).toBe(true);
     });
 
     it('names the item before permanent deletion and announces the result', async () => {

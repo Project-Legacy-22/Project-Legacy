@@ -46,6 +46,16 @@ export async function setInputValue(input: HTMLInputElement, value: string): Pro
     });
 }
 
+export async function setSelectValue(select: HTMLSelectElement, value: string): Promise<void> {
+    const valueSetter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')?.set;
+    if (valueSetter === undefined) throw new Error('The select value setter is unavailable.');
+
+    await act(async () => {
+        valueSetter.call(select, value);
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+}
+
 export async function submitForm(form: HTMLFormElement): Promise<void> {
     await act(async () => {
         form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));

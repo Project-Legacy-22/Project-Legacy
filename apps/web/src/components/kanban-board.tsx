@@ -1,0 +1,128 @@
+import { useState } from 'react';
+import type { DragEvent } from 'react';
+
+import type { ItemDto, ItemStatus } from '../api/items-api';
+import { labels } from '../labels';
+import { ItemRow } from './item-row';
+
+const COLUMNS: readonly ItemStatus[] = ['todo', 'doing', 'done'];
+
+export interface KanbanBoardProps {
+    items: readonly ItemDto[];
+    isDisabled: boolean;
+    pendingItemIds: ReadonlySet<string>;
+    onMove: (item: ItemDto, status: ItemStatus) => Promise<boolean>;
+    onRename: (item: ItemDto, name: string) => Promise<boolean>;
+    onRemove: (item: ItemDto) => Promise<boolean>;
+}
+
+interface KanbanColumnProps extends KanbanBoardProps {
+    status: ItemStatus;
+    isDropTarget: boolean;
+    onDragEnter: (status: ItemStatus) => void;
+    onDragEnd: () => void;
+    onDragStart: (item: ItemDto, event: DragEvent<HTMLLIElement>) => void;
+    onDrop: (status: ItemStatus, event: DragEvent<HTMLElement>) => void;
+}
+
+function restoreMoveFocus(itemId: string): void {
+    globalThis.setTimeout(() => {
+        document.querySelector<HTMLButtonElement>(`[data-move-item-id="${itemId}"]`)?.focus();
+    }, 0);
+}
+
+function KanbanColumn(props: KanbanColumnProps) {
+    const items = props.items.filter((item) => item.status === props.status);
+    const headingId = `kanban-column-${props.status}`;
+    const className = `kanban-column${props.isDropTarget ? ' kanban-column-drop-target' : ''}`;
+
+    return (
+        <section
+            className={className}
+            data-kanban-status={props.status}
+            aria-labelledby={headingId}
+            aria-busy={items.some((item) => props.pendingItemIds.has(item.id))}
+            onDragEnter={() => props.onDragEnter(props.status)}
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={(event) => props.onDrop(props.status, event)}
+        >
+            <div className="kanban-column-heading">
+                <h3 id={headingId}>{labels.itemStatus(props.status)}</h3>
+                <span className="kanban-count" aria-label={labels.columnItemCount(items.length)}>
+                    {items.length}
+                </span>
+            </div>
+            {items.length === 0 ? (
+                <p className="kanban-empty">{labels.emptyColumn(props.status)}</p>
+            ) : (
+                <ul className="todo-list">
+                    {items.map((item) => (
+                        <ItemRow
+                            key={item.id}
+                            item={item}
+                            isPending={props.isDisabled || props.pendingItemIds.has(item.id)}
+                            onMove={async (destination) => {
+                                const moved = await props.onMove(item, destination);
+                                restoreMoveFocus(item.id);
+                                return moved;
+                            }}
+                            onRename={props.onRename}
+                            onRemove={props.onRemove}
+                            onDragStart={props.onDragStart}
+                            onDragEnd={props.onDragEnd}
+                        />
+                    ))}
+                </ul>
+            )}
+        </section>
+    );
+}
+
+export function KanbanBoard(props: KanbanBoardProps) {
+    const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
+    const [dropTarget, setDropTarget] = useState<ItemStatus | null>(null);
+    const draggedItem = props.items.find((item) => item.id === draggedItemId);
+
+    const finishDrag = () => {
+        setDraggedItemId(null);
+        setDropTarget(null);
+    };
+
+    const startDrag = (item: ItemDto, event: DragEvent<HTMLLIElement>) => {
+        setDraggedItemId(item.id);
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', item.id);
+    };
+
+    const drop = (status: ItemStatus, event: DragEvent<HTMLElement>) => {
+        event.preventDefault();
+        const item = draggedItem;
+        finishDrag();
+        if (item === undefined || item.status === status || props.isDisabled) return;
+        void props.onMove(item, status);
+    };
+
+    return (
+        <div className="kanban-region">
+            <p id="kanban-instructions" className="kanban-instructions">
+                {labels.kanbanInstructions}
+            </p>
+            <div id="items-list" className="kanban-board" aria-describedby="kanban-instructions">
+                {COLUMNS.map((status) => (
+                    <KanbanColumn
+                        key={status}
+                        {...props}
+                        status={status}
+                        isDropTarget={dropTarget === status && draggedItem?.status !== status}
+                        onDragEnter={(target) => {
+                            if (draggedItem !== undefined && !props.isDisabled) setDropTarget(target);
+                        }}
+                        onDragStart={startDrag}
+                        onDragEnd={finishDrag}
+                        onDrop={drop}
+                    />
+                ))}
+            </div>
+        </div>
+    );
+}

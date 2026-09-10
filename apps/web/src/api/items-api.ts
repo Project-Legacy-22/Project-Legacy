@@ -3,7 +3,7 @@ import type { CreateItemBody, MoveItemBody, UpdateItemBody } from '@legacy/contr
 
 import { labels } from '../labels';
 
-export type { ItemDto, ItemPageDto } from '@legacy/contracts';
+export type { ItemDto, ItemPageDto, ItemStatus } from '@legacy/contracts';
 
 export interface ListItemsRequest {
     signal: AbortSignal;

@@ -4,7 +4,6 @@ import type { ItemRepository } from '../ports/item-repository.js';
 
 export interface ItemChanges {
     name: string;
-    completed: boolean;
 }
 
 export interface ChangeItemRequest {
@@ -26,7 +25,6 @@ export function makeChangeItem(repository: ItemRepository) {
         const updated: Item = {
             ...existing,
             name: itemName(request.changes.name),
-            status: request.changes.completed ? 'done' : 'todo',
             version: existing.version + 1,
         };
 

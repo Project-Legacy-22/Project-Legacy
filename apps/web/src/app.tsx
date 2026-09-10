@@ -180,7 +180,7 @@ function SignedInApp({
                 hasNextPage={state.hasNextPage}
                 paginationState={state.paginationState}
                 onAdd={state.addItem}
-                onToggle={state.toggleItem}
+                onMove={state.moveItem}
                 onRename={state.renameItem}
                 onRemove={state.removeItem}
                 onLoadMore={state.loadMore}
