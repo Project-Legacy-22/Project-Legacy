@@ -1,0 +1,16 @@
+<h2>Confirm your email address</h2>
+
+<p>
+  A request was made to change the email address on your Legacy 22 account to
+  {{ .NewEmail }}. Follow the link below to confirm it. It is valid for one hour.
+</p>
+
+<p>
+  <a href="{{ .SiteURL }}/confirm-email-change?token_hash={{ .TokenHash }}&type=email_change">Confirm email address</a>
+</p>
+
+<p>
+  If you did not ask for this, you can ignore this message. The address on the
+  account stays unchanged, and the change cannot complete without this
+  confirmation.
+</p>

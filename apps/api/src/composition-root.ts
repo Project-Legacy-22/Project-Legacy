@@ -20,6 +20,9 @@ import type {
 } from '@legacy/infra';
 import type { Logger } from '@legacy/contracts';
 import {
+    makeChangeEmail,
+    makeChangePassword,
+    makeConfirmEmailChange,
     makeEraseAccount,
     makeExportPersonalData,
     makeIdentifyCaller,
@@ -56,6 +59,9 @@ export interface AuthUseCases {
     requestPasswordReset: ReturnType<typeof makeRequestPasswordReset>;
     resetPassword: ReturnType<typeof makeResetPassword>;
     signOut: ReturnType<typeof makeSignOut>;
+    changePassword: ReturnType<typeof makeChangePassword>;
+    changeEmail: ReturnType<typeof makeChangeEmail>;
+    confirmEmailChange: ReturnType<typeof makeConfirmEmailChange>;
 }
 
 // Kept apart from AuthUseCases, which requireAccount receives on every request
@@ -180,6 +186,9 @@ function authUseCases(
         requestPasswordReset: makeRequestPasswordReset(identity),
         resetPassword: makeResetPassword({ provider: identity, compromisedPasswords }),
         signOut: makeSignOut(identity),
+        changePassword: makeChangePassword({ provider: identity, compromisedPasswords }),
+        changeEmail: makeChangeEmail(identity),
+        confirmEmailChange: makeConfirmEmailChange(identity),
     };
 }
 

@@ -32,5 +32,6 @@ the acceptance criteria: it describes the feature as it now behaves, in the pres
 | [#29](29-password-reset.md) | Password reset | Auth |
 | [#30](30-api-hardening.md) | API security hardening | Quality |
 | [#32](32-edit-complete-delete-task.md) | Edit, complete and delete an item | Tasks |
+| [#37](37-account-credentials.md) | Change my email address and my password | Auth |
 | [#48](48-logout.md) | Sign out | Auth |
 | [#49](49-view-states.md) | Coherent loading, empty and error states | A11y |

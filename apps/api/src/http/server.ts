@@ -2,13 +2,14 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import express from 'express';
-import type { Express } from 'express';
+import type { Express, RequestHandler } from 'express';
 import type { Logger } from '@legacy/contracts';
 
 import type { Config } from '../config.js';
 import type { AppUseCases } from '../composition-root.js';
 import { accountRouter } from './routes/account.js';
 import { authRouter } from './routes/auth.js';
+import { credentialsRouter } from './routes/credentials.js';
 import { itemsRouter } from './routes/items.js';
 import { notificationsRouter } from './routes/notifications.js';
 import { projectsRouter } from './routes/projects.js';
@@ -38,6 +39,16 @@ const RESET_MAX_ATTEMPTS = 10;
 const RESET_WINDOW_MS = 5 * 60 * 1000;
 const RESET_REQUESTS_PER_EMAIL = 3;
 const RESET_EMAIL_WINDOW_MS = 60 * 60 * 1000;
+
+// Changing a signed-in credential (US-36). The per-caller budget matches
+// sign-in and is shared by the password change and the confirmation endpoint.
+// The email change also carries a per-address budget over an hour, the same
+// shape as a reset request, so one inbox cannot be flooded with confirmation
+// mail.
+const CREDENTIALS_MAX_ATTEMPTS = 10;
+const CREDENTIALS_WINDOW_MS = 5 * 60 * 1000;
+const EMAIL_CHANGES_PER_ADDRESS = 3;
+const EMAIL_CHANGE_WINDOW_MS = 60 * 60 * 1000;
 
 // Read once at startup, not per request: the deep link for the recovery email
 // needs the app shell, and a route that hits the file system on every call
@@ -89,13 +100,29 @@ export function createServer(config: Config, useCases: AppUseCases, logger: Logg
     // act on the caller's own account, so they resolve it the same way.
     app.use(accountRouter(useCases.account, useCases.auth, { secureCookie: config.secureCookies }));
 
-    // The reset link in the recovery email is a deep link the browser opens
-    // directly. Serve the app shell for it so the front-end can pick up the
-    // token; every other path still falls through to the session guard.
+    // Same shape as accountRouter: the password and email changes act on the
+    // caller's own account, and the confirmation endpoint is public because its
+    // link is opened from an email client (US-36).
+    app.use(
+        credentialsRouter(useCases.auth, {
+            secureCookie: config.secureCookies,
+            maxAttempts: CREDENTIALS_MAX_ATTEMPTS,
+            windowMs: CREDENTIALS_WINDOW_MS,
+            emailChangesPerAddress: EMAIL_CHANGES_PER_ADDRESS,
+            emailChangeWindowMs: EMAIL_CHANGE_WINDOW_MS,
+        }),
+    );
+
+    // The reset and email-change links in the auth emails are deep links the
+    // browser opens directly. Serve the app shell for them so the front-end can
+    // pick up the token; every other path still falls through to the session
+    // guard.
     if (appShell !== undefined) {
-        app.get('/reset-password', (_req, res) => {
+        const serveShell: RequestHandler = (_req, res) => {
             res.type('html').send(appShell);
-        });
+        };
+        app.get('/reset-password', serveShell);
+        app.get('/confirm-email-change', serveShell);
     }
 
     // Items belong to somebody since US-11: no session, no items. The guard

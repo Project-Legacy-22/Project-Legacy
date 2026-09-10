@@ -261,6 +261,14 @@ otp_expiry = 3600
 subject = "Reset your Legacy 22 password"
 content_path = "./supabase/templates/recovery.html"
 
+# Email-change confirmation (US-36). Same server-side exchange as recovery: the link carries the
+# token hash on our own path (GET /confirm-email-change serves the app shell, POST
+# /auth/me/email/confirm exchanges it). With double_confirm_changes on, GoTrue sends this same
+# template to both the current and the new address, each with its own token hash.
+[auth.email.template.email_change]
+subject = "Confirm your Legacy 22 email address"
+content_path = "./supabase/templates/email-change.html"
+
 # Uncomment to customize email template
 # [auth.email.template.invite]
 # subject = "You have been invited"

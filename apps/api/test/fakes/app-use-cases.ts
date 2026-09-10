@@ -32,6 +32,9 @@ function unexercised(): AppUseCases {
             requestPasswordReset: refusing('requestPasswordReset'),
             resetPassword: refusing('resetPassword'),
             signOut: refusing('signOut'),
+            changePassword: refusing('changePassword'),
+            changeEmail: refusing('changeEmail'),
+            confirmEmailChange: refusing('confirmEmailChange'),
         },
         account: {
             exportPersonalData: refusing('exportPersonalData'),
