@@ -23,6 +23,7 @@ import { recordingLogger } from '../../../../../packages/contracts/test/fakes/re
 import { unreachableItemRepository } from '../../../test/fakes/unreachable-item-repository.js';
 import { json, listen, testConfig } from '../../../test/http-harness.js';
 import type { Harness } from '../../../test/http-harness.js';
+import { makeAppUseCases } from '../../../test/fakes/app-use-cases.js';
 
 const ADRESSE = 'alice@example.com';
 const MOT_DE_PASSE = 'MotDePasse2026';
@@ -32,7 +33,7 @@ const COMPTE = [{ id: ACCOUNT_ID, email: ADRESSE, password: MOT_DE_PASSE }];
 function useCasesOver(provider: InMemoryIdentityProvider): AppUseCases {
     const repository = unreachableItemRepository();
 
-    return {
+    return makeAppUseCases({
         items: {
             listItems: makeListItems(repository),
             addItem: makeAddItem({
@@ -43,21 +44,13 @@ function useCasesOver(provider: InMemoryIdentityProvider): AppUseCases {
             changeItem: makeChangeItem(repository),
             removeItem: makeRemoveItem(repository),
         },
-        projects: {
-            listProjects: () => Promise.reject(new Error('not exercised by this suite')),
-            addProject: () => Promise.reject(new Error('not exercised by this suite')),
-            removeProject: () => Promise.reject(new Error('not exercised by this suite')),
-        },
         notifications: {
             countUnread: () => Promise.resolve(0),
-            listNotifications: () => Promise.reject(new Error('not exercised by this suite')),
-            markNotificationRead: () => Promise.reject(new Error('not exercised by this suite')),
         },
         auth: {
             registerAccount: makeRegisterAccount(provider),
             signIn: makeSignIn(provider),
             identifyCaller: makeIdentifyCaller(provider),
-            renewSession: () => Promise.reject(new Error('not exercised by this suite')),
             requestPasswordReset: makeRequestPasswordReset(provider),
             resetPassword: makeResetPassword({
                 provider,
@@ -72,7 +65,7 @@ function useCasesOver(provider: InMemoryIdentityProvider): AppUseCases {
             }),
             eraseAccount: makeEraseAccount({ store: inMemoryPersonalDataStore(), identity: provider }),
         },
-    };
+    });
 }
 
 describe('POST /auth/logout', () => {

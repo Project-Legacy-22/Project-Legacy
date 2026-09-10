@@ -24,6 +24,7 @@ import { recordingLogger } from '../../../../packages/contracts/test/fakes/recor
 import { unreachableItemRepository } from '../../test/fakes/unreachable-item-repository.js';
 import { json, listen, testConfig } from '../../test/http-harness.js';
 import type { Harness } from '../../test/http-harness.js';
+import { makeAppUseCases } from '../../test/fakes/app-use-cases.js';
 
 const ORIGIN = testConfig.webOrigin;
 const ADRESSE = 'alice@example.com';
@@ -39,7 +40,7 @@ function appUseCases(authenticate?: IdentityProvider['authenticate']): AppUseCas
     const repository = unreachableItemRepository();
     const personalData = inMemoryPersonalDataStore();
 
-    return {
+    return makeAppUseCases({
         items: {
             listItems: makeListItems(repository),
             addItem: makeAddItem({
@@ -52,21 +53,10 @@ function appUseCases(authenticate?: IdentityProvider['authenticate']): AppUseCas
         },
         // Required by AppUseCases since #202. This suite exercises headers,
         // CORS and body limits, never a notification route.
-        projects: {
-            listProjects: () => Promise.reject(new Error('not exercised by this suite')),
-            addProject: () => Promise.reject(new Error('not exercised by this suite')),
-            removeProject: () => Promise.reject(new Error('not exercised by this suite')),
-        },
-        notifications: {
-            listNotifications: () => Promise.reject(new Error('not exercised by this suite')),
-            markNotificationRead: () => Promise.reject(new Error('not exercised by this suite')),
-            countUnread: () => Promise.reject(new Error('not exercised by this suite')),
-        },
         auth: {
             registerAccount: makeRegisterAccount(provider),
             signIn: makeSignIn(signInProvider),
             identifyCaller: makeIdentifyCaller(provider),
-            renewSession: () => Promise.reject(new Error('not exercised by this suite')),
             requestPasswordReset: makeRequestPasswordReset(provider),
             resetPassword: makeResetPassword({ provider, compromisedPasswords: inMemoryCompromisedPasswords() }),
             // Required by AuthUseCases since #174; no case here exercises it.
@@ -79,7 +69,7 @@ function appUseCases(authenticate?: IdentityProvider['authenticate']): AppUseCas
             }),
             eraseAccount: makeEraseAccount({ store: personalData, identity: provider }),
         },
-    };
+    });
 }
 
 describe('durcissement de l API', () => {

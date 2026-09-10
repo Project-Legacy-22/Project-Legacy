@@ -64,6 +64,25 @@ export async function flushTimers(): Promise<void> {
     await act(async () => new Promise(resolve => globalThis.setTimeout(resolve, 0)));
 }
 
+// Waits for something the product schedules on a timer, instead of assuming one
+// flush is enough.
+//
+// item-row restores focus with setTimeout(..., 0) after a rename or a removal.
+// A single flushTimers() usually sees it and sometimes does not: if the
+// re-render that schedules the timer happens after the flush has begun, the
+// assertion reads document.activeElement while it is still the body. That is
+// how item-mutations-workflow passed eleven local runs and failed once in CI,
+// under load.
+//
+// It gives up rather than hanging, and the caller still asserts afterwards, so
+// a focus that never lands fails with the diff it would have had.
+export async function waitFor(condition: () => boolean, attempts = 20): Promise<void> {
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+        if (condition()) return;
+        await flushTimers();
+    }
+}
+
 // The keyboard.
 //
 // jsdom does not implement sequential navigation: pressing Tab moves nothing

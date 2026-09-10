@@ -23,6 +23,7 @@ import { recordingLogger } from '../../../../../packages/contracts/test/fakes/re
 import { unreachableItemRepository } from '../../../test/fakes/unreachable-item-repository.js';
 import { json, listen, testConfig } from '../../../test/http-harness.js';
 import type { Harness } from '../../../test/http-harness.js';
+import { makeAppUseCases } from '../../../test/fakes/app-use-cases.js';
 
 const ADRESSE = 'alice@example.com';
 const MOT_DE_PASSE = 'MotDePasse2026';
@@ -42,23 +43,14 @@ function useCasesOver(provider: InMemoryIdentityProvider): AppUseCases {
     const repository = unreachableItemRepository();
     const personalData = inMemoryPersonalDataStore();
 
-    return {
+    return makeAppUseCases({
         items: {
             listItems: makeListItems(repository),
             addItem: makeAddItem({ repository, newId: () => ACCOUNT_ID, now: () => MOMENT }),
             changeItem: makeChangeItem(repository),
             removeItem: makeRemoveItem(repository),
         },
-        projects: {
-            listProjects: () => Promise.reject(new Error('not exercised by this suite')),
-            addProject: () => Promise.reject(new Error('not exercised by this suite')),
-            removeProject: () => Promise.reject(new Error('not exercised by this suite')),
-        },
-        notifications: {
-            countUnread: () => Promise.resolve(0),
-            listNotifications: () => Promise.reject(new Error('not exercised by this suite')),
-            markNotificationRead: () => Promise.reject(new Error('not exercised by this suite')),
-        },
+        notifications: { countUnread: () => Promise.resolve(0) },
         auth: {
             registerAccount: makeRegisterAccount(provider),
             signIn: makeSignIn(provider),
@@ -69,13 +61,12 @@ function useCasesOver(provider: InMemoryIdentityProvider): AppUseCases {
                 provider,
                 compromisedPasswords: inMemoryCompromisedPasswords(),
             }),
-            signOut: () => Promise.reject(new Error('not exercised by this suite')),
         },
         account: {
             exportPersonalData: makeExportPersonalData({ store: personalData, now: () => MOMENT }),
             eraseAccount: makeEraseAccount({ store: personalData, identity: provider }),
         },
-    };
+    });
 }
 
 // Un navigateur garde ses cookies d une requete a l autre ; le harnais, non.

@@ -28,6 +28,7 @@ import { recordingLogger } from '../../../../../packages/contracts/test/fakes/re
 import { unreachableItemRepository } from '../../../test/fakes/unreachable-item-repository.js';
 import { json, listen, testConfig } from '../../../test/http-harness.js';
 import type { Harness } from '../../../test/http-harness.js';
+import { makeAppUseCases } from '../../../test/fakes/app-use-cases.js';
 
 // La boucle vit dans une fonction outillage, pas dans un test : un test ne
 // contient pas de logique, mais la limite de frequence ne se declenche qu au
@@ -54,7 +55,7 @@ function useCasesOver(provider: InMemoryIdentityProvider): AppUseCases {
     const compromisedPasswords = inMemoryCompromisedPasswords();
     const projects = inMemoryProjectRepository();
 
-    return {
+    return makeAppUseCases({
         items: {
             listItems: makeListItems(repository),
             addItem: makeAddItem({
@@ -67,8 +68,6 @@ function useCasesOver(provider: InMemoryIdentityProvider): AppUseCases {
         },
         notifications: {
             countUnread: () => Promise.resolve(0),
-            listNotifications: () => Promise.reject(new Error('not exercised by this suite')),
-            markNotificationRead: () => Promise.reject(new Error('not exercised by this suite')),
         },
         auth: {
             registerAccount: makeRegisterAccount(provider),
@@ -97,7 +96,7 @@ function useCasesOver(provider: InMemoryIdentityProvider): AppUseCases {
             }),
             removeProject: makeRemoveProject(projects),
         },
-    };
+    });
 }
 
 describe('API d authentification', () => {

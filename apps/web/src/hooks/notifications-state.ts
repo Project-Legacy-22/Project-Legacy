@@ -1,9 +1,4 @@
-export type NotificationsLoadState =
-    | { status: 'loading' }
-    | { status: 'ready' }
-    | { status: 'error'; message: string };
+import type { LoadState, PaginationState } from './view-state.js';
 
-export type NotificationsPaginationState =
-    | { status: 'idle'; announcement: string }
-    | { status: 'loading' }
-    | { status: 'error'; message: string };
+export type NotificationsLoadState = LoadState;
+export type NotificationsPaginationState = PaginationState;

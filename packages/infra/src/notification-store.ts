@@ -1,4 +1,3 @@
-import { createClient } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { Buffer } from 'node:buffer';
@@ -13,6 +12,8 @@ import type {
 
 import type { Database } from './database.types.js';
 import type { SupabaseSettings } from './supabase-item-repository.js';
+import { adapterFailure, serviceRoleClient } from './adapter.js';
+import type { AdapterFailure } from './adapter.js';
 
 type NotificationRow = Database['public']['Tables']['notifications']['Row'];
 type NotificationClient = SupabaseClient<Database>;
@@ -25,9 +26,7 @@ export interface NotificationStore extends NotificationRepository {
     notifyItemCreated(eventId: string, userId: string, itemId: string): Promise<boolean>;
 }
 
-function fail(operation: string, cause: unknown): never {
-    throw new Error(`notifications: ${operation} failed`, { cause });
-}
+const fail: AdapterFailure = adapterFailure('notifications');
 
 function toNotification(row: NotificationRow): Notification {
     return {
@@ -85,11 +84,7 @@ async function findPage(
 }
 
 export function createSupabaseNotificationStore(settings: SupabaseSettings): NotificationStore {
-    const client: NotificationClient = createClient<Database>(
-        settings.url,
-        settings.serviceRoleKey,
-        { auth: { persistSession: false, autoRefreshToken: false } },
-    );
+    const client: NotificationClient = serviceRoleClient(settings);
 
     return {
         async notifyItemCreated(eventId, userId, itemId) {

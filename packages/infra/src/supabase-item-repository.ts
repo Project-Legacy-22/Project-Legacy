@@ -1,4 +1,3 @@
-import { createClient } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { InvalidItemCursor, rehydrateItem } from '@legacy/core-items';
@@ -7,6 +6,8 @@ import type { DomainEvent, Item, ItemPage, ItemPageQuery } from '@legacy/core-it
 import type { Database } from './database.types.js';
 import type { ItemStore } from './item-store.js';
 import { decodeKeysetCursor, encodeKeysetCursor } from './keyset-cursor.js';
+import { adapterFailure, serviceRoleClient } from './adapter.js';
+import type { AdapterFailure } from './adapter.js';
 
 type ItemRow = Database['public']['Tables']['items']['Row'];
 
@@ -19,9 +20,7 @@ export interface SupabaseSettings {
 // throwing. Every call checks it and rethrows through here: a storage failure is
 // a technical error, it must bubble to the single error middleware and become a
 // generic 500, never be swallowed or turned into an empty result.
-function fail(operation: string, cause: unknown): never {
-    throw new Error(`items repository: ${operation} failed`, { cause });
-}
+const fail: AdapterFailure = adapterFailure('items repository');
 
 function toItem(row: ItemRow): Item {
     return rehydrateItem({
@@ -160,9 +159,7 @@ async function remove(client: ItemClient, id: string): Promise<void> {
 // the service-role key, so PostgREST does not apply row-level security and the
 // application layer is responsible for project-membership scoping.
 export function createSupabaseItemStore(settings: SupabaseSettings): ItemStore {
-    const client: ItemClient = createClient<Database>(settings.url, settings.serviceRoleKey, {
-        auth: { persistSession: false, autoRefreshToken: false },
-    });
+    const client: ItemClient = serviceRoleClient(settings);
 
     // One call to a database function rather than two inserts. PostgREST opens
     // a transaction per request, so writing the item and then its event would

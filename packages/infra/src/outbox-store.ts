@@ -1,4 +1,3 @@
-import { createClient } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { DomainEvent } from '@legacy/contracts';
@@ -6,6 +5,8 @@ import type { DomainEvent as Event } from '@legacy/contracts';
 
 import type { Database } from './database.types.js';
 import type { SupabaseSettings } from './supabase-item-repository.js';
+import { adapterFailure, serviceRoleClient } from './adapter.js';
+import type { AdapterFailure } from './adapter.js';
 
 // The relay's view of the outbox: read what has not been published, and record
 // that it has been. Writing to the outbox is not here, because nothing outside
@@ -17,9 +18,7 @@ export interface OutboxStore {
     markPublished(eventIds: readonly string[]): Promise<void>;
 }
 
-function fail(operation: string, cause: unknown): never {
-    throw new Error(`outbox: ${operation} failed`, { cause });
-}
+const fail: AdapterFailure = adapterFailure('outbox');
 
 // PostgreSQL renders a timestamptz with a numeric offset (`+00:00`), while the
 // catalogue's canonical form ends in `Z`. Both denote the same instant.
@@ -35,11 +34,7 @@ function asInstant(value: string): string {
 }
 
 export function createSupabaseOutboxStore(settings: SupabaseSettings): OutboxStore {
-    const client: SupabaseClient<Database> = createClient<Database>(
-        settings.url,
-        settings.serviceRoleKey,
-        { auth: { persistSession: false, autoRefreshToken: false } },
-    );
+    const client: SupabaseClient<Database> = serviceRoleClient(settings);
 
     return {
         async unpublished(limit) {

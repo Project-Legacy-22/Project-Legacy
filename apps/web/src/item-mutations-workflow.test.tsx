@@ -6,7 +6,15 @@ import type { ItemDto, ItemsApi } from './api/items-api';
 import type { ProjectsApi } from './api/projects-api';
 import { App } from './app';
 import { labels } from './labels';
-import { click, createReactTestRoot, flushTimers, getElement, setInputValue, submitForm } from './test/react-root';
+import {
+    click,
+    createReactTestRoot,
+    flushTimers,
+    getElement,
+    setInputValue,
+    submitForm,
+    waitFor,
+} from './test/react-root';
 import type { ReactTestRoot } from './test/react-root';
 
 const ACCOUNT = {
@@ -104,6 +112,7 @@ describe('item mutation workflow', () => {
         });
         expect(document.body.textContent).toContain('Renamed task');
         expect(hasAnnouncement(labels.itemRenamed('Renamed task'))).toBe(true);
+        await waitFor(() => document.activeElement === buttonWithLabel(labels.editItem('Renamed task')));
         expect(document.activeElement).toBe(buttonWithLabel(labels.editItem('Renamed task')));
     });
 
@@ -161,6 +170,7 @@ describe('item mutation workflow', () => {
         expect(deleteItem).toHaveBeenCalledWith(PROJECT.id, ITEM.id);
         expect(document.querySelector('.todo-item')).toBeNull();
         expect(hasAnnouncement(labels.itemRemoved('Original task'))).toBe(true);
+        await waitFor(() => document.activeElement === document.querySelector('#item-name'));
         expect(document.activeElement).toBe(getElement<HTMLInputElement>('#item-name'));
     });
 });

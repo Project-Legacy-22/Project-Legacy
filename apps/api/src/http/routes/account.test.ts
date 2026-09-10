@@ -28,6 +28,7 @@ import { recordingLogger } from '../../../../../packages/contracts/test/fakes/re
 import { unreachableItemRepository } from '../../../test/fakes/unreachable-item-repository.js';
 import { json, listen, testConfig } from '../../../test/http-harness.js';
 import type { Harness } from '../../../test/http-harness.js';
+import { makeAppUseCases } from '../../../test/fakes/app-use-cases.js';
 
 const MOT_DE_PASSE = 'MotDePasse2026';
 const MOMENT = new Date('2026-09-08T12:00:00.000Z');
@@ -42,7 +43,7 @@ function useCasesOver(provider: IdentityProvider, store: PersonalDataStore): App
     const repository = unreachableItemRepository();
     const projects = inMemoryProjectRepository();
 
-    return {
+    return makeAppUseCases({
         items: {
             listItems: makeListItems(repository),
             addItem: makeAddItem({
@@ -55,8 +56,6 @@ function useCasesOver(provider: IdentityProvider, store: PersonalDataStore): App
         },
         notifications: {
             countUnread: () => Promise.resolve(0),
-            listNotifications: () => Promise.reject(new Error('not exercised by this suite')),
-            markNotificationRead: () => Promise.reject(new Error('not exercised by this suite')),
         },
         auth: {
             registerAccount: makeRegisterAccount(provider),
@@ -87,7 +86,7 @@ function useCasesOver(provider: IdentityProvider, store: PersonalDataStore): App
             }),
             removeProject: makeRemoveProject(projects),
         },
-    };
+    });
 }
 
 describe('API des donnees personnelles', () => {

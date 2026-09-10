@@ -6,7 +6,7 @@ import type { AuthUseCases } from '../composition-root.js';
 import { readCookie } from './cookies.js';
 
 export const SESSION_COOKIE = 'session';
-export const REFRESH_COOKIE = 'refresh';
+const REFRESH_COOKIE = 'refresh';
 
 // A day without a single request ends the session: the browser stops holding
 // the refresh cookie and the next visit starts at the sign-in screen. Every
