@@ -7,6 +7,7 @@ import {
     makeExportPersonalData,
     makeIdentifyCaller,
     makeRegisterAccount,
+    makeRenewSession,
     makeRequestPasswordReset,
     makeResetPassword,
     makeSignIn,
@@ -33,6 +34,7 @@ const OWNER_ID = '00000000-0000-7000-8000-000000000001';
 const OTHER_OWNER_ID = '00000000-0000-7000-8000-000000000002';
 const ADRESSE = 'alice@example.com';
 const MOT_DE_PASSE = 'MotDePasse2026';
+const MOMENT = new Date('2026-09-04T10:00:00.000Z');
 
 function useCasesOver(repository: ItemRepository, provider: IdentityProvider): AppUseCases {
     // Aucun compte : les routes d items ne touchent pas aux donnees
@@ -42,11 +44,7 @@ function useCasesOver(repository: ItemRepository, provider: IdentityProvider): A
     return {
         items: {
             listItems: makeListItems(repository),
-            addItem: makeAddItem({
-                repository,
-                newId: () => GENERATED_ID,
-                now: () => new Date('2026-09-04T10:00:00.000Z'),
-            }),
+            addItem: makeAddItem({ repository, newId: () => GENERATED_ID, now: () => MOMENT }),
             changeItem: makeChangeItem(repository),
             removeItem: makeRemoveItem(repository),
         },
@@ -55,6 +53,7 @@ function useCasesOver(repository: ItemRepository, provider: IdentityProvider): A
             registerAccount: makeRegisterAccount(provider),
             signIn: makeSignIn(provider),
             identifyCaller: makeIdentifyCaller(provider),
+            renewSession: makeRenewSession(provider),
             requestPasswordReset: makeRequestPasswordReset(provider),
             resetPassword: makeResetPassword({
                 provider,
@@ -62,10 +61,7 @@ function useCasesOver(repository: ItemRepository, provider: IdentityProvider): A
             }),
         },
         account: {
-            exportPersonalData: makeExportPersonalData({
-                store: personalData,
-                now: () => new Date('2026-09-04T10:00:00.000Z'),
-            }),
+            exportPersonalData: makeExportPersonalData({ store: personalData, now: () => MOMENT }),
             eraseAccount: makeEraseAccount({ store: personalData, identity: provider }),
         },
     };

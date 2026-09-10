@@ -12,7 +12,7 @@ import type { RequestHandler } from 'express';
 
 import type { AuthUseCases } from '../../composition-root.js';
 import { rateLimit } from '../rate-limit.js';
-import { accountOf, requireAccount, setSessionCookie } from '../session.js';
+import { accountOf, requireAccount, setSessionCookies } from '../session.js';
 
 export interface AuthRoutesOptions {
     secureCookie: boolean;
@@ -112,7 +112,7 @@ export function authRouter(useCases: AuthUseCases, options: AuthRoutesOptions): 
         useCases
             .signIn(body.data.email, body.data.password)
             .then(session => {
-                setSessionCookie(res, session, options.secureCookie);
+                setSessionCookies(res, session, options.secureCookie);
                 res.send(toAccountDto(session.account));
             })
             .catch(next);
@@ -124,7 +124,7 @@ export function authRouter(useCases: AuthUseCases, options: AuthRoutesOptions): 
 
     router.post('/auth/register', limit, register);
     router.post('/auth/login', limit, login);
-    router.get('/auth/me', requireAccount(useCases), me);
+    router.get('/auth/me', requireAccount(useCases, options.secureCookie), me);
     router.post('/auth/password/forgot', resetLimit, resetPerEmail, forgotPasswordHandler(useCases));
     router.post('/auth/password/reset', resetLimit, resetPasswordHandler(useCases));
 

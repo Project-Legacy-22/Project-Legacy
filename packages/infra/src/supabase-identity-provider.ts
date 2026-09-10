@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import type { Session as GoTrueSession } from '@supabase/supabase-js';
 
 import type {
     Account,
@@ -26,6 +27,22 @@ export interface SupabaseAuthSettings {
 const ALREADY_REGISTERED = 'user_already_exists';
 const INVALID_CREDENTIALS = 'invalid_credentials';
 const UNUSABLE_TOKEN = new Set(['bad_jwt', 'session_expired', 'session_not_found']);
+
+// A refresh token GoTrue will not exchange. It distinguishes a token it never
+// issued from one already spent and from a session it has ended; we do not,
+// because the three mean the same thing to the person holding the cookie, and
+// saying which would describe a session to whoever presented the token.
+//
+// `refresh_token_already_used` is the answer to a reuse outside the reuse
+// interval: GoTrue has ended the session and revoked its tokens by the time it
+// replies (ADR-0008). Nothing more is asked of it here.
+const UNUSABLE_REFRESH_TOKEN = new Set([
+    'refresh_token_not_found',
+    'refresh_token_already_used',
+    'session_expired',
+    'session_not_found',
+    'bad_jwt',
+]);
 // Deleting an account that is already gone. The erasure use case may be a retry
 // of an attempt that failed after removing the rows, and a retry has to be able
 // to finish rather than report a failure for work already done.
@@ -61,6 +78,17 @@ function accountOf(user: { id: string; email?: string | undefined }): Account {
     return { id: user.id, email: user.email };
 }
 
+// One translation for both ways a session is obtained, signing in and renewing,
+// so the two cannot drift apart on which field carries what.
+function sessionOf(session: GoTrueSession): Session {
+    return {
+        account: accountOf(session.user),
+        accessToken: session.access_token,
+        refreshToken: session.refresh_token,
+        expiresInSeconds: session.expires_in,
+    };
+}
+
 // A client that keeps no state: the API holds no session of its own, and the
 // caller's token arrives with each request. Persisting or refreshing anything
 // here would mean one shared session for every user of the process.
@@ -81,6 +109,33 @@ async function requestPasswordReset(settings: SupabaseAuthSettings, email: strin
     if (error.code === EMAIL_RATE_LIMITED) return;
 
     return fail('requestPasswordReset', error);
+}
+
+async function refresh(
+    settings: SupabaseAuthSettings,
+    refreshToken: string,
+): Promise<Session | undefined> {
+    // A throwaway client, for the reason resetPassword below uses one: the
+    // exchange stores the session it obtains on the instance that ran it, and
+    // that session belongs to a single caller.
+    const result = await stateless(settings).auth.refreshSession({ refresh_token: refreshToken });
+
+    if (result.error !== null) {
+        const { code, status } = result.error;
+        if (code !== undefined && UNUSABLE_REFRESH_TOKEN.has(code)) return undefined;
+        // A GoTrue old enough to answer without an error code still says 400 or
+        // 401 for a grant it refuses. Anything else is ours to report: an
+        // outage must not read as an expired session, or a database that came
+        // back a minute later would have signed out every caller meanwhile.
+        if (status === 400 || status === 401) return undefined;
+
+        return fail('refresh', result.error);
+    }
+
+    // A refusal carrying no error is not a shape GoTrue documents, but the type
+    // allows it, and inventing a session here would be worse than ending one
+    // that may still be live.
+    return result.data.session === null ? undefined : sessionOf(result.data.session);
 }
 
 async function resetPassword(
@@ -151,11 +206,7 @@ export function createSupabaseIdentityProvider(settings: SupabaseAuthSettings): 
             return fail('authenticate', result.error);
         }
 
-        return {
-            account: accountOf(result.data.user),
-            accessToken: result.data.session.access_token,
-            expiresInSeconds: result.data.session.expires_in,
-        };
+        return sessionOf(result.data.session);
     }
 
     async function identify(accessToken: string): Promise<Account | undefined> {
@@ -190,6 +241,7 @@ export function createSupabaseIdentityProvider(settings: SupabaseAuthSettings): 
         authenticate,
         identify,
         remove,
+        refresh: refreshToken => refresh(settings, refreshToken),
         requestPasswordReset: email => requestPasswordReset(settings, email),
         resetPassword: (token, password) => resetPassword(settings, token, password),
     };

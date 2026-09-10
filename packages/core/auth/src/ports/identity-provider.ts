@@ -1,11 +1,12 @@
 import type { Account } from '../domain/account.js';
 
-// A session as the application needs it. The refresh token is deliberately
-// absent: renewing and revoking a session is US-27, and holding a secret the
-// code has no use for yet is a liability, not a head start.
+// A session as the application needs it. The access token is short-lived; the
+// refresh token is what lets the session outlive it, and it is single-use: the
+// provider hands back a new one on every exchange (ADR-0008).
 export interface Session {
     account: Account;
     accessToken: string;
+    refreshToken: string;
     expiresInSeconds: number;
 }
 
@@ -27,6 +28,15 @@ export interface IdentityProvider {
     register(email: string, password: string): Promise<RegistrationOutcome>;
     authenticate(email: string, password: string): Promise<Session | undefined>;
     identify(accessToken: string): Promise<Account | undefined>;
+
+    // Exchanges a refresh token for a fresh session and rotates it, so the
+    // token handed back is never the one that was presented.
+    //
+    // Resolves to undefined when the exchange is refused. Consumed, revoked,
+    // expired and unknown are not told apart: they all mean the session is
+    // over, and reporting which would describe somebody's session to whoever
+    // presented the token. Throws only when the provider itself fails.
+    refresh(refreshToken: string): Promise<Session | undefined>;
 
     // Removes the credentials and every session they opened, which is what
     // signs the person out of every browser rather than only the one that
