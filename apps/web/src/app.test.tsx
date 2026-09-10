@@ -2,36 +2,28 @@ import { act } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from './app';
-import type { ItemDto, ItemPageDto, ItemsApi } from './api/items-api';
+import type { ItemPageDto, ItemsApi } from './api/items-api';
 import { ApiError } from './api/items-api';
 import type { AccountDto, AuthApi } from './api/auth-api';
 import type { NotificationsApi } from './api/notifications-api';
 import type { ProjectsApi } from './api/projects-api';
 import { click, createReactTestRoot, flushTimers, getElement, setInputValue, submitForm } from './test/react-root';
 import type { ReactTestRoot } from './test/react-root';
-import { anItem } from './test/builders/item-builder';
+import {
+    ACCOUNT,
+    createApi,
+    createAuth,
+    createProjectsApi,
+    firstItem,
+    itemPage,
+    secondItem,
+} from './test/app-fixture';
 import { labels } from './labels';
 
 interface Deferred<T> {
     promise: Promise<T>;
     resolve: (value: T) => void;
 }
-
-const firstItem = anItem({
-    id: '1c99b4ae-b7b8-49e7-885e-b2d976c1fe19',
-    name: 'First item',
-});
-
-const secondItem = anItem({
-    id: '93a3eb56-61a2-4b0b-8e92-bb97fb9b3531',
-    name: 'Second item',
-});
-const PROJECT = {
-    id: firstItem.projectId,
-    name: 'My project',
-    role: 'owner' as const,
-    itemCount: 2,
-};
 
 let testRoot: ReactTestRoot;
 
@@ -43,50 +35,6 @@ function deferred<T>(): Deferred<T> {
         resolve = promiseResolve;
     });
     return { promise, resolve };
-}
-
-function createApi(overrides: Partial<ItemsApi> = {}): ItemsApi {
-    return {
-        listItems: vi.fn(async () => itemPage()),
-        createItem: vi.fn(async () => firstItem),
-        updateItem: vi.fn(async () => firstItem),
-        deleteItem: vi.fn(async () => undefined),
-        ...overrides,
-    };
-}
-
-function itemPage(items: readonly ItemDto[] = [], nextCursor: string | null = null): ItemPageDto {
-    return { items: [...items], nextCursor };
-}
-
-const ACCOUNT: AccountDto = {
-    id: '5b1f0f4a-9d3f-4d0e-9e2a-6c0f5a3b1d77',
-    email: 'ada@example.com',
-};
-
-// Signed in by default: the item tests below are about the item workflow, and
-// making each of them sign in first would test the session over and over.
-function createAuth(overrides: Partial<AuthApi> = {}): AuthApi {
-    return {
-        register: vi.fn(async () => undefined),
-        signIn: vi.fn(async () => ACCOUNT),
-        currentAccount: vi.fn(async () => ACCOUNT),
-        requestPasswordReset: vi.fn(async () => undefined),
-        resetPassword: vi.fn(async () => undefined),
-        ...overrides,
-    };
-}
-
-function createProjectsApi(overrides: Partial<ProjectsApi> = {}): ProjectsApi {
-    return {
-        listProjects: vi.fn(async () => ({
-            projects: [PROJECT],
-            nextCursor: null,
-        })),
-        createProject: vi.fn(async () => PROJECT),
-        deleteProject: vi.fn(async () => undefined),
-        ...overrides,
-    };
 }
 
 function createNotifications(unread = 0): NotificationsApi {

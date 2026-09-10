@@ -31,6 +31,18 @@ function readRecoveryToken(): string | null {
     return params.get('type') === 'recovery' ? params.get('token_hash') : null;
 }
 
+function useRecoveryToken(): string | null {
+    const recoveryToken = useRef(readRecoveryToken());
+
+    useEffect(() => {
+        if (recoveryToken.current !== null) {
+            window.history.replaceState(null, '', window.location.pathname);
+        }
+    }, []);
+
+    return recoveryToken.current;
+}
+
 export interface AppProps {
     api?: ItemsApi;
     auth?: AuthApi;
@@ -140,7 +152,7 @@ function SignedInApp({ api, account, notifications, save, projectsApi, email, on
     );
 }
 
-export function App({
+function resolveAppProps({
     api = itemsApi,
     auth = authApi,
     account = accountApi,
@@ -148,21 +160,20 @@ export function App({
     save = saveFile,
     projects = projectsApi,
 }: AppProps) {
-    const session = useSession(auth);
-    const recoveryToken = useRef(readRecoveryToken());
+    return { api, auth, account, notifications, save, projects };
+}
 
-    useEffect(() => {
-        if (recoveryToken.current !== null) {
-            window.history.replaceState(null, '', window.location.pathname);
-        }
-    }, []);
+export function App(props: AppProps) {
+    const { api, auth, account, notifications, save, projects } = resolveAppProps(props);
+    const session = useSession(auth);
+    const recoveryToken = useRecoveryToken();
 
     // A recovery link wins over everything else, including a live session: the
     // person following it wants to set a new password, not see their items.
-    if (recoveryToken.current !== null) {
+    if (recoveryToken !== null) {
         return (
             <ResetPasswordPage
-                token={recoveryToken.current}
+                token={recoveryToken}
                 isSubmitting={session.isSubmitting}
                 onSubmit={session.resetPassword}
             />
