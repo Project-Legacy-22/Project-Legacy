@@ -64,6 +64,57 @@ function useSessionCheck(api: AuthApi): [SessionState, Dispatch<SetStateAction<S
     return [state, setState];
 }
 
+// Split out of useSessionActions to keep that hook under the project's
+// line-per-function ceiling, like useSignOut below it.
+function useSignIn(
+    api: AuthApi,
+    guarded: (action: () => Promise<SubmitResult>) => Promise<SubmitResult>,
+    setState: Dispatch<SetStateAction<SessionState>>,
+) {
+    return useCallback(
+        (email: string, password: string): Promise<SubmitResult> =>
+            guarded(async () => {
+                try {
+                    setState({ status: 'signedIn', account: await api.signIn({ email, password }) });
+                    return { status: 'success' };
+                } catch (error) {
+                    return { status: 'error', message: messageOf(error, labels.signInRejected) };
+                }
+            }),
+        [api, guarded, setState],
+    );
+}
+
+// Split out of useSessionActions to keep that hook under the project's
+// line-per-function ceiling.
+//
+// Always ends signed out, whether or not the call to the API itself
+// succeeded: the cookie is cleared server-side regardless (auth-api.ts), and
+// there is nothing left to retry that the shared-computer scenario this
+// exists for should wait on.
+function useSignOut(
+    api: AuthApi,
+    guarded: (action: () => Promise<SubmitResult>) => Promise<SubmitResult>,
+    setState: Dispatch<SetStateAction<SessionState>>,
+) {
+    return useCallback(
+        (): Promise<SubmitResult> =>
+            guarded(async () => {
+                try {
+                    await api.signOut();
+                } catch {
+                    // Swallowed on purpose: see the comment above this hook.
+                    // A rejection here must not become an unhandled one at
+                    // the button's onClick, which does not await this call.
+                } finally {
+                    setState({ status: 'anonymous' });
+                }
+                return { status: 'success' };
+            }),
+        [api, guarded, setState],
+    );
+}
+
 function useSessionActions(api: AuthApi, setState: Dispatch<SetStateAction<SessionState>>) {
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -79,18 +130,8 @@ function useSessionActions(api: AuthApi, setState: Dispatch<SetStateAction<Sessi
         [],
     );
 
-    const signIn = useCallback(
-        (email: string, password: string): Promise<SubmitResult> =>
-            guarded(async () => {
-                try {
-                    setState({ status: 'signedIn', account: await api.signIn({ email, password }) });
-                    return { status: 'success' };
-                } catch (error) {
-                    return { status: 'error', message: messageOf(error, labels.signInRejected) };
-                }
-            }),
-        [api, guarded, setState],
-    );
+    const signIn = useSignIn(api, guarded, setState);
+    const signOut = useSignOut(api, guarded, setState);
 
     const run = useCallback(
         (call: () => Promise<unknown>, success: string, fallback: string): Promise<SubmitResult> =>
@@ -101,6 +142,7 @@ function useSessionActions(api: AuthApi, setState: Dispatch<SetStateAction<Sessi
     return {
         isSubmitting,
         signIn,
+        signOut,
         register: (email: string, password: string) =>
             run(() => api.register({ email, password }), labels.registerAccepted, labels.registerFailed),
         requestPasswordReset: (email: string) =>

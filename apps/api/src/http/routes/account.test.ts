@@ -8,6 +8,7 @@ import {
     makeRequestPasswordReset,
     makeResetPassword,
     makeSignIn,
+    makeSignOut,
 } from '@legacy/core-auth';
 import type { IdentityProvider, PersonalDataStore } from '@legacy/core-auth';
 import { makeAddItem, makeChangeItem, makeListItems, makeRemoveItem } from '@legacy/core-items';
@@ -57,6 +58,9 @@ function useCasesOver(provider: IdentityProvider, store: PersonalDataStore): App
                 provider,
                 compromisedPasswords: inMemoryCompromisedPasswords(),
             }),
+            // Aucune route exercee ici ne se deconnecte. Compose pour la meme
+            // raison que resetPassword ci-dessus.
+            signOut: makeSignOut(provider),
         },
         account: {
             exportPersonalData: makeExportPersonalData({ store, now: () => MOMENT }),

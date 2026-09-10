@@ -11,11 +11,13 @@ import type { NotificationsApi } from './api/notifications-api';
 import { AuthPage } from './components/auth-page';
 import { PersonalDataSection } from './components/personal-data-section';
 import { ResetPasswordPage } from './components/reset-password-page';
+import { SessionBanner } from './components/session-banner';
 import { TodoPage } from './components/todo-page';
 import { useItems } from './hooks/use-items';
 import { useNotifications } from './hooks/use-notifications';
 import { usePersonalData } from './hooks/use-personal-data';
 import { useSession } from './hooks/use-session';
+import type { SubmitResult } from './hooks/use-session';
 import { labels } from './labels';
 import { saveFile } from './save-file';
 import type { SaveFile } from './save-file';
@@ -26,6 +28,21 @@ import type { SaveFile } from './save-file';
 function readRecoveryToken(): string | null {
     const params = new URLSearchParams(window.location.search);
     return params.get('type') === 'recovery' ? params.get('token_hash') : null;
+}
+
+// Split out of App to keep that function under the project's line-per-function
+// ceiling: reading the token and clearing it from the address bar is one
+// self-contained concern.
+function useRecoveryToken(): string | null {
+    const recoveryToken = useRef(readRecoveryToken());
+
+    useEffect(() => {
+        if (recoveryToken.current !== null) {
+            window.history.replaceState(null, '', window.location.pathname);
+        }
+    }, []);
+
+    return recoveryToken.current;
 }
 
 export interface AppProps {
@@ -44,28 +61,36 @@ interface SignedInAppProps {
     notifications: NotificationsApi;
     save: SaveFile;
     email: string;
+    isSigningOut: boolean;
     onDeleted: () => void;
+    onSignOut: () => Promise<SubmitResult>;
 }
 
 // The items screen is mounted in its own component so its data is only fetched
 // once there is a session. Rendering it behind a condition in App would run its
 // hooks anyway and fire a request that can only come back 401.
-function SignedInApp({ api, account, notifications, save, email, onDeleted }: SignedInAppProps) {
+function SignedInApp({
+    api,
+    account,
+    notifications,
+    save,
+    email,
+    isSigningOut,
+    onDeleted,
+    onSignOut,
+}: SignedInAppProps) {
     const state = useItems(api);
     const personalData = usePersonalData({ api: account, save, onDeleted });
     const unread = useNotifications(notifications, true);
 
     return (
         <>
-            <p className="session-banner">
-                {labels.signedInAs(email)}
-                {/* role="status" : le compte change tout seul, quand le worker a
-                    traite l evenement. L annoncer sans interrompre la lecture est
-                    exactement ce pour quoi ce role existe. */}
-                <span className="notification-badge" role="status">
-                    {labels.unreadNotifications(unread)}
-                </span>
-            </p>
+            <SessionBanner
+                email={email}
+                unread={unread}
+                isSigningOut={isSigningOut}
+                onSignOut={onSignOut}
+            />
             <TodoPage
                 items={state.items}
                 loadState={state.loadState}
@@ -100,20 +125,14 @@ export function App({
     save = saveFile,
 }: AppProps) {
     const session = useSession(auth);
-    const recoveryToken = useRef(readRecoveryToken());
-
-    useEffect(() => {
-        if (recoveryToken.current !== null) {
-            window.history.replaceState(null, '', window.location.pathname);
-        }
-    }, []);
+    const recoveryToken = useRecoveryToken();
 
     // A recovery link wins over everything else, including a live session: the
     // person following it wants to set a new password, not see their items.
-    if (recoveryToken.current !== null) {
+    if (recoveryToken !== null) {
         return (
             <ResetPasswordPage
-                token={recoveryToken.current}
+                token={recoveryToken}
                 isSubmitting={session.isSubmitting}
                 onSubmit={session.resetPassword}
             />
@@ -152,7 +171,9 @@ export function App({
             notifications={notifications}
             save={save}
             email={session.state.account.email}
+            isSigningOut={session.isSubmitting}
             onDeleted={session.forget}
+            onSignOut={session.signOut}
         />
     );
 }
