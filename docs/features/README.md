@@ -26,4 +26,5 @@ the acceptance criteria: it describes the feature as it now behaves, in the pres
 | [#15](15-accessibility-audit.md) | Accessibility audit of the delivered screens | A11y |
 | [#19](19-notifications.md) | Notifications | Notifications |
 | [#29](29-password-reset.md) | Password reset | Auth |
+| [#30](30-api-hardening.md) | API security hardening | Quality |
 | [#48](48-logout.md) | Sign out | Auth |

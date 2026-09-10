@@ -72,7 +72,7 @@ const RULES = [
         bare: [
             /^@legacy\/(contracts|core-items|core-auth|core-notifications)$/,
             /^node:/,
-            /^(express|zod|uuid)$/,
+            /^(express|helmet|zod|uuid)$/,
         ],
         local: /^\.\.?\//,
     },

@@ -31,7 +31,38 @@ function isReported(error: unknown): error is Reported {
     );
 }
 
+// express.json() rejects a body that is over the size limit or is not valid
+// JSON. Its errors are tagged with a stable `type`. Without this branch they
+// fall through to the generic 500 below, which both misreports a client mistake
+// as a server fault and logs an "unhandled failure" for it. The detail strings
+// here are fixed: a body-parser message can quote the offending input, and an
+// error response must not echo what was submitted.
+const BODY_ERRORS: Record<string, Omit<ProblemDetails, 'instance' | 'traceId'>> = {
+    'entity.too.large': {
+        type: 'payload_too_large',
+        title: 'PayloadTooLarge',
+        status: 413,
+        detail: 'The request body is too large.',
+    },
+    'entity.parse.failed': {
+        type: 'malformed_body',
+        title: 'MalformedBody',
+        status: 400,
+        detail: 'The request body is not valid JSON.',
+    },
+};
+
+function bodyErrorFor(error: unknown): Omit<ProblemDetails, 'instance' | 'traceId'> | undefined {
+    if (typeof error !== 'object' || error === null || !('type' in error)) return undefined;
+    return typeof error.type === 'string' ? BODY_ERRORS[error.type] : undefined;
+}
+
 function toProblem(error: unknown): Omit<ProblemDetails, 'instance' | 'traceId'> {
+    const bodyError = bodyErrorFor(error);
+    if (bodyError !== undefined) {
+        return bodyError;
+    }
+
     if (error instanceof ZodError) {
         return {
             type: 'validation_error',
