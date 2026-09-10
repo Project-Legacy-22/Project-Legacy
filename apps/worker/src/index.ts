@@ -65,20 +65,38 @@ async function loop(): Promise<void> {
     }
 }
 
+// Resolves when the loop has left its body. stop() waits on it, so an event
+// being handled when a signal arrives is finished rather than abandoned: it has
+// already left the queue, so killing the process would lose it with nothing to
+// notice.
+const finished = loop().catch((error: unknown) => {
+    logger.fatal({ err: error }, 'worker failed');
+    process.exit(1);
+});
+
 function stop(signal: string): void {
     logger.info({ signal }, 'worker stopping');
     // Set before disconnecting: the pending read is about to fail, and the loop
     // reads this flag to tell a deliberate stop from a real failure.
     running = false;
-    // The blocking read holds the process open; closing the connection ends it
-    // rather than waiting out the timeout.
-    void bus.disconnect().then(() => process.exit(0));
+
+    // Waiting on the loop rather than exiting straight away. An event is off
+    // the queue as soon as it is read, so a process killed mid-consume loses
+    // it silently. The blocking read is what the disconnect below cuts short,
+    // which is why the wait is bounded in practice by the current event, not by
+    // the poll interval.
+    void bus
+        .disconnect()
+        .then(() => finished)
+        .then(() => {
+            logger.info({}, 'worker stopped');
+            process.exit(0);
+        })
+        .catch((error: unknown) => {
+            logger.error({ err: error }, 'worker did not stop cleanly');
+            process.exit(1);
+        });
 }
 
 process.on('SIGINT', () => stop('SIGINT'));
 process.on('SIGTERM', () => stop('SIGTERM'));
-
-loop().catch((error: unknown) => {
-    logger.fatal({ err: error }, 'worker failed');
-    process.exit(1);
-});
