@@ -23,3 +23,5 @@ the acceptance criteria: it describes the feature as it now behaves, in the pres
 | Issue | Feature | Epic |
 |---|---|---|
 | [#14](14-export-and-delete-account.md) | Export and delete my personal data | GDPR |
+| [#15](15-accessibility-audit.md) | Accessibility audit of the delivered screens | A11y |
+| [#29](29-password-reset.md) | Reset a forgotten password | Auth |
