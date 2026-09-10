@@ -1,25 +1,29 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { guardSession } from './api/guard-session';
 import { accountApi } from './api/account-api';
 import type { AccountApi } from './api/account-api';
 import { authApi } from './api/auth-api';
 import type { AuthApi } from './api/auth-api';
+import { credentialsApi } from './api/credentials-api';
+import type { CredentialsApi } from './api/credentials-api';
 import { itemsApi } from './api/items-api';
 import type { ItemsApi } from './api/items-api';
 import { notificationsApi } from './api/notifications-api';
 import { projectsApi } from './api/projects-api';
 import type { ProjectsApi } from './api/projects-api';
 import type { NotificationsApi } from './api/notifications-api';
+import { AccountSections } from './components/account-sections';
+import type { CredentialsControls } from './components/account-sections';
 import { AuthPage } from './components/auth-page';
+import { DeepLinkPages, useDeepLinkToken } from './components/deep-link-pages';
 import { NotificationsPanel } from './components/notifications-panel';
 import { PrivacyPolicyPage } from './components/privacy-policy-page';
 import { SiteFooter } from './components/site-footer';
-import { PersonalDataSection } from './components/personal-data-section';
-import { ResetPasswordPage } from './components/reset-password-page';
 import { SessionBanner } from './components/session-banner';
 import { TodoPage } from './components/todo-page';
 import { SessionCheckScreen } from './components/session-check-screen';
+import { useCredentials } from './hooks/use-credentials';
 import { useItems } from './hooks/use-items';
 import { useNotifications } from './hooks/use-notifications';
 import { useProjects } from './hooks/use-projects';
@@ -28,29 +32,6 @@ import { useSession } from './hooks/use-session';
 import type { SubmitResult } from './hooks/use-session';
 import { saveFile } from './save-file';
 import type { SaveFile } from './save-file';
-
-// The recovery email links here with the token hash as a query parameter. It is
-// read once, on the first render, and then wiped from the address bar so it
-// stops sitting in history or leaking through a Referer on the next navigation.
-function readRecoveryToken(): string | null {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('type') === 'recovery' ? params.get('token_hash') : null;
-}
-
-// Split out of App to keep that function under the project's line-per-function
-// ceiling: reading the token and clearing it from the address bar is one
-// self-contained concern.
-function useRecoveryToken(): string | null {
-    const recoveryToken = useRef(readRecoveryToken());
-
-    useEffect(() => {
-        if (recoveryToken.current !== null) {
-            window.history.replaceState(null, '', window.location.pathname);
-        }
-    }, []);
-
-    return recoveryToken.current;
-}
 
 // The policy is linkable, so it can be sent to somebody who has no account and
 // so a browser reload stays on it.
@@ -62,6 +43,7 @@ export interface AppProps {
     api?: ItemsApi;
     auth?: AuthApi;
     account?: AccountApi;
+    credentials?: CredentialsApi;
     notifications?: NotificationsApi;
     // Injected so a test can assert on what a download would have contained
     // without a jsdom that implements object URLs.
@@ -72,6 +54,7 @@ export interface AppProps {
 interface SignedInApis {
     api: ItemsApi;
     account: AccountApi;
+    credentials: CredentialsApi;
     notifications: NotificationsApi;
     projects: ProjectsApi;
 }
@@ -84,16 +67,17 @@ interface SignedInApis {
 // identity of the client they are given, so rebuilding these on every render
 // would refetch on every render.
 function useGuardedApis(apis: SignedInApis, onExpired: () => void): SignedInApis {
-    const { api, account, notifications, projects } = apis;
+    const { api, account, credentials, notifications, projects } = apis;
 
     return useMemo(
         () => ({
             api: guardSession(api, onExpired),
             account: guardSession(account, onExpired),
+            credentials: guardSession(credentials, onExpired),
             notifications: guardSession(notifications, onExpired),
             projects: guardSession(projects, onExpired),
         }),
-        [api, account, notifications, projects, onExpired],
+        [api, account, credentials, notifications, projects, onExpired],
     );
 }
 
@@ -102,6 +86,7 @@ interface SignedInAppProps {
     save: SaveFile;
     email: string;
     isSigningOut: boolean;
+    credentials: CredentialsControls;
     onDeleted: () => void;
     onSignOut: () => Promise<SubmitResult>;
 }
@@ -154,6 +139,7 @@ function SignedInApp({
     save,
     email,
     isSigningOut,
+    credentials,
     onDeleted,
     onSignOut,
 }: SignedInAppProps) {
@@ -188,12 +174,10 @@ function SignedInApp({
                 selectedProject={projects.selectedProject}
                 projects={projectSectionProps(projects)}
             >
-                <PersonalDataSection
+                <AccountSections
                     email={email}
-                    activity={personalData.activity}
-                    feedback={personalData.feedback}
-                    onExport={personalData.exportPersonalData}
-                    onDelete={personalData.deleteAccount}
+                    credentials={credentials}
+                    personalData={personalData}
                 />
             </TodoPage>
         </>
@@ -253,16 +237,19 @@ const REAL: Required<AppProps> = {
     api: itemsApi,
     auth: authApi,
     account: accountApi,
+    credentials: credentialsApi,
     notifications: notificationsApi,
     save: saveFile,
     projects: projectsApi,
 };
 
 export function App(props: AppProps) {
-    const { api, auth, account, notifications, save, projects } = { ...REAL, ...props };
+    const { api, auth, account, credentials, notifications, save, projects } = { ...REAL, ...props };
     const session = useSession(auth);
-    const recoveryToken = useRecoveryToken();
-    const guarded = useGuardedApis({ api, account, notifications, projects }, session.expire);
+    const recoveryToken = useDeepLinkToken('recovery');
+    const emailChangeToken = useDeepLinkToken('email_change');
+    const guarded = useGuardedApis({ api, account, credentials, notifications, projects }, session.expire);
+    const credentialActions = useCredentials(guarded.credentials);
     // The policy is a screen, not a route: this application chooses what to
     // show by state, and it must be readable before an account exists.
     const [showsPolicy, setShowsPolicy] = useState(readsPolicy());
@@ -272,14 +259,13 @@ export function App(props: AppProps) {
         return <PolicyScreen onBack={() => setShowsPolicy(false)} onOpenPolicy={openPolicy} />;
     }
 
-    // A recovery link wins over everything else, including a live session: the
-    // person following it wants to set a new password, not see their items.
-    if (recoveryToken !== null) {
+    if (recoveryToken !== null || emailChangeToken !== null) {
         return (
-            <ResetPasswordPage
-                token={recoveryToken}
-                isSubmitting={session.isSubmitting}
-                onSubmit={session.resetPassword}
+            <DeepLinkPages
+                recoveryToken={recoveryToken}
+                emailChangeToken={emailChangeToken}
+                session={session}
+                credentials={credentialActions}
             />
         );
     }
@@ -312,6 +298,7 @@ export function App(props: AppProps) {
             save={save}
             email={session.state.account.email}
             isSigningOut={session.isSubmitting}
+            credentials={credentialActions}
             onDeleted={session.forget}
             onOpenPolicy={openPolicy}
             onSignOut={session.signOut}

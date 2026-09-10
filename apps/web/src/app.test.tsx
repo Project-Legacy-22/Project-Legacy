@@ -5,6 +5,7 @@ import { App } from './app';
 import type { ItemPageDto, ItemsApi } from './api/items-api';
 import { ApiError } from './api/items-api';
 import type { AccountDto, AuthApi } from './api/auth-api';
+import type { CredentialsApi } from './api/credentials-api';
 import type { NotificationsApi } from './api/notifications-api';
 import type { ProjectsApi } from './api/projects-api';
 import {
@@ -22,6 +23,7 @@ import {
     ACCOUNT,
     createApi,
     createAuth,
+    createCredentialsApi,
     createProjectsApi,
     firstItem,
     itemPage,
@@ -44,6 +46,7 @@ function createNotifications(unread = 0): NotificationsApi {
 interface AppFixture {
     api?: ItemsApi;
     auth?: AuthApi;
+    credentials?: CredentialsApi;
     projects?: ProjectsApi;
     notifications?: NotificationsApi;
 }
@@ -53,6 +56,7 @@ function renderApp(fixture: AppFixture = {}): Promise<void> {
         <App
             api={fixture.api ?? createApi()}
             auth={fixture.auth ?? createAuth()}
+            credentials={fixture.credentials ?? createCredentialsApi()}
             projects={fixture.projects ?? createProjectsApi()}
             notifications={fixture.notifications ?? createNotifications()}
         />,

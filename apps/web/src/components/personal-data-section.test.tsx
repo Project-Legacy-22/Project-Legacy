@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../app';
 import type { AccountApi } from '../api/account-api';
 import type { AccountDto, AuthApi } from '../api/auth-api';
+import type { CredentialsApi } from '../api/credentials-api';
 import type { ItemPageDto, ItemsApi } from '../api/items-api';
 import { ApiError } from '../api/items-api';
 import type { ProjectsApi } from '../api/projects-api';
@@ -69,6 +70,16 @@ function createProjects(): ProjectsApi {
     };
 }
 
+// Fourni pour la meme raison que createAuth : aucun scenario de cette section ne
+// change d identifiant, et un double qui refuse signale un appel inattendu.
+function createCredentials(): CredentialsApi {
+    return {
+        changePassword: vi.fn(),
+        changeEmail: vi.fn(),
+        confirmEmailChange: vi.fn(),
+    };
+}
+
 async function afficher(account: AccountApi, save: SaveFile = vi.fn()): Promise<void> {
     // apps/web/index.html les porte ; le document vierge de jsdom, non. Sans
     // eux, le controle axe signalerait deux manques du bac a sable plutot que
@@ -77,7 +88,14 @@ async function afficher(account: AccountApi, save: SaveFile = vi.fn()): Promise<
     document.title = 'Todo list | Legacy 22';
 
     await testRoot.render(
-        <App api={createItems()} auth={createAuth()} account={account} projects={createProjects()} save={save} />,
+        <App
+            api={createItems()}
+            auth={createAuth()}
+            account={account}
+            credentials={createCredentials()}
+            projects={createProjects()}
+            save={save}
+        />,
     );
 }
 

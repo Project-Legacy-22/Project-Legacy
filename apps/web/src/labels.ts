@@ -1,5 +1,6 @@
 import type { ItemStatus } from '@legacy/contracts';
 
+import { credentialsLabels } from './credentials-labels';
 import { itemPlanningLabels } from './item-planning-labels';
 
 const ITEM_STATUS_LABELS: Record<ItemStatus, string> = {
@@ -110,6 +111,9 @@ export const labels = {
     resetPasswordSucceeded: 'Your password has been changed and every other session was signed out. You can sign in now.',
     resetPasswordFailed: 'Unable to set a new password.',
     requestNewResetLink: 'Request a new link',
+
+    ...credentialsLabels,
+
     notificationsFailed: 'Unable to read your notifications.',
     unreadNotifications(count: number): string {
         return count === 1 ? '1 unread notification' : `${String(count)} unread notifications`;
