@@ -19,7 +19,7 @@ import type { InMemoryIdentityProvider } from '../../../../../packages/core/auth
 import { createServer } from '../server.js';
 import { SESSION_COOKIE } from '../session.js';
 import type { AppUseCases } from '../../composition-root.js';
-import { recordingLogger } from '../../../test/fakes/recording-logger.js';
+import { recordingLogger } from '../../../../../packages/contracts/test/fakes/recording-logger.js';
 import { unreachableItemRepository } from '../../../test/fakes/unreachable-item-repository.js';
 import { json, listen, testConfig } from '../../../test/http-harness.js';
 import type { Harness } from '../../../test/http-harness.js';
@@ -43,6 +43,7 @@ function useCasesOver(provider: InMemoryIdentityProvider): AppUseCases {
             changeItem: makeChangeItem(repository),
             removeItem: makeRemoveItem(repository),
         },
+        notifications: { countUnread: () => Promise.resolve(0) },
         auth: {
             registerAccount: makeRegisterAccount(provider),
             signIn: makeSignIn(provider),
