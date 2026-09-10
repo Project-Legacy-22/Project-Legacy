@@ -32,6 +32,8 @@ const auth: AuthApi = {
     currentAccount: vi.fn(async () => ACCOUNT),
     requestPasswordReset: vi.fn(),
     resetPassword: vi.fn(),
+    // Required by AuthApi since #174; this suite exercises item mutations.
+    signOut: vi.fn(async () => undefined),
 };
 const account: AccountApi = {
     exportPersonalData: vi.fn(),

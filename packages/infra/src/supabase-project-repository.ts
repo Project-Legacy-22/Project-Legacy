@@ -46,10 +46,7 @@ async function findPage(client: ProjectClient, memberId: string, page: ProjectPa
     const visible = client
         .from('projects')
         .select('id,name,created_at,project_memberships!inner(role),items(count)')
-        .eq('project_memberships.user_id', memberId)
-        // Filter the embedded count, not the project: an empty project must
-        // remain visible, with the same item set as the paginated item list.
-        .is('items.deleted_at', null);
+        .eq('project_memberships.user_id', memberId);
     const positioned = page.cursor === undefined ? visible : visible.or(beforeCursor(page.cursor));
     const { data, error } = await positioned
         .order('created_at', { ascending: false })
