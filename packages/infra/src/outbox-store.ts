@@ -21,6 +21,19 @@ function fail(operation: string, cause: unknown): never {
     throw new Error(`outbox: ${operation} failed`, { cause });
 }
 
+// PostgreSQL renders a timestamptz with a numeric offset (`+00:00`), while the
+// catalogue's canonical form ends in `Z`. Both denote the same instant.
+//
+// The conversion returns the raw value when it cannot parse, instead of letting
+// toISOString throw a RangeError: a row that cannot be read must be rejected by
+// the schema below, with the event named, not by an exception nobody catches.
+// Thrown here it would abort the whole batch on every pass, blocking the valid
+// events alongside it until someone intervened.
+function asInstant(value: string): string {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? value : parsed.toISOString();
+}
+
 export function createSupabaseOutboxStore(settings: SupabaseSettings): OutboxStore {
     const client: SupabaseClient<Database> = createClient<Database>(
         settings.url,
@@ -53,7 +66,7 @@ export function createSupabaseOutboxStore(settings: SupabaseSettings): OutboxSto
                     // the storage representation where it belongs, in the
                     // adapter. Read straight through, the relay rejects the
                     // very events it wrote.
-                    occurredAt: new Date(row.occurred_at).toISOString(),
+                    occurredAt: asInstant(row.occurred_at),
                     payload: row.payload,
                 });
 

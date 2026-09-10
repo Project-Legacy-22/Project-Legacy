@@ -17,11 +17,6 @@ function fail(operation: string, cause: unknown): never {
     throw new Error(`notifications: ${operation} failed`, { cause });
 }
 
-// Raised by PostgreSQL when a unique or primary key is violated. Here it means
-// "already processed", which is the expected outcome of a redelivery and not an
-// error to propagate.
-const UNIQUE_VIOLATION = '23505';
-
 export function createSupabaseNotificationStore(settings: SupabaseSettings): NotificationStore {
     const client: SupabaseClient<Database> = createClient<Database>(
         settings.url,
@@ -31,24 +26,23 @@ export function createSupabaseNotificationStore(settings: SupabaseSettings): Not
 
     return {
         async notifyItemCreated(eventId, userId, itemId) {
-            // Claim the event first. Whoever wins this insert is the one that
-            // creates the notification; a redelivery loses it and stops here.
-            const claim = await client.from('processed_events').insert({ event_id: eventId });
+            // One call to a database function. Claiming the event and creating
+            // its notification are two writes that must not be able to happen
+            // separately: split across two statements they were two
+            // transactions, and a claim that outlived a failed insert turned
+            // every later redelivery into a no-op for an effect that had never
+            // been applied.
+            const { data, error } = await client.rpc('record_item_created_notification', {
+                p_event_id: eventId,
+                p_user_id: userId,
+                p_item_id: itemId,
+            });
 
-            if (claim.error) {
-                if (claim.error.code === UNIQUE_VIOLATION) return false;
-                fail('claim', claim.error);
-            }
+            if (error) fail('notify', error);
 
-            const { error } = await client
-                .from('notifications')
-                .insert({ event_id: eventId, user_id: userId, item_id: itemId });
-
-            // The notification carries the same uniqueness rule, so even if the
-            // claim above were bypassed the database still refuses a duplicate.
-            if (error && error.code !== UNIQUE_VIOLATION) fail('notify', error);
-
-            return true;
+            // false when the event had already been handled, which is the
+            // expected outcome of a redelivery.
+            return data === true;
         },
 
         async countUnread(userId) {

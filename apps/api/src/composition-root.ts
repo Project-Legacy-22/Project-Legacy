@@ -10,7 +10,13 @@ import {
     createSupabasePersonalDataStore,
     relayOnce,
 } from '@legacy/infra';
-import type { EventBus, ItemStore, NotificationStore, OutboxStore } from '@legacy/infra';
+import type {
+    EventBus,
+    ItemStore,
+    NotificationStore,
+    OutboxStore,
+    RelayDependencies,
+} from '@legacy/infra';
 import type { Logger } from '@legacy/contracts';
 import {
     makeEraseAccount,
@@ -106,6 +112,31 @@ function createAdapters(config: Config): Adapters {
     };
 }
 
+// A pass that outlives its interval must not have a second one start behind it:
+// both would read the same unpublished rows and publish them twice, in an order
+// neither controls. The flag makes the tick skip instead, and the skipped work
+// is still there on the next one.
+function startRelay(dependencies: RelayDependencies): NodeJS.Timeout {
+    let relaying = false;
+
+    const timer = setInterval(() => {
+        if (relaying) return;
+        relaying = true;
+
+        void relayOnce(dependencies)
+            .catch((err: unknown) => {
+                dependencies.logger.warn({ err }, 'relay pass failed, will retry');
+            })
+            .finally(() => {
+                relaying = false;
+            });
+    }, RELAY_INTERVAL_MS);
+
+    // Does not hold the process open on its own.
+    timer.unref();
+    return timer;
+}
+
 export function compose(config: Config): Application {
     const { store, identity, personalData, outbox, notifications, bus } = createAdapters(config);
     const logger = createLogger(config.logLevel);
@@ -148,24 +179,19 @@ export function compose(config: Config): Application {
         // for. It checks the connection so a misconfigured deployment fails
         // loudly at boot instead of on the first request.
         start: async () => {
-            await store.connect();
-            await bus.connect();
+            // Two independent services: waiting for one before dialling the
+            // other only adds their latencies together
+            // (standards/02-code-style.md section 7).
+            await Promise.all([store.connect(), bus.connect()]);
 
             // A failed pass is logged and retried on the next tick: the outbox
             // still holds what was not published, so nothing is lost by a
             // broker that is briefly unreachable.
-            relay = setInterval(() => {
-                void relayOnce({ outbox, bus, logger }).catch((err: unknown) => {
-                    logger.warn({ err }, 'relay pass failed, will retry');
-                });
-            }, RELAY_INTERVAL_MS);
-            // Does not hold the process open on its own.
-            relay.unref();
+            relay = startRelay({ outbox, bus, logger });
         },
         stop: async () => {
             if (relay !== undefined) clearInterval(relay);
-            await bus.disconnect();
-            await store.disconnect();
+            await Promise.all([bus.disconnect(), store.disconnect()]);
         },
     };
 }

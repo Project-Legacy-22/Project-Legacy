@@ -31,9 +31,25 @@ async function loop(): Promise<void> {
     logger.info({ queueDepth: await bus.depth() }, 'worker started');
 
     while (running) {
-        // Blocks until an event arrives or the delay elapses. Polling in a
-        // tight loop would burn a core to learn nothing.
-        const event = await bus.take(config.blockSeconds);
+        let event;
+
+        try {
+            // Blocks until an event arrives or the delay elapses. Polling in a
+            // tight loop would burn a core to learn nothing.
+            event = await bus.take(config.blockSeconds);
+        } catch (error) {
+            // Closing the connection from stop() makes the pending read fail.
+            // That is the shutdown working, not a fault: reporting it would end
+            // a deliberate stop with a fatal log and a non-zero exit code.
+            if (!running) break;
+
+            // Otherwise the queue held something unreadable, or the broker
+            // blinked. Neither is worth taking the worker down for: the next
+            // pass reconnects, and the bad entry is already off the queue.
+            logger.error({ err: error }, 'could not read from the queue, retrying');
+            continue;
+        }
+
         if (event === null) continue;
 
         try {
@@ -51,9 +67,11 @@ async function loop(): Promise<void> {
 
 function stop(signal: string): void {
     logger.info({ signal }, 'worker stopping');
+    // Set before disconnecting: the pending read is about to fail, and the loop
+    // reads this flag to tell a deliberate stop from a real failure.
     running = false;
-    // The pending blocking read holds the process; closing the connection ends
-    // it rather than waiting out the timeout.
+    // The blocking read holds the process open; closing the connection ends it
+    // rather than waiting out the timeout.
     void bus.disconnect().then(() => process.exit(0));
 }
 

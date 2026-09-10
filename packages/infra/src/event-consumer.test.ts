@@ -94,3 +94,44 @@ describe('consume', () => {
         expect(written).not.toContain(ITEM_ID);
     });
 });
+
+// Les deux ecritures du consommateur -- la reservation et la notification --
+// sont desormais faites par une seule fonction de base de donnees. Le faux
+// ci-dessous se comporte comme elle : ou les deux existent, ou aucune. Un faux
+// qui les separerait laisserait passer le defaut que la revue a trouve.
+describe('consume, atomicite de l effet', () => {
+    it('ne marque pas un evenement traite quand la notification n a pas pu etre creee', async () => {
+        const notifications: NotificationStore = {
+            notifyItemCreated: () => Promise.reject(new Error('notifications: notify failed')),
+            countUnread: () => Promise.resolve(0),
+        };
+
+        await expect(
+            consume(EVENT, { notifications, logger: recordingLogger() }),
+        ).rejects.toThrow(/notify failed/);
+    });
+
+    // Consequence directe : une redelivraison apres un echec doit encore avoir
+    // du travail. Si la reservation avait survecu a l echec, celle-ci
+    // repondrait "deja traite" et l effet serait perdu pour toujours.
+    it('applique l effet a la redelivraison qui suit un echec', async () => {
+        const store = fakeNotifications();
+        let failNext = true;
+        const flaky: NotificationStore = {
+            notifyItemCreated: (eventId, userId, itemId) => {
+                if (failNext) {
+                    failNext = false;
+                    return Promise.reject(new Error('notifications: notify failed'));
+                }
+                return store.notifyItemCreated(eventId, userId, itemId);
+            },
+            countUnread: userId => store.countUnread(userId),
+        };
+
+        await expect(consume(EVENT, { notifications: flaky, logger: recordingLogger() })).rejects.toThrow();
+        const retry = await consume(EVENT, { notifications: flaky, logger: recordingLogger() });
+
+        expect(retry).toBe('applied');
+        expect(store.created).toHaveLength(1);
+    });
+});

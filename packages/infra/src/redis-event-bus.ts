@@ -64,22 +64,23 @@ export function createRedisEventBus(settings: RedisSettings): EventBus {
         },
 
         async take(timeoutSeconds) {
-            let raw: string | null;
+            // The whole exchange is guarded, not just the read. Parsing sits
+            // inside on purpose: a message pushed by hand, or written by an
+            // older producer, would otherwise throw past every caller and take
+            // the worker down for one bad entry.
             try {
                 const popped = await client.brPop(EVENT_QUEUE, timeoutSeconds);
-                raw = popped === null ? null : popped.element;
+                if (popped === null) return null;
+
+                const parsed = DomainEvent.safeParse(JSON.parse(popped.element));
+                if (!parsed.success) {
+                    throw new Error('event does not match the catalogue', { cause: parsed.error });
+                }
+
+                return parsed.data;
             } catch (error) {
                 return fail('take', error);
             }
-
-            if (raw === null) return null;
-
-            // A payload that does not match the catalogue is a bug upstream,
-            // not something to guess at: failing here keeps a malformed event
-            // from being half-applied by the consumer.
-            const parsed = DomainEvent.safeParse(JSON.parse(raw));
-            if (!parsed.success) fail('take: event does not match the catalogue', parsed.error);
-            return parsed.data;
         },
 
         async depth() {
