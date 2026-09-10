@@ -41,8 +41,10 @@ export type Database = {
       items: {
         Row: {
           created_at: string
+          due_date: string | null
           id: string
           name: string
+          priority: Database["public"]["Enums"]["item_priority"]
           project_id: string
           status: Database["public"]["Enums"]["item_status"]
           updated_at: string
@@ -51,8 +53,10 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          due_date?: string | null
           id?: string
           name: string
+          priority?: Database["public"]["Enums"]["item_priority"]
           project_id: string
           status?: Database["public"]["Enums"]["item_status"]
           updated_at?: string
@@ -61,8 +65,10 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          due_date?: string | null
           id?: string
           name?: string
+          priority?: Database["public"]["Enums"]["item_priority"]
           project_id?: string
           status?: Database["public"]["Enums"]["item_status"]
           updated_at?: string
@@ -271,12 +277,14 @@ export type Database = {
     Functions: {
       create_item_with_event: {
         Args: {
+          p_due_date: string
           p_event_id: string
           p_event_name: string
           p_item_id: string
           p_name: string
           p_occurred_at: string
           p_payload: Json
+          p_priority: Database["public"]["Enums"]["item_priority"]
           p_project_id: string
           p_user_id: string
         }
@@ -298,6 +306,7 @@ export type Database = {
       uuid_generate_v7: { Args: never; Returns: string }
     }
     Enums: {
+      item_priority: "low" | "normal" | "high"
       item_status: "todo" | "doing" | "done"
     }
     CompositeTypes: {
@@ -429,6 +438,7 @@ export const Constants = {
   },
   public: {
     Enums: {
+      item_priority: ["low", "normal", "high"],
       item_status: ["todo", "doing", "done"],
     },
   },

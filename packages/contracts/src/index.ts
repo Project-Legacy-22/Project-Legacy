@@ -4,6 +4,8 @@ export {
     UpdateItemBody,
     MoveItemBody,
     ItemStatus,
+    ItemPriority,
+    ItemDueDate,
     ItemDto,
     ItemListDto,
     ItemPageDto,

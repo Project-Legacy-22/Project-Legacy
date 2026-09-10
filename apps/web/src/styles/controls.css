@@ -1,6 +1,13 @@
 .add-form {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(180px, 1fr) minmax(280px, 1fr) auto;
+    align-items: end;
+    gap: 14px;
+}
+
+.item-planning-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: end;
     gap: 14px;
 }
@@ -138,6 +145,10 @@ select:disabled {
 }
 
 @media (max-width: 620px) {
+    .item-planning-fields {
+        grid-template-columns: 1fr;
+    }
+
     .add-form .button-primary,
     .item-actions .button {
         flex: 1;

@@ -1,5 +1,7 @@
 import type { ItemStatus } from '@legacy/contracts';
 
+import { itemPlanningLabels } from './item-planning-labels';
+
 const ITEM_STATUS_LABELS: Record<ItemStatus, string> = {
     todo: 'Todo',
     doing: 'In progress',
@@ -148,7 +150,7 @@ export const labels = {
     policyWhatTitle: 'What is collected',
     policyWhatIntro: 'Only what the service needs to work:',
     policyWhatAccount: 'Your email address, and a password stored as a hash that cannot be read back.',
-    policyWhatItems: 'The items you write, their state, and when you created or changed them.',
+    policyWhatItems: 'The items you write, their state, priority, due date, and when you created or changed them.',
     policyWhatNotifications: 'The notifications you received, as identifiers only.',
     policyWhatLogs: 'Technical logs of requests: method, path, status and duration.',
     policyWhyTitle: 'Why',
@@ -224,6 +226,7 @@ export const labels = {
     newItemKicker: 'New item',
     addSectionTitle: 'Add to the list',
     itemNameLabel: 'Item name',
+    ...itemPlanningLabels,
     itemNameRequired: 'Enter an item name.',
     addingItem: 'Adding…',
     addItem: 'Add item',
@@ -310,7 +313,7 @@ export const labels = {
     itemAdded(name: string): string {
         return `${name} added.`;
     },
-    itemRenamed(name: string): string {
+    itemSaved(name: string): string {
         return `${name} saved.`;
     },
     itemRemoved(name: string): string {

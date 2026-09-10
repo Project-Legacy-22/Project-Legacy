@@ -1,6 +1,17 @@
 import { InvalidItemCursor } from '../../src/index.js';
 import type { DomainEvent, Item, ItemRepository } from '../../src/index.js';
 
+const PRIORITY_RANK = { high: 0, normal: 1, low: 2 } as const;
+
+function compareItems(left: Item, right: Item): number {
+    const priority = PRIORITY_RANK[left.priority] - PRIORITY_RANK[right.priority];
+    if (priority !== 0) return priority;
+    if (left.dueDate === null && right.dueDate !== null) return 1;
+    if (left.dueDate !== null && right.dueDate === null) return -1;
+    const dueDate = (left.dueDate ?? '').localeCompare(right.dueDate ?? '');
+    return dueDate !== 0 ? dueDate : left.id.localeCompare(right.id);
+}
+
 // A real, in-process implementation of the port, not a mock: it behaves like
 // a repository, so a test using it exercises the same contract the Supabase
 // adapter honors, and it keeps working across a refactor of the code under
@@ -34,14 +45,14 @@ export function inMemoryItemRepository(
         ...additionalMemberships,
     ];
 
-    // Most recent first, like the adapter, insertion order standing in for
-    // creation order: a fake that ordered otherwise would prove nothing.
+    // The same public order as the adapter: urgent priority first, dated work
+    // before undated work, then the UUID as a stable final key.
     function isMember(projectId: string, userId: string): boolean {
         return memberships.some((membership) => membership.projectId === projectId && membership.userId === userId);
     }
 
     function inProject(projectId: string): Item[] {
-        return [...items.values()].filter((item) => item.projectId === projectId).reverse();
+        return [...items.values()].filter((item) => item.projectId === projectId).sort(compareItems);
     }
 
     return {

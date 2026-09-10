@@ -39,6 +39,8 @@ function anItemOf(candidate: { id: string; ownerId: string; name?: string; proje
         name: candidate.name ?? 'Acheter du pain',
         status: 'todo',
         version: 1,
+        priority: 'normal',
+        dueDate: null,
         projectId: candidate.projectId ?? PROJECT_ID,
         ownerId: candidate.ownerId,
     };
@@ -91,7 +93,7 @@ describe('items API', () => {
 
             expect(response.status).toBe(200);
             const page = (await response.json()) as Page;
-            expect(page.items.map((item) => item.id)).toEqual([OTHER_ID, EXISTING_ID]);
+            expect(page.items.map((item) => item.id)).toEqual([EXISTING_ID, OTHER_ID]);
             expect(JSON.stringify(page)).not.toContain(OWNER_ID);
         });
 
@@ -122,8 +124,8 @@ describe('items API', () => {
                 await harness.request(`${ITEMS_PATH}?limit=1&cursor=${encodeURIComponent(String(first.nextCursor))}`)
             ).json()) as Page;
 
-            expect(first.items.map((item) => item.id)).toEqual([OTHER_ID]);
-            expect(second.items.map((item) => item.id)).toEqual([EXISTING_ID]);
+            expect(first.items.map((item) => item.id)).toEqual([EXISTING_ID]);
+            expect(second.items.map((item) => item.id)).toEqual([OTHER_ID]);
             expect(second.nextCursor).toBeNull();
         });
 
@@ -144,6 +146,8 @@ describe('items API', () => {
                 name: 'Acheter du pain',
                 status: 'todo',
                 version: 1,
+                priority: 'normal',
+                dueDate: null,
             });
             expect(store.items.get(GENERATED_ID)).toMatchObject({
                 projectId: PROJECT_ID,

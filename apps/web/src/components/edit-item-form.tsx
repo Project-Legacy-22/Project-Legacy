@@ -2,15 +2,20 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 
 import { MAX_ITEM_NAME_LENGTH } from '@legacy/contracts';
+import { UpdateItemBody } from '@legacy/contracts';
+import type { ItemPriority, UpdateItemBody as UpdateItemInput } from '@legacy/contracts';
 
 import { labels } from '../labels';
+import { ItemPlanningFields } from './item-planning-fields';
 
 export interface EditItemFormProps {
     itemId: string;
     initialName: string;
+    initialPriority: ItemPriority;
+    initialDueDate: string | null;
     isPending: boolean;
     onCancel: () => void;
-    onSave: (name: string) => Promise<boolean>;
+    onSave: (changes: UpdateItemInput) => Promise<boolean>;
 }
 
 interface EditItemFieldProps {
@@ -60,37 +65,74 @@ function EditItemField({ inputId, name, validationError, isPending, onChange }: 
     );
 }
 
-export function EditItemForm({ itemId, initialName, isPending, onCancel, onSave }: EditItemFormProps) {
+function useEditItemForm({ initialName, initialPriority, initialDueDate, onSave }: EditItemFormProps) {
     const [name, setName] = useState(initialName);
+    const [priority, setPriority] = useState(initialPriority);
+    const [dueDate, setDueDate] = useState(initialDueDate ?? '');
     const [validationError, setValidationError] = useState<string | null>(null);
-    const inputId = `edit-item-${itemId}`;
+
+    const handleNameChange = (newName: string) => {
+        setName(newName);
+        setValidationError(null);
+    };
 
     const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
+        const candidate = UpdateItemBody.safeParse({
+            name,
+            priority,
+            dueDate: dueDate === '' ? null : dueDate,
+        });
         const error = validateName(name);
         setValidationError(error);
-        if (error !== null) return;
+        if (error !== null || !candidate.success) return;
 
-        await onSave(name.trim());
+        await onSave(candidate.data);
     };
 
+    return {
+        name,
+        priority,
+        dueDate,
+        validationError,
+        setPriority,
+        setDueDate,
+        handleNameChange,
+        handleSubmit,
+    };
+}
+
+export function EditItemForm(props: EditItemFormProps) {
+    const form = useEditItemForm(props);
+    const inputId = `edit-item-${props.itemId}`;
+
     return (
-        <form className="item-edit-form" onSubmit={(event) => void handleSubmit(event)} noValidate>
+        <form className="item-edit-form" onSubmit={(event) => void form.handleSubmit(event)} noValidate>
             <EditItemField
                 inputId={inputId}
-                name={name}
-                validationError={validationError}
-                isPending={isPending}
-                onChange={(newName) => {
-                    setName(newName);
-                    setValidationError(null);
-                }}
+                name={form.name}
+                validationError={form.validationError}
+                isPending={props.isPending}
+                onChange={form.handleNameChange}
+            />
+            <ItemPlanningFields
+                idPrefix={`edit-item-${props.itemId}`}
+                priority={form.priority}
+                dueDate={form.dueDate}
+                isDisabled={props.isPending}
+                onPriorityChange={form.setPriority}
+                onDueDateChange={form.setDueDate}
             />
             <div className="item-edit-actions">
-                <button className="button button-primary" type="submit" disabled={isPending}>
-                    {isPending ? labels.savingItem : labels.saveItem}
+                <button className="button button-primary" type="submit" disabled={props.isPending}>
+                    {props.isPending ? labels.savingItem : labels.saveItem}
                 </button>
-                <button className="button button-secondary" type="button" disabled={isPending} onClick={onCancel}>
+                <button
+                    className="button button-secondary"
+                    type="button"
+                    disabled={props.isPending}
+                    onClick={props.onCancel}
+                >
                     {labels.cancel}
                 </button>
             </div>

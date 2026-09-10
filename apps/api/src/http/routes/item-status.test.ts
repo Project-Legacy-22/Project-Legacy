@@ -30,6 +30,8 @@ function anItem(ownerId = OWNER_ID): Item {
         name: 'Prepare the review',
         status: 'todo',
         version: 1,
+        priority: 'normal',
+        dueDate: null,
     };
 }
 

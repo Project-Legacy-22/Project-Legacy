@@ -54,7 +54,58 @@ describe('items API (integration)', () => {
         expect(response.status).toBe(200);
         expect(created).not.toHaveProperty('ownerId');
         expect(created.name).toBe('Depot integration');
-        expect(created).toMatchObject({ status: 'todo', version: 1 });
+        expect(created).toMatchObject({
+            status: 'todo',
+            version: 1,
+            priority: 'normal',
+            dueDate: null,
+        });
+    });
+
+    it('persiste la priorite et accepte une echeance passee', async () => {
+        const response = await asOwner.request(itemsOf(owner), json('POST', {
+            name: 'Echeance passee',
+            priority: 'high',
+            dueDate: '2020-01-02',
+        }));
+
+        expect(response.status).toBe(200);
+        await expect(response.json()).resolves.toMatchObject({
+            priority: 'high',
+            dueDate: '2020-01-02',
+        });
+    });
+
+    it('trie par priorite, echeance puis identifiant sur plusieurs pages', async () => {
+        const database = createClient<Database>(integrationConfig().supabaseUrl, integrationConfig().supabaseServiceRoleKey, {
+            auth: { persistSession: false, autoRefreshToken: false },
+        });
+        const cleared = await database.from('items').delete().eq('project_id', owner.projectId);
+        expect(cleared.error).toBeNull();
+        const rows = [
+            { id: '00000000-0000-7000-8000-000000000104', name: 'Normal sans date', priority: 'normal' as const, due_date: null },
+            { id: '00000000-0000-7000-8000-000000000103', name: 'Haute tard', priority: 'high' as const, due_date: '2026-09-20' },
+            { id: '00000000-0000-7000-8000-000000000102', name: 'Haute proche B', priority: 'high' as const, due_date: '2026-09-12' },
+            { id: '00000000-0000-7000-8000-000000000101', name: 'Haute proche A', priority: 'high' as const, due_date: '2026-09-12' },
+        ].map((row) => ({ ...row, project_id: owner.projectId, user_id: owner.id }));
+        const inserted = await database.from('items').insert(rows);
+        expect(inserted.error).toBeNull();
+
+        const firstResponse = await asOwner.request(`${itemsOf(owner)}?limit=2`);
+        const first = (await firstResponse.json()) as { items: { id: string }[]; nextCursor: string | null };
+        const secondResponse = await asOwner.request(
+            `${itemsOf(owner)}?limit=2&cursor=${encodeURIComponent(String(first.nextCursor))}`,
+        );
+        const second = (await secondResponse.json()) as { items: { id: string }[] };
+
+        expect(first.items.map((item) => item.id)).toEqual([
+            '00000000-0000-7000-8000-000000000101',
+            '00000000-0000-7000-8000-000000000102',
+        ]);
+        expect(second.items.map((item) => item.id)).toEqual([
+            '00000000-0000-7000-8000-000000000103',
+            '00000000-0000-7000-8000-000000000104',
+        ]);
     });
 
     describe('isolation entre comptes', () => {

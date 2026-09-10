@@ -31,7 +31,7 @@ function pageProps(overrides: Partial<TodoPageProps> = {}): TodoPageProps {
         paginationState: { status: 'idle', announcement: '' },
         onAdd: vi.fn(async (): Promise<AddItemResult> => ({ status: 'success' })),
         onMove: vi.fn(async () => true),
-        onRename: vi.fn(async () => true),
+        onUpdate: vi.fn(async () => true),
         onRemove: vi.fn(async () => true),
         onLoadMore: vi.fn(),
         onRetry: vi.fn(),

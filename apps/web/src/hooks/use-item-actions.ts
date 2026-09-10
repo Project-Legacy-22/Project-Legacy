@@ -1,9 +1,11 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
+import type { CreateItemBody, UpdateItemBody } from '@legacy/contracts';
 
 import { ApiError } from '../api/items-api';
 import type { ItemDto, ItemsApi, ItemStatus } from '../api/items-api';
 import { labels } from '../labels';
+import { orderItems } from '../item-order';
 import type { AddItemResult, ItemActionFeedback } from './items-state';
 import type { SetItems } from './use-items-query';
 
@@ -34,14 +36,14 @@ function updatePending(context: ActionContext, id: string, operation: 'add' | 'r
     });
 }
 
-async function addItem(context: ActionContext, name: string): Promise<AddItemResult> {
+async function addItem(context: ActionContext, body: CreateItemBody): Promise<AddItemResult> {
     if (context.projectId === null) return { status: 'error', message: labels.selectProject };
     context.setIsAdding(true);
     context.setFeedback({ status: 'idle' });
 
     try {
-        const created = await context.api.createItem(context.projectId, { name });
-        context.setItems((current) => [...current, created]);
+        const created = await context.api.createItem(context.projectId, body);
+        context.setItems((current) => orderItems([...current, created]));
         context.setFeedback({
             status: 'success',
             message: labels.itemAdded(itemName(created)),
@@ -57,19 +59,17 @@ async function addItem(context: ActionContext, name: string): Promise<AddItemRes
     }
 }
 
-async function renameItem(context: ActionContext, item: ItemDto, name: string): Promise<boolean> {
+async function updateItem(context: ActionContext, item: ItemDto, changes: UpdateItemBody): Promise<boolean> {
     if (context.projectId === null) return false;
     updatePending(context, item.id, 'add');
     context.setFeedback({ status: 'idle' });
 
     try {
-        const updated = await context.api.updateItem(context.projectId, item.id, {
-            name,
-        });
+        const updated = await context.api.updateItem(context.projectId, item.id, changes);
         context.setItems((current) =>
-            current.map((currentItem) => (currentItem.id === updated.id ? updated : currentItem)),
+            orderItems(current.map((currentItem) => (currentItem.id === updated.id ? updated : currentItem))),
         );
-        context.setFeedback({ status: 'success', message: labels.itemRenamed(itemName(updated)) });
+        context.setFeedback({ status: 'success', message: labels.itemSaved(itemName(updated)) });
         return true;
     } catch (error) {
         context.setFeedback({
@@ -83,7 +83,7 @@ async function renameItem(context: ActionContext, item: ItemDto, name: string): 
 }
 
 function replaceItem(items: readonly ItemDto[], replacement: ItemDto): readonly ItemDto[] {
-    return items.map((item) => (item.id === replacement.id ? replacement : item));
+    return orderItems(items.map((item) => (item.id === replacement.id ? replacement : item)));
 }
 
 async function recoverMove(context: ActionContext, item: ItemDto, error: unknown): Promise<void> {
@@ -180,8 +180,8 @@ export function useItemActions(options: UseItemActionsOptions) {
         [api, projectId, refreshItems, setItems],
     );
 
-    const add = useCallback((name: string) => addItem(context, name), [context]);
-    const rename = useCallback((item: ItemDto, name: string) => renameItem(context, item, name), [context]);
+    const add = useCallback((body: CreateItemBody) => addItem(context, body), [context]);
+    const update = useCallback((item: ItemDto, changes: UpdateItemBody) => updateItem(context, item, changes), [context]);
     const move = useCallback((item: ItemDto, status: ItemStatus) => moveItem(context, item, status), [context]);
     const remove = useCallback((item: ItemDto) => removeItem(context, item), [context]);
 
@@ -190,7 +190,7 @@ export function useItemActions(options: UseItemActionsOptions) {
         isAdding,
         pendingItemIds,
         addItem: add,
-        renameItem: rename,
+        updateItem: update,
         moveItem: move,
         removeItem: remove,
     };

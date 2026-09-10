@@ -53,6 +53,8 @@ function toItem(row: ItemRow): ExportedItem {
         name: row.name,
         status: row.status,
         version: row.version,
+        priority: row.priority,
+        dueDate: row.due_date,
         createdAt: toInstant(row.created_at),
         updatedAt: toInstant(row.updated_at),
     };

@@ -2,16 +2,19 @@ export {
     createItem,
     rehydrateItem,
     itemName,
+    itemDueDate,
     DomainError,
     InvalidItemName,
+    InvalidItemDueDate,
     InvalidItemCursor,
     ItemNotFound,
     ItemStatusConflict,
     ItemProjectNotFound,
     ITEM_STATUSES,
+    ITEM_PRIORITIES,
     MAX_ITEM_NAME_LENGTH,
 } from './domain/item.js';
-export type { Item, ItemStatus } from './domain/item.js';
+export type { Item, ItemPriority, ItemStatus } from './domain/item.js';
 
 export { ITEM_CREATED_V1, itemCreated } from './domain/event.js';
 export type { DomainEvent, ItemCreatedV1 } from './domain/event.js';

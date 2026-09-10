@@ -63,7 +63,7 @@ communication à un tiers : il figure ici pour cette raison.
 | **Finalité** | Créer, consulter, modifier et supprimer ses propres tâches |
 | **Base légale** | Exécution du contrat : c'est le service lui-même |
 | **Personnes concernées** | Utilisateurs inscrits |
-| **Catégories de données** | Intitulé saisi par l'utilisateur ; état d'avancement ; propriétaire ; horodatages de création, de modification et de suppression |
+| **Catégories de données** | Intitulé saisi par l'utilisateur ; état d'avancement ; priorité ; échéance facultative ; propriétaire ; horodatages de création, de modification et de suppression |
 | **Localisation** | `public.items` |
 | **Conservation** | Trente jours après suppression par l'utilisateur (`deleted_at`), puis effacement définitif. Immédiat à la suppression du compte |
 | **Destinataires** | Vercel (sous-traitant, hébergement applicatif : l'API Express tourne en fonction Vercel, `vercel.json` y redirige `/auth` et `/items`, donc le corps des requêtes et des réponses y transite en clair) ; Supabase (sous-traitant, persistance) |
