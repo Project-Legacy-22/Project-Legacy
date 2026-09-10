@@ -8,6 +8,16 @@
     margin: 48px auto;
 }
 
+/* La raison pour laquelle cet ecran est revenu : une session terminee. Meme
+   traitement que les messages de resultat, dans la couleur du texte courant --
+   ce n est pas une erreur commise par la personne. */
+.auth-notice {
+    margin: 0 0 20px;
+    color: #465568;
+    font-weight: 700;
+    line-height: 1.45;
+}
+
 .auth-intro {
     margin: 0 0 24px;
     color: #465568;

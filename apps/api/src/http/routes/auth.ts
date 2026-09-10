@@ -13,7 +13,13 @@ import type { RequestHandler } from 'express';
 import type { AuthUseCases } from '../../composition-root.js';
 import { readCookie } from '../cookies.js';
 import { rateLimit } from '../rate-limit.js';
-import { SESSION_COOKIE, accountOf, clearSessionCookie, requireAccount, setSessionCookie } from '../session.js';
+import {
+    SESSION_COOKIE,
+    accountOf,
+    clearSessionCookies,
+    requireAccount,
+    setSessionCookies,
+} from '../session.js';
 
 export interface AuthRoutesOptions {
     secureCookie: boolean;
@@ -85,7 +91,7 @@ function resetPasswordHandler(useCases: AuthUseCases): RequestHandler {
 function logoutHandler(useCases: AuthUseCases, secureCookie: boolean): RequestHandler {
     return (req, res, next) => {
         const token = readCookie(req.headers.cookie, SESSION_COOKIE);
-        clearSessionCookie(res, secureCookie);
+        clearSessionCookies(res, secureCookie);
 
         useCases
             .signOut(token)
@@ -131,7 +137,7 @@ export function authRouter(useCases: AuthUseCases, options: AuthRoutesOptions): 
         useCases
             .signIn(body.data.email, body.data.password)
             .then(session => {
-                setSessionCookie(res, session, options.secureCookie);
+                setSessionCookies(res, session, options.secureCookie);
                 res.send(toAccountDto(session.account));
             })
             .catch(next);
@@ -143,7 +149,7 @@ export function authRouter(useCases: AuthUseCases, options: AuthRoutesOptions): 
 
     router.post('/auth/register', limit, register);
     router.post('/auth/login', limit, login);
-    router.get('/auth/me', requireAccount(useCases), me);
+    router.get('/auth/me', requireAccount(useCases, options.secureCookie), me);
     router.post('/auth/password/forgot', resetLimit, resetPerEmail, forgotPasswordHandler(useCases));
     router.post('/auth/password/reset', resetLimit, resetPasswordHandler(useCases));
     router.post('/auth/logout', logoutHandler(useCases, options.secureCookie));

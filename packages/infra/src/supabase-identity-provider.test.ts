@@ -1,40 +1,27 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { fauxFournisseur } from '../test/fakes/fake-gotrue.js';
-import type { FakeGoTrue } from '../test/fakes/fake-gotrue.js';
 import { PRIVACY_POLICY_VERSION } from '@legacy/contracts';
 
 import { createSupabaseIdentityProvider } from './supabase-identity-provider.js';
-
-const UTILISATEUR = {
-    id: '9f8e4a2c-1b3d-4e5f-8a90-1c2d3e4f5a6b',
-    aud: 'authenticated',
-    role: 'authenticated',
-    email: 'alice@example.test',
-    app_metadata: {},
-    user_metadata: {},
-    created_at: '2026-09-04T10:00:00Z',
-};
-
-const SESSION = {
-    access_token: 'jeton-acces',
-    token_type: 'bearer',
-    expires_in: 3600,
-    refresh_token: 'jeton-rafraichissement',
-    user: UTILISATEUR,
-};
-
-const SIGNUP = 'POST /auth/v1/signup';
-const TOKEN = 'POST /auth/v1/token';
-const USER = 'GET /auth/v1/user';
-const ADMIN_DELETE = `DELETE /auth/v1/admin/users/${UTILISATEUR.id}`;
-const RECOVER = 'POST /auth/v1/recover';
-const VERIFY = 'POST /auth/v1/verify';
-const UPDATE_USER = 'PUT /auth/v1/user';
-const LOGOUT = 'POST /auth/v1/logout';
+// La doublure de GoTrue vit dans test/fakes, comme les autres doublures de
+// reference : ce fichier n est plus le seul a en avoir besoin.
+import {
+    ADMIN_DELETE,
+    LOGOUT,
+    RECOVER,
+    SESSION,
+    SIGNUP,
+    TOKEN,
+    UPDATE_USER,
+    USER,
+    UTILISATEUR,
+    VERIFY,
+    fauxFournisseur,
+} from '../test/fakes/gotrue-server.js';
+import type { FauxFournisseur } from '../test/fakes/gotrue-server.js';
 
 describe('adaptateur Supabase Auth', () => {
-    let faux: FakeGoTrue;
+    let faux: FauxFournisseur;
 
     async function adaptateur() {
         faux = await fauxFournisseur();
@@ -96,6 +83,7 @@ describe('adaptateur Supabase Auth', () => {
             expect(session).toEqual({
                 account: { id: UTILISATEUR.id, email: UTILISATEUR.email },
                 accessToken: 'jeton-acces',
+                refreshToken: 'jeton-rafraichissement',
                 expiresInSeconds: 3600,
             });
         });
@@ -230,7 +218,7 @@ describe('adaptateur Supabase Auth', () => {
     });
 
     describe('resetPassword', () => {
-        function armeLeSucces(serveur: FakeGoTrue) {
+        function armeLeSucces(serveur: FauxFournisseur) {
             serveur.quand(VERIFY, { status: 200, body: SESSION });
             serveur.quand(UPDATE_USER, { status: 200, body: UTILISATEUR });
             serveur.quand(LOGOUT, { status: 204, body: {} });

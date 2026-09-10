@@ -5,6 +5,7 @@ import {
     makeExportPersonalData,
     makeIdentifyCaller,
     makeRegisterAccount,
+    makeRenewSession,
     makeRequestPasswordReset,
     makeResetPassword,
     makeSignIn,
@@ -54,6 +55,7 @@ function useCasesOver(provider: IdentityProvider, store: PersonalDataStore): App
             registerAccount: makeRegisterAccount(provider),
             signIn: makeSignIn(provider),
             identifyCaller: makeIdentifyCaller(provider),
+            renewSession: makeRenewSession(provider),
             // Aucune route exercee ici ne reinitialise de mot de passe. Les cas
             // d usage sont composes quand meme : AuthUseCases les exige, et un
             // double vide masquerait un branchement oublie dans le serveur.

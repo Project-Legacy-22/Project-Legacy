@@ -1,21 +1,20 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { fauxFournisseur } from '../test/fakes/fake-gotrue.js';
-import type { FakeGoTrue } from '../test/fakes/fake-gotrue.js';
+import { LOGOUT, fauxFournisseur } from '../test/fakes/gotrue-server.js';
+import type { FauxFournisseur } from '../test/fakes/gotrue-server.js';
 import { createSupabaseIdentityProvider } from './supabase-identity-provider.js';
 
 // Split from supabase-identity-provider.test.ts to keep that file under the
 // project's line ceiling; the fake GoTrue server both files drive lives in
-// test/fakes/fake-gotrue.ts for the same reason it would otherwise have to be
+// test/fakes/gotrue-server.ts for the same reason it would otherwise have to be
 // duplicated here.
 //
 // Same route as the client's own signOut: the admin call
 // IdentityProvider.signOut() makes carries the target's access token as its
 // own Authorization header rather than reaching a distinct admin endpoint.
-const LOGOUT = 'POST /auth/v1/logout';
 
 describe('adaptateur Supabase Auth, signOut', () => {
-    let faux: FakeGoTrue;
+    let faux: FauxFournisseur;
 
     async function adaptateur() {
         faux = await fauxFournisseur();

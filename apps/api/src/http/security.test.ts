@@ -61,6 +61,7 @@ function appUseCases(authenticate?: IdentityProvider['authenticate']): AppUseCas
             registerAccount: makeRegisterAccount(provider),
             signIn: makeSignIn(signInProvider),
             identifyCaller: makeIdentifyCaller(provider),
+            renewSession: () => Promise.reject(new Error('not exercised by this suite')),
             requestPasswordReset: makeRequestPasswordReset(provider),
             resetPassword: makeResetPassword({ provider, compromisedPasswords: inMemoryCompromisedPasswords() }),
             // Required by AuthUseCases since #174; no case here exercises it.

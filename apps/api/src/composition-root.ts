@@ -23,6 +23,7 @@ import {
     makeExportPersonalData,
     makeIdentifyCaller,
     makeRegisterAccount,
+    makeRenewSession,
     makeRequestPasswordReset,
     makeResetPassword,
     makeSignIn,
@@ -48,6 +49,7 @@ export interface AuthUseCases {
     registerAccount: ReturnType<typeof makeRegisterAccount>;
     signIn: ReturnType<typeof makeSignIn>;
     identifyCaller: ReturnType<typeof makeIdentifyCaller>;
+    renewSession: ReturnType<typeof makeRenewSession>;
     requestPasswordReset: ReturnType<typeof makeRequestPasswordReset>;
     resetPassword: ReturnType<typeof makeResetPassword>;
     signOut: ReturnType<typeof makeSignOut>;
@@ -146,6 +148,24 @@ function startRelay(dependencies: RelayDependencies): NodeJS.Timeout {
     return timer;
 }
 
+// Assembled apart from compose, which stays a list of what is wired to what:
+// this is the group that gains a use case with every authentication story, and
+// it is the only one whose members all share a single adapter.
+function authUseCases(
+    identity: Adapters['identity'],
+    compromisedPasswords: ReturnType<typeof createHibpPasswordRegistry>,
+): AuthUseCases {
+    return {
+        registerAccount: makeRegisterAccount(identity),
+        signIn: makeSignIn(identity),
+        identifyCaller: makeIdentifyCaller(identity),
+        renewSession: makeRenewSession(identity),
+        requestPasswordReset: makeRequestPasswordReset(identity),
+        resetPassword: makeResetPassword({ provider: identity, compromisedPasswords }),
+        signOut: makeSignOut(identity),
+    };
+}
+
 export function compose(config: Config): Application {
     const { store, identity, personalData, outbox, notifications, bus } = createAdapters(config);
     const logger = createLogger(config.logLevel);
@@ -166,14 +186,7 @@ export function compose(config: Config): Application {
                 changeItem: makeChangeItem(store),
                 removeItem: makeRemoveItem(store),
             },
-            auth: {
-                registerAccount: makeRegisterAccount(identity),
-                signIn: makeSignIn(identity),
-                identifyCaller: makeIdentifyCaller(identity),
-                requestPasswordReset: makeRequestPasswordReset(identity),
-                resetPassword: makeResetPassword({ provider: identity, compromisedPasswords }),
-                signOut: makeSignOut(identity),
-            },
+            auth: authUseCases(identity, compromisedPasswords),
             account: {
                 exportPersonalData: makeExportPersonalData({
                     store: personalData,

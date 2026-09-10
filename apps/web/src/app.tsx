@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { guardSession } from './api/guard-session';
 import { accountApi } from './api/account-api';
 import type { AccountApi } from './api/account-api';
 import { authApi } from './api/auth-api';
@@ -64,10 +65,34 @@ export interface AppProps {
     save?: SaveFile;
 }
 
-interface SignedInAppProps {
+interface SignedInApis {
     api: ItemsApi;
     account: AccountApi;
     notifications: NotificationsApi;
+}
+
+// The three clients the signed-in screen uses, each wrapped so that a 401 ends
+// the session in the interface instead of being reported as one more failed
+// request (US-27).
+//
+// Wrapped once and kept: useItems and useNotifications key their effects on the
+// identity of the client they are given, so rebuilding these on every render
+// would refetch on every render.
+function useGuardedApis(apis: SignedInApis, onExpired: () => void): SignedInApis {
+    const { api, account, notifications } = apis;
+
+    return useMemo(
+        () => ({
+            api: guardSession(api, onExpired),
+            account: guardSession(account, onExpired),
+            notifications: guardSession(notifications, onExpired),
+        }),
+        [api, account, notifications, onExpired],
+    );
+}
+
+interface SignedInAppProps {
+    apis: SignedInApis;
     save: SaveFile;
     email: string;
     isSigningOut: boolean;
@@ -79,18 +104,16 @@ interface SignedInAppProps {
 // once there is a session. Rendering it behind a condition in App would run its
 // hooks anyway and fire a request that can only come back 401.
 function SignedInApp({
-    api,
-    account,
-    notifications,
+    apis,
     save,
     email,
     isSigningOut,
     onDeleted,
     onSignOut,
 }: SignedInAppProps) {
-    const state = useItems(api);
-    const personalData = usePersonalData({ api: account, save, onDeleted });
-    const unread = useNotifications(notifications, true);
+    const state = useItems(apis.api);
+    const personalData = usePersonalData({ api: apis.account, save, onDeleted });
+    const unread = useNotifications(apis.notifications, true);
 
     return (
         <>
@@ -100,7 +123,7 @@ function SignedInApp({
                 isSigningOut={isSigningOut}
                 onSignOut={onSignOut}
             />
-            <NotificationsPanel api={notifications} />
+            <NotificationsPanel api={apis.notifications} />
             <TodoPage
                 items={state.items}
                 loadState={state.loadState}
@@ -131,14 +154,19 @@ function SignedInApp({
 // and markup.
 function AnonymousScreen({
     session,
+    notice,
     onOpenPolicy,
 }: {
     session: ReturnType<typeof useSession>;
+    // Read in App, where the state is narrowed to anonymous: inside this
+    // component the union is whole again and notice is not on every variant.
+    notice: string | undefined;
     onOpenPolicy: () => void;
 }) {
     return (
         <>
             <AuthPage
+                notice={notice}
                 isSubmitting={session.isSubmitting}
                 onSignIn={session.signIn}
                 onRegister={session.register}
@@ -183,6 +211,7 @@ export function App(props: AppProps) {
     const { api, auth, account, notifications, save } = { ...REAL, ...props };
     const session = useSession(auth);
     const recoveryToken = useRecoveryToken();
+    const guarded = useGuardedApis({ api, account, notifications }, session.expire);
     // The policy is a screen, not a route: this application chooses what to
     // show by state, and it must be readable before an account exists.
     const [showsPolicy, setShowsPolicy] = useState(readsPolicy());
@@ -219,14 +248,18 @@ export function App(props: AppProps) {
     // items screen and relying on the API to refuse it. Both guards are needed:
     // this one for what is displayed, the API's for what is served.
     if (session.state.status === 'anonymous') {
-        return <AnonymousScreen session={session} onOpenPolicy={openPolicy} />;
+        return (
+            <AnonymousScreen
+                session={session}
+                notice={session.state.notice}
+                onOpenPolicy={openPolicy}
+            />
+        );
     }
 
     return (
         <SignedInScreen
-            api={api}
-            account={account}
-            notifications={notifications}
+            apis={guarded}
             save={save}
             email={session.state.account.email}
             isSigningOut={session.isSubmitting}

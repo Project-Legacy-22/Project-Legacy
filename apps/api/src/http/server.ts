@@ -97,9 +97,13 @@ export function createServer(config: Config, useCases: AppUseCases, logger: Logg
         });
     }
 
-    // Items belong to somebody since US-11: no session, no items.
-    app.use(requireAccount(useCases.auth), itemsRouter(useCases.items));
-    app.use(requireAccount(useCases.auth), notificationsRouter(useCases.notifications));
+    // Items belong to somebody since US-11: no session, no items. The guard
+    // also renews the session it is given when it can, so an hour-long access
+    // token does not interrupt what somebody is doing (US-27).
+    const session = requireAccount(useCases.auth, config.secureCookies);
+
+    app.use(session, itemsRouter(useCases.items));
+    app.use(session, notificationsRouter(useCases.notifications));
 
     // Registered last: express only treats a middleware as an error handler
     // once every route has had its chance to fail.
