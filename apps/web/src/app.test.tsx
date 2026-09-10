@@ -76,7 +76,11 @@ function createAuth(overrides: Partial<AuthApi> = {}): AuthApi {
 }
 
 function createNotifications(unread = 0): NotificationsApi {
-    return { unreadCount: vi.fn(async () => unread) };
+    return {
+        unreadCount: vi.fn(async () => unread),
+        listNotifications: vi.fn(async () => ({ notifications: [], nextCursor: null })),
+        markAsRead: vi.fn(async () => undefined),
+    };
 }
 
 async function fillSignInForm(email: string, password: string): Promise<void> {

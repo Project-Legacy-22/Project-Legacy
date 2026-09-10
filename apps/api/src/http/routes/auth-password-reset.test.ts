@@ -51,7 +51,11 @@ function useCasesOver(provider: InMemoryIdentityProvider, compromised: string[])
             changeItem: makeChangeItem(repository),
             removeItem: makeRemoveItem(repository),
         },
-        notifications: { countUnread: () => Promise.resolve(0) },
+        notifications: {
+            countUnread: () => Promise.resolve(0),
+            listNotifications: () => Promise.reject(new Error('not exercised by this suite')),
+            markNotificationRead: () => Promise.reject(new Error('not exercised by this suite')),
+        },
         auth: {
             registerAccount: makeRegisterAccount(provider),
             signIn: makeSignIn(provider),
