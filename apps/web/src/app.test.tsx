@@ -7,7 +7,15 @@ import { ApiError } from './api/items-api';
 import type { AccountDto, AuthApi } from './api/auth-api';
 import type { NotificationsApi } from './api/notifications-api';
 import type { ProjectsApi } from './api/projects-api';
-import { click, createReactTestRoot, flushTimers, getElement, setInputValue, submitForm } from './test/react-root';
+import {
+    click,
+    createReactTestRoot,
+    flushTimers,
+    getElement,
+    setInputValue,
+    submitForm,
+    waitFor,
+} from './test/react-root';
 import type { ReactTestRoot } from './test/react-root';
 import {
     ACCOUNT,
@@ -121,6 +129,9 @@ describe('App item workflow', () => {
 
         expect(document.querySelectorAll('.todo-item')).toHaveLength(1);
         expect(getElement<HTMLElement>('.item-name').textContent).toBe(secondItem.name);
+        await waitFor(
+            () => document.activeElement === document.querySelector('.todo-item .button-secondary'),
+        );
         expect(document.activeElement).toBe(getElement<HTMLButtonElement>('.todo-item .button-secondary'));
     });
 });

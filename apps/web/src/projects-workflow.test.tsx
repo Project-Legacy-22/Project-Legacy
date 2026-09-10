@@ -6,7 +6,15 @@ import { ApiError } from './api/items-api';
 import type { ProjectDto, ProjectsApi } from './api/projects-api';
 import { App } from './app';
 import { labels } from './labels';
-import { click, createReactTestRoot, flushTimers, getElement, setInputValue, submitForm } from './test/react-root';
+import {
+    click,
+    createReactTestRoot,
+    flushTimers,
+    getElement,
+    setInputValue,
+    submitForm,
+    waitFor,
+} from './test/react-root';
 import type { ReactTestRoot } from './test/react-root';
 
 const ACCOUNT: AccountDto = {
@@ -128,6 +136,7 @@ describe('App project workflow', () => {
         expect(getElement('.projects-panel [aria-live="polite"]').textContent).toBe(labels.projectsLoaded(1));
         expect(loadMore.textContent).toBe(labels.allProjectsLoaded);
         expect(loadMore.getAttribute('aria-disabled')).toBe('true');
+        await waitFor(() => document.activeElement === loadMore);
         expect(document.activeElement).toBe(loadMore);
     });
 

@@ -8,7 +8,7 @@ import type { ProjectsApi } from './api/projects-api';
 import { App } from './app';
 import { labels } from './labels';
 import { anItem } from './test/builders/item-builder';
-import { click, createReactTestRoot, flushTimers, getElement } from './test/react-root';
+import { click, createReactTestRoot, flushTimers, getElement, waitFor } from './test/react-root';
 import type { ReactTestRoot } from './test/react-root';
 
 const ACCOUNT = {
@@ -103,6 +103,7 @@ describe('App item pagination', () => {
         expect(listItems).toHaveBeenCalledTimes(3);
         expect(loadMore.getAttribute('aria-disabled')).toBe('true');
         expect(loadMore.textContent).toBe(labels.allItemsLoaded);
+        await waitFor(() => document.activeElement === loadMore);
         expect(document.activeElement).toBe(loadMore);
         expect(getElement<HTMLElement>('.pagination-status').textContent).toBe(labels.itemsLoaded(1));
     });
