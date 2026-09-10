@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import type { DragEvent } from 'react';
 
 import type { ItemDto, ItemStatus } from '../api/items-api';
@@ -23,12 +23,6 @@ interface KanbanColumnProps extends KanbanBoardProps {
     onDragEnd: () => void;
     onDragStart: (item: ItemDto, event: DragEvent<HTMLLIElement>) => void;
     onDrop: (status: ItemStatus, event: DragEvent<HTMLElement>) => void;
-}
-
-function restoreMoveFocus(itemId: string): void {
-    globalThis.setTimeout(() => {
-        document.querySelector<HTMLButtonElement>(`[data-move-item-id="${itemId}"]`)?.focus();
-    }, 0);
 }
 
 function KanbanColumn(props: KanbanColumnProps) {
@@ -61,11 +55,7 @@ function KanbanColumn(props: KanbanColumnProps) {
                             key={item.id}
                             item={item}
                             isPending={props.isDisabled || props.pendingItemIds.has(item.id)}
-                            onMove={async (destination) => {
-                                const moved = await props.onMove(item, destination);
-                                restoreMoveFocus(item.id);
-                                return moved;
-                            }}
+                            onMove={(destination) => props.onMove(item, destination)}
                             onRename={props.onRename}
                             onRemove={props.onRemove}
                             onDragStart={props.onDragStart}
@@ -78,9 +68,25 @@ function KanbanColumn(props: KanbanColumnProps) {
     );
 }
 
+function useFocusedMove(items: readonly ItemDto[], onMove: KanbanBoardProps['onMove']) {
+    const [request, setRequest] = useState<{ itemId: string } | null>(null);
+
+    useLayoutEffect(() => {
+        if (request === null) return;
+        document.querySelector<HTMLButtonElement>(`[data-move-item-id="${request.itemId}"]`)?.focus();
+    }, [items, request]);
+
+    return async (item: ItemDto, status: ItemStatus) => {
+        const moved = await onMove(item, status);
+        setRequest({ itemId: item.id });
+        return moved;
+    };
+}
+
 export function KanbanBoard(props: KanbanBoardProps) {
     const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
     const [dropTarget, setDropTarget] = useState<ItemStatus | null>(null);
+    const moveWithFocus = useFocusedMove(props.items, props.onMove);
     const draggedItem = props.items.find((item) => item.id === draggedItemId);
 
     const finishDrag = () => {
@@ -112,6 +118,7 @@ export function KanbanBoard(props: KanbanBoardProps) {
                     <KanbanColumn
                         key={status}
                         {...props}
+                        onMove={moveWithFocus}
                         status={status}
                         isDropTarget={dropTarget === status && draggedItem?.status !== status}
                         onDragEnter={(target) => {

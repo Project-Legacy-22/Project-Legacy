@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import type { DragEvent, RefObject } from 'react';
 
 import type { ItemDto, ItemStatus } from '../api/items-api';
@@ -92,6 +92,23 @@ interface ItemRowBodyProps {
     onRename: (name: string) => Promise<boolean>;
 }
 
+type RestoredAction = 'edit' | 'move';
+
+function useActionFocus(mode: ItemRowBodyProps['mode']) {
+    const editButtonRef = useRef<HTMLButtonElement>(null);
+    const moveButtonRef = useRef<HTMLButtonElement>(null);
+    const pendingAction = useRef<RestoredAction | null>(null);
+
+    useLayoutEffect(() => {
+        if (mode !== 'idle' || pendingAction.current === null) return;
+        const target = pendingAction.current === 'edit' ? editButtonRef : moveButtonRef;
+        pendingAction.current = null;
+        target.current?.focus();
+    }, [mode]);
+
+    return { editButtonRef, moveButtonRef, pendingAction };
+}
+
 function ItemRowBody(props: ItemRowBodyProps) {
     if (props.mode === 'edit') {
         return (
@@ -143,8 +160,7 @@ function ItemRowBody(props: ItemRowBodyProps) {
 
 export function ItemRow(props: ItemRowProps) {
     const [mode, setMode] = useState<'idle' | 'edit' | 'move'>('idle');
-    const editButtonRef = useRef<HTMLButtonElement>(null);
-    const moveButtonRef = useRef<HTMLButtonElement>(null);
+    const { editButtonRef, moveButtonRef, pendingAction } = useActionFocus(mode);
     const removeButtonRef = useRef<HTMLButtonElement>(null);
     const name = props.item.name ?? labels.unnamedItem;
 
@@ -154,14 +170,14 @@ export function ItemRow(props: ItemRowProps) {
         if (await props.onRemove(props.item)) globalThis.setTimeout(() => focusTarget?.focus(), 0);
     };
 
-    const close = (target: RefObject<HTMLButtonElement | null>) => {
+    const close = (target: RestoredAction) => {
+        pendingAction.current = target;
         setMode('idle');
-        globalThis.setTimeout(() => target.current?.focus(), 0);
     };
 
     const handleRename = async (newName: string) => {
         const saved = await props.onRename(props.item, newName);
-        if (saved) close(editButtonRef);
+        if (saved) close('edit');
         return saved;
     };
 
@@ -181,8 +197,8 @@ export function ItemRow(props: ItemRowProps) {
                 editButtonRef={editButtonRef}
                 moveButtonRef={moveButtonRef}
                 removeButtonRef={removeButtonRef}
-                onCancelEdit={() => close(editButtonRef)}
-                onCancelMove={() => close(moveButtonRef)}
+                onCancelEdit={() => close('edit')}
+                onCancelMove={() => close('move')}
                 onEdit={() => setMode('edit')}
                 onMove={props.onMove}
                 onOpenMove={() => setMode('move')}
