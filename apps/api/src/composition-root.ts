@@ -27,8 +27,14 @@ import {
     makeRequestPasswordReset,
     makeResetPassword,
     makeSignIn,
+    makeSignOut,
 } from '@legacy/core-auth';
 import { makeListItems, makeAddItem, makeChangeItem, makeRemoveItem } from '@legacy/core-items';
+import {
+    makeCountUnreadNotifications,
+    makeListNotifications,
+    makeMarkNotificationRead,
+} from '@legacy/core-notifications';
 
 import type { Config } from './config.js';
 
@@ -46,6 +52,7 @@ export interface AuthUseCases {
     renewSession: ReturnType<typeof makeRenewSession>;
     requestPasswordReset: ReturnType<typeof makeRequestPasswordReset>;
     resetPassword: ReturnType<typeof makeResetPassword>;
+    signOut: ReturnType<typeof makeSignOut>;
 }
 
 // Kept apart from AuthUseCases, which requireAccount receives on every request
@@ -57,7 +64,9 @@ export interface AccountUseCases {
 }
 
 export interface NotificationUseCases {
-    countUnread: (userId: string) => Promise<number>;
+    listNotifications: ReturnType<typeof makeListNotifications>;
+    markNotificationRead: ReturnType<typeof makeMarkNotificationRead>;
+    countUnread: ReturnType<typeof makeCountUnreadNotifications>;
 }
 
 export interface AppUseCases {
@@ -153,6 +162,7 @@ function authUseCases(
         renewSession: makeRenewSession(identity),
         requestPasswordReset: makeRequestPasswordReset(identity),
         resetPassword: makeResetPassword({ provider: identity, compromisedPasswords }),
+        signOut: makeSignOut(identity),
     };
 }
 
@@ -185,7 +195,9 @@ export function compose(config: Config): Application {
                 eraseAccount: makeEraseAccount({ store: personalData, identity }),
             },
             notifications: {
-                countUnread: userId => notifications.countUnread(userId),
+                listNotifications: makeListNotifications(notifications),
+                markNotificationRead: makeMarkNotificationRead(notifications),
+                countUnread: makeCountUnreadNotifications(notifications),
             },
         },
         // start() no longer creates the schema -- that is what migrations are

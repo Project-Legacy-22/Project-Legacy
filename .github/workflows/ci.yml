@@ -247,6 +247,32 @@ jobs:
       - name: Detecter un secret dans le code et dans l historique
         run: ./gitleaks detect --source . --redact --no-banner --exit-code 1
 
+  audit:
+    name: Audit des dependances
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: verifier
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Installer les dependances
+        run: npm ci
+
+      # L env global pose npm_config_audit a false pour taire l audit
+      # automatique de npm ci ; il est reactive ici, pour la commande explicite.
+      # --audit-level=high : une vulnerabilite haute ou critique fait echouer le
+      # job et donc le merge (standards/07-quality-gates.md section 5). Les
+      # niveaux inferieurs sont rapportes sans bloquer.
+      - name: Auditer les dependances
+        run: npm audit --audit-level=high
+        env:
+          npm_config_audit: 'true'
+
   construire:
     name: Build
     runs-on: ubuntu-latest

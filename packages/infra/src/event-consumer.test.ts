@@ -41,6 +41,10 @@ function fakeNotifications(): NotificationStore & { created: Notification[] } {
         },
         countUnread: userId =>
             Promise.resolve(created.filter(notification => notification.userId === userId).length),
+        // Neither is reached by consume: this suite exercises the worker's own
+        // effect, not the list or mark-as-read screen US-18 added.
+        findPageForAccount: () => Promise.reject(new Error('not exercised by this suite')),
+        markAsRead: () => Promise.reject(new Error('not exercised by this suite')),
     };
 }
 
@@ -104,6 +108,8 @@ describe('consume, atomicite de l effet', () => {
         const notifications: NotificationStore = {
             notifyItemCreated: () => Promise.reject(new Error('notifications: notify failed')),
             countUnread: () => Promise.resolve(0),
+            findPageForAccount: () => Promise.reject(new Error('not exercised by this suite')),
+            markAsRead: () => Promise.reject(new Error('not exercised by this suite')),
         };
 
         await expect(
@@ -126,6 +132,8 @@ describe('consume, atomicite de l effet', () => {
                 return store.notifyItemCreated(eventId, userId, itemId);
             },
             countUnread: userId => store.countUnread(userId),
+            findPageForAccount: () => Promise.reject(new Error('not exercised by this suite')),
+            markAsRead: () => Promise.reject(new Error('not exercised by this suite')),
         };
 
         await expect(consume(EVENT, { notifications: flaky, logger: recordingLogger() })).rejects.toThrow();

@@ -1,3 +1,5 @@
+import type { RefObject } from 'react';
+
 import { labels } from '../labels';
 import type { AuthMode } from './auth-form';
 
@@ -12,6 +14,10 @@ export interface AuthHeadingProps {
     // ended while the page was in use (US-27). Undefined on a first visit,
     // where there is nothing to explain.
     notice: string | undefined;
+    // The heading takes focus when the page mounts (US-47), so the ref that
+    // does it belongs to whoever renders the h1 -- which is this component
+    // since #210 extracted it.
+    titleRef: RefObject<HTMLHeadingElement | null>;
 }
 
 function title(screen: Screen): string {
@@ -29,10 +35,12 @@ function intro(screen: Screen): string {
 // The title of the screen, the reason it is showing when there is one, and the
 // sentence that introduces it. Kept together because the three are read in that
 // order and only make sense in it.
-export function AuthHeading({ screen, notice }: AuthHeadingProps) {
+export function AuthHeading({ screen, notice, titleRef }: AuthHeadingProps) {
     return (
         <>
-            <h1>{title(screen)}</h1>
+            <h1 ref={titleRef} tabIndex={-1}>
+                {title(screen)}
+            </h1>
             {/* role="alert" : la personne etait en train de travailler et se
                 retrouve ici. La raison doit etre annoncee, pas attendre qu on
                 aille la chercher. */}

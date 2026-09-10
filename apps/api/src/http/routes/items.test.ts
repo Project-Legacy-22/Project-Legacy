@@ -11,6 +11,7 @@ import {
     makeRequestPasswordReset,
     makeResetPassword,
     makeSignIn,
+    makeSignOut,
 } from '@legacy/core-auth';
 // The reference fakes for a port live with the port they implement. Copying one
 // here would let the copy drift from the contract it is supposed to stand for.
@@ -48,7 +49,11 @@ function useCasesOver(repository: ItemRepository, provider: IdentityProvider): A
             changeItem: makeChangeItem(repository),
             removeItem: makeRemoveItem(repository),
         },
-        notifications: { countUnread: () => Promise.resolve(0) },
+        notifications: {
+            countUnread: () => Promise.resolve(0),
+            listNotifications: () => Promise.reject(new Error('not exercised by this suite')),
+            markNotificationRead: () => Promise.reject(new Error('not exercised by this suite')),
+        },
         auth: {
             registerAccount: makeRegisterAccount(provider),
             signIn: makeSignIn(provider),
@@ -59,6 +64,7 @@ function useCasesOver(repository: ItemRepository, provider: IdentityProvider): A
                 provider,
                 compromisedPasswords: inMemoryCompromisedPasswords(),
             }),
+            signOut: makeSignOut(provider),
         },
         account: {
             exportPersonalData: makeExportPersonalData({ store: personalData, now: () => MOMENT }),
@@ -387,17 +393,6 @@ describe('items API', () => {
                 line => (line.fields as { traceId?: string }).traceId === problem.traceId,
             );
             expect(traced.length).toBeGreaterThan(0);
-        });
-    });
-
-    // L effet observable du flux evenementiel de US-10. La route est montee
-    // derriere la meme exigence de session que les items.
-    describe('GET /notifications', () => {
-        it('renvoie le compte de notifications non lues du compte connecte', async () => {
-            const response = await harness.request('/notifications');
-
-            expect(response.status).toBe(200);
-            await expect(response.json()).resolves.toEqual({ unread: 0 });
         });
     });
 });

@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { PRIVACY_POLICY_VERSION } from '@legacy/contracts';
+
 import { createSupabaseIdentityProvider } from './supabase-identity-provider.js';
 // La doublure de GoTrue vit dans test/fakes, comme les autres doublures de
 // reference : ce fichier n est plus le seul a en avoir besoin.
@@ -40,7 +42,7 @@ describe('adaptateur Supabase Auth', () => {
             const { provider, faux: serveur } = await adaptateur();
             serveur.quand(SIGNUP, { status: 200, body: SESSION });
 
-            await expect(provider.register('alice@example.test', 'MotDePasse2026')).resolves.toBe(
+            await expect(provider.register('alice@example.test', 'MotDePasse2026', PRIVACY_POLICY_VERSION)).resolves.toBe(
                 'created',
             );
         });
@@ -52,7 +54,7 @@ describe('adaptateur Supabase Auth', () => {
                 body: { code: 422, error_code: 'user_already_exists', msg: 'User already registered' },
             });
 
-            await expect(provider.register('alice@example.test', 'MotDePasse2026')).resolves.toBe(
+            await expect(provider.register('alice@example.test', 'MotDePasse2026', PRIVACY_POLICY_VERSION)).resolves.toBe(
                 'already-registered',
             );
         });
@@ -65,7 +67,7 @@ describe('adaptateur Supabase Auth', () => {
                 body: { code: 503, error_code: 'service_unavailable', msg: 'indisponible' },
             });
 
-            await expect(provider.register('alice@example.test', 'MotDePasse2026')).rejects.toThrow(
+            await expect(provider.register('alice@example.test', 'MotDePasse2026', PRIVACY_POLICY_VERSION)).rejects.toThrow(
                 /register/,
             );
         });

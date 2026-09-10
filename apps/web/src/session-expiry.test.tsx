@@ -42,11 +42,18 @@ function authApi(): AuthApi {
         currentAccount: vi.fn(async () => COMPTE),
         requestPasswordReset: vi.fn(async () => undefined),
         resetPassword: vi.fn(async () => undefined),
+    // Required by AuthApi since #174; this suite exercises expiry, not sign-out.
+    signOut: vi.fn(async () => undefined),
     };
 }
 
 function notificationsApi(): NotificationsApi {
-    return { unreadCount: vi.fn(async () => 0) };
+    return {
+        unreadCount: vi.fn(async () => 0),
+        // Required by NotificationsApi since #202.
+        listNotifications: vi.fn(async () => ({ notifications: [], nextCursor: null })),
+        markAsRead: vi.fn(async () => undefined),
+    };
 }
 
 // La suppression d un item est l action la plus courte qui parle a l API.

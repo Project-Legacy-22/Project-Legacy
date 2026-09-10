@@ -70,12 +70,17 @@ function createAuth(overrides: Partial<AuthApi> = {}): AuthApi {
         currentAccount: vi.fn(async () => ACCOUNT),
         requestPasswordReset: vi.fn(async () => undefined),
         resetPassword: vi.fn(async () => undefined),
+        signOut: vi.fn(async () => undefined),
         ...overrides,
     };
 }
 
 function createNotifications(unread = 0): NotificationsApi {
-    return { unreadCount: vi.fn(async () => unread) };
+    return {
+        unreadCount: vi.fn(async () => unread),
+        listNotifications: vi.fn(async () => ({ notifications: [], nextCursor: null })),
+        markAsRead: vi.fn(async () => undefined),
+    };
 }
 
 async function fillSignInForm(email: string, password: string): Promise<void> {
@@ -262,6 +267,7 @@ describe('App session states', () => {
             getElement<HTMLInputElement>('input[type="password"]'),
             'un-mot-de-passe-valide',
         );
+        await click(getElement<HTMLInputElement>('input[type="checkbox"]'));
         await submitForm(getElement<HTMLFormElement>('form.auth-form'));
         await flushTimers();
 

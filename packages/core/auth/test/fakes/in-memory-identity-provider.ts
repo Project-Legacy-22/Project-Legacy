@@ -71,6 +71,8 @@ export function inMemoryIdentityProvider(
         seed.map(account => [account.email, { ...account, sessionEpoch: 0 }]),
     );
     const refreshTokens = new Map<string, StoredRefreshToken>();
+    // What each registration consented to, so a test can assert on it.
+    const consentedVersions = new Map<string, string>();
     let nextId = seed.length;
     let nextToken = 0;
 
@@ -122,8 +124,9 @@ export function inMemoryIdentityProvider(
     }
 
     return {
-        register: (email, password): Promise<RegistrationOutcome> => {
+        register: (email, password, policyVersion): Promise<RegistrationOutcome> => {
             if (accounts.has(email)) return Promise.resolve('already-registered');
+            consentedVersions.set(email, policyVersion);
 
             nextId += 1;
             accounts.set(email, {
@@ -187,6 +190,17 @@ export function inMemoryIdentityProvider(
 
             return Promise.resolve();
         },
+        // The fake tracks one current token per account, not one per device,
+        // so there is nothing narrower than the account's whole epoch to
+        // revoke: the same bump resetPassword uses. A token that does not
+        // match the current one is already unusable, which is signOut's goal
+        // state, so there is nothing to do.
+        signOut: (accessToken): Promise<void> => {
+            const account = accountByCurrentToken(accessToken);
+            if (account !== undefined) account.sessionEpoch += 1;
+            return Promise.resolve();
+        },
+
         requestPasswordReset: (email): Promise<void> => {
             const account = accounts.get(email);
 
