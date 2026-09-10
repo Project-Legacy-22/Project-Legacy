@@ -1,31 +1,10 @@
-import { createServer } from 'node:http';
-import type { AddressInfo } from 'node:net';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { fauxFournisseur } from '../test/fakes/fake-gotrue.js';
+import type { FakeGoTrue } from '../test/fakes/fake-gotrue.js';
 import { PRIVACY_POLICY_VERSION } from '@legacy/contracts';
 
 import { createSupabaseIdentityProvider } from './supabase-identity-provider.js';
-
-// A stand-in for GoTrue, served over real HTTP on a free port. The adapter is
-// given its address like any other Supabase URL, so nothing in the production
-// code changes to make it testable, and the exchange under test is the one that
-// actually happens: a request goes out, a status and a body come back.
-//
-// What is pinned here is the translation, not the provider: which answers are
-// ordinary and which are failures. Treating an unknown error as a rejected
-// credential would turn an outage into a wall of plausible refusals, and that
-// is precisely the mistake no integration suite would catch quickly.
-
-interface Reponse {
-    status: number;
-    body: unknown;
-}
-
-interface FauxFournisseur {
-    url: string;
-    quand: (route: string, reponse: Reponse) => void;
-    close: () => Promise<void>;
-}
 
 const UTILISATEUR = {
     id: '9f8e4a2c-1b3d-4e5f-8a90-1c2d3e4f5a6b',
@@ -45,37 +24,6 @@ const SESSION = {
     user: UTILISATEUR,
 };
 
-async function fauxFournisseur(): Promise<FauxFournisseur> {
-    const reponses = new Map<string, Reponse>();
-
-    const server = createServer((req, res) => {
-        req.resume();
-        const chemin = (req.url ?? '').split('?')[0] ?? '';
-        const reponse = reponses.get(`${req.method ?? ''} ${chemin}`) ?? {
-            status: 404,
-            body: { code: 404, error_code: 'not_configured', msg: 'route non configuree' },
-        };
-
-        res.writeHead(reponse.status, { 'content-type': 'application/json' });
-        res.end(JSON.stringify(reponse.body));
-    });
-
-    await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
-    const { port } = server.address() as AddressInfo;
-
-    return {
-        url: `http://127.0.0.1:${String(port)}`,
-        quand: (route, reponse) => reponses.set(route, reponse),
-        close: () =>
-            new Promise<void>((resolve, reject) => {
-                server.close(error => {
-                    if (error) reject(error);
-                    else resolve();
-                });
-            }),
-    };
-}
-
 const SIGNUP = 'POST /auth/v1/signup';
 const TOKEN = 'POST /auth/v1/token';
 const USER = 'GET /auth/v1/user';
@@ -86,7 +34,7 @@ const UPDATE_USER = 'PUT /auth/v1/user';
 const LOGOUT = 'POST /auth/v1/logout';
 
 describe('adaptateur Supabase Auth', () => {
-    let faux: FauxFournisseur;
+    let faux: FakeGoTrue;
 
     async function adaptateur() {
         faux = await fauxFournisseur();
@@ -282,7 +230,7 @@ describe('adaptateur Supabase Auth', () => {
     });
 
     describe('resetPassword', () => {
-        function armeLeSucces(serveur: FauxFournisseur) {
+        function armeLeSucces(serveur: FakeGoTrue) {
             serveur.quand(VERIFY, { status: 200, body: SESSION });
             serveur.quand(UPDATE_USER, { status: 200, body: UTILISATEUR });
             serveur.quand(LOGOUT, { status: 204, body: {} });

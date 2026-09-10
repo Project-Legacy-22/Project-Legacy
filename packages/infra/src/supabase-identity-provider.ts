@@ -70,6 +70,30 @@ function stateless(settings: SupabaseAuthSettings) {
     });
 }
 
+// The admin client, used by the two operations no session can perform on its
+// own behalf. Kept apart from the one above so that sign-up and sign-in
+// cannot reach the service-role key by accident: the endpoints that apply the
+// password policy and the provider's own rate limits are exactly the
+// endpoints that key would bypass.
+function admin(settings: SupabaseAuthSettings) {
+    return createClient(settings.url, settings.serviceRoleKey, {
+        auth: { persistSession: false, autoRefreshToken: false },
+    });
+}
+
+async function signOut(settings: SupabaseAuthSettings, accessToken: string): Promise<void> {
+    // 'local' revokes only the refresh token tied to this access token, not
+    // every session of the account -- that is resetPassword's job, with its
+    // own reason to want 'global'.
+    const { error } = await admin(settings).auth.admin.signOut(accessToken, 'local');
+
+    if (error === null) return;
+    if (error.code !== undefined && UNUSABLE_TOKEN.has(error.code)) return;
+    if (error.status === 401 || error.status === 403) return;
+
+    return fail('signOut', error);
+}
+
 async function requestPasswordReset(settings: SupabaseAuthSettings, email: string): Promise<void> {
     // GoTrue answers a syntactically valid address the same way whether or not
     // it has an account, so this call does not disclose which. The recovery
@@ -151,13 +175,7 @@ async function registerWith(
 
 export function createSupabaseIdentityProvider(settings: SupabaseAuthSettings): IdentityProvider {
     const client = stateless(settings);
-    // The admin client, used by one method. Kept apart from the one above so
-    // that sign-up and sign-in cannot reach the service-role key by accident:
-    // the endpoints that apply the password policy and the provider's rate
-    // limits are exactly the endpoints that key would bypass.
-    const admin = createClient(settings.url, settings.serviceRoleKey, {
-        auth: { persistSession: false, autoRefreshToken: false },
-    });
+    const adminClient = admin(settings);
 
     const register = (email: string, password: string, policyVersion: string) =>
         registerWith(client, { email, password, policyVersion });
@@ -198,7 +216,7 @@ export function createSupabaseIdentityProvider(settings: SupabaseAuthSettings): 
         // an erasure exists to remove. Deleting the user also drops the
         // sessions and refresh tokens GoTrue holds for it, which is what signs
         // the person out everywhere instead of only in the browser that asked.
-        const { error } = await admin.auth.admin.deleteUser(accountId);
+        const { error } = await adminClient.auth.admin.deleteUser(accountId);
 
         if (error === null || error.status === USER_NOT_FOUND) return;
 
@@ -212,5 +230,6 @@ export function createSupabaseIdentityProvider(settings: SupabaseAuthSettings): 
         remove,
         requestPasswordReset: email => requestPasswordReset(settings, email),
         resetPassword: (token, password) => resetPassword(settings, token, password),
+        signOut: accessToken => signOut(settings, accessToken),
     };
 }

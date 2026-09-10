@@ -55,4 +55,12 @@ export interface IdentityProvider {
     // revokes every other session of the account. The token is single-use and
     // time-limited on the provider's side.
     resetPassword(recoveryToken: string, newPassword: string): Promise<PasswordResetOutcome>;
+
+    // Revokes this one session's refresh token, so it cannot be exchanged for
+    // a new access token again: signs the caller out of the browser that
+    // asked, not every browser signed in as them (that is `remove`'s job, and
+    // resetPassword's). A token the provider no longer recognises is treated
+    // the same as one it just revoked -- the goal state, this token cannot be
+    // renewed, is already reached.
+    signOut(accessToken: string): Promise<void>;
 }

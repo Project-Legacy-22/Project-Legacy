@@ -7,6 +7,7 @@ import {
     makeRequestPasswordReset,
     makeResetPassword,
     makeSignIn,
+    makeSignOut,
 } from '@legacy/core-auth';
 import { makeAddItem, makeChangeItem, makeListItems, makeRemoveItem } from '@legacy/core-items';
 // The reference fakes for a port live with the port they implement.
@@ -60,6 +61,7 @@ function useCasesOver(provider: InMemoryIdentityProvider, compromised: string[])
                 provider,
                 compromisedPasswords: inMemoryCompromisedPasswords(compromised),
             }),
+            signOut: makeSignOut(provider),
         },
         // Aucune route exercee ici ne touche aux donnees personnelles. Le
         // groupe est compose sur un magasin vide plutot qu omis : AppUseCases

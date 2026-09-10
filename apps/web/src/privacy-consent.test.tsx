@@ -28,6 +28,8 @@ function createAuth(overrides: Partial<AuthApi> = {}): AuthApi {
         currentAccount: vi.fn(async () => ACCOUNT),
         requestPasswordReset: vi.fn(async () => undefined),
         resetPassword: vi.fn(async () => undefined),
+        // Added by #174: the AuthApi facade makes it required.
+        signOut: vi.fn(async () => undefined),
         ...overrides,
     };
 }

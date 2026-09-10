@@ -212,6 +212,30 @@ describe('authApi.resetPassword', () => {
     });
 });
 
+describe('authApi.signOut', () => {
+    it('aboutit sur une reponse sans corps', async () => {
+        stubFetch(new Response(null, { status: 204 }));
+
+        await expect(authApi.signOut()).resolves.toBeUndefined();
+    });
+
+    it('leve quand le serveur refuse la requete', async () => {
+        stubFetch(new Response(null, { status: 500 }));
+
+        await expect(authApi.signOut()).rejects.toEqual(new ApiError(500, labels.signOutFailed));
+    });
+
+    it('poste sur /auth/logout', async () => {
+        const fetchMock = stubFetch(new Response(null, { status: 204 }));
+
+        await authApi.signOut();
+
+        const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+        expect(url).toBe('/auth/logout');
+        expect(init.method).toBe('POST');
+    });
+});
+
 describe('authApi.currentAccount', () => {
     it('renvoie le compte quand la session est valide', async () => {
         stubFetch(response(ACCOUNT));
