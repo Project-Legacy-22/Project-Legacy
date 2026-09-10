@@ -65,7 +65,7 @@ input[aria-invalid="true"] {
         filter 100ms ease;
 }
 
-.button:active:not(:disabled) {
+.button:active:not(:disabled):not([aria-disabled='true']) {
     filter: brightness(0.88);
 }
 
@@ -74,7 +74,7 @@ input[aria-invalid="true"] {
     background: #0f7169;
 }
 
-.button-primary:hover:not(:disabled) {
+.button-primary:hover:not(:disabled):not([aria-disabled='true']) {
     background: #0b5c56;
 }
 
@@ -84,7 +84,7 @@ input[aria-invalid="true"] {
     background: #ffffff;
 }
 
-.button-secondary:hover:not(:disabled) {
+.button-secondary:hover:not(:disabled):not([aria-disabled='true']) {
     border-color: #184f49;
     background: #e9f6f3;
 }
@@ -95,12 +95,13 @@ input[aria-invalid="true"] {
     background: #ffffff;
 }
 
-.button-danger:hover:not(:disabled) {
+.button-danger:hover:not(:disabled):not([aria-disabled='true']) {
     border-color: #8a1c16;
     background: #fff1f0;
 }
 
 .button:disabled,
+.button[aria-disabled='true'],
 input:disabled {
     cursor: not-allowed;
     opacity: 0.62;

@@ -43,6 +43,11 @@ function useCasesOver(provider: InMemoryIdentityProvider): AppUseCases {
             changeItem: makeChangeItem(repository),
             removeItem: makeRemoveItem(repository),
         },
+        projects: {
+            listProjects: () => Promise.reject(new Error('not exercised by this suite')),
+            addProject: () => Promise.reject(new Error('not exercised by this suite')),
+            removeProject: () => Promise.reject(new Error('not exercised by this suite')),
+        },
         notifications: {
             countUnread: () => Promise.resolve(0),
             listNotifications: () => Promise.reject(new Error('not exercised by this suite')),

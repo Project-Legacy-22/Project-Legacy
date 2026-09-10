@@ -61,6 +61,11 @@ function useCasesOver(
             changeItem: () => Promise.reject(new Error('not exercised by this suite')),
             removeItem: () => Promise.reject(new Error('not exercised by this suite')),
         },
+        projects: {
+            listProjects: () => Promise.reject(new Error('not exercised by this suite')),
+            addProject: () => Promise.reject(new Error('not exercised by this suite')),
+            removeProject: () => Promise.reject(new Error('not exercised by this suite')),
+        },
         notifications: {
             listNotifications: makeListNotifications(repository),
             markNotificationRead: makeMarkNotificationRead(repository),

@@ -8,6 +8,7 @@ import {
     createSupabaseNotificationStore,
     createSupabaseOutboxStore,
     createSupabasePersonalDataStore,
+    createSupabaseProjectRepository,
     relayOnce,
 } from '@legacy/infra';
 import type {
@@ -35,6 +36,7 @@ import {
     makeListNotifications,
     makeMarkNotificationRead,
 } from '@legacy/core-notifications';
+import { makeAddProject, makeListProjects, makeRemoveProject } from '@legacy/core-projects';
 
 import type { Config } from './config.js';
 
@@ -63,6 +65,12 @@ export interface AccountUseCases {
     eraseAccount: ReturnType<typeof makeEraseAccount>;
 }
 
+export interface ProjectUseCases {
+    listProjects: ReturnType<typeof makeListProjects>;
+    addProject: ReturnType<typeof makeAddProject>;
+    removeProject: ReturnType<typeof makeRemoveProject>;
+}
+
 export interface NotificationUseCases {
     listNotifications: ReturnType<typeof makeListNotifications>;
     markNotificationRead: ReturnType<typeof makeMarkNotificationRead>;
@@ -73,6 +81,7 @@ export interface AppUseCases {
     items: ItemUseCases;
     auth: AuthUseCases;
     account: AccountUseCases;
+    projects: ProjectUseCases;
     notifications: NotificationUseCases;
 }
 
@@ -92,6 +101,7 @@ interface Adapters {
     store: ItemStore;
     identity: ReturnType<typeof createSupabaseIdentityProvider>;
     personalData: ReturnType<typeof createSupabasePersonalDataStore>;
+    projects: ReturnType<typeof createSupabaseProjectRepository>;
     outbox: OutboxStore;
     notifications: NotificationStore;
     bus: EventBus;
@@ -117,6 +127,7 @@ function createAdapters(config: Config): Adapters {
         // own port: it reads and clears the tables of every domain at once
         // (US-13), which no single domain's repository is allowed to know about.
         personalData: createSupabasePersonalDataStore(supabase),
+        projects: createSupabaseProjectRepository(supabase),
         outbox: createSupabaseOutboxStore(supabase),
         notifications: createSupabaseNotificationStore(supabase),
         bus: createRedisEventBus({ url: config.redisUrl }),
@@ -167,7 +178,7 @@ function authUseCases(
 }
 
 export function compose(config: Config): Application {
-    const { store, identity, personalData, outbox, notifications, bus } = createAdapters(config);
+    const { store, identity, personalData, projects, outbox, notifications, bus } = createAdapters(config);
     const logger = createLogger(config.logLevel);
     const compromisedPasswords = createHibpPasswordRegistry({ logger });
 
@@ -193,6 +204,11 @@ export function compose(config: Config): Application {
                     now: () => new Date(),
                 }),
                 eraseAccount: makeEraseAccount({ store: personalData, identity }),
+            },
+            projects: {
+                listProjects: makeListProjects(projects),
+                addProject: makeAddProject({ repository: projects, newId: uuid }),
+                removeProject: makeRemoveProject(projects),
             },
             notifications: {
                 listNotifications: makeListNotifications(notifications),

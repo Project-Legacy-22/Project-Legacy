@@ -389,7 +389,15 @@ jobs:
           set -euo pipefail
           psql -v ON_ERROR_STOP=1 <<'SQL'
           create schema if not exists auth;
-          create table if not exists auth.users (id uuid primary key, email text);
+          -- raw_user_meta_data porte le consentement que le miroir lit depuis
+          -- 20260910110000. Le fac-simile s en passait tant qu aucun controle
+          -- n inserait dans auth.users ; les assertions d effacement de US-16 le
+          -- font, et le declencheur echouait alors sur une colonne absente.
+          create table if not exists auth.users (
+            id uuid primary key,
+            email text,
+            raw_user_meta_data jsonb
+          );
           create or replace function auth.uid() returns uuid
           language sql stable
           as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;

@@ -4,15 +4,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AccountDto, AuthApi } from './api/auth-api';
 import { ApiError } from './api/items-api';
 import type { ItemPageDto, ItemsApi, ListItemsRequest } from './api/items-api';
+import type { ProjectsApi } from './api/projects-api';
 import { App } from './app';
 import { labels } from './labels';
 import { anItem } from './test/builders/item-builder';
 import { click, createReactTestRoot, flushTimers, getElement } from './test/react-root';
 import type { ReactTestRoot } from './test/react-root';
 
-const ACCOUNT = { id: 'account', email: 'ada@example.com' } satisfies AccountDto;
+const ACCOUNT = {
+    id: 'account',
+    email: 'ada@example.com',
+} satisfies AccountDto;
 const firstItem = anItem({ id: 'first', name: 'First item' });
 const secondItem = anItem({ id: 'second', name: 'Second item' });
+const PROJECT_ID = firstItem.projectId;
 
 let testRoot: ReactTestRoot;
 
@@ -34,6 +39,22 @@ const auth: AuthApi = {
     signOut: vi.fn(async () => undefined),
 };
 
+const projects: ProjectsApi = {
+    listProjects: vi.fn(async () => ({
+        projects: [
+            {
+                id: PROJECT_ID,
+                name: 'My project',
+                role: 'owner' as const,
+                itemCount: 2,
+            },
+        ],
+        nextCursor: null,
+    })),
+    createProject: vi.fn(),
+    deleteProject: vi.fn(),
+};
+
 beforeEach(() => {
     testRoot = createReactTestRoot();
 });
@@ -49,7 +70,7 @@ describe('App item pagination', () => {
             rejectNextPage = reject;
         });
         let nextPageAttempts = 0;
-        const listItems = vi.fn(async (request: ListItemsRequest): Promise<ItemPageDto> => {
+        const listItems = vi.fn(async (_projectId: string, request: ListItemsRequest): Promise<ItemPageDto> => {
             if (request.cursor === undefined) {
                 return { items: [firstItem], nextCursor: 'next page' };
             }
@@ -57,14 +78,14 @@ describe('App item pagination', () => {
             if (nextPageAttempts === 1) return failedNextPage;
             return { items: [secondItem], nextCursor: null };
         });
-        await testRoot.render(<App api={createApi(listItems)} auth={auth} />);
+        await testRoot.render(<App api={createApi(listItems)} auth={auth} projects={projects} />);
 
         const loadMore = getElement<HTMLButtonElement>('.items-pagination button');
         loadMore.focus();
         await click(loadMore);
 
         expect(loadMore.getAttribute('aria-disabled')).toBe('true');
-        expect(listItems.mock.calls[1]?.[0].cursor).toBe('next page');
+        expect(listItems.mock.calls[1]?.[1].cursor).toBe('next page');
 
         await act(async () => {
             rejectNextPage(new ApiError(503, labels.loadMoreItemsFailed));
@@ -83,8 +104,6 @@ describe('App item pagination', () => {
         expect(loadMore.getAttribute('aria-disabled')).toBe('true');
         expect(loadMore.textContent).toBe(labels.allItemsLoaded);
         expect(document.activeElement).toBe(loadMore);
-        expect(getElement<HTMLElement>('.pagination-status').textContent).toBe(
-            labels.itemsLoaded(1),
-        );
+        expect(getElement<HTMLElement>('.pagination-status').textContent).toBe(labels.itemsLoaded(1));
     });
 });

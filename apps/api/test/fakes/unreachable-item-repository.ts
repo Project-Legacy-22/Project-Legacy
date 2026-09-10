@@ -9,8 +9,9 @@ function unreachable(): Promise<never> {
 
 export function unreachableItemRepository(): ItemRepository {
     return {
-        findPageByOwner: unreachable,
-        findByIdForOwner: unreachable,
+        isProjectMember: unreachable,
+        findPageForMember: unreachable,
+        findByIdForMember: unreachable,
         save: unreachable,
         update: unreachable,
         remove: unreachable,

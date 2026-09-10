@@ -11,6 +11,7 @@ import { accountRouter } from './routes/account.js';
 import { authRouter } from './routes/auth.js';
 import { itemsRouter } from './routes/items.js';
 import { notificationsRouter } from './routes/notifications.js';
+import { projectsRouter } from './routes/projects.js';
 import { translateErrors } from './error-middleware.js';
 import { requireAccount } from './session.js';
 import { withTraceId } from './trace.js';
@@ -100,9 +101,12 @@ export function createServer(config: Config, useCases: AppUseCases, logger: Logg
     // Items belong to somebody since US-11: no session, no items. The guard
     // also renews the session it is given when it can, so an hour-long access
     // token does not interrupt what somebody is doing (US-27).
+    //
+    // One instance for the three routers rather than one each: the guard holds
+    // no state, and building it three times would only make three closures.
     const session = requireAccount(useCases.auth, config.secureCookies);
 
-    app.use(session, itemsRouter(useCases.items));
+    app.use(session, projectsRouter(useCases.projects), itemsRouter(useCases.items));
     app.use(session, notificationsRouter(useCases.notifications));
 
     // Registered last: express only treats a middleware as an error handler

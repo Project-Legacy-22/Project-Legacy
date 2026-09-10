@@ -62,7 +62,13 @@ describe('notifications API (integration)', () => {
         asOwner = await serveAs(app, owner.cookie);
         asIntruder = await serveAs(app, intruder.cookie);
 
-        const created = await asOwner.request('/items', json('POST', { name: 'Depot integration' }));
+        // Les items s adressent par leur projet depuis US-16 : sur /items le
+        // serveur rend la coquille de l application, et la lecture JSON echoue
+        // sur un document HTML.
+        const created = await asOwner.request(
+            `/projects/${owner.projectId}/items`,
+            json('POST', { name: 'Depot integration' }),
+        );
         itemId = ((await created.json()) as { id: string }).id;
     });
 

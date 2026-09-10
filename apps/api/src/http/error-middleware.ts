@@ -2,6 +2,7 @@ import { ZodError } from 'zod';
 import { AuthError } from '@legacy/core-auth';
 import { DomainError } from '@legacy/core-items';
 import { NotificationError } from '@legacy/core-notifications';
+import { ProjectError } from '@legacy/core-projects';
 import type { Logger, ProblemDetails } from '@legacy/contracts';
 import type { ErrorRequestHandler } from 'express';
 
@@ -14,19 +15,20 @@ import { traceIdOf } from './trace.js';
 // Only the field paths and the reason are reported, never the value that was
 // submitted: an error body must not echo back what a user typed.
 function describe(error: ZodError): string {
-    return error.issues.map(issue => `${issue.path.join('.') || 'body'}: ${issue.message}`).join('; ');
+    return error.issues.map((issue) => `${issue.path.join('.') || 'body'}: ${issue.message}`).join('; ');
 }
 
 // Each domain names its own errors -- a core package may not import another --
 // so the middleware knows all of them. They agree on three fields, which is
 // what makes one translation enough.
-type Reported = AuthError | DomainError | NotificationError | TooManyAttempts;
+type Reported = AuthError | DomainError | NotificationError | ProjectError | TooManyAttempts;
 
 function isReported(error: unknown): error is Reported {
     return (
         error instanceof AuthError ||
         error instanceof DomainError ||
         error instanceof NotificationError ||
+        error instanceof ProjectError ||
         error instanceof TooManyAttempts
     );
 }
@@ -105,7 +107,11 @@ export function translateErrors(logger: Logger): ErrorRequestHandler {
         if (problem.status >= 500) {
             logger.error({ err: error, traceId: problem.traceId }, 'unhandled failure');
         } else {
-            logger.warn({ type: problem.type, status: problem.status, traceId: problem.traceId });
+            logger.warn({
+                type: problem.type,
+                status: problem.status,
+                traceId: problem.traceId,
+            });
         }
 
         res.status(problem.status).json(problem);

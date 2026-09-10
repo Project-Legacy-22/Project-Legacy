@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { labels } from '../labels';
 import type { AddItemResult } from '../hooks/use-items';
+import type { AddProjectResult } from '../hooks/use-projects';
 import { anItem } from '../test/builders/item-builder';
 import { click, createReactTestRoot, getElement } from '../test/react-root';
 import type { ReactTestRoot } from '../test/react-root';
@@ -10,6 +11,12 @@ import { TodoPage } from './todo-page';
 import type { TodoPageProps } from './todo-page';
 
 const firstItem = anItem({ name: 'Check keyboard navigation' });
+const project = {
+    id: firstItem.projectId,
+    name: 'My project',
+    role: 'owner' as const,
+    itemCount: 1,
+};
 
 let testRoot: ReactTestRoot;
 
@@ -27,6 +34,24 @@ function pageProps(overrides: Partial<TodoPageProps> = {}): TodoPageProps {
         onRemove: vi.fn(async () => true),
         onLoadMore: vi.fn(),
         onRetry: vi.fn(),
+        selectedProject: project,
+        projects: {
+            projects: [project],
+            selectedProjectId: project.id,
+            loadState: { status: 'ready' },
+            feedback: { status: 'idle' },
+            isAdding: false,
+            pendingProjectId: null,
+            hasNextPage: false,
+            paginationState: { status: 'idle', announcement: '' },
+            onSelect: vi.fn(),
+            onAdd: vi.fn(async (): Promise<AddProjectResult> => ({
+                status: 'success',
+            })),
+            onRemove: vi.fn(async () => true),
+            onLoadMore: vi.fn(),
+            onRetry: vi.fn(),
+        },
         ...overrides,
     };
 }
@@ -55,7 +80,7 @@ describe('TodoPage accessibility', () => {
             rules: { 'color-contrast': { enabled: false } },
         });
 
-        expect(results.violations.map(violation => violation.id)).toEqual([]);
+        expect(results.violations.map((violation) => violation.id)).toEqual([]);
     });
 
     it('links every input help reference to an existing element', async () => {
@@ -64,7 +89,7 @@ describe('TodoPage accessibility', () => {
         const input = getElement<HTMLInputElement>('#item-name');
         const referenceIds = input.getAttribute('aria-describedby')?.split(/\s+/u) ?? [];
         expect(referenceIds.length).toBeGreaterThan(0);
-        expect(referenceIds.map(id => document.getElementById(id)?.id)).toEqual(referenceIds);
+        expect(referenceIds.map((id) => document.getElementById(id)?.id)).toEqual(referenceIds);
     });
 
     it('announces errors and successful actions', async () => {
@@ -82,12 +107,16 @@ describe('TodoPage accessibility', () => {
         await renderPage({ items: [], loadState: { status: 'loading' } });
 
         expect(getElement<HTMLInputElement>('#item-name').disabled).toBe(true);
-        expect(getElement<HTMLButtonElement>('.button-primary').disabled).toBe(true);
+        expect(getElement<HTMLButtonElement>('.add-form .button-primary').disabled).toBe(true);
         expect(document.querySelector('[role="status"]')?.textContent).toBe(labels.loadingItems);
     });
 
     it('shows an explicit empty state when the list is ready', async () => {
-        await renderPage({ items: [], loadState: { status: 'ready' }, hasNextPage: false });
+        await renderPage({
+            items: [],
+            loadState: { status: 'ready' },
+            hasNextPage: false,
+        });
 
         expect(document.querySelector('.empty-message')?.textContent).toBe(labels.emptyItems);
         expect(document.querySelector('.todo-list')).toBeNull();

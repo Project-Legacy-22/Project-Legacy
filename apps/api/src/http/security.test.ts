@@ -52,6 +52,11 @@ function appUseCases(authenticate?: IdentityProvider['authenticate']): AppUseCas
         },
         // Required by AppUseCases since #202. This suite exercises headers,
         // CORS and body limits, never a notification route.
+        projects: {
+            listProjects: () => Promise.reject(new Error('not exercised by this suite')),
+            addProject: () => Promise.reject(new Error('not exercised by this suite')),
+            removeProject: () => Promise.reject(new Error('not exercised by this suite')),
+        },
         notifications: {
             listNotifications: () => Promise.reject(new Error('not exercised by this suite')),
             markNotificationRead: () => Promise.reject(new Error('not exercised by this suite')),

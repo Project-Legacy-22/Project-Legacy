@@ -2,6 +2,7 @@ import { act } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from './app';
+import { createProjectsApi } from './test/app-fixture';
 import { ApiError } from './api/items-api';
 import type { ItemPageDto, ItemsApi } from './api/items-api';
 import type { AccountDto, AuthApi } from './api/auth-api';
@@ -57,8 +58,11 @@ function notificationsApi(): NotificationsApi {
 }
 
 // La suppression d un item est l action la plus courte qui parle a l API.
+//
+// Cible par le nom accessible et non par .button-danger : depuis #152 la page
+// porte aussi la suppression d un projet, qui vient avant dans le document.
 async function agirSurUnItem(): Promise<void> {
-    await click(getElement<HTMLButtonElement>('.button-danger'));
+    await click(getElement<HTMLButtonElement>(`[aria-label="${labels.removeItem(ITEM.name ?? labels.unnamedItem)}"]`));
     await flushTimers();
 }
 
@@ -87,7 +91,7 @@ describe('session qui expire pendant l usage', () => {
             deleteItem: vi.fn(() => Promise.reject(new ApiError(401, 'session expiree'))),
         });
         await testRoot.render(
-            <App api={api} auth={authApi()} notifications={notificationsApi()} />,
+            <App api={api} auth={authApi()} notifications={notificationsApi()} projects={createProjectsApi()} />,
         );
 
         await agirSurUnItem();
@@ -109,11 +113,16 @@ describe('session qui expire pendant l usage', () => {
         const api = itemsApi({
             deleteItem: vi.fn(() => Promise.reject(new ApiError(401, 'session expiree'))),
         });
-        await testRoot.render(<App api={api} auth={authApi()} notifications={notifications} />);
+        await testRoot.render(<App
+                api={api}
+                auth={authApi()}
+                notifications={notifications}
+                projects={createProjectsApi()}
+            />);
 
         await avancer(TROIS_RELECTURES_MS);
         const pendantLaSession = vi.mocked(notifications.unreadCount).mock.calls.length;
-        await click(getElement<HTMLButtonElement>('.button-danger'));
+        await click(getElement<HTMLButtonElement>(`[aria-label="${labels.removeItem(ITEM.name ?? labels.unnamedItem)}"]`));
         await avancer(TROIS_RELECTURES_MS);
 
         // Une relecture a bien lieu tant que la session dure, sinon l assertion
@@ -129,7 +138,12 @@ describe('session qui expire pendant l usage', () => {
         auth.currentAccount = vi.fn(async () => null);
 
         await testRoot.render(
-            <App api={itemsApi()} auth={auth} notifications={notificationsApi()} />,
+            <App
+                api={itemsApi()}
+                auth={auth}
+                notifications={notificationsApi()}
+                projects={createProjectsApi()}
+            />,
         );
 
         expect(document.querySelector('form.auth-form')).not.toBeNull();

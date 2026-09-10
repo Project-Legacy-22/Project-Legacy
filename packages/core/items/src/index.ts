@@ -6,6 +6,7 @@ export {
     InvalidItemName,
     InvalidItemCursor,
     ItemNotFound,
+    ItemProjectNotFound,
     MAX_ITEM_NAME_LENGTH,
 } from './domain/item.js';
 export type { Item } from './domain/item.js';

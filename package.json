@@ -15,7 +15,8 @@
     "packages/infra",
     "packages/core/items",
     "packages/core/auth",
-    "packages/core/notifications"
+    "packages/core/notifications",
+    "packages/core/projects"
   ],
   "scripts": {
     "up": "node scripts/up.mjs",

@@ -24,6 +24,10 @@ describe('items API (integration)', () => {
     let asOwner: Harness;
     let asIntruder: Harness;
 
+    function itemsOf(account: RealAccount): string {
+        return `/projects/${account.projectId}/items`;
+    }
+
     beforeAll(async () => {
         app = realApplication();
         await app.start();
@@ -40,7 +44,7 @@ describe('items API (integration)', () => {
     });
 
     it('cree un item et le renvoie sans le proprietaire', async () => {
-        const response = await asOwner.request('/items', json('POST', { name: 'Depot integration' }));
+        const response = await asOwner.request(itemsOf(owner), json('POST', { name: 'Depot integration' }));
         const created = (await response.json()) as Record<string, unknown>;
 
         expect(response.status).toBe(200);
@@ -52,29 +56,30 @@ describe('items API (integration)', () => {
         let itemId: string;
 
         beforeAll(async () => {
-            const response = await asOwner.request('/items', json('POST', { name: 'A moi' }));
+            const response = await asOwner.request(itemsOf(owner), json('POST', { name: 'A moi' }));
             itemId = ((await response.json()) as { id: string }).id;
         });
 
         it('le proprietaire voit son item dans la liste', async () => {
-            const page = (await (await asOwner.request('/items')).json()) as {
+            const page = (await (await asOwner.request(itemsOf(owner))).json()) as {
                 items: { id: string }[];
             };
 
-            expect(page.items.map(item => item.id)).toContain(itemId);
+            expect(page.items.map((item) => item.id)).toContain(itemId);
         });
 
         it('un autre compte ne voit pas cet item dans sa liste', async () => {
-            const page = (await (await asIntruder.request('/items')).json()) as {
-                items: { id: string }[];
-            };
+            const response = await asIntruder.request(itemsOf(owner));
 
-            expect(page.items.map(item => item.id)).not.toContain(itemId);
+            expect(response.status).toBe(404);
+            expect((await response.json()) as object).toMatchObject({
+                type: 'project_not_found',
+            });
         });
 
         it('le proprietaire peut le modifier', async () => {
             const response = await asOwner.request(
-                `/items/${itemId}`,
+                `${itemsOf(owner)}/${itemId}`,
                 json('PUT', { name: 'A moi, renomme', completed: true }),
             );
 
@@ -85,31 +90,35 @@ describe('items API (integration)', () => {
         // meme regle deja exercee contre des doublures.
         it('un autre compte ne peut pas le modifier, et ne le change pas', async () => {
             const response = await asIntruder.request(
-                `/items/${itemId}`,
+                `${itemsOf(owner)}/${itemId}`,
                 json('PUT', { name: 'Vole', completed: true }),
             );
 
             expect(response.status).toBe(404);
 
-            const stillMine = (await (await asOwner.request('/items')).json()) as {
+            const stillMine = (await (await asOwner.request(itemsOf(owner))).json()) as {
                 items: { id: string; name: string }[];
             };
-            expect(stillMine.items.find(item => item.id === itemId)?.name).toBe('A moi, renomme');
+            expect(stillMine.items.find((item) => item.id === itemId)?.name).toBe('A moi, renomme');
         });
 
         it('un autre compte ne peut pas le supprimer, et il reste present', async () => {
-            const response = await asIntruder.request(`/items/${itemId}`, { method: 'DELETE' });
+            const response = await asIntruder.request(`${itemsOf(owner)}/${itemId}`, {
+                method: 'DELETE',
+            });
 
             expect(response.status).toBe(404);
 
-            const stillThere = (await (await asOwner.request('/items')).json()) as {
+            const stillThere = (await (await asOwner.request(itemsOf(owner))).json()) as {
                 items: { id: string }[];
             };
-            expect(stillThere.items.map(item => item.id)).toContain(itemId);
+            expect(stillThere.items.map((item) => item.id)).toContain(itemId);
         });
 
         it('le proprietaire peut le supprimer', async () => {
-            const response = await asOwner.request(`/items/${itemId}`, { method: 'DELETE' });
+            const response = await asOwner.request(`${itemsOf(owner)}/${itemId}`, {
+                method: 'DELETE',
+            });
 
             expect(response.status).toBe(200);
         });

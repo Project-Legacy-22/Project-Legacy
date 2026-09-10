@@ -1,19 +1,9 @@
 import type { ItemsApi } from '../api/items-api';
-import type {
-    AddItemResult,
-    ItemActionFeedback,
-    ItemsLoadState,
-    ItemsPaginationState,
-} from './items-state';
+import type { AddItemResult, ItemActionFeedback, ItemsLoadState, ItemsPaginationState } from './items-state';
 import { useItemActions } from './use-item-actions';
 import { useItemsQuery } from './use-items-query';
 
-export type {
-    AddItemResult,
-    ItemActionFeedback,
-    ItemsLoadState,
-    ItemsPaginationState,
-} from './items-state';
+export type { AddItemResult, ItemActionFeedback, ItemsLoadState, ItemsPaginationState } from './items-state';
 
 export interface ItemsState {
     items: ReturnType<typeof useItemsQuery>['items'];
@@ -30,9 +20,9 @@ export interface ItemsState {
     retry: () => void;
 }
 
-export function useItems(api: ItemsApi): ItemsState {
-    const query = useItemsQuery(api);
-    const actions = useItemActions(api, query.setItems);
+export function useItems(api: ItemsApi, projectId: string | null): ItemsState {
+    const query = useItemsQuery(api, projectId);
+    const actions = useItemActions(api, projectId, query.setItems);
 
     return {
         items: query.items,

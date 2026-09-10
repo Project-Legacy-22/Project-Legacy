@@ -23,6 +23,9 @@
     },
     {
       "path": "../core/notifications"
+    },
+    {
+      "path": "../core/projects"
     }
   ]
 }

@@ -18,12 +18,14 @@ function exportateurSur(comptes: SeededAccount[]) {
 }
 
 describe('exportPersonalData', () => {
-    it('rend le compte, ses items et ses notifications', async () => {
+    it('rend le compte, ses projets, ses appartenances, ses items et ses notifications', async () => {
         const exportPersonalData = exportateurSur([ALICE]);
 
         const copie = await exportPersonalData(ALICE.account.id);
 
         expect(copie.account).toEqual(ALICE.account);
+        expect(copie.projects).toEqual(ALICE.projects);
+        expect(copie.projectMemberships).toEqual(ALICE.projectMemberships);
         expect(copie.items).toEqual(ALICE.items);
         expect(copie.notifications).toEqual(ALICE.notifications);
     });
@@ -36,6 +38,8 @@ describe('exportPersonalData', () => {
 
         const copie = await exportPersonalData(ALICE.account.id);
 
+        expect(copie.projects).not.toHaveLength(0);
+        expect(copie.projectMemberships).not.toHaveLength(0);
         expect(copie.items).not.toHaveLength(0);
         expect(copie.notifications).not.toHaveLength(0);
     });
@@ -50,6 +54,7 @@ describe('exportPersonalData', () => {
 
         expect(document).not.toContain(BOB.account.email);
         expect(document).not.toContain(BOB.account.id);
+        expect(document).not.toContain(BOB.projectId);
         expect(document).not.toContain(BOB.itemId);
         expect(document).not.toContain(BOB.notificationId);
     });

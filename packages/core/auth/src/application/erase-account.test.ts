@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { anAccountWithData } from '../../test/builders/personal-data.js';
+import { aProject, aProjectMembership, anAccountWithData, anItem } from '../../test/builders/personal-data.js';
 import { inMemoryIdentityProvider } from '../../test/fakes/in-memory-identity-provider.js';
 import { inMemoryPersonalDataStore } from '../../test/fakes/in-memory-personal-data-store.js';
-import type { InMemoryPersonalDataStore } from '../../test/fakes/in-memory-personal-data-store.js';
+import type { InMemoryPersonalDataStore, SeededAccount } from '../../test/fakes/in-memory-personal-data-store.js';
 import { ErasureNotConfirmed } from '../domain/account.js';
 import type { IdentityProvider } from '../ports/identity-provider.js';
 import { makeEraseAccount } from './erase-account.js';
@@ -18,17 +18,21 @@ interface Contexte {
     identity: IdentityProvider;
 }
 
-function contexte(): Contexte {
-    const store = inMemoryPersonalDataStore([ALICE, BOB]);
+function contexte(seed: SeededAccount[] = [ALICE, BOB]): Contexte {
+    const store = inMemoryPersonalDataStore(seed);
     const identity = inMemoryIdentityProvider(
-        [ALICE, BOB].map(compte => ({
+        [ALICE, BOB].map((compte) => ({
             id: compte.account.id,
             email: compte.account.email,
             password: MOT_DE_PASSE,
         })),
     );
 
-    return { eraseAccount: makeEraseAccount({ store, identity }), store, identity };
+    return {
+        eraseAccount: makeEraseAccount({ store, identity }),
+        store,
+        identity,
+    };
 }
 
 describe('eraseAccount', () => {
@@ -64,8 +68,49 @@ describe('eraseAccount', () => {
             'items',
             'notifications',
             'outbox',
+            'project_memberships',
         ]);
         expect(store.hasProcessedEvent(BOB.eventId)).toBe(true);
+    });
+
+    it('efface un projet dont le compte etait le dernier membre et ses items', async () => {
+        const { eraseAccount, store } = contexte();
+
+        await eraseAccount(ALICE.account, ALICE.account.email);
+
+        expect(store.hasProject(ALICE.projectId)).toBe(false);
+        expect(store.hasItem(ALICE.itemId)).toBe(false);
+    });
+
+    it('conserve un projet partage et retire seulement l appartenance du compte', async () => {
+        const sharedProjectId = '01996f00-0000-7000-8000-0000000000d9';
+        const sharedItemId = '01996f00-0000-7000-8000-0000000000a9';
+        const project = aProject({ id: sharedProjectId, name: 'Shared project' });
+        const alice = {
+            ...ALICE,
+            projects: [...(ALICE.projects ?? []), project],
+            projectMemberships: [
+                ...(ALICE.projectMemberships ?? []),
+                aProjectMembership({ projectId: sharedProjectId, role: 'member' }),
+            ],
+        };
+        const bob = {
+            ...BOB,
+            projects: [...(BOB.projects ?? []), project],
+            projectMemberships: [
+                ...(BOB.projectMemberships ?? []),
+                aProjectMembership({ projectId: sharedProjectId, role: 'owner' }),
+            ],
+            items: [...(BOB.items ?? []), anItem({ id: sharedItemId, projectId: sharedProjectId })],
+        };
+        const { eraseAccount, store } = contexte([alice, bob]);
+
+        await eraseAccount(ALICE.account, ALICE.account.email);
+
+        expect(store.hasProject(sharedProjectId)).toBe(true);
+        expect(store.hasMembership(sharedProjectId, ALICE.account.id)).toBe(false);
+        expect(store.hasMembership(sharedProjectId, BOB.account.id)).toBe(true);
+        expect(store.hasItem(sharedItemId)).toBe(true);
     });
 
     // La suppression revoque toutes les sessions. Le jeton est fait passer par

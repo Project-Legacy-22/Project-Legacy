@@ -11,6 +11,7 @@ export interface Item {
     // item is created or changed, not when an existing one is read.
     name: string | null;
     completed: boolean;
+    projectId: string;
     // Every item belongs to a user. The application is single-user for now
     // (D-20), so this is always the system account, but the column is mandatory
     // from day one so authentication (US-11) and erasure (US-13) do not force a
@@ -64,8 +65,15 @@ export function itemName(candidate: string): string {
     return name;
 }
 
-export function createItem(id: string, name: string, ownerId: string): Item {
-    return { id, name: itemName(name), completed: false, ownerId };
+export interface NewItem {
+    id: string;
+    name: string;
+    projectId: string;
+    ownerId: string;
+}
+
+export function createItem(candidate: NewItem): Item {
+    return { ...candidate, name: itemName(candidate.name), completed: false };
 }
 
 // Rebuilding an item from storage is not the same operation as creating one:
@@ -76,7 +84,20 @@ export function rehydrateItem(row: {
     id: string;
     name: string | null;
     completed: boolean;
+    projectId: string;
     ownerId: string;
 }): Item {
-    return { id: row.id, name: row.name, completed: row.completed, ownerId: row.ownerId };
+    return {
+        id: row.id,
+        name: row.name,
+        completed: row.completed,
+        projectId: row.projectId,
+        ownerId: row.ownerId,
+    };
+}
+
+export class ItemProjectNotFound extends DomainError {
+    constructor(readonly projectId: string) {
+        super('project_not_found', 404, `Project ${projectId} not found`);
+    }
 }

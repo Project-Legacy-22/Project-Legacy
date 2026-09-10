@@ -8,6 +8,8 @@ import type { AuthApi } from './api/auth-api';
 import { itemsApi } from './api/items-api';
 import type { ItemsApi } from './api/items-api';
 import { notificationsApi } from './api/notifications-api';
+import { projectsApi } from './api/projects-api';
+import type { ProjectsApi } from './api/projects-api';
 import type { NotificationsApi } from './api/notifications-api';
 import { AuthPage } from './components/auth-page';
 import { NotificationsPanel } from './components/notifications-panel';
@@ -19,6 +21,7 @@ import { SessionBanner } from './components/session-banner';
 import { TodoPage } from './components/todo-page';
 import { useItems } from './hooks/use-items';
 import { useNotifications } from './hooks/use-notifications';
+import { useProjects } from './hooks/use-projects';
 import { usePersonalData } from './hooks/use-personal-data';
 import { useSession } from './hooks/use-session';
 import type { SubmitResult } from './hooks/use-session';
@@ -63,12 +66,14 @@ export interface AppProps {
     // Injected so a test can assert on what a download would have contained
     // without a jsdom that implements object URLs.
     save?: SaveFile;
+    projects?: ProjectsApi;
 }
 
 interface SignedInApis {
     api: ItemsApi;
     account: AccountApi;
     notifications: NotificationsApi;
+    projects: ProjectsApi;
 }
 
 // The three clients the signed-in screen uses, each wrapped so that a 401 ends
@@ -79,15 +84,16 @@ interface SignedInApis {
 // identity of the client they are given, so rebuilding these on every render
 // would refetch on every render.
 function useGuardedApis(apis: SignedInApis, onExpired: () => void): SignedInApis {
-    const { api, account, notifications } = apis;
+    const { api, account, notifications, projects } = apis;
 
     return useMemo(
         () => ({
             api: guardSession(api, onExpired),
             account: guardSession(account, onExpired),
             notifications: guardSession(notifications, onExpired),
+            projects: guardSession(projects, onExpired),
         }),
-        [api, account, notifications, onExpired],
+        [api, account, notifications, projects, onExpired],
     );
 }
 
@@ -98,6 +104,46 @@ interface SignedInAppProps {
     isSigningOut: boolean;
     onDeleted: () => void;
     onSignOut: () => Promise<SubmitResult>;
+}
+
+function useProjectItems(api: ItemsApi, projects: ReturnType<typeof useProjects>) {
+    const items = useItems(api, projects.selectedProjectId);
+
+    const addItem = async (name: string) => {
+        const result = await items.addItem(name);
+        if (result.status === 'success') {
+            projects.adjustSelectedItemCount(1);
+        }
+        return result;
+    };
+
+    const removeItem = async (item: Parameters<typeof items.removeItem>[0]) => {
+        const removed = await items.removeItem(item);
+        if (removed) {
+            projects.adjustSelectedItemCount(-1);
+        }
+        return removed;
+    };
+
+    return { ...items, addItem, removeItem };
+}
+
+function projectSectionProps(projects: ReturnType<typeof useProjects>) {
+    return {
+        projects: projects.projects,
+        selectedProjectId: projects.selectedProjectId,
+        loadState: projects.loadState,
+        feedback: projects.feedback,
+        isAdding: projects.isAdding,
+        pendingProjectId: projects.pendingProjectId,
+        hasNextPage: projects.hasNextPage,
+        paginationState: projects.paginationState,
+        onSelect: projects.selectProject,
+        onAdd: projects.addProject,
+        onRemove: projects.removeProject,
+        onLoadMore: projects.loadMore,
+        onRetry: projects.retry,
+    };
 }
 
 // The items screen is mounted in its own component so its data is only fetched
@@ -111,7 +157,8 @@ function SignedInApp({
     onDeleted,
     onSignOut,
 }: SignedInAppProps) {
-    const state = useItems(apis.api);
+    const projects = useProjects(apis.projects);
+    const state = useProjectItems(apis.api, projects);
     const personalData = usePersonalData({ api: apis.account, save, onDeleted });
     const unread = useNotifications(apis.notifications, true);
 
@@ -137,6 +184,8 @@ function SignedInApp({
                 onRemove={state.removeItem}
                 onLoadMore={state.loadMore}
                 onRetry={state.retry}
+                selectedProject={projects.selectedProject}
+                projects={projectSectionProps(projects)}
             >
                 <PersonalDataSection
                     email={email}
@@ -205,13 +254,14 @@ const REAL: Required<AppProps> = {
     account: accountApi,
     notifications: notificationsApi,
     save: saveFile,
+    projects: projectsApi,
 };
 
 export function App(props: AppProps) {
-    const { api, auth, account, notifications, save } = { ...REAL, ...props };
+    const { api, auth, account, notifications, save, projects } = { ...REAL, ...props };
     const session = useSession(auth);
     const recoveryToken = useRecoveryToken();
-    const guarded = useGuardedApis({ api, account, notifications }, session.expire);
+    const guarded = useGuardedApis({ api, account, notifications, projects }, session.expire);
     // The policy is a screen, not a route: this application chooses what to
     // show by state, and it must be readable before an account exists.
     const [showsPolicy, setShowsPolicy] = useState(readsPolicy());

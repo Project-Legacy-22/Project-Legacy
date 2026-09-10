@@ -1,6 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { ExportedItem, ExportedNotification, PersonalData, PersonalDataStore } from '@legacy/core-auth';
+import type {
+    ExportedItem,
+    ExportedNotification,
+    ExportedProject,
+    ExportedProjectMembership,
+    PersonalData,
+    PersonalDataStore,
+} from '@legacy/core-auth';
 
 import type { Database } from './database.types.js';
 import type { SupabaseSettings } from './supabase-item-repository.js';
@@ -8,6 +16,9 @@ import type { SupabaseSettings } from './supabase-item-repository.js';
 type UserRow = Database['public']['Tables']['users']['Row'];
 type ItemRow = Database['public']['Tables']['items']['Row'];
 type NotificationRow = Database['public']['Tables']['notifications']['Row'];
+type ProjectRow = Database['public']['Tables']['projects']['Row'];
+type ProjectMembershipRow = Database['public']['Tables']['project_memberships']['Row'];
+type PersonalDataClient = SupabaseClient<Database>;
 
 // Same posture as the item repository: supabase-js reports a failure as a value
 // on `{ error }`, every call checks it, and a storage failure becomes a generic
@@ -39,11 +50,33 @@ function toOptionalInstant(value: string | null): string | null {
 function toItem(row: ItemRow): ExportedItem {
     return {
         id: row.id,
+        projectId: row.project_id,
         name: row.name,
         completed: row.completed,
         createdAt: toInstant(row.created_at),
         updatedAt: toInstant(row.updated_at),
         deletedAt: toOptionalInstant(row.deleted_at),
+    };
+}
+
+function toProject(row: ProjectRow): ExportedProject {
+    return {
+        id: row.id,
+        name: row.name,
+        createdAt: toInstant(row.created_at),
+        updatedAt: toInstant(row.updated_at),
+    };
+}
+
+function toProjectMembership(row: ProjectMembershipRow): ExportedProjectMembership {
+    if (row.role !== 'owner' && row.role !== 'member') {
+        fail('exportFor', new Error('unknown project membership role'));
+    }
+
+    return {
+        projectId: row.project_id,
+        role: row.role,
+        createdAt: toInstant(row.created_at),
     };
 }
 
@@ -57,16 +90,46 @@ function toNotification(row: NotificationRow): ExportedNotification {
     };
 }
 
-function toPersonalData(
-    account: UserRow,
-    items: ItemRow[],
-    notifications: NotificationRow[],
-): PersonalData {
+interface PersonalDataRows {
+    account: UserRow;
+    projects: ProjectRow[];
+    projectMemberships: ProjectMembershipRow[];
+    items: ItemRow[];
+    notifications: NotificationRow[];
+}
+
+function toPersonalData(rows: PersonalDataRows): PersonalData {
     return {
-        account: { id: account.id, email: account.email, createdAt: toInstant(account.created_at) },
-        items: items.map(toItem),
-        notifications: notifications.map(toNotification),
+        account: {
+            id: rows.account.id,
+            email: rows.account.email,
+            createdAt: toInstant(rows.account.created_at),
+        },
+        projects: rows.projects.map(toProject),
+        projectMemberships: rows.projectMemberships.map(toProjectMembership),
+        items: rows.items.map(toItem),
+        notifications: rows.notifications.map(toNotification),
     };
+}
+
+function checked<T>(result: { data: T; error: unknown }, operation: string): T {
+    if (result.error) fail(operation, result.error);
+    return result.data;
+}
+
+async function projectsFor(client: PersonalDataClient, memberships: ProjectMembershipRow[]): Promise<ProjectRow[]> {
+    if (memberships.length === 0) return [];
+
+    const result = await client
+        .from('projects')
+        .select('*')
+        .in(
+            'id',
+            memberships.map((row) => row.project_id),
+        )
+        .order('created_at');
+
+    return checked(result, 'exportFor') ?? [];
 }
 
 // The storage side of US-13: read everything one account owns, then remove it.
@@ -87,18 +150,26 @@ export function createSupabasePersonalDataStore(settings: SupabaseSettings): Per
         //
         // Items are not filtered on deleted_at. A removed item is still a row
         // this application holds, so it is still part of what is exported.
-        const [account, items, notifications] = await Promise.all([
+        const [account, items, notifications, projectMemberships] = await Promise.all([
             client.from('users').select('*').eq('id', accountId).maybeSingle(),
             client.from('items').select('*').eq('user_id', accountId).order('created_at'),
             client.from('notifications').select('*').eq('user_id', accountId).order('created_at'),
+            client.from('project_memberships').select('*').eq('user_id', accountId).order('created_at'),
         ]);
 
-        if (account.error) fail('exportFor', account.error);
-        if (items.error) fail('exportFor', items.error);
-        if (notifications.error) fail('exportFor', notifications.error);
-        if (account.data === null) return undefined;
+        const accountRow = checked(account, 'exportFor');
+        const itemRows = checked(items, 'exportFor') ?? [];
+        const notificationRows = checked(notifications, 'exportFor') ?? [];
+        const membershipRows = checked(projectMemberships, 'exportFor') ?? [];
+        if (accountRow === null) return undefined;
 
-        return toPersonalData(account.data, items.data ?? [], notifications.data ?? []);
+        return toPersonalData({
+            account: accountRow,
+            projects: await projectsFor(client, membershipRows),
+            projectMemberships: membershipRows,
+            items: itemRows,
+            notifications: notificationRows,
+        });
     }
 
     async function eraseFor(accountId: string): Promise<void> {
@@ -107,7 +178,9 @@ export function createSupabasePersonalDataStore(settings: SupabaseSettings): Per
         // be separate transactions and a failure in between would leave an
         // account half erased. The function body is a single transaction (see
         // the account erasure migration).
-        const { error } = await client.rpc('erase_account', { p_user_id: accountId });
+        const { error } = await client.rpc('erase_account', {
+            p_user_id: accountId,
+        });
         if (error) fail('eraseFor', error);
     }
 
