@@ -198,19 +198,36 @@ jobs:
       # ci-dessus. Le gate applique ("Sonar way", seuils documentes dans l ADR
       # correspondant) est impose par le plan gratuit de l organisation :
       # aucun gate personnalise n y est selectionnable.
-      # Aucune condition ici. GitHub ne transmet pas les secrets du depot aux
-      # executions declenchees par Dependabot : elles lisent un magasin
-      # distinct, ou SONAR_TOKEN a ete pose separement. Sans lui, ni ce job ni
-      # le controle publie par SonarCloud lui-meme n aboutissaient, et les deux
-      # sont exiges par la protection de dev.
       #
-      # Le jeton existe donc en deux exemplaires. Une rotation doit toucher les
-      # deux magasins, sans quoi la moitie des pull requests echouera sans que
-      # la cause soit visible.
+      # sonar.qualitygate.wait fait attendre le verdict du gate et rend un code
+      # de sortie non nul quand il echoue. Sans lui, ce job ne signalait que
+      # l echec du scan : le gate lui-meme n etait bloquant que par le controle
+      # que SonarCloud publie de son cote, et ce controle n apparait jamais sur
+      # une pull request de Dependabot. Le rendre bloquant ici, c est le rendre
+      # bloquant partout, et cesser de dependre d un contexte externe.
+      #
+      # La condition porte sur l etape et non sur le job. Sauter le job entier le
+      # fait conclure en "skipped", et un controle requis saute n est pas
+      # satisfait par GitHub : la pull request passerait de rouge a bloquee.
       - name: Analyser avec SonarCloud
+        if: github.actor != 'dependabot[bot]'
         uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f # v8.2.1
+        with:
+          args: -Dsonar.qualitygate.wait=true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      # Dependabot lit un magasin de secrets distinct, ou le jeton en place est
+      # refuse par SonarCloud. Plutot que de laisser un job rouge que personne ne
+      # peut corriger depuis une pull request de bot, on dit pourquoi l analyse
+      # n a pas tourne. Ces changements restent juges par leurs tests, leur
+      # build, le scan de secrets et CodeQL.
+      - name: Dire pourquoi l analyse n a pas tourne
+        if: github.actor == 'dependabot[bot]'
+        run: |
+          echo "## Qualite" >> "$GITHUB_STEP_SUMMARY"
+          echo "Analyse non executee : le jeton du magasin Dependabot est refuse par SonarCloud." >> "$GITHUB_STEP_SUMMARY"
+          echo "Le changement reste juge sur ses tests, son build, son scan de secrets et CodeQL." >> "$GITHUB_STEP_SUMMARY"
 
   secrets:
     name: Secrets
