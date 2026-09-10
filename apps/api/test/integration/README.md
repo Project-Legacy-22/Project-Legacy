@@ -13,6 +13,9 @@ pour de vrai.
   inscrit et connecte de vrais comptes par l'authentification réelle.
 - `projects.integration.test.ts` — projet par défaut, création avec appartenance,
   visibilité des membres, refus des non-membres et cascade de suppression.
+- `project-counts.integration.test.ts` — compteur aligné sur les tâches visibles,
+  y compris pour un projet vide ou contenant uniquement des tâches supprimées
+  logiquement. Exerce le vrai agrégat PostgREST utilisé par l'API.
 - `items.integration.test.ts` — l'API HTTP réelle : CRUD sous un projet et
   isolation entre membres et non-membres, telle que l'application l'applique.
 - `row-level-security.integration.test.ts` — les politiques RLS elles-mêmes,
