@@ -209,6 +209,10 @@ export type Database = {
         Returns: undefined
       }
       erase_account: { Args: { p_user_id: string }; Returns: undefined }
+      mark_notification_read: {
+        Args: { p_account_id: string; p_id: string }
+        Returns: boolean
+      }
       record_item_created_notification: {
         Args: { p_event_id: string; p_item_id: string; p_user_id: string }
         Returns: boolean
