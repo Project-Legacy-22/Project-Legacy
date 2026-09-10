@@ -5,87 +5,87 @@ import { describe, expect, it } from 'vitest';
 
 import { CONTRAST_PAIRS, EXEMPT, FOCUS_SURFACES } from './contrast-pairs';
 
-// Le contraste n'est verifie par aucun autre test. axe sait le calculer, mais
-// sa regle color-contrast est desactivee partout dans la suite parce que jsdom
-// ne fait pas de rendu : il n'y a ni cascade ni couleur calculee a lire.
+// No other test verifies contrast. axe knows how to compute it, but its
+// color-contrast rule is disabled everywhere in the suite because jsdom does
+// not render: there is neither a cascade nor a computed colour to read.
 //
-// Ce test contourne l'obstacle par le haut. Il ne demande rien au DOM : il lit
-// le texte de tokens.css sur le disque et applique la formule de luminance
-// relative de WCAG aux couples declares. La lecture passe par node:fs et non
-// par un import ?raw, que Vitest ne transforme pas : le test ne depend ainsi
-// d'aucune configuration de bundler. Ce qu'il verifie
-// est donc la palette telle qu'elle est ecrite, pas telle qu'elle est composee
-// a l'ecran -- l'opacite d'un controle desactive et les etats survoles restent
-// hors de portee, et c'est le role des tests navigateur de EN-26.
+// This test goes around the obstacle from above. It asks the DOM for nothing:
+// it reads the text of tokens.css from disk and applies the WCAG relative
+// luminance formula to the declared pairs. The read goes through node:fs
+// rather than a ?raw import, which Vitest does not transform, so the test
+// depends on no bundler configuration. What it verifies is therefore the
+// palette as written, not as composed on screen -- the opacity of a disabled
+// control and hover states stay out of reach, and that is the job of the
+// browser tests of EN-26.
 
-const SEUILS = { text: 4.5, ui: 3 } as const;
+const THRESHOLDS = { text: 4.5, ui: 3 } as const;
 
-function jetons(css: string): ReadonlyMap<string, string> {
-    // Le premier bloc :root seulement. Un second bloc, un jour, serait une
-    // redefinition conditionnelle qu'il faudrait verifier separement.
-    const bloc = /:root\s*\{([^}]*)\}/u.exec(css);
-    if (bloc === null) throw new Error('tokens.css ne declare aucun bloc :root');
+function tokens(css: string): ReadonlyMap<string, string> {
+    // The first :root block only. A second block, one day, would be a
+    // conditional redefinition to be verified separately.
+    const block = /:root\s*\{([^}]*)\}/u.exec(css);
+    if (block === null) throw new Error('tokens.css declares no :root block');
 
-    // noUncheckedIndexedAccess rend chaque groupe capture optionnel. Le motif
-    // garantit leur presence, le typage ne le sait pas : on le verifie plutot
-    // que de le lui affirmer.
-    const declarations = bloc[1] ?? '';
-    const trouves = new Map<string, string>();
-    for (const [, nom, valeur] of declarations.matchAll(
+    // noUncheckedIndexedAccess makes every capture group optional. The pattern
+    // guarantees they are there, the type system does not know it: we check
+    // rather than assert it.
+    const declarations = block[1] ?? '';
+    const found = new Map<string, string>();
+    for (const [, name, value] of declarations.matchAll(
         /(--[a-z0-9-]+)\s*:\s*(#[0-9a-f]{6})\s*;/giu,
     )) {
-        if (nom === undefined || valeur === undefined) continue;
-        trouves.set(nom.toLowerCase(), valeur.toLowerCase());
+        if (name === undefined || value === undefined) continue;
+        found.set(name.toLowerCase(), value.toLowerCase());
     }
-    return trouves;
+    return found;
 }
 
-const PALETTE = jetons(readFileSync(join(import.meta.dirname, 'tokens.css'), 'utf8'));
+const PALETTE = tokens(readFileSync(join(import.meta.dirname, 'tokens.css'), 'utf8'));
 
-function valeur(nom: string): string {
-    const trouve = PALETTE.get(nom);
-    // Nommer le jeton manquant plutot que de calculer sur une valeur vide : une
-    // faute de frappe dans la liste produirait sinon un ratio absurde au lieu
-    // d'une erreur lisible.
-    if (trouve === undefined) throw new Error(`jeton absent de tokens.css : ${nom}`);
-    return trouve;
+function value(name: string): string {
+    const found = PALETTE.get(name);
+    // Name the missing token rather than compute on an empty value: a typo in
+    // the list would otherwise produce an absurd ratio instead of a readable
+    // error.
+    if (found === undefined) throw new Error(`token absent from tokens.css: ${name}`);
+    return found;
 }
 
 function luminance(hex: string): number {
-    const canaux = [1, 3, 5].map(depart => Number.parseInt(hex.slice(depart, depart + 2), 16) / 255);
-    const [rouge, vert, bleu] = canaux.map(canal =>
-        canal <= 0.04045 ? canal / 12.92 : ((canal + 0.055) / 1.055) ** 2.4,
+    const channels = [1, 3, 5].map(start => Number.parseInt(hex.slice(start, start + 2), 16) / 255);
+    const [red, green, blue] = channels.map(channel =>
+        channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4,
     ) as [number, number, number];
 
-    return 0.2126 * rouge + 0.7152 * vert + 0.0722 * bleu;
+    return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
 }
 
-function ratio(premier: string, second: string): number {
-    const [haut, bas] = [luminance(premier), luminance(second)].sort((a, b) => b - a) as [
+function ratio(first: string, second: string): number {
+    const [lighter, darker] = [luminance(first), luminance(second)].sort((a, b) => b - a) as [
         number,
         number,
     ];
-    // Arrondi vers le bas : 4.499 ne doit pas s'afficher 4.50 a cote d'un seuil
-    // de 4.5 et laisser croire que le couple passe de justesse.
-    return Math.floor(((haut + 0.05) / (bas + 0.05)) * 100) / 100;
+    // Rounded down: 4.499 must not print as 4.50 next to a threshold of 4.5
+    // and suggest the pair scrapes through.
+    return Math.floor(((lighter + 0.05) / (darker + 0.05)) * 100) / 100;
 }
 
-describe('contraste de la palette', () => {
+describe('palette contrast', () => {
     it.each(CONTRAST_PAIRS)(
-        'tient $requirement sur $foreground contre $background ($where)',
+        'holds $requirement for $foreground against $background ($where)',
         ({ foreground, background, requirement }) => {
-            expect(ratio(valeur(foreground), valeur(background))).toBeGreaterThanOrEqual(
-                SEUILS[requirement],
+            expect(ratio(value(foreground), value(background))).toBeGreaterThanOrEqual(
+                THRESHOLDS[requirement],
             );
         },
     );
 
-    // Les trois tests suivants empechent la liste de se perimer. Sans eux, une
-    // couleur ajoutee ailleurs ou un jeton oublie passeraient inapercus, et la
-    // specification decrirait une palette qui n'existe plus.
+    // The three tests below stop the list from going stale. Without them, a
+    // colour added elsewhere or a forgotten token would go unnoticed, and the
+    // specification would describe a palette that no longer exists.
 
-    it('ne laisse aucun jeton hors de la specification', () => {
-        const decrits = new Set([
+    it('leaves no token outside the specification', () => {
+        const described = new Set([
             ...CONTRAST_PAIRS.flatMap(({ foreground, background }) => [foreground, background]),
             ...EXEMPT.map(({ token }) => token),
             ...FOCUS_SURFACES,
@@ -93,55 +93,54 @@ describe('contraste de la palette', () => {
             '--focus-halo',
         ]);
 
-        expect([...PALETTE.keys()].filter(nom => !decrits.has(nom))).toEqual([]);
+        expect([...PALETTE.keys()].filter(name => !described.has(name))).toEqual([]);
     });
 
-    // Le garde qui rend cette specification vraie plutot que decorative.
+    // The guard that makes this specification true rather than decorative.
     //
-    // Tant que les feuilles portent leurs propres hexadecimaux, un test qui ne
-    // lirait que tokens.css verifierait une palette que personne ne sert : une
-    // couleur changee dans auth.css passerait inapercue. On verifie donc que
-    // toute couleur ecrite quelque part est une valeur declaree ici.
+    // As long as the stylesheets carry their own hexadecimals, a test reading
+    // only tokens.css would verify a palette nobody serves: a colour changed
+    // in auth.css would go unnoticed. So we check that every colour written
+    // anywhere is a value declared here.
     //
-    // Ce test tient avant la migration vers var(--...) comme apres : il porte
-    // sur les valeurs, pas sur la forme d'ecriture.
-    it('ne laisse aucune couleur des feuilles hors de la palette', () => {
-        const connues = new Set(PALETTE.values());
-        const intrus: string[] = [];
+    // This holds before the migration to var(--...) as well as after: it is
+    // about the values, not about how they are written.
+    it('leaves no stylesheet colour outside the palette', () => {
+        const known = new Set(PALETTE.values());
+        const intruders: string[] = [];
 
-        for (const fichier of readdirSync(import.meta.dirname)) {
-            if (!fichier.endsWith('.css') || fichier === 'tokens.css') continue;
+        for (const file of readdirSync(import.meta.dirname)) {
+            if (!file.endsWith('.css') || file === 'tokens.css') continue;
 
-            const contenu = readFileSync(join(import.meta.dirname, fichier), 'utf8');
-            for (const [couleur] of contenu.matchAll(/#[0-9a-f]{3,8}\b/giu)) {
-                if (!connues.has(couleur.toLowerCase())) intrus.push(`${fichier} : ${couleur}`);
+            const content = readFileSync(join(import.meta.dirname, file), 'utf8');
+            for (const [colour] of content.matchAll(/#[0-9a-f]{3,8}\b/giu)) {
+                if (!known.has(colour.toLowerCase())) intruders.push(`${file}: ${colour}`);
             }
         }
 
-        expect(intrus).toEqual([]);
+        expect(intruders).toEqual([]);
     });
 
-    it('exige une raison ecrite pour chaque exemption', () => {
+    it('requires a written reason for every exemption', () => {
         expect(EXEMPT.filter(({ reason }) => reason.trim().length < 40)).toEqual([]);
     });
 
-    // L'indicateur de focus est un anneau blanc double d'un halo bleu. Il suffit
-    // que l'un des deux ressorte : c'est ce qui le rend lisible aussi bien sur
-    // l'en-tete sombre que sur un panneau blanc. Exiger les deux ferait echouer
-    // une conception correcte, ce qui est la pire facon de rater un test
-    // d'accessibilite.
-    it.each(FOCUS_SURFACES)('garde le focus visible sur %s', surface => {
-        const fond = valeur(surface);
-        const meilleur = Math.max(
-            ratio(valeur('--focus-ring'), fond),
-            ratio(valeur('--focus-halo'), fond),
+    // The focus indicator is a white ring doubled by a blue halo. Either one
+    // standing out is enough: that is what makes it readable on the dark
+    // header as well as on a white panel. Requiring both would fail a correct
+    // design, which is the worst way to get an accessibility test wrong.
+    it.each(FOCUS_SURFACES)('keeps focus visible on %s', surface => {
+        const background = value(surface);
+        const best = Math.max(
+            ratio(value('--focus-ring'), background),
+            ratio(value('--focus-halo'), background),
         );
 
-        expect(meilleur).toBeGreaterThanOrEqual(SEUILS.ui);
-        // Les deux anneaux doivent aussi se distinguer l'un de l'autre, sans
-        // quoi l'indicateur se lit comme un trait unique et perd sa moitie.
-        expect(ratio(valeur('--focus-ring'), valeur('--focus-halo'))).toBeGreaterThanOrEqual(
-            SEUILS.ui,
+        expect(best).toBeGreaterThanOrEqual(THRESHOLDS.ui);
+        // The two rings must also stand apart from each other, or the
+        // indicator reads as a single stroke and loses half of itself.
+        expect(ratio(value('--focus-ring'), value('--focus-halo'))).toBeGreaterThanOrEqual(
+            THRESHOLDS.ui,
         );
     });
 });

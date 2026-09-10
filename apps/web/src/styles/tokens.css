@@ -1,14 +1,13 @@
-/* Les couleurs de l'interface, nommees par role et declarees une seule fois.
+/* The colours of the interface, named by role and declared once.
  *
- * Avant ce fichier, la meme valeur etait recopiee dans trois ou quatre feuilles
- * -- #8a1c16 dans quatre, #172033 dans quatre -- si bien qu'une correction de
- * contraste demandait de retrouver toutes les copies, sans qu'aucun endroit ne
- * dise lesquelles avaient ete verifiees.
+ * The values are copied verbatim from the six stylesheets: this file changes
+ * nothing on screen, it gives every colour a name so that contrast-pairs.ts
+ * can state a requirement about it and contrast.test.ts can verify it.
  *
- * Les couples effectivement utilises sont listes dans contrast-pairs.ts et
- * verifies par contrast.test.ts, qui lit ce fichier. Ajouter un jeton sans
- * l'inscrire dans cette liste fait echouer la suite : c'est ce qui empeche la
- * liste de se perimer en silence.
+ * A token is added here before being used anywhere, and never the other way
+ * round: contrast.test.ts refuses a hexadecimal written in a stylesheet that
+ * is not one of the values below, and refuses a token that no pair and no
+ * exemption mentions.
  */
 :root {
     /* Surfaces */
@@ -21,7 +20,7 @@
     --surface-brand-softer: #edf8f5;
     --surface-danger-soft: #fff1f0;
 
-    /* Texte */
+    /* Text */
     --text-body: #172033;
     --text-secondary: #39495c;
     --text-muted: #465568;
@@ -34,7 +33,7 @@
     --text-on-brand-soft: #b9e7dd;
     --text-on-brand-muted: #e5edf4;
 
-    /* Bordures */
+    /* Borders */
     --border-input: #65768a;
     --border-input-hover: #34465a;
     --border-invalid: #a5241c;

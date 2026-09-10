@@ -5,29 +5,29 @@ import { saveFile } from './save-file';
 const DOCUMENT = new Blob(['{"exportedAt":"2026-09-08T12:00:00.000Z"}'], {
     type: 'application/json',
 });
-const URL_OBJET = 'blob:http://localhost/an-object-url';
+const OBJECT_URL = 'blob:http://localhost/an-object-url';
 
-interface Telechargement {
+interface Download {
     href: string;
     download: string;
 }
 
-let telecharge: Telechargement | undefined;
+let downloaded: Download | undefined;
 
-// Le clic est intercepte plutot que laisse remonter : jsdom n implemente pas la
-// navigation et signalerait une erreur, alors que ce que le test veut lire est
-// ce que le lien portait au moment du clic.
+// The click is intercepted rather than left to bubble: jsdom implements no
+// navigation and would report an error, whereas what the test wants to read is
+// what the link carried at the moment of the click.
 function interceptClick(event: Event): void {
-    const lien = event.target as HTMLAnchorElement;
+    const link = event.target as HTMLAnchorElement;
 
-    telecharge = { href: lien.href, download: lien.download };
+    downloaded = { href: link.href, download: link.download };
     event.preventDefault();
 }
 
-// jsdom n implemente pas les URL d objet. Les deux fonctions sont donc posees
-// ici, ce qui permet en prime d observer ce qui est cree et ce qui est libere.
+// jsdom implements no object URLs. Both functions are stubbed here, which as
+// a bonus lets the test observe what is created and what is released.
 function stubObjectUrl(): { create: ReturnType<typeof vi.fn>; revoke: ReturnType<typeof vi.fn> } {
-    const create = vi.fn(() => URL_OBJET);
+    const create = vi.fn(() => OBJECT_URL);
     const revoke = vi.fn();
 
     vi.stubGlobal(
@@ -42,7 +42,7 @@ function stubObjectUrl(): { create: ReturnType<typeof vi.fn>; revoke: ReturnType
 }
 
 beforeEach(() => {
-    telecharge = undefined;
+    downloaded = undefined;
     document.addEventListener('click', interceptClick, true);
 });
 
@@ -53,23 +53,23 @@ afterEach(() => {
 });
 
 describe('saveFile', () => {
-    it('propose le contenu au telechargement sous le nom demande', () => {
+    it('offers the content for download under the requested name', () => {
         const { create } = stubObjectUrl();
 
         saveFile(DOCUMENT, 'export.json');
 
         expect(create).toHaveBeenCalledWith(DOCUMENT);
-        expect(telecharge).toEqual({ href: URL_OBJET, download: 'export.json' });
+        expect(downloaded).toEqual({ href: OBJECT_URL, download: 'export.json' });
     });
 
-    // Un lien laisse dans la page, ou une URL d objet jamais liberee, retiendrait
-    // le document en memoire pour toute la duree de la session.
-    it('ne laisse derriere lui ni lien ni URL d objet', () => {
+    // A link left in the page, or an object URL never released, would hold the
+    // document in memory for the whole session.
+    it('leaves behind neither a link nor an object URL', () => {
         const { revoke } = stubObjectUrl();
 
         saveFile(DOCUMENT, 'export.json');
 
         expect(document.querySelector('a')).toBeNull();
-        expect(revoke).toHaveBeenCalledWith(URL_OBJET);
+        expect(revoke).toHaveBeenCalledWith(OBJECT_URL);
     });
 });

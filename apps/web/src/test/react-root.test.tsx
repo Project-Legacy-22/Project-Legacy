@@ -2,207 +2,206 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createReactTestRoot, focusOrder, pressKey, tab, tabbables } from './react-root';
 
-// Le harnais est une simulation du clavier, et les tests de parcours lui font
-// entierement confiance : une erreur ici ne casse rien, elle rend vrai un test
-// qui devrait etre faux. C'est pour cette raison qu'il est teste a son tour,
-// contre du DOM ecrit a la main plutot que contre un composant du produit --
-// on verifie l'outil, pas ce qu'il mesure.
+// The harness simulates the keyboard, and the journey tests trust it
+// entirely: a mistake here breaks nothing, it makes a test that should be red
+// pass. That is why it is tested in turn, against DOM written by hand rather
+// than against a product component -- we verify the tool, not what it
+// measures.
 
-function poser(html: string): void {
+function mount(html: string): void {
     document.body.replaceChildren();
-    const bac = document.createElement('div');
-    bac.innerHTML = html;
-    document.body.append(bac);
+    const holder = document.createElement('div');
+    holder.innerHTML = html;
+    document.body.append(holder);
 }
 
-describe('nom accessible dans focusOrder', () => {
-    it('nomme un champ par son etiquette, faute de contenu textuel', () => {
-        poser(`
-            <label for="courriel">Adresse electronique</label>
+describe('accessible name in focusOrder', () => {
+    it('names a field by its label, for want of text content', () => {
+        mount(`
+            <label for="courriel">Email address</label>
             <input id="courriel" name="email" />
         `);
 
-        expect(focusOrder()).toEqual(['input:Adresse electronique']);
+        expect(focusOrder()).toEqual(['input:Email address']);
     });
 
-    it('distingue deux champs du meme formulaire', () => {
-        // La raison d'etre de la resolution du nom. Avec un repli sur le
-        // contenu textuel, les deux champs s'appelleraient tous les deux la
-        // chaine vide, et un test comparant cet ordre passerait encore apres
-        // que quelqu'un ait echange les deux.
-        poser(`
-            <label for="mdp">Nouveau mot de passe</label>
+    it('tells two fields of the same form apart', () => {
+        // The reason name resolution exists. Falling back to text content
+        // would name both fields the empty string, and a test comparing that
+        // order would still pass after someone had swapped the two.
+        mount(`
+            <label for="mdp">New password</label>
             <input id="mdp" type="password" />
-            <label for="confirmation">Confirmation</label>
+            <label for="confirmation">Confirm password</label>
             <input id="confirmation" type="password" />
         `);
 
         expect(focusOrder()).toEqual([
-            'input:Nouveau mot de passe',
-            'input:Confirmation',
+            'input:New password',
+            'input:Confirm password',
         ]);
     });
 
-    it('prefere aria-label a l etiquette associee', () => {
-        poser(`
-            <label for="q">Etiquette visible</label>
-            <input id="q" aria-label="Nom explicite" />
+    it('prefers aria-label over the associated label', () => {
+        mount(`
+            <label for="q">Visible label</label>
+            <input id="q" aria-label="Explicit name" />
         `);
 
-        expect(focusOrder()).toEqual(['input:Nom explicite']);
+        expect(focusOrder()).toEqual(['input:Explicit name']);
     });
 
-    it('ignore un aria-label vide au lieu de le prendre pour un nom', () => {
-        // Le piege que la version precedente n'attrapait pas : ?? ne se
-        // declenche pas sur une chaine vide, seulement sur null ou undefined.
-        poser(`
-            <label for="r">Etiquette visible</label>
+    it('ignores an empty aria-label instead of taking it for a name', () => {
+        // The trap the previous version missed: ?? does not trigger on an
+        // empty string, only on null or undefined.
+        mount(`
+            <label for="r">Visible label</label>
             <input id="r" aria-label="  " />
         `);
 
-        expect(focusOrder()).toEqual(['input:Etiquette visible']);
+        expect(focusOrder()).toEqual(['input:Visible label']);
     });
 
-    it('suit aria-labelledby', () => {
-        poser(`
-            <span id="titre">Rechercher une tache</span>
+    it('follows aria-labelledby', () => {
+        mount(`
+            <span id="titre">Search a task</span>
             <input aria-labelledby="titre" />
         `);
 
-        expect(focusOrder()).toEqual(['input:Rechercher une tache']);
+        expect(focusOrder()).toEqual(['input:Search a task']);
     });
 
-    it('se rabat sur l attribut name quand rien ne nomme le champ', () => {
-        poser('<input name="jeton" />');
+    it('falls back to the name attribute when nothing names the field', () => {
+        mount('<input name="token" />');
 
-        expect(focusOrder()).toEqual(['input:jeton']);
+        expect(focusOrder()).toEqual(['input:token']);
     });
 });
 
 describe('tabbables', () => {
-    it('refuse de rendre un ordre quand un tabindex positif le reordonne', () => {
-        // Echouer bruyamment plutot que rendre un ordre faux : un tabindex
-        // positif deplace l'element sans que le DOM le montre, donc la
-        // simulation mentirait.
-        poser('<button>Un</button><button tabindex="2">Deux</button>');
+    it('refuses to return an order a positive tabindex has reordered', () => {
+        // Failing loudly beats returning a wrong order: a positive tabindex
+        // moves the element without the DOM showing it, so the simulation
+        // would lie.
+        mount('<button>One</button><button tabindex="2">Two</button>');
 
-        expect(() => tabbables()).toThrow(/tabindex positif/u);
+        expect(() => tabbables()).toThrow(/positive tabindex/u);
     });
 
-    it('retire les elements desactives', () => {
-        poser('<button>Actif</button><button disabled>Inerte</button>');
+    it('drops disabled elements', () => {
+        mount('<button>Active</button><button disabled>Inert</button>');
 
-        expect(focusOrder()).toEqual(['button:Actif']);
+        expect(focusOrder()).toEqual(['button:Active']);
     });
 
-    it('garde les elements marques aria-disabled', () => {
-        // C'est tout l'interet du choix fait sur la pagination : aria-disabled
-        // annonce l'indisponibilite sans retirer de l'ordre, donc sans faire
-        // perdre le focus a qui s'y trouve.
-        poser('<button aria-disabled="true">Page suivante</button>');
+    it('keeps elements marked aria-disabled', () => {
+        // That is the whole point of the choice made on the pagination:
+        // aria-disabled announces unavailability without removing the element
+        // from the order, so whoever stands on it does not lose focus.
+        mount('<button aria-disabled="true">Next page</button>');
 
-        expect(focusOrder()).toEqual(['button:Page suivante']);
+        expect(focusOrder()).toEqual(['button:Next page']);
     });
 
-    it('retire les elements sortis de l ordre par tabindex negatif', () => {
-        poser('<h1 tabindex="-1">Titre</h1><button>Continuer</button>');
+    it('drops elements taken out of the order by a negative tabindex', () => {
+        mount('<h1 tabindex="-1">Title</h1><button>Continue</button>');
 
-        expect(focusOrder()).toEqual(['button:Continuer']);
+        expect(focusOrder()).toEqual(['button:Continue']);
     });
 
-    it('garde un element masque visuellement mais toujours atteignable', () => {
-        // Le lien d'evitement est exactement ce cas : invisible a l'ecran,
-        // present au clavier. Le filtrer reviendrait a ne jamais le tester.
-        poser('<a href="#main-content" class="visually-hidden">Aller au contenu</a>');
+    it('keeps an element hidden visually but still reachable', () => {
+        // The skip link is exactly that case: invisible on screen, present to
+        // the keyboard. Filtering it out would mean never testing it.
+        mount('<a href="#main-content" class="visually-hidden">Skip to content</a>');
 
-        expect(focusOrder()).toEqual(['a:Aller au contenu']);
+        expect(focusOrder()).toEqual(['a:Skip to content']);
     });
 });
 
 describe('tab', () => {
-    it('entre par le premier element depuis le corps du document', async () => {
-        poser('<button>Un</button><button>Deux</button>');
+    it('enters at the first element from the document body', async () => {
+        mount('<button>One</button><button>Two</button>');
 
-        expect((await tab())?.textContent).toBe('Un');
+        expect((await tab())?.textContent).toBe('One');
     });
 
-    it('entre par le dernier element avec Maj', async () => {
-        poser('<button>Un</button><button>Deux</button>');
+    it('enters at the last element with Shift', async () => {
+        mount('<button>One</button><button>Two</button>');
 
-        expect((await tab({ shift: true }))?.textContent).toBe('Deux');
+        expect((await tab({ shift: true }))?.textContent).toBe('Two');
     });
 
-    it('avance puis recule sur le meme parcours', async () => {
-        poser('<button>Un</button><button>Deux</button><button>Trois</button>');
+    it('moves forward then back along the same path', async () => {
+        mount('<button>One</button><button>Two</button><button>Three</button>');
 
         await tab();
-        expect((await tab())?.textContent).toBe('Deux');
-        expect((await tab({ shift: true }))?.textContent).toBe('Un');
+        expect((await tab())?.textContent).toBe('Two');
+        expect((await tab({ shift: true }))?.textContent).toBe('One');
     });
 
-    it('boucle du dernier au premier, ce qu un navigateur ne fait pas', async () => {
-        // Un vrai navigateur sortirait vers sa propre barre d'outils. La
-        // simulation boucle, ce qui rend les parcours faciles a ecrire mais
-        // interdit de conclure quoi que ce soit sur la sortie de la page.
-        poser('<button>Un</button><button>Deux</button>');
+    it('wraps from the last to the first, which a browser does not', async () => {
+        // A real browser would leave for its own toolbar. The simulation
+        // wraps, which makes journeys easy to write but forbids concluding
+        // anything about leaving the page.
+        mount('<button>One</button><button>Two</button>');
 
         await tab();
         await tab();
-        expect((await tab())?.textContent).toBe('Un');
+        expect((await tab())?.textContent).toBe('One');
     });
 
-    it('rend null quand rien n est atteignable', async () => {
-        poser('<p>Rien a atteindre</p>');
+    it('returns null when nothing is reachable', async () => {
+        mount('<p>Nothing to reach</p>');
 
         expect(await tab()).toBeNull();
     });
 });
 
 describe('pressKey', () => {
-    it('emet keydown puis keyup avec la touche demandee', async () => {
-        poser('<button>Valider</button>');
-        const bouton = document.querySelector('button') as HTMLButtonElement;
-        const vues: string[] = [];
-        bouton.addEventListener('keydown', event => vues.push(`down:${event.key}`));
-        bouton.addEventListener('keyup', event => vues.push(`up:${event.key}`));
+    it('emits keydown then keyup with the requested key', async () => {
+        mount('<button>Submit</button>');
+        const button = document.querySelector('button') as HTMLButtonElement;
+        const seen: string[] = [];
+        button.addEventListener('keydown', event => seen.push(`down:${event.key}`));
+        button.addEventListener('keyup', event => seen.push(`up:${event.key}`));
 
-        await pressKey(bouton, 'Enter');
+        await pressKey(button, 'Enter');
 
-        expect(vues).toEqual(['down:Enter', 'up:Enter']);
+        expect(seen).toEqual(['down:Enter', 'up:Enter']);
     });
 
-    it('remonte l evenement aux ancetres', async () => {
-        // Les gestionnaires de React sont poses a la racine : sans remontee,
-        // aucun parcours clavier du produit ne declencherait quoi que ce soit.
-        poser('<div><button>Valider</button></div>');
-        const ecoute = vi.fn();
-        document.body.addEventListener('keydown', ecoute);
+    it('bubbles the event to ancestors', async () => {
+        // React attaches its handlers at the root: without bubbling, no
+        // keyboard journey of the product would trigger anything at all.
+        mount('<div><button>Submit</button></div>');
+        const listener = vi.fn();
+        document.body.addEventListener('keydown', listener);
 
         await pressKey(document.querySelector('button') as HTMLButtonElement, 'Escape');
 
-        expect(ecoute).toHaveBeenCalledOnce();
-        document.body.removeEventListener('keydown', ecoute);
+        expect(listener).toHaveBeenCalledOnce();
+        document.body.removeEventListener('keydown', listener);
     });
 
-    it('transmet les modificateurs', async () => {
-        poser('<input />');
-        const champ = document.querySelector('input') as HTMLInputElement;
-        const vues: boolean[] = [];
-        champ.addEventListener('keydown', event => vues.push(event.shiftKey));
+    it('passes the modifiers through', async () => {
+        mount('<input />');
+        const field = document.querySelector('input') as HTMLInputElement;
+        const seen: boolean[] = [];
+        field.addEventListener('keydown', event => seen.push(event.shiftKey));
 
-        await pressKey(champ, 'Tab', { shiftKey: true });
+        await pressKey(field, 'Tab', { shiftKey: true });
 
-        expect(vues).toEqual([true]);
+        expect(seen).toEqual([true]);
     });
 });
 
 describe('createReactTestRoot', () => {
-    it('vide le document au demontage, pour ne pas polluer le test suivant', async () => {
-        const racine = createReactTestRoot();
-        await racine.render(<button>Presente</button>);
+    it('empties the document on unmount, so the next test starts clean', async () => {
+        const root = createReactTestRoot();
+        await root.render(<button>Present</button>);
         expect(document.querySelectorAll('button')).toHaveLength(1);
 
-        await racine.unmount();
+        await root.unmount();
 
         expect(document.body.children).toHaveLength(0);
     });
