@@ -29,6 +29,25 @@ describe('loadConfig', () => {
         ).toThrow(/SUPABASE_SERVICE_ROLE_KEY/);
     });
 
+    // Servir du HTTP ne touche pas au bus : aucune route ne l utilise, seuls
+    // start() et stop() le font. Exiger le courtier ici empechait la fonction
+    // Vercel de se charger pour une variable dont elle ne se servait pas, et
+    // /auth/me repondait 500 -- l interface disait ne pas pouvoir verifier la
+    // session. C est start() qui l exige desormais, la ou il sert vraiment.
+    it('loads without a broker, which only the relay requires', () => {
+        expect(
+            loadConfig({
+                SUPABASE_URL: VALID_ENV.SUPABASE_URL,
+                SUPABASE_SERVICE_ROLE_KEY: VALID_ENV.SUPABASE_SERVICE_ROLE_KEY,
+                SUPABASE_ANON_KEY: VALID_ENV.SUPABASE_ANON_KEY,
+            }).redisUrl,
+        ).toBeUndefined();
+    });
+
+    it('reads the broker address when one is given', () => {
+        expect(loadConfig(VALID_ENV).redisUrl).toBe(VALID_ENV.REDIS_URL);
+    });
+
     it('lit la cle publique que l authentification utilise', () => {
         expect(loadConfig(VALID_ENV).supabaseAnonKey).toBe(VALID_ENV.SUPABASE_ANON_KEY);
     });

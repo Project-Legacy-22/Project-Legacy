@@ -104,7 +104,9 @@ interface Adapters {
     projects: ReturnType<typeof createSupabaseProjectRepository>;
     outbox: OutboxStore;
     notifications: NotificationStore;
-    bus: EventBus;
+    // Absent when no broker is configured. Serving HTTP does not need one; the
+    // relay does, and start() is where that is enforced.
+    bus: EventBus | undefined;
 }
 
 // Every adapter the application talks to, built in one place. Extracted from
@@ -130,7 +132,10 @@ function createAdapters(config: Config): Adapters {
         projects: createSupabaseProjectRepository(supabase),
         outbox: createSupabaseOutboxStore(supabase),
         notifications: createSupabaseNotificationStore(supabase),
-        bus: createRedisEventBus({ url: config.redisUrl }),
+        bus:
+            config.redisUrl === undefined
+                ? undefined
+                : createRedisEventBus({ url: config.redisUrl }),
     };
 }
 
@@ -220,6 +225,14 @@ export function compose(config: Config): Application {
         // for. It checks the connection so a misconfigured deployment fails
         // loudly at boot instead of on the first request.
         start: async () => {
+            // The broker is what the relay publishes through, so a process
+            // that relays and has none is misconfigured, not degraded. It says
+            // so here rather than filling the outbox with events nobody
+            // delivers.
+            if (bus === undefined) {
+                throw new Error('REDIS_URL is required to relay the outbox');
+            }
+
             // Two independent services: waiting for one before dialling the
             // other only adds their latencies together
             // (standards/02-code-style.md section 7).
@@ -232,7 +245,7 @@ export function compose(config: Config): Application {
         },
         stop: async () => {
             if (relay !== undefined) clearInterval(relay);
-            await Promise.all([bus.disconnect(), store.disconnect()]);
+            await Promise.all([bus?.disconnect(), store.disconnect()]);
         },
     };
 }

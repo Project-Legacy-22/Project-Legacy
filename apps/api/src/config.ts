@@ -22,10 +22,17 @@ const EnvSchema = z.object({
     // Read by the authentication adapter. Public by design: it is the key a
     // browser would carry, and what it can reach is what the policies allow.
     SUPABASE_ANON_KEY: z.string().min(1),
-    // The broker of ADR-0007. Required: the relay has nowhere to publish
-    // without it, and an API that starts anyway would fill the outbox with
-    // events nobody ever delivers.
-    REDIS_URL: z.string().url(),
+    // The broker of ADR-0007, and the transport the notification flow will keep
+    // using. Required by whoever relays or consumes -- start() refuses to boot
+    // without it, so a long-running process still cannot fill the outbox with
+    // events nobody delivers.
+    //
+    // Optional in the schema because serving HTTP does not need it: no route
+    // touches the bus, only start() and stop() do. A serverless function that
+    // never relays was refusing to load over a variable it would not have
+    // used, which took the whole deployment down -- /auth/me answered 500 and
+    // the interface said it could not check the session.
+    REDIS_URL: z.string().url().optional(),
     // Optional: absent, it is `info`. An optional variable is declared here
     // like every other one, otherwise its default ends up scattered across the
     // code that consumes it and the example file stops being the reference.
@@ -59,7 +66,7 @@ export interface Config {
     supabaseAnonKey: string;
     logLevel: LogLevel;
     secureCookies: boolean;
-    redisUrl: string;
+    redisUrl: string | undefined;
     webOrigin: string;
     trustProxy: number;
 }
