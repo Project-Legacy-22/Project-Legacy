@@ -22,7 +22,7 @@ import type {
     ProjectMembership,
 } from '../../../../../packages/core/projects/test/fakes/in-memory-project-repository.js';
 import type { AppUseCases } from '../../composition-root.js';
-import { recordingLogger } from '../../../test/fakes/recording-logger.js';
+import { recordingLogger } from '../../../../../packages/contracts/test/fakes/recording-logger.js';
 import { json, listen, testConfig } from '../../../test/http-harness.js';
 import type { Harness } from '../../../test/http-harness.js';
 import { createServer } from '../server.js';
@@ -43,6 +43,7 @@ function useCasesOver(
     const items = inMemoryItemRepository();
     const personalData = inMemoryPersonalDataStore();
     return {
+        notifications: { countUnread: () => Promise.resolve(0) },
         projects: {
             listProjects: makeListProjects(projects),
             addProject: makeAddProject({

@@ -30,6 +30,7 @@ export function makeItemRouteUseCases(options: ItemRouteUseCasesOptions): AppUse
     const projects = inMemoryProjectRepository();
 
     return {
+        notifications: { countUnread: () => Promise.resolve(0) },
         items: {
             listItems: makeListItems(repository),
             addItem: makeAddItem({
