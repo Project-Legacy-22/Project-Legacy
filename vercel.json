@@ -10,11 +10,15 @@
             "destination": "/api"
         },
         {
-            "source": "/items(.*)",
+            "source": "/projects(.*)",
             "destination": "/api"
         },
         {
             "source": "/notifications(.*)",
+            "destination": "/api"
+        },
+        {
+            "source": "/reset-password",
             "destination": "/api"
         }
     ],

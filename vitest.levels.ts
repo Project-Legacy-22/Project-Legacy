@@ -24,6 +24,9 @@ export const LEVELS = {
         // needs no server or real service.
         'apps/worker/src/config.test.ts',
         'apps/api/src/http/cookies.test.ts',
+        // Builds the application without listening, to compare the routes it
+        // mounts with what vercel.json makes reachable. No server, no service.
+        'apps/api/src/http/vercel-rewrites.test.ts',
     ],
 
     // A real Express server on port 0, queried by fetch, fakes behind the
