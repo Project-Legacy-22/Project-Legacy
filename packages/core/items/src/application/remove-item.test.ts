@@ -34,6 +34,8 @@ describe('removeItem', () => {
         const repository = inMemoryItemRepository([theirs]);
         const removeItem = makeRemoveItem(repository);
 
+        expect(await repository.findByIdForMember('item-1', PROJECT_ID, OTHER_OWNER_ID)).toEqual(theirs);
+
         const result = removeItem('item-1', PROJECT_ID, OWNER_ID);
 
         await expect(result).rejects.toBeInstanceOf(ItemNotFound);

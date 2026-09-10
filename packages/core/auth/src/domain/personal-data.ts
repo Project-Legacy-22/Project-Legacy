@@ -22,9 +22,6 @@ export interface ExportedItem {
     completed: boolean;
     createdAt: string;
     updatedAt: string;
-    // Set when the item was removed from the list. Removed is not erased: the
-    // row is still held, so it is still exported.
-    deletedAt: string | null;
 }
 
 export interface ExportedProject {

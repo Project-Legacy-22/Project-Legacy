@@ -91,6 +91,32 @@ async function toggleItem(context: ActionContext, item: ItemDto): Promise<void> 
     }
 }
 
+async function renameItem(context: ActionContext, item: ItemDto, name: string): Promise<boolean> {
+    if (context.projectId === null) return false;
+    updatePending(context, item.id, 'add');
+    context.setFeedback({ status: 'idle' });
+
+    try {
+        const updated = await context.api.updateItem(context.projectId, item.id, {
+            name,
+            completed: item.completed,
+        });
+        context.setItems((current) =>
+            current.map((currentItem) => (currentItem.id === updated.id ? updated : currentItem)),
+        );
+        context.setFeedback({ status: 'success', message: labels.itemRenamed(itemName(updated)) });
+        return true;
+    } catch (error) {
+        context.setFeedback({
+            status: 'error',
+            message: messageFor(error, labels.updateItemFailed),
+        });
+        return false;
+    } finally {
+        updatePending(context, item.id, 'remove');
+    }
+}
+
 async function removeItem(context: ActionContext, item: ItemDto): Promise<boolean> {
     if (context.projectId === null) return false;
     updatePending(context, item.id, 'add');
@@ -135,6 +161,7 @@ export function useItemActions(api: ItemsApi, projectId: string | null, setItems
 
     const add = useCallback((name: string) => addItem(context, name), [context]);
     const toggle = useCallback((item: ItemDto) => toggleItem(context, item), [context]);
+    const rename = useCallback((item: ItemDto, name: string) => renameItem(context, item, name), [context]);
     const remove = useCallback((item: ItemDto) => removeItem(context, item), [context]);
 
     return {
@@ -143,6 +170,7 @@ export function useItemActions(api: ItemsApi, projectId: string | null, setItems
         pendingItemIds,
         addItem: add,
         toggleItem: toggle,
+        renameItem: rename,
         removeItem: remove,
     };
 }

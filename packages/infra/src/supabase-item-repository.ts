@@ -63,7 +63,7 @@ async function findPage(request: PageRequest): Promise<ItemPage | undefined> {
     const { client, projectId, memberId, page } = request;
     if (!(await isProjectMember(client, projectId, memberId))) return undefined;
 
-    const inProject = client.from('items').select('*').eq('project_id', projectId).is('deleted_at', null);
+    const inProject = client.from('items').select('*').eq('project_id', projectId);
     const positioned = page.cursor === undefined ? inProject : inProject.or(beforeCursor(page.cursor));
 
     // One row more than asked: its presence is what says there is a next page.
@@ -99,7 +99,6 @@ async function findForMember(request: MemberItemRequest): Promise<Item | undefin
         .select('*')
         .eq('id', id)
         .eq('project_id', projectId)
-        .is('deleted_at', null)
         .maybeSingle();
     if (error) fail('findByIdForMember', error);
     return data ? toItem(data) : undefined;

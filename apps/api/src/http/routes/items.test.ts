@@ -205,6 +205,8 @@ describe('items API', () => {
             });
             await reseed([item], []);
 
+            expect(await store.findByIdForMember(EXISTING_ID, PROJECT_ID, OTHER_OWNER_ID)).toEqual(item);
+
             const denied = await harness.request(
                 `${ITEMS_PATH}/${EXISTING_ID}`,
                 json('PUT', { name: 'Modifie', completed: true }),
@@ -216,6 +218,45 @@ describe('items API', () => {
 
             expect(denied.status).toBe(404);
             expect(unknown.status).toBe(404);
+            expect(store.items.get(EXISTING_ID)).toEqual(item);
+        });
+
+        it('returns the same absence for an inaccessible and a missing item', async () => {
+            const inaccessible = anItemOf({ id: EXISTING_ID, ownerId: OTHER_OWNER_ID });
+            await reseed([inaccessible], []);
+
+            expect(await store.findByIdForMember(EXISTING_ID, PROJECT_ID, OTHER_OWNER_ID)).toEqual(inaccessible);
+            const denied = await harness.request(
+                `${ITEMS_PATH}/${EXISTING_ID}`,
+                json('PUT', { name: 'Modifie', completed: true }),
+            );
+            await reseed([], [{ projectId: PROJECT_ID, userId: OWNER_ID }]);
+            const missing = await harness.request(
+                `${ITEMS_PATH}/${UNKNOWN_ID}`,
+                json('PUT', { name: 'Modifie', completed: true }),
+            );
+
+            expect(denied.status).toBe(404);
+            expect(missing.status).toBe(404);
+            expect((await denied.json()) as object).toMatchObject({ type: 'item_not_found' });
+            expect((await missing.json()) as object).toMatchObject({ type: 'item_not_found' });
+        });
+
+        it('rejects empty and overlong names without changing the item', async () => {
+            const item = anItemOf({ id: EXISTING_ID, ownerId: OWNER_ID, name: 'Intact' });
+            await reseed([item]);
+
+            const empty = await harness.request(
+                `${ITEMS_PATH}/${EXISTING_ID}`,
+                json('PUT', { name: '   ', completed: true }),
+            );
+            const overlong = await harness.request(
+                `${ITEMS_PATH}/${EXISTING_ID}`,
+                json('PUT', { name: 'a'.repeat(256), completed: true }),
+            );
+
+            expect(empty.status).toBe(400);
+            expect(overlong.status).toBe(400);
             expect(store.items.get(EXISTING_ID)).toEqual(item);
         });
 
@@ -238,13 +279,15 @@ describe('items API', () => {
                 method: 'DELETE',
             });
 
-            expect(response.status).toBe(200);
+            expect(response.status).toBe(204);
             expect(store.items.has(EXISTING_ID)).toBe(false);
         });
 
         it('returns the same absence for a non-member and an unknown project', async () => {
             const item = anItemOf({ id: EXISTING_ID, ownerId: OTHER_OWNER_ID });
             await reseed([item], []);
+
+            expect(await store.findByIdForMember(EXISTING_ID, PROJECT_ID, OTHER_OWNER_ID)).toEqual(item);
 
             const denied = await harness.request(`${ITEMS_PATH}/${EXISTING_ID}`, {
                 method: 'DELETE',
@@ -256,6 +299,21 @@ describe('items API', () => {
             expect(denied.status).toBe(404);
             expect(unknown.status).toBe(404);
             expect(store.items.get(EXISTING_ID)).toEqual(item);
+        });
+
+        it('returns the same absence for an inaccessible and a missing item', async () => {
+            const inaccessible = anItemOf({ id: EXISTING_ID, ownerId: OTHER_OWNER_ID });
+            await reseed([inaccessible], []);
+
+            expect(await store.findByIdForMember(EXISTING_ID, PROJECT_ID, OTHER_OWNER_ID)).toEqual(inaccessible);
+            const denied = await harness.request(`${ITEMS_PATH}/${EXISTING_ID}`, { method: 'DELETE' });
+            await reseed([], [{ projectId: PROJECT_ID, userId: OWNER_ID }]);
+            const missing = await harness.request(`${ITEMS_PATH}/${UNKNOWN_ID}`, { method: 'DELETE' });
+
+            expect(denied.status).toBe(404);
+            expect(missing.status).toBe(404);
+            expect((await denied.json()) as object).toMatchObject({ type: 'item_not_found' });
+            expect((await missing.json()) as object).toMatchObject({ type: 'item_not_found' });
         });
     });
 

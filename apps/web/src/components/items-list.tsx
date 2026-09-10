@@ -5,10 +5,11 @@ export interface ItemsListProps {
     items: readonly ItemDto[];
     pendingItemIds: ReadonlySet<string>;
     onToggle: (item: ItemDto) => Promise<void>;
+    onRename: (item: ItemDto, name: string) => Promise<boolean>;
     onRemove: (item: ItemDto) => Promise<boolean>;
 }
 
-export function ItemsList({ items, pendingItemIds, onToggle, onRemove }: ItemsListProps) {
+export function ItemsList({ items, pendingItemIds, onToggle, onRename, onRemove }: ItemsListProps) {
     return (
         <ul id="items-list" className="todo-list">
             {items.map(item => (
@@ -17,6 +18,7 @@ export function ItemsList({ items, pendingItemIds, onToggle, onRemove }: ItemsLi
                     item={item}
                     isPending={pendingItemIds.has(item.id)}
                     onToggle={onToggle}
+                    onRename={onRename}
                     onRemove={onRemove}
                 />
             ))}

@@ -204,8 +204,8 @@ serait une route qu'on peut pointer vers quelqu'un d'autre.
 | `DELETE /auth/me` | Supprime le compte, sans délai, après confirmation |
 
 L'export est assemblé à la demande et servi tel quel : rien n'est écrit sur disque, donc
-aucune copie ne subsiste à protéger ni à purger. Les éléments supprimés y figurent avec leur
-date de suppression, parce qu'ils sont encore détenus.
+aucune copie ne subsiste à protéger ni à purger. Une tâche supprimée est effacée physiquement
+et ne figure donc plus dans les données détenues ni dans l'export.
 
 La suppression exige que le corps de la requête reprenne l'adresse du compte
 (`{ "confirmation": "..." }`), faute de quoi elle répond `422`. Elle efface physiquement les
@@ -219,6 +219,8 @@ en arrière.
 Détail complet dans [docs/features/14-export-and-delete-account.md](docs/features/14-export-and-delete-account.md).
 Le regroupement par projet est décrit dans
 [docs/features/17-projects.md](docs/features/17-projects.md).
+La modification, la complétion et la suppression des tâches sont décrites dans
+[docs/features/32-edit-complete-delete-task.md](docs/features/32-edit-complete-delete-task.md).
 
 ## Build de production
 

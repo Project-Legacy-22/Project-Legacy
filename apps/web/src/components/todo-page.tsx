@@ -21,6 +21,7 @@ export interface TodoPageProps {
     paginationState: ItemsPaginationState;
     onAdd: (name: string) => Promise<AddItemResult>;
     onToggle: (item: ItemDto) => Promise<void>;
+    onRename: (item: ItemDto, name: string) => Promise<boolean>;
     onRemove: (item: ItemDto) => Promise<boolean>;
     onLoadMore: () => void;
     onRetry: () => void;
@@ -60,6 +61,7 @@ export function TodoPage(props: TodoPageProps) {
                             hasNextPage={props.hasNextPage}
                             paginationState={props.paginationState}
                             onToggle={props.onToggle}
+                            onRename={props.onRename}
                             onRemove={props.onRemove}
                             onLoadMore={props.onLoadMore}
                             onRetry={props.onRetry}

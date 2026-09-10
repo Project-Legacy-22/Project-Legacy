@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { inMemoryItemRepository } from '../../test/fakes/in-memory-item-repository.js';
 import { anItem } from '../../test/builders/item.js';
-import { InvalidItemName, ItemNotFound } from '../domain/item.js';
+import { InvalidItemName, ItemNotFound, MAX_ITEM_NAME_LENGTH } from '../domain/item.js';
 import { makeChangeItem } from './change-item.js';
 
 const OWNER_ID = 'owner-42';
@@ -62,6 +62,8 @@ describe('changeItem', () => {
         const repository = inMemoryItemRepository([theirs]);
         const changeItem = makeChangeItem(repository);
 
+        expect(await repository.findByIdForMember('item-1', PROJECT_ID, OTHER_OWNER_ID)).toEqual(theirs);
+
         const result = changeItem({
             id: 'item-1',
             projectId: PROJECT_ID,
@@ -95,5 +97,42 @@ describe('changeItem', () => {
 
         await expect(result).rejects.toBeInstanceOf(InvalidItemName);
         expect(await repository.findByIdForMember('item-1', PROJECT_ID, OWNER_ID)).toEqual(existing);
+    });
+
+    it('refuse un nom trop long sans modifier l item existant', async () => {
+        const existing = anItem({ id: 'item-1', name: 'Old name', projectId: PROJECT_ID, ownerId: OWNER_ID });
+        const repository = inMemoryItemRepository([existing]);
+        const changeItem = makeChangeItem(repository);
+
+        const result = changeItem({
+            id: 'item-1',
+            projectId: PROJECT_ID,
+            memberId: OWNER_ID,
+            changes: { name: 'a'.repeat(MAX_ITEM_NAME_LENGTH + 1), completed: false },
+        });
+
+        await expect(result).rejects.toBeInstanceOf(InvalidItemName);
+        expect(await repository.findByIdForMember('item-1', PROJECT_ID, OWNER_ID)).toEqual(existing);
+    });
+
+    it('rejoue terminer et rouvrir sans erreur ni evenement supplementaire', async () => {
+        const repository = inMemoryItemRepository([
+            anItem({ id: 'item-1', name: 'Stable name', projectId: PROJECT_ID, ownerId: OWNER_ID }),
+        ]);
+        const changeItem = makeChangeItem(repository);
+        const changeCompleted = (completed: boolean) =>
+            changeItem({
+                id: 'item-1',
+                projectId: PROJECT_ID,
+                memberId: OWNER_ID,
+                changes: { name: 'Stable name', completed },
+            });
+
+        await changeCompleted(true);
+        await expect(changeCompleted(true)).resolves.toMatchObject({ completed: true });
+        await changeCompleted(false);
+        await expect(changeCompleted(false)).resolves.toMatchObject({ completed: false });
+
+        expect(repository.recordedEvents).toEqual([]);
     });
 });

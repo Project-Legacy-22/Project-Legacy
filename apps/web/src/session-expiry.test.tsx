@@ -78,6 +78,10 @@ async function avancer(millisecondes: number): Promise<void> {
 
 beforeEach(() => {
     testRoot = createReactTestRoot();
+    // La suppression d un item demande confirmation depuis #176. jsdom
+    // n implemente pas confirm, qui rend alors undefined : l action serait
+    // abandonnee et le 401 attendu n arriverait jamais.
+    vi.stubGlobal('confirm', vi.fn(() => true));
 });
 
 afterEach(async () => {

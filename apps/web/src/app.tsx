@@ -181,6 +181,7 @@ function SignedInApp({
                 paginationState={state.paginationState}
                 onAdd={state.addItem}
                 onToggle={state.toggleItem}
+                onRename={state.renameItem}
                 onRemove={state.removeItem}
                 onLoadMore={state.loadMore}
                 onRetry={state.retry}

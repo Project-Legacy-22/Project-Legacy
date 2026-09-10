@@ -45,7 +45,7 @@ rows, plus projects and items that would otherwise have no member left.
 | `users` | yes | yes | `id` |
 | `projects` | yes, when the caller is a member | yes, only when no other member remains | the caller's membership |
 | `project_memberships` | yes, caller's rows only | yes, by cascade | `user_id` |
-| `items` | yes, soft-deleted rows and `projectId` included | yes, by cascade | `user_id` and `project_id` |
+| `items` | yes, with `projectId` included | yes, by cascade | `user_id` and `project_id` |
 | `notifications` | yes | yes, by cascade | `user_id` |
 | `outbox` | no | yes | `payload ->> 'ownerId'` |
 | `processed_events` | no | yes | the events the account produced |

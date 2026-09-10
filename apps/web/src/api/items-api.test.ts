@@ -3,6 +3,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ApiError, itemsApi } from './items-api';
 
 const PROJECT_ID = '00000000-0000-7000-8000-000000000010';
+const ITEM_ID = '00000000-0000-7000-8000-000000000020';
+const ITEM = {
+    id: ITEM_ID,
+    projectId: PROJECT_ID,
+    name: 'Prepare the review',
+    completed: false,
+};
 
 function response(body: unknown, status = 200): Response {
     return new Response(JSON.stringify(body), {
@@ -71,5 +78,33 @@ describe('itemsApi', () => {
         await expect(itemsApi.createItem(PROJECT_ID, { name: '' })).rejects.toEqual(
             new ApiError(400, 'Item name must not be empty.'),
         );
+    });
+
+    it('updates the editable item state in its project', async () => {
+        const fetchMock = vi.fn<typeof fetch>(async () => response({ ...ITEM, completed: true }));
+        vi.stubGlobal('fetch', fetchMock);
+
+        await expect(
+            itemsApi.updateItem(PROJECT_ID, ITEM_ID, {
+                name: ITEM.name,
+                completed: true,
+            }),
+        ).resolves.toEqual({ ...ITEM, completed: true });
+        expect(fetchMock).toHaveBeenCalledWith(`/projects/${PROJECT_ID}/items/${ITEM_ID}`, {
+            method: 'PUT',
+            headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: ITEM.name, completed: true }),
+        });
+    });
+
+    it('accepts an empty successful response when permanently deleting an item', async () => {
+        const fetchMock = vi.fn<typeof fetch>(async () => new Response(null, { status: 204 }));
+        vi.stubGlobal('fetch', fetchMock);
+
+        await expect(itemsApi.deleteItem(PROJECT_ID, ITEM_ID)).resolves.toBeUndefined();
+        expect(fetchMock).toHaveBeenCalledWith(`/projects/${PROJECT_ID}/items/${ITEM_ID}`, {
+            method: 'DELETE',
+            headers: { Accept: 'application/json' },
+        });
     });
 });

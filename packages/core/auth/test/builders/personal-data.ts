@@ -36,7 +36,6 @@ export function anItem(overrides: Partial<ExportedItem> = {}): ExportedItem {
         completed: false,
         createdAt: INSTANT,
         updatedAt: INSTANT,
-        deletedAt: null,
         ...overrides,
     };
 }

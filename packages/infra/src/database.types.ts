@@ -42,7 +42,6 @@ export type Database = {
         Row: {
           completed: boolean
           created_at: string
-          deleted_at: string | null
           id: string
           name: string
           project_id: string
@@ -52,7 +51,6 @@ export type Database = {
         Insert: {
           completed?: boolean
           created_at?: string
-          deleted_at?: string | null
           id?: string
           name: string
           project_id: string
@@ -62,7 +60,6 @@ export type Database = {
         Update: {
           completed?: boolean
           created_at?: string
-          deleted_at?: string | null
           id?: string
           name?: string
           project_id?: string
