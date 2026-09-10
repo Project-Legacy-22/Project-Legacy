@@ -9,8 +9,17 @@ export {
     MAX_ITEM_NAME_LENGTH,
     DEFAULT_ITEM_PAGE_SIZE,
     MAX_ITEM_PAGE_SIZE,
-    NotificationSummaryDto,
 } from './items.js';
+export {
+    NotificationIdParams,
+    NotificationDto,
+    NotificationListDto,
+    NotificationPageDto,
+    ListNotificationsQuery,
+    NotificationSummaryDto,
+    DEFAULT_NOTIFICATION_PAGE_SIZE,
+    MAX_NOTIFICATION_PAGE_SIZE,
+} from './notifications.js';
 export {
     RegisterAccountBody,
     SignInBody,

@@ -7,6 +7,7 @@
     "@legacy/contracts": "*",
     "@legacy/core-auth": "*",
     "@legacy/core-items": "*",
+    "@legacy/core-notifications": "*",
     "@legacy/infra": "*",
     "express": "^5.2.1",
     "uuid": "^13.0.0",
