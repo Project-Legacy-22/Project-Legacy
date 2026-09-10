@@ -10,7 +10,7 @@
 A project member can rename an item and delete it from the project Kanban board. The controls
 are always visible and work with a keyboard. A deletion asks for confirmation that names the
 item, then removes it permanently. Status changes now use the dedicated Kanban interaction
-documented in `docs/features/16-kanban.md`.
+documented in `docs/features/16-kanban-move.md`.
 
 ## Surface
 
