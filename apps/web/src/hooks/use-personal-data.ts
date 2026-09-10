@@ -4,13 +4,9 @@ import { ApiError } from '../api/items-api';
 import type { AccountApi } from '../api/account-api';
 import { labels } from '../labels';
 import type { SaveFile } from '../save-file';
+import type { Feedback } from './view-state.js';
 
-// Idle carries no message, which is what tells the live region to stay silent
-// rather than repeat the last thing that happened.
-export type PersonalDataFeedback =
-    | { status: 'idle' }
-    | { status: 'success'; message: string }
-    | { status: 'error'; message: string };
+export type PersonalDataFeedback = Feedback;
 
 export type PersonalDataActivity = 'idle' | 'exporting' | 'deleting';
 

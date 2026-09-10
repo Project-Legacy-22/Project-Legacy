@@ -1,16 +1,6 @@
-export type ItemsLoadState =
-    | { status: 'loading' }
-    | { status: 'ready' }
-    | { status: 'error'; message: string };
+import type { ActionResult, Feedback, LoadState, PaginationState } from './view-state.js';
 
-export type ItemsPaginationState =
-    | { status: 'idle'; announcement: string }
-    | { status: 'loading' }
-    | { status: 'error'; message: string };
-
-export type ItemActionFeedback =
-    | { status: 'idle' }
-    | { status: 'success'; message: string }
-    | { status: 'error'; message: string };
-
-export type AddItemResult = { status: 'success' } | { status: 'error'; message: string };
+export type ItemsLoadState = LoadState;
+export type ItemsPaginationState = PaginationState;
+export type ItemActionFeedback = Feedback;
+export type AddItemResult = ActionResult;

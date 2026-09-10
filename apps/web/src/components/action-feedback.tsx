@@ -1,14 +1,12 @@
+import type { Feedback } from '../hooks/view-state';
+
 // The result of an action, as this component renders it: a refusal announced at
 // once, a success announced quietly, and nothing at all before anything has
 // happened.
 //
-// Declared here rather than imported from one of the screens that report
-// through it. The component is what they share, and typing it on one caller's
-// module would make every other caller depend on that one for no reason.
-export type ActionFeedbackState =
-    | { status: 'idle' }
-    | { status: 'success'; message: string }
-    | { status: 'error'; message: string };
+// Its own reason for not living on a caller's module is what sends it to the
+// shared one: no screen owns this shape.
+export type ActionFeedbackState = Feedback;
 
 export interface ActionFeedbackProps {
     feedback: ActionFeedbackState;
