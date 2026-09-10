@@ -33,7 +33,7 @@ Elles changent ici en premier.
 | **Catégories de données** | Adresse e-mail ; empreinte du mot de passe ; horodatages de création et de connexion ; jetons de session |
 | **Localisation** | `auth.users` (Supabase Auth), reflété dans `public.users` par un déclencheur |
 | **Conservation** | Toute la vie du compte, puis effacement immédiat à sa suppression (`US-13`) |
-| **Destinataires** | Supabase (sous-traitant, hébergement et authentification) |
+| **Destinataires** | Vercel (sous-traitant, hébergement applicatif : l'API Express tourne en fonction Vercel, `vercel.json` y redirige `/auth` et `/items`, donc le corps des requêtes et des réponses y transite en clair) ; Supabase (sous-traitant, persistance et authentification) |
 | **Mesures de sécurité** | Mot de passe haché par Supabase Auth, jamais stocké ni journalisé en clair ; session en cookie `httpOnly` et `SameSite=Lax` ; politiques RLS restreignant chaque ligne à son propriétaire ; limitation de fréquence sur l'inscription et la connexion |
 
 `public.users` ne duplique qu'`id` et `email`. Le miroir existe parce qu'`items.user_id` doit
@@ -50,7 +50,7 @@ personnelles le restitue.
 | **Catégories de données** | Les cinq premiers caractères d'une empreinte SHA-1 du mot de passe candidat |
 | **Localisation** | Aucune. Rien n'est stocké : l'empreinte est une clé de recherche, calculée puis jetée |
 | **Conservation** | Sans objet |
-| **Destinataires** | Have I Been Pwned (API Pwned Passwords) |
+| **Destinataires** | Have I Been Pwned (API Pwned Passwords), atteinte depuis le réseau sortant de Vercel (sous-traitant, hébergement applicatif) |
 | **Mesures de sécurité** | k-anonymat : seul un préfixe de cinq caractères sort du processus, la comparaison se fait localement ; en-tête `Add-Padding` pour que la taille de la réponse ne révèle rien ; délai de deux secondes, un échec ne bloque pas la réinitialisation |
 
 Le préfixe ne permet pas de retrouver le mot de passe, mais l'appel constitue une
@@ -66,7 +66,7 @@ communication à un tiers : il figure ici pour cette raison.
 | **Catégories de données** | Intitulé saisi par l'utilisateur ; état d'avancement ; propriétaire ; horodatages de création, de modification et de suppression |
 | **Localisation** | `public.items` |
 | **Conservation** | Trente jours après suppression par l'utilisateur (`deleted_at`), puis effacement définitif. Immédiat à la suppression du compte |
-| **Destinataires** | Supabase (sous-traitant) |
+| **Destinataires** | Vercel (sous-traitant, hébergement applicatif : l'API Express tourne en fonction Vercel, `vercel.json` y redirige `/auth` et `/items`, donc le corps des requêtes et des réponses y transite en clair) ; Supabase (sous-traitant, persistance) |
 | **Mesures de sécurité** | Politiques RLS par propriétaire ; toute lecture nomme un propriétaire ; l'intitulé ne sort jamais dans un journal ni dans un événement |
 
 L'intitulé est du contenu libre : il peut contenir n'importe quelle donnée personnelle, y
@@ -83,7 +83,7 @@ compris sensible, sans que l'application puisse l'anticiper. C'est ce qui justif
 | **Catégories de données** | Identifiants du destinataire, de la tâche et de l'événement d'origine ; date de lecture ; horodatages |
 | **Localisation** | `public.notifications` |
 | **Conservation** | Quatre-vingt-dix jours après création, puis effacement. Immédiat à la suppression du compte |
-| **Destinataires** | Supabase (sous-traitant) |
+| **Destinataires** | Vercel (sous-traitant, hébergement applicatif : l'API Express tourne en fonction Vercel, `vercel.json` y redirige `/auth` et `/items`, donc le corps des requêtes et des réponses y transite en clair) ; Supabase (sous-traitant, persistance) |
 | **Mesures de sécurité** | Aucun libellé stocké : le texte affiché est construit par l'interface, la table ne contient que des identifiants |
 
 ### T-05 — File d'événements
@@ -95,12 +95,30 @@ compris sensible, sans que l'application puisse l'anticiper. C'est ce qui justif
 | **Personnes concernées** | Utilisateurs inscrits, indirectement |
 | **Catégories de données** | Identifiant d'événement, nom versionné, instant, et un payload restreint à des identifiants (`itemId`, `ownerId`) |
 | **Localisation** | `public.outbox`, `public.processed_events`, et la file Redis pendant le transport |
-| **Conservation** | Sept jours après publication (`published_at`), puis effacement. `processed_events` est conservé quatre-vingt-dix jours : c'est ce qui rend un rejeu sans effet |
-| **Destinataires** | Supabase (sous-traitant). Redis s'exécute localement et n'est pas un tiers |
+| **Conservation** | `outbox` : sept jours après publication (`published_at`). Un événement jamais publié (`published_at is null`) n'est pas purgé : il représente un fait écrit dont personne n'a encore été prévenu, et le supprimer perdrait l'effet au lieu de le retarder. `processed_events` : quatre-vingt-dix jours à compter de sa création, c'est-à-dire de la consommation, ce qui rend un rejeu sans effet pendant cette durée. La file Redis ne conserve rien : un message en sort dès qu'il est lu, et le broker n'est pas persistant |
+| **Destinataires** | Vercel (sous-traitant, hébergement applicatif : l'API Express tourne en fonction Vercel, `vercel.json` y redirige `/auth` et `/items`, donc le corps des requêtes et des réponses y transite en clair) ; Supabase (sous-traitant, persistance de l'outbox et des événements traités). Le broker Redis est exécuté par l'équipe et n'est pas un tiers distinct ; s'il était un jour hébergé, il rejoindrait cette ligne |
 | **Mesures de sécurité** | Le contrat d'événement interdit toute donnée personnelle dans le payload, et un test échoue si l'intitulé d'une tâche s'y trouve ; schéma strict, un champ ajouté est rejeté |
 
-Un événement ne transporte que des identifiants. C'est ce qui permet de ne pas avoir à purger
-la file lors d'un export ou d'un effacement : elle ne contient rien à restituer.
+Un événement ne transporte que des identifiants, et `ownerId` en est un : il désigne un compte,
+donc il reste rattachable à une personne. C'est une **minimisation**, pas une anonymisation — la
+CNIL distingue les deux, et un identifiant pseudonyme demeure une donnée personnelle.
+
+**L'effacement les supprime donc, et le fait déjà.** `account_erasure.sql` retire les lignes de
+`public.outbox` dont le `payload ->> 'ownerId'` désigne le compte, et les lignes de
+`public.processed_events` correspondantes.
+
+**Ce que ça impose à `US-39`**, qui implémentera la purge : elle retrouve aujourd'hui les
+`processed_events` d'un compte **en passant par l'outbox**. Une purge à J+7 supprime ce chemin,
+et une suppression de compte à J+8 laisserait alors les traces de traitement en place. La purge
+doit donc préserver l'effacement par compte — en supprimant les deux tables ensemble, ou en
+rattachant `processed_events` au compte directement. À trancher avant d'activer la purge, pas
+après.
+
+**La portabilité, elle, les exclut**, et pour une raison qui lui est propre : le droit porte sur
+les données que la personne a fournies ou qui la concernent, pas sur les traces techniques que
+leur traitement produit. Un identifiant d'événement et un instant de publication ne lui
+apprennent rien sur elle ; l'objet auquel ils renvoient — la tâche — est restitué par `T-03`.
+Cette exclusion ne dépend pas de l'argument de minimisation ci-dessus.
 
 ### T-06 — Journaux applicatifs
 
@@ -112,14 +130,63 @@ la file lors d'un export ou d'un effacement : elle ne contient rien à restituer
 | **Catégories de données** | Méthode, chemin appelé, code de réponse, durée, identifiant de corrélation. Le chemin peut contenir l'identifiant d'une tâche |
 | **Localisation** | Sortie standard des processus, collectée par l'hébergeur |
 | **Conservation** | Trente jours |
-| **Destinataires** | Vercel (sous-traitant, hébergement de l'application) |
+| **Destinataires** | Vercel (sous-traitant, journaux d'exécution). Ses journaux de bord enregistrent l'adresse IP du client quoi que notre ligne de journal contienne, ce qui est une finalité et une durée distinctes de l'hébergement applicatif ci-dessus |
 | **Mesures de sécurité** | Masquage du corps des requêtes, de l'en-tête d'autorisation, du cookie et de tout champ nommé `password` ; ni adresse e-mail ni intitulé de tâche n'est journalisé, ce qu'un test vérifie |
+
+### T-07 — Projets et appartenance
+
+| | |
+|---|---|
+| **Finalité** | Regrouper des tâches et les partager entre plusieurs comptes |
+| **Base légale** | Exécution du contrat : le regroupement est la fonction demandée |
+| **Personnes concernées** | Utilisateurs inscrits, membres d'au moins un projet |
+| **Catégories de données** | Intitulé du projet, choisi par l'utilisateur et pouvant contenir ce qu'il veut ; identifiant du compte membre ; rôle (`owner` ou `member`) ; horodatages de création et de mise à jour |
+| **Localisation** | `public.projects` et `public.project_memberships` |
+| **Conservation** | Toute la vie du projet. À la suppression d'un compte, ses appartenances partent, et un projet dont il était le dernier membre est supprimé avec ses tâches ; un projet encore partagé subsiste |
+| **Destinataires** | Vercel (sous-traitant, hébergement applicatif) ; Supabase (sous-traitant, persistance) |
+| **Mesures de sécurité** | Politiques RLS restreignant chaque projet à ses membres ; l'appartenance est vérifiée avant toute lecture ou écriture d'une tâche ; un non-membre reçoit la même absence qu'un projet inexistant, ce qui ne révèle pas qu'un projet existe |
+
+Un projet partagé a une conséquence qu'il faut écrire ici plutôt que de la découvrir : **un
+membre qui efface son compte fait disparaître ses tâches des projets que les autres continuent
+d'utiliser**. L'intitulé d'une tâche est sa donnée personnelle, donc l'effacement la retire — et
+les autres membres perdent ce contenu sans avertissement. C'est assumé au titre du RGPD, mais
+rien ne le dit encore à l'utilisateur : la politique de confidentialité (`US-37`) doit le
+mentionner, et l'écran de suppression de compte devrait le rappeler.
+
+### T-08 — Courriel de réinitialisation de mot de passe
+
+| | |
+|---|---|
+| **Finalité** | Permettre à une personne qui ne peut plus se connecter de reprendre la main sur son compte |
+| **Base légale** | Exécution du contrat : sans ce canal, un mot de passe oublié rend le compte inaccessible |
+| **Personnes concernées** | Utilisateurs demandant une réinitialisation |
+| **Catégories de données** | Adresse e-mail, et un jeton de récupération à usage unique envoyé dans le message |
+| **Localisation** | Aucune de notre côté. Le jeton est émis et vérifié par Supabase Auth ; le message part vers la boîte du destinataire |
+| **Conservation** | Le jeton expire côté fournisseur et est à usage unique. Le message vit dans la boîte du destinataire, hors de notre portée |
+| **Destinataires** | Supabase (sous-traitant, émission du message) et le fournisseur SMTP configuré. En développement, le mail-catcher de la pile locale ; en production, aucun SMTP n'est encore provisionné (#164) |
+| **Mesures de sécurité** | La réponse de l'API est identique que l'adresse ait un compte ou non, donc la demande ne révèle pas qui est inscrit ; l'échange du jeton se fait entièrement côté serveur ; le lien n'est jamais journalisé |
+
+C'est le seul traitement où une donnée personnelle **sort vers un tiers qui n'est ni Vercel ni
+Supabase**. L'ADR-0010 a tranché ce canal ; le choix du fournisseur de production reste ouvert et
+devra revenir ici.
+
+### T-09 — Limitation de fréquence
+
+| | |
+|---|---|
+| **Finalité** | Refuser une attaque par force brute sur l'inscription, la connexion et la demande de réinitialisation |
+| **Base légale** | Intérêt légitime : protéger les comptes contre l'essai systématique d'identifiants |
+| **Personnes concernées** | Toute personne émettant une requête, inscrite ou non |
+| **Catégories de données** | Adresse IP de l'appelant, seule clé du compteur |
+| **Localisation** | Mémoire du processus, dans une table effacée au redémarrage |
+| **Conservation** | La durée de la fenêtre, cinq minutes, puis la clé est retirée |
+| **Destinataires** | Aucun. La valeur ne quitte pas le processus |
+| **Mesures de sécurité** | Jamais journalisée — `request-log.ts` ne consigne aucune adresse, ce qu'un test vérifie — jamais persistée, jamais transmise. `TRUST_PROXY` détermine combien de sauts de proxy sont crus pour la dériver, et une valeur fausse ferait partager un même compteur à tous les visiteurs |
 
 ## Ce que le registre ne couvre pas encore
 
-**Les projets.** Le critère d'acceptation les mentionne, mais aucune table de projets
-n'existe au schéma à ce jour : `US-16` n'est pas livrée. La ligne sera ajoutée par l'issue qui
-introduira la table, pas anticipée ici sur un modèle qui n'est pas arrêté.
+Rien. Les neuf traitements ci-dessus couvrent chaque table du schéma, chaque appel sortant et
+chaque donnée tenue en mémoire par le processus.
 
 ## Champs sans finalité identifiée
 
@@ -134,8 +201,9 @@ dépendre d'un appel à l'API d'authentification.
 ## Décisions à ratifier
 
 Les durées ci-dessus sont proposées, argumentées et prêtes à être appliquées. Elles engagent
-`US-39`, qui les implémentera au sprint 3. Trois points demandent une confirmation de
-l'équipe en relecture :
+`US-39`, qui les implémentera au sprint 3, et lui imposent une contrainte écrite en `T-05` :
+la purge de l'outbox ne doit pas casser l'effacement par compte, qui passe aujourd'hui par
+elle. Trois points demandent une confirmation de l'équipe en relecture :
 
 1. **La région d'hébergement Supabase.** Une instance hors Union européenne impose un
    encadrement des transferts qu'il faut alors décrire ici. C'est le seul point qui peut
