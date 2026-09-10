@@ -97,7 +97,10 @@ export function itemsRouter(useCases: ItemUseCases): Router {
         if (!params.success) return next(params.error);
 
         useCases
-            .addItem(body.data.name, params.data.projectId, accountOf(res).id, {
+            .addItem({
+                name: body.data.name,
+                projectId: params.data.projectId,
+                ownerId: accountOf(res).id,
                 priority: body.data.priority,
                 dueDate: body.data.dueDate,
             })

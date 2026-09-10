@@ -43,7 +43,11 @@ describe('politiques RLS sur items (sans role de service)', () => {
         // Through the real use case, service-role-backed, exactly as the API
         // itself creates an item: this file is not testing how the row gets
         // there, only who PostgREST lets read, write or erase it afterwards.
-        const item = await app.useCases.items.addItem('Vu par PostgREST', owner.projectId, owner.id);
+        const item = await app.useCases.items.addItem({
+            name: 'Vu par PostgREST',
+            projectId: owner.projectId,
+            ownerId: owner.id,
+        });
         itemId = item.id;
     });
 
@@ -171,7 +175,11 @@ describe('politiques RLS sur notifications (sans role de service)', () => {
         await app.start();
         owner = await registerAndSignIn(app, MOT_DE_PASSE);
         intruder = await registerAndSignIn(app, MOT_DE_PASSE);
-        const item = await app.useCases.items.addItem('Vu par PostgREST', owner.projectId, owner.id);
+        const item = await app.useCases.items.addItem({
+            name: 'Vu par PostgREST',
+            projectId: owner.projectId,
+            ownerId: owner.id,
+        });
         notificationId = await seedNotification(owner.id, item.id);
     });
 

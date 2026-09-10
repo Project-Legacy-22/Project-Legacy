@@ -111,6 +111,25 @@ function useActionFocus(mode: ItemRowBodyProps['mode']) {
     return { editButtonRef, moveButtonRef, pendingAction };
 }
 
+function ItemPlanningSummary({ item }: { item: ItemDto }) {
+    const hasOverdueDate = item.dueDate !== null && item.status !== 'done' && isOverdue(item.dueDate);
+
+    return (
+        <p className="item-planning-summary">
+            <span className={`item-priority item-priority-${item.priority}`}>
+                {labels.itemPriorityDescription(item.priority)}
+            </span>
+            {item.dueDate !== null && (
+                <>
+                    <span aria-hidden="true"> · </span>
+                    <time dateTime={item.dueDate}>{labels.itemDueDate(formatDueDate(item.dueDate))}</time>
+                    {hasOverdueDate && <span className="item-overdue">{labels.itemOverdue}</span>}
+                </>
+            )}
+        </p>
+    );
+}
+
 function ItemRowBody(props: ItemRowBodyProps) {
     if (props.mode === 'edit') {
         return (
@@ -143,22 +162,7 @@ function ItemRowBody(props: ItemRowBodyProps) {
             <div className="item-copy">
                 <p className="item-name">{props.name}</p>
                 <p className="item-state">{labels.itemStatus(props.item.status)}</p>
-                <p className="item-planning-summary">
-                    <span className={`item-priority item-priority-${props.item.priority}`}>
-                        {labels.itemPriorityDescription(props.item.priority)}
-                    </span>
-                    {props.item.dueDate !== null && (
-                        <>
-                            <span aria-hidden="true"> · </span>
-                            <time dateTime={props.item.dueDate}>
-                                {labels.itemDueDate(formatDueDate(props.item.dueDate))}
-                            </time>
-                            {props.item.status !== 'done' && isOverdue(props.item.dueDate) && (
-                                <span className="item-overdue">{labels.itemOverdue}</span>
-                            )}
-                        </>
-                    )}
-                </p>
+                <ItemPlanningSummary item={props.item} />
                 {props.item.name === null && (
                     <p className="item-remediation">{labels.unnamedItemRemediation}</p>
                 )}

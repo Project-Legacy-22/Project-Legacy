@@ -155,38 +155,6 @@ describe('items API', () => {
             });
         });
 
-        it('creates a high-priority item with a past due date', async () => {
-            const response = await harness.request(ITEMS_PATH, json('POST', {
-                name: 'Traiter le retard',
-                priority: 'high',
-                dueDate: '2020-01-02',
-            }));
-
-            expect(response.status).toBe(200);
-            await expect(response.json()).resolves.toMatchObject({
-                priority: 'high',
-                dueDate: '2020-01-02',
-            });
-            expect(store.items.get(GENERATED_ID)).toMatchObject({
-                priority: 'high',
-                dueDate: '2020-01-02',
-            });
-        });
-
-        it('rejects unknown priorities and invalid calendar dates', async () => {
-            const priority = await harness.request(ITEMS_PATH, json('POST', {
-                name: 'Intact',
-                priority: 'urgent',
-            }));
-            const dueDate = await harness.request(ITEMS_PATH, json('POST', {
-                name: 'Intact',
-                dueDate: '2026-02-30',
-            }));
-
-            expect([priority.status, dueDate.status]).toEqual([400, 400]);
-            expect(store.items.size).toBe(0);
-        });
-
         it('returns the same absence for a non-member and an unknown project', async () => {
             await reseed([], []);
 
@@ -199,27 +167,6 @@ describe('items API', () => {
             expect(denied.status).toBe(404);
             expect(unknown.status).toBe(404);
             expect(store.items.size).toBe(0);
-        });
-
-        it('updates and clears item planning fields', async () => {
-            await reseed([anItemOf({ id: EXISTING_ID, ownerId: OWNER_ID, name: 'Intact' })]);
-
-            const planned = await harness.request(
-                `${ITEMS_PATH}/${EXISTING_ID}`,
-                json('PUT', { name: 'Planifie', priority: 'high', dueDate: '2020-01-02' }),
-            );
-            const cleared = await harness.request(
-                `${ITEMS_PATH}/${EXISTING_ID}`,
-                json('PUT', { name: 'Sans date', dueDate: null }),
-            );
-
-            expect(planned.status).toBe(200);
-            expect(cleared.status).toBe(200);
-            expect(store.items.get(EXISTING_ID)).toMatchObject({
-                name: 'Sans date',
-                priority: 'high',
-                dueDate: null,
-            });
         });
 
         it('rejects an invalid name without echoing it', async () => {

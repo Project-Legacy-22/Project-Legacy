@@ -21,34 +21,54 @@ interface AddItemFormState {
     handleSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }
 
+function useAddItemFields() {
+    const [name, setName] = useState('');
+    const [priority, setPriority] = useState<ItemPriority>('normal');
+    const [dueDate, setDueDate] = useState('');
+
+    return {
+        name,
+        priority,
+        dueDate,
+        setName,
+        handlePriorityChange: setPriority,
+        handleDueDateChange: setDueDate,
+        reset: () => {
+            setName('');
+            setPriority('normal');
+            setDueDate('');
+        },
+    };
+}
+
+function invalidNameMessage(name: string): string {
+    return name.trim().length === 0
+        ? labels.itemNameRequired
+        : labels.itemNameTooLong(MAX_ITEM_NAME_LENGTH);
+}
+
 export function useAddItemForm(
     onAdd: (body: CreateItemInput) => Promise<AddItemResult>,
 ): AddItemFormState {
     const inputRef = useRef<HTMLInputElement>(null);
-    const [name, setName] = useState('');
-    const [priority, setPriority] = useState<ItemPriority>('normal');
-    const [dueDate, setDueDate] = useState('');
+    const fields = useAddItemFields();
     const [validationError, setValidationError] = useState<string | null>(null);
 
     const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
-        setName(event.target.value);
+        fields.setName(event.target.value);
         if (validationError !== null) setValidationError(null);
     };
 
     const submit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         const candidate = CreateItemBody.safeParse({
-            name,
-            priority,
-            dueDate: dueDate === '' ? null : dueDate,
+            name: fields.name,
+            priority: fields.priority,
+            dueDate: fields.dueDate === '' ? null : fields.dueDate,
         });
 
         if (!candidate.success) {
-            const message =
-                name.trim().length === 0
-                    ? labels.itemNameRequired
-                    : labels.itemNameTooLong(MAX_ITEM_NAME_LENGTH);
-            setValidationError(message);
+            setValidationError(invalidNameMessage(fields.name));
             inputRef.current?.focus();
             return;
         }
@@ -56,9 +76,7 @@ export function useAddItemForm(
         setValidationError(null);
         const result = await onAdd(candidate.data);
         if (result.status === 'success') {
-            setName('');
-            setPriority('normal');
-            setDueDate('');
+            fields.reset();
             inputRef.current?.focus();
         } else {
             setValidationError(result.message);
@@ -69,20 +87,16 @@ export function useAddItemForm(
     const describedBy =
         validationError === null ? 'item-name-help' : 'item-name-help item-name-error';
 
-    const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-        void submit(event);
-    };
-
     return {
         inputRef,
-        name,
-        priority,
-        dueDate,
+        name: fields.name,
+        priority: fields.priority,
+        dueDate: fields.dueDate,
         validationError,
         describedBy,
         handleChange,
-        handlePriorityChange: setPriority,
-        handleDueDateChange: setDueDate,
-        handleSubmit,
+        handlePriorityChange: fields.handlePriorityChange,
+        handleDueDateChange: fields.handleDueDateChange,
+        handleSubmit: (event) => void submit(event),
     };
 }

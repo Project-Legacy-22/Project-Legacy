@@ -13,21 +13,24 @@ export interface AddItemDependencies {
     now: () => Date;
 }
 
+interface AddItemInput {
+    name: string;
+    projectId: string;
+    ownerId: string;
+    priority?: ItemPriority | undefined;
+    dueDate?: string | null | undefined;
+}
+
 // The creator is an argument, not an injected constant: it is the authenticated
 // caller and changes with every request. Access is granted by project membership;
 // ownerId only records who created the item and its event.
 export function makeAddItem({ repository, newId, now }: AddItemDependencies) {
-    return async function addItem(
-        name: string,
-        projectId: string,
-        ownerId: string,
-        planning: { priority?: ItemPriority | undefined; dueDate?: string | null | undefined } = {},
-    ): Promise<Item> {
+    return async function addItem({ name, projectId, ownerId, priority, dueDate }: AddItemInput): Promise<Item> {
         if (!(await repository.isProjectMember(projectId, ownerId))) {
             throw new ItemProjectNotFound(projectId);
         }
 
-        const item = createItem({ id: newId(), name, projectId, ownerId, ...planning });
+        const item = createItem({ id: newId(), name, projectId, ownerId, priority, dueDate });
         const event = itemCreated(newId(), now(), item);
 
         // One call, so the item and its event share a transaction. Announcing

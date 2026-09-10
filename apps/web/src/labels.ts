@@ -1,15 +1,11 @@
-import type { ItemPriority, ItemStatus } from '@legacy/contracts';
+import type { ItemStatus } from '@legacy/contracts';
+
+import { itemPlanningLabels } from './item-planning-labels';
 
 const ITEM_STATUS_LABELS: Record<ItemStatus, string> = {
     todo: 'Todo',
     doing: 'In progress',
     done: 'Done',
-};
-
-const ITEM_PRIORITY_LABELS: Record<ItemPriority, string> = {
-    low: 'Low',
-    normal: 'Normal',
-    high: 'High',
 };
 
 export const labels = {
@@ -230,10 +226,7 @@ export const labels = {
     newItemKicker: 'New item',
     addSectionTitle: 'Add to the list',
     itemNameLabel: 'Item name',
-    itemPriorityLabel: 'Priority',
-    itemDueDateLabel: 'Due date',
-    itemDueDateHelp: 'Optional. Past dates are accepted.',
-    itemOverdue: 'Overdue',
+    ...itemPlanningLabels,
     itemNameRequired: 'Enter an item name.',
     addingItem: 'Adding…',
     addItem: 'Add item',
@@ -292,15 +285,6 @@ export const labels = {
     },
     itemStatus(status: ItemStatus): string {
         return ITEM_STATUS_LABELS[status];
-    },
-    itemPriority(priority: ItemPriority): string {
-        return ITEM_PRIORITY_LABELS[priority];
-    },
-    itemPriorityDescription(priority: ItemPriority): string {
-        return `${ITEM_PRIORITY_LABELS[priority]} priority`;
-    },
-    itemDueDate(formattedDate: string): string {
-        return `Due ${formattedDate}`;
     },
     moveItem(name: string): string {
         return `Move: ${name}`;
