@@ -21,6 +21,10 @@ Comment nous écrivons le code, indépendamment des services dont il dépend.
 | [0003](0003-decoupage-du-backend-par-domaine.md) | Découpage du backend par domaine, en couches à l'intérieur | Accepté | `EN-04` |
 | [0006](0006-chaine-front-vite-et-react.md) | Vite pour la chaîne front, React conservé | Accepté | `EN-05` |
 | [0011](0011-anglais-pour-le-code-et-l-interface.md) | Anglais pour le code et l'interface, français pour la documentation | Accepté | la migration de nommage, toutes les revues |
+| [0012](0012-pas-de-formateur-automatique.md) | Pas de formateur automatique pour l'instant | Accepté | la mise en forme, qui reste tenue par la relecture |
+| [0013](0013-garantie-de-livraison-des-evenements.md) | L'outbox est la garantie, et la notification est l'effet démontrable | Accepté | tout producteur d'événement, toute cible de déploiement |
+| [0014](0014-niveau-d-accessibilite-wcag-21-aa.md) | WCAG 2.1 AA comme niveau visé | Accepté | les critères d'acceptation de toutes les US front |
+| [0015](0015-ghcr-comme-registre-d-images.md) | GHCR comme registre d'images | Accepté | la publication d'image et les releases |
 
 L'ADR-0001 a été tranché **contre** la recommandation du backlog, qui proposait le
 mono-utilisateur. Il porte la raison qui a emporté la décision et le coût accepté en échange.
@@ -53,12 +57,9 @@ sprint 1, mais chacun bloque quelque chose plus loin.
 
 | À trancher | Proposition | Bloque | Échéance |
 |---|---|---|---|
-| Garantie de livraison des événements : outbox conservée ou perte assumée | outbox conservée, Redis comme transport | `EN-35`, et donc `US-10` | planning du sprint 2, **avant le premier producteur** |
-| Effet visible démontrant le flux événementiel | « créer une tâche produit une notification visible » | la démonstration de revue | planning du sprint 2 |
-| Registre d'images | GHCR, déjà lié au dépôt | `EN-08` | sprint 1 |
-| Niveau d'accessibilité visé | WCAG 2.1 AA | critères d'acceptation des US front | sprint 1 |
-| Direction graphique, et qui arbitre | bibliothèque de composants ou CSS maison | toutes les US front | sprint 1 |
+| Direction graphique, et qui arbitre | bibliothèque de composants ou CSS maison | toutes les US front | sprint 3 |
 
-Le premier point de ce tableau est le seul qui soit une conséquence directe d'une décision
-prise : l'ADR-0007 a retenu un broker sans statuer sur ce qui garantit qu'un événement publié
-corresponde à un fait réellement écrit. Il est daté et rattaché à `EN-35`.
+Les quatre autres points de ce tableau ont été ratifiés le 11 septembre 2026 : la garantie de
+livraison et l'effet démontrable par l'ADR-0013, le niveau d'accessibilité par l'ADR-0014, le
+registre d'images par l'ADR-0015. Ils étaient tranchés dans le code depuis des semaines sans
+qu'aucun ADR ne l'enregistre, ce qui est ce que #228 corrige.
