@@ -11,6 +11,7 @@ import { accountRouter } from './routes/account.js';
 import { authRouter } from './routes/auth.js';
 import { itemsRouter } from './routes/items.js';
 import { notificationsRouter } from './routes/notifications.js';
+import { relayRouter } from './routes/relay.js';
 import { projectsRouter } from './routes/projects.js';
 import { translateErrors } from './error-middleware.js';
 import { requireAccount } from './session.js';
@@ -106,8 +107,15 @@ export function createServer(config: Config, useCases: AppUseCases, logger: Logg
     // no state, and building it three times would only make three closures.
     const session = requireAccount(useCases.auth, config.secureCookies);
 
+    // Monte avant les routes gardees par la session : ce middleware s applique
+    // a tout ce qui le suit, et l appelant ici est un workflow sans session.
+    if (config.relaySecret !== undefined) {
+        app.use(relayRouter(useCases.notifications, config.relaySecret));
+    }
+
     app.use(session, projectsRouter(useCases.projects), itemsRouter(useCases.items));
-    app.use(session, notificationsRouter(useCases.notifications));
+    app.use(session, notificationsRouter(useCases.notifications, logger));
+
 
     // Registered last: express only treats a middleware as an error handler
     // once every route has had its chance to fail.
