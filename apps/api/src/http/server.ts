@@ -44,17 +44,24 @@ const RESET_EMAIL_WINDOW_MS = 60 * 60 * 1000;
 // needs the app shell, and a route that hits the file system on every call
 // would be one more thing to rate-limit for no reason. Absent in development,
 // where Vite serves this path.
-function readAppShell(staticDir: string): string | undefined {
+// Une coquille introuvable disparaissait en silence : la route du lien profond
+// n etait pas montee, la requete tombait dans la garde de session, et la
+// personne qui suivait un lien de reinitialisation recevait un 401 parlant
+// d une session dont elle n avait pas besoin (#232).
+function readAppShell(staticDir: string, logger: Logger): string | undefined {
+    const file = path.join(staticDir, 'index.html');
+
     try {
-        return readFileSync(path.join(staticDir, 'index.html'), 'utf8');
-    } catch {
+        return readFileSync(file, 'utf8');
+    } catch (error) {
+        logger.warn({ err: error, file }, 'application shell not found, deep links answer 503');
         return undefined;
     }
 }
 
 export function createServer(config: Config, useCases: AppUseCases, logger: Logger): Express {
     const app = express();
-    const appShell = readAppShell(config.staticDir);
+    const appShell = readAppShell(config.staticDir, logger);
 
     // req.ip, and therefore the rate limiter's client key, is only as
     // trustworthy as this setting: it says how many proxy hops in front of the
@@ -93,11 +100,21 @@ export function createServer(config: Config, useCases: AppUseCases, logger: Logg
     // The reset link in the recovery email is a deep link the browser opens
     // directly. Serve the app shell for it so the front-end can pick up the
     // token; every other path still falls through to the session guard.
-    if (appShell !== undefined) {
-        app.get('/reset-password', (_req, res) => {
-            res.type('html').send(appShell);
-        });
-    }
+    // Montee dans tous les cas : c est ce qui distingue une coquille manquante
+    // d une session manquante.
+    app.get('/reset-password', (_req, res) => {
+        if (appShell === undefined) {
+            res.status(503).send({
+                type: 'app_shell_unavailable',
+                title: 'AppShellUnavailable',
+                status: 503,
+                detail: 'The application shell is not available on this deployment.',
+            });
+            return;
+        }
+
+        res.type('html').send(appShell);
+    });
 
     // Items belong to somebody since US-11: no session, no items. The guard
     // also renews the session it is given when it can, so an hour-long access
