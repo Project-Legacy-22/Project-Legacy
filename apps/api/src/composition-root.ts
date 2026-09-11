@@ -199,7 +199,7 @@ function makeDeliverPending(dependencies: {
 }): () => Promise<DeliveryPassResult> {
     const { bus } = dependencies;
 
-    if (bus === undefined) return () => Promise.resolve({ published: 0, consumed: 0 });
+    if (bus === undefined) return () => Promise.resolve({ published: 0, consumed: 0, failed: 0 });
 
     return () => deliverPending({ ...dependencies, bus });
 }

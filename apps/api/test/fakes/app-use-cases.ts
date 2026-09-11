@@ -49,7 +49,7 @@ function unexercised(): AppUseCases {
             // Zeros rather than a refusal: this one is housekeeping the routes
             // ask for on the way past, not a use case a suite exercises. A
             // suite that cares about it overrides it.
-            deliverPending: () => Promise.resolve({ published: 0, consumed: 0 }),
+            deliverPending: () => Promise.resolve({ published: 0, consumed: 0, failed: 0 }),
         },
     };
 }
