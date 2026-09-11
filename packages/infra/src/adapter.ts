@@ -49,22 +49,8 @@ export function serviceRoleClient(settings: SupabaseSettings): SupabaseClient<Da
     });
 }
 
-// A deadline for a call whose own retries cannot be bounded.
-//
-// @supabase/supabase-js retries a failed refresh with exponential backoff --
-// 200, 400, 800 ms and so on -- for as long as the next interval still fits
-// inside a 30-second window it keeps to itself. Measured on 2.115.0, that is
-// eight attempts and about 25 seconds of sleeping, and neither the window nor
-// the predicate is exposed. A session renewal against a provider that is down
-// therefore held the HTTP request open for 25 seconds before answering.
-//
-// The abandoned attempt keeps running: there is nothing to cancel, since the
-// SDK takes no signal. Whatever it ends up doing is ignored -- the caller has
-// already been answered, and the tokens it would carry belong to a request that
-// no longer exists. Its late rejection needs no guard of its own: Promise.race
-// attaches a handler to it, so it never becomes an unhandled rejection. A catch
-// added here as a precaution was removed after a test proved it changed
-// nothing.
+// A deadline for a call whose own retries cannot be bounded: the SDK retries a
+// failed refresh for about 25 seconds and exposes no way to shorten it (#214).
 export async function withDeadline<T>(
     work: Promise<T>,
     milliseconds: number,
