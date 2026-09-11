@@ -30,7 +30,7 @@ const OWNERS: Readonly<Record<string, string>> = {
     'public.erase_account': '20260908144244_extend_account_erasure_for_projects',
     'public.mark_notification_read': '20260910100000_notification_policies_and_pagination',
     'public.mirror_auth_user': '20260910120000_mirror_auth_user_keeps_consent_and_default_project',
-    'public.record_item_created_notification': '20260910090000_notify_in_one_transaction',
+    'public.record_item_created_notification': '20260911180000_notification_survives_a_deleted_item',
     'public.set_updated_at': '20260903120000_initial_schema',
     'public.uuid_generate_v7': '20260903120000_initial_schema',
 };
@@ -94,6 +94,7 @@ describe('le registre des fonctions SQL', () => {
             'public.create_item_with_event',
             'public.erase_account',
             'public.mirror_auth_user',
+            'public.record_item_created_notification',
         ]);
     });
 });

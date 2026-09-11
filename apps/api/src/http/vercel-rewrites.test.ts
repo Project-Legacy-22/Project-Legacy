@@ -36,8 +36,13 @@ import { createServer } from './server.js';
 
 const RACINE = join(import.meta.dirname, '..', '..', '..', '..');
 
+// Every route mounted, including the ones a target enables by configuration:
+// the relay trigger exists only when RELAY_SECRET is set, and a rewrite that
+// points at it is still a rewrite this file has to justify.
 function application(): Express {
-    return createServer(testConfig, makeAppUseCases(), recordingLogger());
+    const config = { ...testConfig, relaySecret: 'un-secret-de-relais-assez-long-pour-le-schema' };
+
+    return createServer(config, makeAppUseCases(), recordingLogger());
 }
 
 // Express 5 exposes the mounted stack. A nested router -- the items routes live

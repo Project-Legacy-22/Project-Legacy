@@ -12,6 +12,7 @@ import { authRouter } from './routes/auth.js';
 import { credentialsRouter } from './routes/credentials.js';
 import { itemsRouter } from './routes/items.js';
 import { notificationsRouter } from './routes/notifications.js';
+import { relayRouter } from './routes/relay.js';
 import { projectsRouter } from './routes/projects.js';
 import { translateErrors } from './error-middleware.js';
 import { requireAccount } from './session.js';
@@ -54,17 +55,49 @@ const EMAIL_CHANGE_WINDOW_MS = 60 * 60 * 1000;
 // needs the app shell, and a route that hits the file system on every call
 // would be one more thing to rate-limit for no reason. Absent in development,
 // where Vite serves this path.
-function readAppShell(staticDir: string): string | undefined {
+// Une coquille introuvable disparaissait en silence : la route du lien profond
+// n etait pas montee, la requete tombait dans la garde de session, et la
+// personne qui suivait un lien de reinitialisation recevait un 401 parlant
+// d une session dont elle n avait pas besoin (#232).
+function readAppShell(staticDir: string, logger: Logger): string | undefined {
+    const file = path.join(staticDir, 'index.html');
+
     try {
-        return readFileSync(path.join(staticDir, 'index.html'), 'utf8');
-    } catch {
+        return readFileSync(file, 'utf8');
+    } catch (error) {
+        logger.warn({ err: error, file }, 'application shell not found, deep links answer 503');
         return undefined;
     }
 }
 
+// Le lien de reinitialisation et celui de changement d adresse sont ouverts
+// directement par le navigateur : la coquille doit etre servie pour que le front
+// recupere le jeton.
+//
+// Monte dans tous les cas, et repond 503 quand la coquille manque : c est ce qui
+// distingue une coquille manquante d une session manquante (#232). Conditionne a
+// la coquille, la route disparaissait et la requete tombait dans la garde de
+// session -- quelqu un qui suivait un lien de reinitialisation s entendait dire
+// qu une session etait requise pour changer le mot de passe qu il avait oublie.
+function shellHandler(appShell: string | undefined): RequestHandler {
+    return (_req, res) => {
+        if (appShell === undefined) {
+            res.status(503).send({
+                type: 'app_shell_unavailable',
+                title: 'AppShellUnavailable',
+                status: 503,
+                detail: 'The application shell is not available on this deployment.',
+            });
+            return;
+        }
+
+        res.type('html').send(appShell);
+    };
+}
+
 export function createServer(config: Config, useCases: AppUseCases, logger: Logger): Express {
     const app = express();
-    const appShell = readAppShell(config.staticDir);
+    const appShell = readAppShell(config.staticDir, logger);
 
     // req.ip, and therefore the rate limiter's client key, is only as
     // trustworthy as this setting: it says how many proxy hops in front of the
@@ -113,17 +146,11 @@ export function createServer(config: Config, useCases: AppUseCases, logger: Logg
         }),
     );
 
-    // The reset and email-change links in the auth emails are deep links the
-    // browser opens directly. Serve the app shell for them so the front-end can
-    // pick up the token; every other path still falls through to the session
-    // guard.
-    if (appShell !== undefined) {
-        const serveShell: RequestHandler = (_req, res) => {
-            res.type('html').send(appShell);
-        };
-        app.get('/reset-password', serveShell);
-        app.get('/confirm-email-change', serveShell);
-    }
+    // Les liens profonds des e-mails d authentification, ouverts directement par
+    // le navigateur.
+    const serveShell = shellHandler(appShell);
+    app.get('/reset-password', serveShell);
+    app.get('/confirm-email-change', serveShell);
 
     // Items belong to somebody since US-11: no session, no items. The guard
     // also renews the session it is given when it can, so an hour-long access
@@ -133,8 +160,15 @@ export function createServer(config: Config, useCases: AppUseCases, logger: Logg
     // no state, and building it three times would only make three closures.
     const session = requireAccount(useCases.auth, config.secureCookies);
 
+    // Monte avant les routes gardees par la session : ce middleware s applique
+    // a tout ce qui le suit, et l appelant ici est un workflow sans session.
+    if (config.relaySecret !== undefined) {
+        app.use(relayRouter(useCases.notifications, config.relaySecret));
+    }
+
     app.use(session, projectsRouter(useCases.projects), itemsRouter(useCases.items));
     app.use(session, notificationsRouter(useCases.notifications));
+
 
     // Registered last: express only treats a middleware as an error handler
     // once every route has had its chance to fail.

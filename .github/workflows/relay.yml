@@ -1,0 +1,48 @@
+# Declenche une passe de livraison sur le deploiement.
+#
+# Vercel n a pas de processus qui tourne entre deux requetes, donc personne n y
+# fait tourner le relais de l outbox. Les crons Vercel en offre gratuite sont
+# limites a une fois par jour ; ce workflow prend le relais toutes les cinq
+# minutes, ce qui est le minimum que GitHub accepte.
+
+name: relais
+
+on:
+  schedule:
+    # Toutes les cinq minutes. GitHub retarde souvent l execution de quelques
+    # minutes : c est la garantie de fond, pas le chemin de demonstration.
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # Une passe a la fois : deux passes concurrentes liraient les memes lignes non
+  # publiees et les publieraient deux fois.
+  group: relais
+  cancel-in-progress: false
+
+jobs:
+  livrer:
+    name: Passe de livraison
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Declencher la passe
+        env:
+          CIBLE: ${{ vars.RELAY_URL }}
+          SECRET: ${{ secrets.RELAY_SECRET }}
+        run: |
+          if [ -z "$CIBLE" ] || [ -z "$SECRET" ]; then
+            echo "::notice::RELAY_URL ou RELAY_SECRET absent, rien a declencher."
+            exit 0
+          fi
+
+          reponse=$(curl --silent --show-error --fail-with-body \
+            --max-time 60 \
+            --header "x-relay-secret: $SECRET" \
+            --request POST "$CIBLE/internal/relay")
+
+          echo "Passe: $reponse"
+          echo "::notice::$reponse"

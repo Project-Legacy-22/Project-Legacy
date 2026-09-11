@@ -16,6 +16,8 @@ export const LEVELS = {
         // The guard below lives at this level too: it needs no server and no
         // real service, only git and these patterns.
         'test/*.test.ts',
+        'apps/api/src/after-write.test.ts',
+        'apps/api/src/item-use-cases.test.ts',
         'apps/api/src/config.test.ts',
         // Composition only, plus the one refusal start() owes before it dials
         // anything: no server and no real service are involved.
@@ -36,6 +38,9 @@ export const LEVELS = {
         // Boots the same real server, for what the whole app answers rather
         // than one route: headers, CORS, body limits.
         'apps/api/src/http/security.test.ts',
+        // Boots the same real server, for the deep link the reset email points
+        // at and what it answers when the shell is missing.
+        'apps/api/src/http/app-shell.test.ts',
     ],
 
     // Components mounted in jsdom, queried through src/test/react-root.tsx.
