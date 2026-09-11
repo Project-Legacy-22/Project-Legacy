@@ -34,6 +34,7 @@ export const labels = {
     registerAccepted: 'If that address was available, the account now exists. You can sign in.',
     sessionCheckFailed: 'Unable to check the session.',
     checkingSession: 'Checking your session…',
+    sessionCheckTitle: 'Session',
     // Why this screen is back (US-27). It says what happened rather than what
     // failed: nothing went wrong, the session reached the end of its life.
     sessionExpired: 'Your session has expired. Sign in again to pick up where you left off.',
@@ -241,7 +242,7 @@ export const labels = {
     retryLoadingMore: 'Try loading more again',
     allItemsLoaded: 'All items loaded',
     retry: 'Try again',
-    emptyItems: 'No items yet. Add one above.',
+    emptyItems: 'No item in this project yet.',
     kanbanInstructions: 'Drag tasks between columns, or use each task’s Move button for a keyboard-accessible choice.',
     move: 'Move',
     movingItem: 'Moving…',

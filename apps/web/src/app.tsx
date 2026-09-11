@@ -19,13 +19,13 @@ import { PersonalDataSection } from './components/personal-data-section';
 import { ResetPasswordPage } from './components/reset-password-page';
 import { SessionBanner } from './components/session-banner';
 import { TodoPage } from './components/todo-page';
+import { SessionCheckScreen } from './components/session-check-screen';
 import { useItems } from './hooks/use-items';
 import { useNotifications } from './hooks/use-notifications';
 import { useProjects } from './hooks/use-projects';
 import { usePersonalData } from './hooks/use-personal-data';
 import { useSession } from './hooks/use-session';
 import type { SubmitResult } from './hooks/use-session';
-import { labels } from './labels';
 import { saveFile } from './save-file';
 import type { SaveFile } from './save-file';
 
@@ -287,12 +287,10 @@ export function App(props: AppProps) {
     // Waiting rather than showing the sign-in screen: the cookie is httpOnly,
     // so only the API can say whether a session is valid, and flashing a form
     // at someone already signed in would be wrong on every reload.
-    if (session.state.status === 'checking') {
-        return <p role="status">{labels.checkingSession}</p>;
-    }
-
-    if (session.state.status === 'error') {
-        return <p role="alert">{session.state.message}</p>;
+    // Both states go through a landmark with a heading, and the failure through
+    // a retry. See session-check-screen.tsx for what they used to be.
+    if (session.state.status === 'checking' || session.state.status === 'error') {
+        return <SessionCheckScreen state={session.state} onRetry={session.recheck} />;
     }
 
     // The interface keeps the visitor out on its own, rather than mounting the

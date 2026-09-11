@@ -140,6 +140,13 @@ select:disabled {
     margin-bottom: 12px;
 }
 
+/* Seulement quand une action suit : un etat vide qu on ne peut pas remplir
+   n affiche qu un paragraphe, et une marge sous le dernier element ajouterait
+   un blanc que rien ne justifie. */
+.empty-message p:not(:last-child) {
+    margin-bottom: 12px;
+}
+
 .action-error {
     margin: 0;
 }

@@ -3,6 +3,7 @@ import type { NotificationsLoadState, NotificationsPaginationState } from '../ho
 import { labels } from '../labels';
 import { NotificationsList } from './notifications-list';
 import { NotificationsPagination } from './notifications-pagination';
+import { ViewState } from './view-state';
 
 export interface NotificationsPanelContentProps {
     notifications: readonly NotificationDto[];
@@ -12,6 +13,7 @@ export interface NotificationsPanelContentProps {
     paginationState: NotificationsPaginationState;
     onMarkAsRead: (id: string) => Promise<void>;
     onLoadMore: () => void;
+    onRetry: () => void;
     actionError: string | null;
 }
 
@@ -23,6 +25,7 @@ export function NotificationsPanelContent({
     paginationState,
     onMarkAsRead,
     onLoadMore,
+    onRetry,
     actionError,
 }: NotificationsPanelContentProps) {
     return (
@@ -33,33 +36,31 @@ export function NotificationsPanelContent({
                     {actionError}
                 </p>
             )}
-            {loadState.status === 'loading' && (
-                <p className="status-message" role="status">
-                    {labels.loadingNotifications}
-                </p>
-            )}
-            {loadState.status === 'error' && (
-                <p className="error-message" role="alert">
-                    {loadState.message}
-                </p>
-            )}
-            {loadState.status === 'ready' && notifications.length === 0 && (
-                <p className="empty-message">{labels.emptyNotifications}</p>
-            )}
-            {loadState.status === 'ready' && notifications.length > 0 && (
-                <>
-                    <NotificationsList
-                        notifications={notifications}
-                        pendingIds={pendingIds}
-                        onMarkAsRead={onMarkAsRead}
-                    />
-                    <NotificationsPagination
-                        hasNextPage={hasNextPage}
-                        state={paginationState}
-                        onLoadMore={onLoadMore}
-                    />
-                </>
-            )}
+            <ViewState
+                state={loadState}
+                loadingMessage={labels.loadingNotifications}
+                empty={{
+                    isEmpty: notifications.length === 0,
+                    message: labels.emptyNotifications,
+                    // The only thing that fills this list is somebody else
+                    // acting on a task, so there is no action to offer the
+                    // person reading it. Said here rather than left out, so a
+                    // missing action cannot pass for an oversight.
+                    unfillable: 'Notifications arrive from task events, not from this screen.',
+                }}
+                onRetry={onRetry}
+            >
+                <NotificationsList
+                    notifications={notifications}
+                    pendingIds={pendingIds}
+                    onMarkAsRead={onMarkAsRead}
+                />
+                <NotificationsPagination
+                    hasNextPage={hasNextPage}
+                    state={paginationState}
+                    onLoadMore={onLoadMore}
+                />
+            </ViewState>
         </div>
     );
 }

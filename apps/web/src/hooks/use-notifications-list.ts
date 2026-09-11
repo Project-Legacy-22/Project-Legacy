@@ -109,6 +109,11 @@ export function useNotificationsList(api: NotificationsApi, isEnabled: boolean) 
     const [loadState, setLoadState] = useState<NotificationsLoadState>({ status: 'loading' });
     const pagination = useNotificationsPagination(api, setNotifications);
     const readAction = useMarkNotificationRead(api, setNotifications);
+    // Bumped by retry(), and a dependency of the effect below: it is what lets
+    // a failed load be asked for again. Without it the only way back was to
+    // close the panel and open it again, and the panel said nothing about that.
+    const [attempt, setAttempt] = useState(0);
+    const retry = useCallback(() => setAttempt(previous => previous + 1), []);
 
     useEffect(() => {
         if (!isEnabled) return;
@@ -130,7 +135,7 @@ export function useNotificationsList(api: NotificationsApi, isEnabled: boolean) 
             });
 
         return () => controller.abort();
-    }, [api, isEnabled, pagination.reset, pagination.setNextCursor]);
+    }, [api, isEnabled, attempt, pagination.reset, pagination.setNextCursor]);
 
     return {
         notifications,
@@ -141,5 +146,6 @@ export function useNotificationsList(api: NotificationsApi, isEnabled: boolean) 
         pendingIds: readAction.pendingIds,
         markAsRead: readAction.markAsRead,
         actionError: readAction.actionError,
+        retry,
     };
 }
