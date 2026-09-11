@@ -1,4 +1,5 @@
 import type { AccountDto, AuthApi } from '../api/auth-api';
+import type { CredentialsApi } from '../api/credentials-api';
 import type { ItemDto, ItemPageDto, ItemsApi } from '../api/items-api';
 import type { ProjectsApi } from '../api/projects-api';
 import { anItem } from './builders/item-builder';
@@ -51,6 +52,18 @@ export function createAuth(overrides: Partial<AuthApi> = {}): AuthApi {
         // Required by AuthApi since #174. No suite driving this fixture signs
         // out; the ones that do build their own double.
         signOut: async () => undefined,
+        ...overrides,
+    };
+}
+
+// No suite driving this fixture changes a credential; the ones that do build
+// their own double. Provided so App does not fall back to the real client and
+// fetch during an unrelated signed-in test.
+export function createCredentialsApi(overrides: Partial<CredentialsApi> = {}): CredentialsApi {
+    return {
+        changePassword: async () => undefined,
+        changeEmail: async () => undefined,
+        confirmEmailChange: async () => undefined,
         ...overrides,
     };
 }
