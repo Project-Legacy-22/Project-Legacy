@@ -154,12 +154,19 @@ enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails. The password recovery email (US-28) builds its link from this value, so it points at
 # the origin a developer actually opens: Vite on 5173, which proxies /auth to the API on 3000. A
-# deployment overrides this with the real public origin.
-site_url = "http://localhost:5173"
+# deployment overrides this with the real public origin, and that override is no
+# longer a sentence: SUPABASE_AUTH_SITE_URL carries it, so `supabase config push`
+# cannot quietly point the deployed reset link at a developer's machine.
+site_url = "env(SUPABASE_AUTH_SITE_URL)"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["http://127.0.0.1:5173", "http://127.0.0.1:3000", "https://127.0.0.1:3000"]
+additional_redirect_urls = [
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:3000",
+  "https://127.0.0.1:3000",
+  "env(SUPABASE_AUTH_REDIRECT_URL)",
+]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.

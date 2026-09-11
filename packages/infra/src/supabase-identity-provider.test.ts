@@ -10,7 +10,7 @@ import {
     LOGOUT,
     RECOVER,
     SESSION,
-    SIGNUP,
+    ADMIN_CREATE,
     TOKEN,
     UPDATE_USER,
     USER,
@@ -40,7 +40,11 @@ describe('adaptateur Supabase Auth', () => {
     describe('register', () => {
         it('signale un compte cree', async () => {
             const { provider, faux: serveur } = await adaptateur();
-            serveur.quand(SIGNUP, { status: 200, body: SESSION });
+            // L inscription passe par l API d administration : signUp
+            // demande a GoTrue d envoyer un e-mail de confirmation des que le
+            // projet vise est configure pour confirmer, ce qui faisait repondre
+            // 500 a toute inscription sur le deploiement.
+            serveur.quand(ADMIN_CREATE, { status: 200, body: UTILISATEUR });
 
             await expect(provider.register('alice@example.test', 'MotDePasse2026', PRIVACY_POLICY_VERSION)).resolves.toBe(
                 'created',
@@ -49,9 +53,9 @@ describe('adaptateur Supabase Auth', () => {
 
         it('signale une adresse deja enregistree plutot que d echouer', async () => {
             const { provider, faux: serveur } = await adaptateur();
-            serveur.quand(SIGNUP, {
+            serveur.quand(ADMIN_CREATE, {
                 status: 422,
-                body: { code: 422, error_code: 'user_already_exists', msg: 'User already registered' },
+                body: { code: 422, error_code: 'email_exists', msg: 'Email address already registered' },
             });
 
             await expect(provider.register('alice@example.test', 'MotDePasse2026', PRIVACY_POLICY_VERSION)).resolves.toBe(
@@ -62,7 +66,7 @@ describe('adaptateur Supabase Auth', () => {
         // Une panne du fournisseur ne doit pas ressembler a un refus ordinaire.
         it('propage une erreur inattendue du fournisseur', async () => {
             const { provider, faux: serveur } = await adaptateur();
-            serveur.quand(SIGNUP, {
+            serveur.quand(ADMIN_CREATE, {
                 status: 503,
                 body: { code: 503, error_code: 'service_unavailable', msg: 'indisponible' },
             });
