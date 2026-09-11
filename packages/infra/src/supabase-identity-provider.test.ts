@@ -78,6 +78,18 @@ describe('adaptateur Supabase Auth', () => {
     });
 
     describe('authenticate', () => {
+        it('refuse une adresse non confirmee au lieu d echouer', async () => {
+            const { provider, faux: serveur } = await adaptateur();
+            serveur.quand(TOKEN, {
+                status: 400,
+                body: { code: 400, error_code: 'email_not_confirmed', msg: 'Email not confirmed' },
+            });
+
+            await expect(
+                provider.authenticate('alice@example.test', 'MotDePasse2026'),
+            ).resolves.toBeUndefined();
+        });
+
         it('rend la session et le compte de l appelant', async () => {
             const { provider, faux: serveur } = await adaptateur();
             serveur.quand(TOKEN, { status: 200, body: SESSION });
