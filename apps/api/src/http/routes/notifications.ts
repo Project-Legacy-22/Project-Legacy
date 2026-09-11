@@ -5,7 +5,6 @@ import { ListNotificationsQuery, NotificationIdParams } from '@legacy/contracts'
 import type { NotificationSummaryDto, NotificationPageDto, NotificationDto } from '@legacy/contracts';
 import type { Notification, NotificationPage } from '@legacy/core-notifications';
 
-import type { Logger } from '@legacy/contracts';
 import type { NotificationUseCases } from '../../composition-root.js';
 import { accountOf } from '../session.js';
 
@@ -35,32 +34,18 @@ function toNotificationPageDto(page: NotificationPage): NotificationPageDto {
 // reaches a use case: no read or write here ever crosses accounts, and a
 // request aimed at somebody else's notification is answered like one aimed at
 // nothing (US-18, the same posture US-12 set for items).
-export function notificationsRouter(useCases: NotificationUseCases, logger: Logger): Router {
+export function notificationsRouter(useCases: NotificationUseCases): Router {
     const router = Router();
-
-    // Une passe de livraison avant de lire. Sur une cible sans processus long,
-    // rien ne fait tourner le relais : l evenement resterait dans l outbox et la
-    // liste serait vide alors que la tache existe. Un echec de la passe ne doit
-    // pas empecher de lire ce qui est deja la.
-    const deliverFirst = async (): Promise<void> => {
-        try {
-            await useCases.deliverPending();
-        } catch (error) {
-            logger.warn({ err: error }, 'delivery pass failed, serving what is stored');
-        }
-    };
 
     const list: RequestHandler = (req, res, next) => {
         const query = ListNotificationsQuery.safeParse(req.query);
         if (!query.success) return next(query.error);
 
-        deliverFirst()
-            .then(() =>
-                useCases.listNotifications(accountOf(res).id, {
-                    limit: query.data.limit,
-                    cursor: query.data.cursor,
-                }),
-            )
+        useCases
+            .listNotifications(accountOf(res).id, {
+                limit: query.data.limit,
+                cursor: query.data.cursor,
+            })
             .then(page => res.send(toNotificationPageDto(page)))
             .catch(next);
     };
@@ -68,8 +53,8 @@ export function notificationsRouter(useCases: NotificationUseCases, logger: Logg
     // A count rather than a list: the session banner shows a reminder, and a
     // list would carry identifiers it has no use for.
     const unreadCount: RequestHandler = (_req, res, next) => {
-        deliverFirst()
-            .then(() => useCases.countUnread(accountOf(res).id))
+        useCases
+            .countUnread(accountOf(res).id)
             .then(unread => {
                 const body: NotificationSummaryDto = { unread };
                 res.send(body);

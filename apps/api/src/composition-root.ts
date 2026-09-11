@@ -33,6 +33,7 @@ import {
     makeSignOut,
 } from '@legacy/core-auth';
 import { makeListItems, makeAddItem, makeChangeItem, makeMoveItem, makeRemoveItem } from '@legacy/core-items';
+import type { ItemRepository } from '@legacy/core-items';
 import {
     makeCountUnreadNotifications,
     makeListNotifications,
@@ -40,6 +41,7 @@ import {
 } from '@legacy/core-notifications';
 import { makeAddProject, makeListProjects, makeRemoveProject } from '@legacy/core-projects';
 
+import { afterWrite } from './after-write.js';
 import type { Config } from './config.js';
 
 export interface ItemUseCases {
@@ -204,9 +206,31 @@ function makeDeliverPending(dependencies: {
     return () => deliverPending({ ...dependencies, bus });
 }
 
+// La creation est le seul producteur d evenement : le declencheur de livraison
+// vit donc au plus pres du fait ecrit. Voir after-write.ts.
+export function itemUseCases(
+    // Un depot, pas un store : ces cas d usage n ouvrent ni ne ferment rien.
+    store: ItemRepository,
+    deliver: () => Promise<unknown>,
+    logger: Logger,
+): ItemUseCases {
+    return {
+        listItems: makeListItems(store),
+        addItem: afterWrite(
+            makeAddItem({ repository: store, newId: uuid, now: () => new Date() }),
+            deliver,
+            logger,
+        ),
+        changeItem: makeChangeItem(store),
+        moveItem: makeMoveItem(store),
+        removeItem: makeRemoveItem(store),
+    };
+}
+
 export function compose(config: Config): Application {
     const { store, identity, personalData, projects, outbox, notifications, bus } = createAdapters(config);
     const logger = createLogger(config.logLevel);
+    const deliver = makeDeliverPending({ outbox, bus, notifications, logger });
     const compromisedPasswords = createHibpPasswordRegistry({ logger });
 
     // The relay lives with the writer, not with the consumer: it reads a table
@@ -218,13 +242,7 @@ export function compose(config: Config): Application {
     return {
         logger,
         useCases: {
-            items: {
-                listItems: makeListItems(store),
-                addItem: makeAddItem({ repository: store, newId: uuid, now: () => new Date() }),
-                changeItem: makeChangeItem(store),
-                moveItem: makeMoveItem(store),
-                removeItem: makeRemoveItem(store),
-            },
+            items: itemUseCases(store, deliver, logger),
             auth: authUseCases(identity, compromisedPasswords),
             account: {
                 exportPersonalData: makeExportPersonalData({
@@ -242,7 +260,7 @@ export function compose(config: Config): Application {
                 listNotifications: makeListNotifications(notifications),
                 markNotificationRead: makeMarkNotificationRead(notifications),
                 countUnread: makeCountUnreadNotifications(notifications),
-                deliverPending: makeDeliverPending({ outbox, bus, notifications, logger }),
+                deliverPending: deliver,
             },
         },
         // start() no longer creates the schema -- that is what migrations are
