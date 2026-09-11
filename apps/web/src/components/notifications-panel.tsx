@@ -38,6 +38,7 @@ export function NotificationsPanel({ api }: NotificationsPanelProps) {
                     paginationState={list.paginationState}
                     onMarkAsRead={list.markAsRead}
                     onLoadMore={() => void list.loadMore()}
+                    onRetry={list.retry}
                     actionError={list.actionError}
                 />
             )}

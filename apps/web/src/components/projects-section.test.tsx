@@ -61,6 +61,17 @@ describe('ProjectsSection', () => {
         expect(results.violations.map((violation) => violation.id)).toEqual([]);
     });
 
+    // Le critere de EN-48 : le chargement s expose sur la region, pas seulement
+    // par une ligne de texte. Rien ne le verifiait, ni ici ni sur les deux
+    // autres panneaux qui le portaient deja.
+    it('expose le chargement sur la region, et pas seulement en texte', async () => {
+        await root.render(<ProjectsSection {...props({ loadState: { status: 'loading' } })} />);
+        expect(getElement<HTMLElement>('.projects-panel').getAttribute('aria-busy')).toBe('true');
+
+        await root.render(<ProjectsSection {...props()} />);
+        expect(getElement<HTMLElement>('.projects-panel').getAttribute('aria-busy')).toBe('false');
+    });
+
     it('names the project and exact item count before deletion', async () => {
         const confirm = vi.fn((_message: string) => true);
         const onRemove = vi.fn(async () => true);

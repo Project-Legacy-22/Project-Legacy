@@ -17,6 +17,7 @@ import {
     waitFor,
 } from './test/react-root';
 import type { ReactTestRoot } from './test/react-root';
+import { deferred } from './test/deferred';
 import {
     ACCOUNT,
     createApi,
@@ -28,22 +29,7 @@ import {
 } from './test/app-fixture';
 import { labels } from './labels';
 
-interface Deferred<T> {
-    promise: Promise<T>;
-    resolve: (value: T) => void;
-}
-
 let testRoot: ReactTestRoot;
-
-function deferred<T>(): Deferred<T> {
-    let resolve: Deferred<T>['resolve'] = () => {
-        throw new Error('Deferred promise was not initialized.');
-    };
-    const promise = new Promise<T>((promiseResolve) => {
-        resolve = promiseResolve;
-    });
-    return { promise, resolve };
-}
 
 // Signed in by default: the item tests below are about the item workflow, and
 // making each of them sign in first would test the session over and over.
@@ -238,16 +224,25 @@ describe('App session states', () => {
     });
 
     it('annonce l echec de la verification sans faire croire a une deconnexion', async () => {
-        const auth = createAuth({
-            currentAccount: vi.fn(async () => {
-                throw new ApiError(503, 'Unable to check the session.');
-            }),
+        const currentAccount = vi.fn(async () => {
+            throw new ApiError(503, 'Unable to check the session.');
         });
 
-        await renderApp({ auth });
+        await renderApp({ auth: createAuth({ currentAccount }) });
 
-        expect(getElement<HTMLElement>('[role="alert"]').textContent).toBe('Unable to check the session.');
+        const alerte = getElement<HTMLElement>('[role="alert"]');
+        expect(alerte.querySelector('p')?.textContent).toBe('Unable to check the session.');
         expect(document.querySelector('form.auth-form')).toBeNull();
+
+        // L ecran etait un paragraphe nu hors de tout repere, et sa branche
+        // d erreur n avait aucune sortie : seul un rechargement en sortait.
+        expect(getElement<HTMLElement>('main.session-check')).not.toBeNull();
+        expect(getElement<HTMLElement>('h1#session-check-heading')).not.toBeNull();
+
+        const appelsAvant = currentAccount.mock.calls.length;
+        await click(getElement<HTMLButtonElement>('[role="alert"] button'));
+
+        expect(currentAccount.mock.calls.length).toBeGreaterThan(appelsAvant);
     });
 
     it('confirme une inscription sans reveler si l adresse existait deja', async () => {

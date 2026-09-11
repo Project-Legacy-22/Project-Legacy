@@ -4,6 +4,7 @@ import { labels } from '../labels';
 import type { ItemsLoadState, ItemsPaginationState } from '../hooks/use-items';
 import { KanbanBoard } from './kanban-board';
 import { ItemsPagination } from './items-pagination';
+import { ViewState } from './view-state';
 
 export interface ItemsContentProps {
     items: readonly ItemDto[];
@@ -20,26 +21,17 @@ export interface ItemsContentProps {
 
 function retryItems(onRetry: () => void): void {
     onRetry();
+    // The button that was focused is about to be replaced by the list, so the
+    // focus has to land somewhere deliberate. The heading is the region the
+    // person asked to see again, and it is the only focus move here: the state
+    // changes below never take focus by themselves.
     document.querySelector<HTMLElement>('#items-heading')?.focus();
 }
 
-function LoadingItems() {
-    return (
-        <p className="status-message" role="status">
-            {labels.loadingItems}
-        </p>
-    );
-}
-
-function ItemsError({ message, onRetry }: { message: string; onRetry: () => void }) {
-    return (
-        <div className="error-message" role="alert">
-            <p>{message}</p>
-            <button className="button button-secondary" type="button" onClick={() => retryItems(onRetry)}>
-                {labels.retry}
-            </button>
-        </div>
-    );
+// Focusing the field is the action, not scrolling to it: somebody who cannot
+// see the panel gets the caret where the task is typed.
+function focusItemName(): void {
+    document.querySelector<HTMLInputElement>('#item-name')?.focus();
 }
 
 export function ItemsContent({
@@ -54,16 +46,18 @@ export function ItemsContent({
     onLoadMore,
     onRetry,
 }: ItemsContentProps) {
-    if (loadState.status === 'loading' && items.length === 0) return <LoadingItems />;
-
-    if (loadState.status === 'error') {
-        return <ItemsError message={loadState.message} onRetry={onRetry} />;
-    }
-
     return (
-        <>
-            {loadState.status === 'loading' && <LoadingItems />}
-            {items.length === 0 && <p className="empty-message">{labels.emptyItems}</p>}
+        <ViewState
+            state={loadState}
+            loadingMessage={labels.loadingItems}
+            empty={{
+                isEmpty: items.length === 0,
+                message: labels.emptyItems,
+                action: { label: labels.addItem, onAction: focusItemName },
+            }}
+            onRetry={() => retryItems(onRetry)}
+            keepsChildrenWhenEmpty
+        >
             <KanbanBoard
                 items={items}
                 isDisabled={loadState.status !== 'ready'}
@@ -77,6 +71,6 @@ export function ItemsContent({
                 state={paginationState}
                 onLoadMore={onLoadMore}
             />
-        </>
+        </ViewState>
     );
 }
