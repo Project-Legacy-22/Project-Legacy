@@ -157,7 +157,7 @@ describe('App authentication', () => {
         const auth = createAuth({
             currentAccount: vi.fn(async () => null),
             signIn: vi.fn(async () => {
-                throw new ApiError(401, 'Email address or password is incorrect.');
+                throw new ApiError(401, labels.signInRejected);
             }),
         });
         await renderApp({ auth });
@@ -165,7 +165,7 @@ describe('App authentication', () => {
         await fillSignInForm('ada@example.com', 'mauvais-mot-de-passe');
 
         const message = getElement<HTMLElement>('.form-error').textContent ?? '';
-        expect(message).toBe('Email address or password is incorrect.');
+        expect(message).toBe(labels.signInRejected);
         expect(message.toLowerCase()).not.toContain('unknown');
         expect(message.toLowerCase()).not.toContain('inconnu');
     });

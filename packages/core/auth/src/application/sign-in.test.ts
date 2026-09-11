@@ -48,6 +48,21 @@ describe('signIn', () => {
         expect((motDePasseFaux as Error).message).toBe((adresseInconnue as Error).message);
     });
 
+    // Le refus couvre plus qu un mot de passe faux : une adresse dont la
+    // confirmation n a jamais ete suivie est refusee aussi, et l adaptateur les
+    // rend indiscernables. Le message ne doit donc pas affirmer que le mot de
+    // passe est faux -- ca envoyait cette personne reinitialiser un mot de passe
+    // qui fonctionne -- et doit nommer une issue de secours.
+    it('ne pretend pas savoir laquelle des deux moities est fausse', async () => {
+        const signIn = makeSignIn(providerAvecCompte());
+
+        const refus = await signIn(ADRESSE, 'MauvaisMotDePasse1').catch((error: unknown) => error);
+        const message = (refus as Error).message;
+
+        expect(message).not.toMatch(/is incorrect/iu);
+        expect(message).toMatch(/reset your password/iu);
+    });
+
     it('ne renvoie jamais le mot de passe dans la session', async () => {
         const signIn = makeSignIn(providerAvecCompte());
 

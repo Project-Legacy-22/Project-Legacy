@@ -103,8 +103,9 @@ api_url = "http://127.0.0.1"
 enabled = true
 # Port to use for the email testing server web interface.
 port = 54324
-# Uncomment to expose additional ports for testing user applications that send emails.
-# smtp_port = 54325
+# Expose le port SMTP du capteur : c est lui que [auth.email.smtp] vise en developpement, de sorte
+# qu un seul fichier serve les deux cibles sans qu un e-mail parte pour de vrai depuis un poste.
+smtp_port = 54325
 # pop3_port = 54326
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
@@ -247,25 +248,26 @@ otp_expiry = 3600
 # Left disabled on purpose (ADR-0010): with SMTP off, the local stack captures every message in
 # its mail viewer instead of sending it, which is exactly what US-28 asks for in development. A
 # deployment enables this block and supplies the credentials through environment variables.
-# Le fournisseur retenu est Resend, branche par son relais SMTP : aucun SDK, aucun code d envoi, et
-# un changement de fournisseur ne touche que les quatre valeurs ci-dessous (#149, ADR-0010).
+# Le relais SMTP derriere GoTrue. Le fournisseur retenu est Resend : aucun SDK, aucun code d envoi,
+# et un changement de fournisseur ne touche que ces valeurs (#149, ADR-0010).
 #
-# Le bloc reste commente, et ce n est pas un oubli. Un seul fichier sert la pile locale et le projet
-# heberge : active ici, la pile locale enverrait vers Resend au lieu de garder les e-mails dans son
-# capteur, et le port differe entre les deux -- 587 chez Resend, 54325 pour le capteur. Le port est
-# un nombre, donc `env()` ne peut pas l en sortir comme il le fait pour site_url.
+# Le bloc est declare ici, et c est ce qui compte : le reglage existait seulement dans le tableau de
+# bord du projet heberge, donc un `supabase config push` -- que rien n empechait de lancer -- aurait
+# rendu ce bloc absent et desactive Resend en silence. Ce qui fait partir les e-mails doit etre dans
+# le depot.
 #
-# La procedure est donc : decommenter ces lignes, lancer `supabase config push` avec
-# SUPABASE_AUTH_SMTP_PASS dans l environnement, puis recommenter. Le projet heberge garde le reglage,
-# la pile locale garde son capteur. La cle d API n apparait jamais dans le depot.
-# [auth.email.smtp]
-# enabled = true
-# host = "smtp.resend.com"
-# port = 587
-# user = "resend"
-# pass = "env(SUPABASE_AUTH_SMTP_PASS)"
-# admin_email = "no-reply@legacy22.test"
-# sender_name = "Legacy 22"
+# Les cinq valeurs viennent de l environnement parce qu un seul fichier sert les deux cibles. En
+# developpement elles pointent le capteur de la pile locale, qui garde les e-mails au lieu de les
+# envoyer ; au deploiement, `supabase config push` est lance avec les valeurs de Resend. La cle d API
+# n apparait jamais dans le depot. Voir .env.example.
+[auth.email.smtp]
+enabled = true
+host = "env(SUPABASE_AUTH_SMTP_HOST)"
+port = "env(SUPABASE_AUTH_SMTP_PORT)"
+user = "env(SUPABASE_AUTH_SMTP_USER)"
+pass = "env(SUPABASE_AUTH_SMTP_PASS)"
+admin_email = "env(SUPABASE_AUTH_SMTP_ADMIN_EMAIL)"
+sender_name = "Legacy 22"
 
 # Password recovery email (US-28). The link carries the token hash as a plain query parameter on
 # our own path, so the exchange happens server-side (POST /auth/password/reset) and no token ever
