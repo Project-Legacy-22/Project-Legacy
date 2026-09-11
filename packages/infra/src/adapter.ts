@@ -48,3 +48,29 @@ export function serviceRoleClient(settings: SupabaseSettings): SupabaseClient<Da
         auth: { persistSession: false, autoRefreshToken: false },
     });
 }
+
+// A deadline for a call whose own retries cannot be bounded: the SDK retries a
+// failed refresh for about 25 seconds and exposes no way to shorten it (#214).
+export async function withDeadline<T>(
+    work: Promise<T>,
+    milliseconds: number,
+    operation: string,
+): Promise<T> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const deadline = new Promise<never>((_, reject) => {
+        timer = setTimeout(
+            () => reject(new Error(`${operation} exceeded its ${milliseconds} ms deadline`)),
+            milliseconds,
+        );
+    });
+
+    try {
+        return await Promise.race([work, deadline]);
+    } finally {
+        // Without this, the timer holds the process open for its whole duration
+        // even when the work answered first -- which in a long-running process
+        // means a pending timer per renewal.
+        if (timer !== undefined) clearTimeout(timer);
+    }
+}
