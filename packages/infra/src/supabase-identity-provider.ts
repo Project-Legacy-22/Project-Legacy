@@ -26,7 +26,9 @@ export interface SupabaseAuthSettings {
 // reach the error middleware as a 500 rather than be mistaken for a rejected
 // credential. Silently treating an unknown error as "wrong password" would turn
 // an outage into a wall of plausible refusals.
-const ALREADY_REGISTERED = 'user_already_exists';
+// GoTrue answers one or the other depending on the call: signUp says
+// user_already_exists, admin.createUser says email_exists.
+const ALREADY_REGISTERED = new Set(['user_already_exists', 'email_exists']);
 const INVALID_CREDENTIALS = 'invalid_credentials';
 const UNUSABLE_TOKEN = new Set(['bad_jwt', 'session_expired', 'session_not_found']);
 
@@ -207,23 +209,40 @@ interface Registration {
 }
 
 async function registerWith(
-    client: ReturnType<typeof stateless>,
+    client: ReturnType<typeof admin>,
     { email, password, policyVersion }: Registration,
 ): Promise<RegistrationOutcome> {
-    // Email confirmation is disabled, so a successful sign-up also returns a
-    // session. It is discarded: registering does not log anybody in, and the
-    // response must not differ from the one an existing address produces.
-    // The consent rides along as user metadata, so the mirror trigger reads
-    // it in the transaction that creates the account. Written by a second
-    // call afterwards, it could be missing from an account that exists.
-    const { error } = await client.auth.signUp({
+    // Created through the admin API rather than signUp, because signUp asks
+    // GoTrue to send a confirmation email whenever the project it talks to is
+    // configured to confirm addresses. config.toml says not to, but that
+    // setting belongs to the project and not to this repository: the hosted one
+    // had it on, with no SMTP behind it, so every registration on the
+    // deployment answered 500 with `Error sending confirmation email` while
+    // every local run passed. Registration now means the same thing on every
+    // target.
+    //
+    // email_confirm marks the address as confirmed at creation. This
+    // application does not verify addresses -- nothing here claims to -- so the
+    // alternative would be accounts that can never sign in.
+    //
+    // The password policy and the breach check are ours (change-password.ts and
+    // register-account.ts), and the route carries its own rate limiter, so
+    // going around GoTrue's own checks on this path costs nothing we relied on.
+    //
+    // The consent rides along as user metadata, so the mirror trigger reads it
+    // in the transaction that creates the account. Written by a second call
+    // afterwards, it could be missing from an account that exists.
+    const { error } = await client.auth.admin.createUser({
         email,
         password,
-        options: { data: { policy_version: policyVersion } },
+        email_confirm: true,
+        user_metadata: { policy_version: policyVersion },
     });
 
     if (error === null) return 'created';
-    if (error.code === ALREADY_REGISTERED) return 'already-registered';
+    // Answered exactly like a free address by the use case, so the form cannot
+    // be used to tell which addresses are registered.
+    if (error.code !== undefined && ALREADY_REGISTERED.has(error.code)) return 'already-registered';
 
     return fail('register', error);
 }
@@ -233,7 +252,7 @@ export function createSupabaseIdentityProvider(settings: SupabaseAuthSettings): 
     const adminClient = admin(settings);
 
     const register = (email: string, password: string, policyVersion: string) =>
-        registerWith(client, { email, password, policyVersion });
+        registerWith(adminClient, { email, password, policyVersion });
 
 
     async function authenticate(email: string, password: string): Promise<Session | undefined> {
