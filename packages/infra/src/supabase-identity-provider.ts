@@ -29,7 +29,9 @@ export interface SupabaseAuthSettings {
 // GoTrue answers one or the other depending on the call: signUp says
 // user_already_exists, admin.createUser says email_exists.
 const ALREADY_REGISTERED = new Set(['user_already_exists', 'email_exists']);
-const INVALID_CREDENTIALS = 'invalid_credentials';
+// Deux refus, pas une panne : le second vient d un compte cree avant que
+// l inscription confirme l adresse elle-meme, et il repondait 500.
+const SIGN_IN_REFUSED = new Set(['invalid_credentials', 'email_not_confirmed']);
 const UNUSABLE_TOKEN = new Set(['bad_jwt', 'session_expired', 'session_not_found']);
 
 // A refresh token GoTrue will not exchange. It distinguishes a token it never
@@ -259,7 +261,8 @@ export function createSupabaseIdentityProvider(settings: SupabaseAuthSettings): 
         const result = await client.auth.signInWithPassword({ email, password });
 
         if (result.error !== null) {
-            if (result.error.code === INVALID_CREDENTIALS) return undefined;
+            const { code } = result.error;
+            if (code !== undefined && SIGN_IN_REFUSED.has(code)) return undefined;
             return fail('authenticate', result.error);
         }
 
