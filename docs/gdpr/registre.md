@@ -30,11 +30,16 @@ Elles changent ici en premier.
 | **Finalité** | Permettre à une personne de créer un compte, de s'y connecter et de retrouver ses données d'une session à l'autre |
 | **Base légale** | Exécution du contrat : sans compte, le service ne peut pas être rendu |
 | **Personnes concernées** | Utilisateurs inscrits |
-| **Catégories de données** | Adresse e-mail ; empreinte du mot de passe ; horodatages de création et de connexion ; jetons de session |
+| **Catégories de données** | Adresse e-mail ; empreinte du mot de passe ; horodatages de création et de modification ; jetons de session ; version de la politique de confidentialité acceptée et date de cette acceptation |
 | **Localisation** | `auth.users` (Supabase Auth), reflété dans `public.users` par un déclencheur |
 | **Conservation** | Toute la vie du compte, puis effacement immédiat à sa suppression (`US-13`) |
 | **Destinataires** | Vercel (sous-traitant, hébergement applicatif : l'API Express tourne en fonction Vercel, `vercel.json` y redirige `/auth` et `/items`, donc le corps des requêtes et des réponses y transite en clair) ; Supabase (sous-traitant, persistance et authentification) |
 | **Mesures de sécurité** | Mot de passe haché par Supabase Auth, jamais stocké ni journalisé en clair ; session en cookie `httpOnly` et `SameSite=Lax` ; politiques RLS restreignant chaque ligne à son propriétaire ; limitation de fréquence sur l'inscription et la connexion |
+
+La trace du consentement (`policy_version`, `policy_accepted_at`) est écrite par le
+déclencheur de miroir, dans la transaction qui crée le compte. Elle est conservée aussi
+longtemps que le compte : c'est elle qui permet de dire à quoi la personne a consenti le jour
+où le texte change, et l'effacer reviendrait à perdre la preuve que l'on doit pouvoir produire.
 
 `public.users` ne duplique qu'`id` et `email`. Le miroir existe parce qu'`items.user_id` doit
 référencer une table du schéma `public` ; l'e-mail y est repris parce que l'export de données
@@ -63,15 +68,20 @@ communication à un tiers : il figure ici pour cette raison.
 | **Finalité** | Créer, consulter, modifier et supprimer ses propres tâches |
 | **Base légale** | Exécution du contrat : c'est le service lui-même |
 | **Personnes concernées** | Utilisateurs inscrits |
-| **Catégories de données** | Intitulé saisi par l'utilisateur ; état d'avancement ; priorité ; échéance facultative ; propriétaire ; horodatages de création, de modification et de suppression |
+| **Catégories de données** | Intitulé saisi par l'utilisateur ; colonne de progression du Kanban ; priorité ; échéance facultative ; propriétaire et projet de rattachement ; horodatages de création et de modification |
 | **Localisation** | `public.items` |
-| **Conservation** | Trente jours après suppression par l'utilisateur (`deleted_at`), puis effacement définitif. Immédiat à la suppression du compte |
+| **Conservation** | Aucune : une suppression demandée par l'utilisateur efface la ligne immédiatement. Effacement immédiat également à la suppression du compte, et à celle d'un projet dont il était le dernier membre |
 | **Destinataires** | Vercel (sous-traitant, hébergement applicatif : l'API Express tourne en fonction Vercel, `vercel.json` y redirige `/auth` et `/items`, donc le corps des requêtes et des réponses y transite en clair) ; Supabase (sous-traitant, persistance) |
 | **Mesures de sécurité** | Politiques RLS par propriétaire ; toute lecture nomme un propriétaire ; l'intitulé ne sort jamais dans un journal ni dans un événement |
 
 L'intitulé est du contenu libre : il peut contenir n'importe quelle donnée personnelle, y
-compris sensible, sans que l'application puisse l'anticiper. C'est ce qui justifie que
-`deleted_at` ne soit pas une conservation indéfinie.
+compris sensible, sans que l'application puisse l'anticiper. C'est ce qui rend l'effacement
+immédiat préférable à un délai de grâce : une tâche supprimée ne survit nulle part, et il n'y
+a pas de fenêtre pendant laquelle une donnée que l'utilisateur a voulu retirer reste lisible.
+
+La suppression douce a existé jusqu'à la migration `20260909123004_remove_item_soft_deletion` :
+la colonne `deleted_at` a disparu avec elle, et aucune ligne n'est plus marquée plutôt que
+retirée.
 
 ### T-04 — Notifications
 
@@ -200,8 +210,10 @@ dépendre d'un appel à l'API d'authentification.
 
 ## Décisions à ratifier
 
-Les durées ci-dessus sont proposées, argumentées et prêtes à être appliquées. Elles engagent
-`US-39`, qui les implémentera au sprint 3, et lui imposent une contrainte écrite en `T-05` :
+Chaque durée ci-dessus a été confrontée au schéma en vigueur, pas à celui du sprint 1 : une
+durée que le code ne pratique pas est pire qu'une durée absente, puisqu'elle affirme une
+rétention qui n'existe pas. Celles qui restent à appliquer engagent `US-39`, qui les
+implémentera au sprint 3, et lui imposent une contrainte écrite en `T-05` :
 la purge de l'outbox ne doit pas casser l'effacement par compte, qui passe aujourd'hui par
 elle. Trois points demandent une confirmation de l'équipe en relecture :
 
