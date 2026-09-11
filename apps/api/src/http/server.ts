@@ -114,7 +114,7 @@ export function createServer(config: Config, useCases: AppUseCases, logger: Logg
     }
 
     app.use(session, projectsRouter(useCases.projects), itemsRouter(useCases.items));
-    app.use(session, notificationsRouter(useCases.notifications, logger));
+    app.use(session, notificationsRouter(useCases.notifications));
 
 
     // Registered last: express only treats a middleware as an error handler
