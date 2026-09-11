@@ -40,6 +40,8 @@ export const testConfig: Config = {
     // Aucun proxy devant le harness : req.ip est l adresse de la connexion.
     // Une suite qui exerce X-Forwarded-For remonte cette valeur.
     trustProxy: 0,
+    // Aucune passe declenchable : les suites qui en ont besoin la surchargent.
+    relaySecret: undefined,
 };
 
 export function json(method: string, body: unknown): TestRequestInit {

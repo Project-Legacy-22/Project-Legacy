@@ -21,4 +21,6 @@ export type { NotificationStore } from './notification-store.js';
 export { relayOnce } from './outbox-relay.js';
 export type { RelayDependencies } from './outbox-relay.js';
 export { consume } from './event-consumer.js';
+export { deliverPending } from './delivery-pass.js';
+export type { DeliveryPassDependencies, DeliveryPassResult } from './delivery-pass.js';
 export type { ConsumeDependencies, ConsumeOutcome } from './event-consumer.js';

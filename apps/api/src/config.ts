@@ -54,6 +54,10 @@ const EnvSchema = z.object({
     // trusts no forwarded header -- correct for a direct connection and for
     // development. Behind one reverse proxy in production, set it to 1.
     TRUST_PROXY: z.coerce.number().int().min(0).default(0),
+    // Le secret que le workflow planifie presente pour declencher une passe de
+    // livraison. Absent, la route n existe pas : une cible qui fait tourner le
+    // relais en continu n en a pas besoin.
+    RELAY_SECRET: z.string().min(32).optional(),
 });
 
 export type LogLevel = (typeof LOG_LEVELS)[number];
@@ -69,6 +73,7 @@ export interface Config {
     redisUrl: string | undefined;
     webOrigin: string;
     trustProxy: number;
+    relaySecret: string | undefined;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -95,5 +100,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
         secureCookies: parsed.data.NODE_ENV === 'production',
         webOrigin: parsed.data.WEB_ORIGIN,
         trustProxy: parsed.data.TRUST_PROXY,
+        relaySecret: parsed.data.RELAY_SECRET,
     };
 }

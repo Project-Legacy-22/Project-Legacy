@@ -9,9 +9,11 @@ import {
     createSupabaseOutboxStore,
     createSupabasePersonalDataStore,
     createSupabaseProjectRepository,
+    deliverPending,
     relayOnce,
 } from '@legacy/infra';
 import type {
+    DeliveryPassResult,
     EventBus,
     ItemStore,
     NotificationStore,
@@ -76,6 +78,10 @@ export interface NotificationUseCases {
     listNotifications: ReturnType<typeof makeListNotifications>;
     markNotificationRead: ReturnType<typeof makeMarkNotificationRead>;
     countUnread: ReturnType<typeof makeCountUnreadNotifications>;
+    // Une passe de livraison, demandee au lieu d etre planifiee. Sur une cible
+    // sans processus long, personne ne fait tourner le relais : la route qui
+    // lit les notifications et le workflow planifie l appellent.
+    deliverPending: () => Promise<DeliveryPassResult>;
 }
 
 export interface AppUseCases {
@@ -183,6 +189,21 @@ function authUseCases(
     };
 }
 
+// Rien a livrer quand aucun courtier n est configure : servir du HTTP n en
+// demande pas, et la passe doit alors ne rien faire plutot que d echouer.
+function makeDeliverPending(dependencies: {
+    outbox: OutboxStore;
+    bus: EventBus | undefined;
+    notifications: NotificationStore;
+    logger: Logger;
+}): () => Promise<DeliveryPassResult> {
+    const { bus } = dependencies;
+
+    if (bus === undefined) return () => Promise.resolve({ published: 0, consumed: 0 });
+
+    return () => deliverPending({ ...dependencies, bus });
+}
+
 export function compose(config: Config): Application {
     const { store, identity, personalData, projects, outbox, notifications, bus } = createAdapters(config);
     const logger = createLogger(config.logLevel);
@@ -221,6 +242,7 @@ export function compose(config: Config): Application {
                 listNotifications: makeListNotifications(notifications),
                 markNotificationRead: makeMarkNotificationRead(notifications),
                 countUnread: makeCountUnreadNotifications(notifications),
+                deliverPending: makeDeliverPending({ outbox, bus, notifications, logger }),
             },
         },
         // start() no longer creates the schema -- that is what migrations are

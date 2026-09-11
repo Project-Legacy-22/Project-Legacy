@@ -18,6 +18,10 @@
             "destination": "/api"
         },
         {
+            "source": "/internal/(.*)",
+            "destination": "/api"
+        },
+        {
             "source": "/reset-password",
             "destination": "/index.html"
         }
