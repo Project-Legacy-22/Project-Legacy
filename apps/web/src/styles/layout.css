@@ -7,7 +7,7 @@
 
 .header-content,
 .main-content {
-    width: min(1280px, 100%);
+    width: min(1600px, 100%);
     margin: 0 auto;
 }
 
@@ -48,6 +48,13 @@ h1 {
     gap: 20px;
     padding: 0 16px 56px;
     transform: translateY(-42px);
+}
+
+/* La colonne suit la fenetre, mais une ligne de texte qui ferait 1500 px ne se
+   lit plus : la prose garde sa propre mesure a l interieur du panneau. */
+.panel p,
+.panel li {
+    max-width: 80ch;
 }
 
 .panel {
