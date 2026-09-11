@@ -33,7 +33,7 @@ export function PersonalDataSection({
                 <p className="section-kicker">{labels.personalDataKicker}</p>
                 <h2 id="personal-data-heading">{labels.personalDataTitle}</h2>
             </div>
-            <p className="intro">{labels.personalDataIntro}</p>
+            <p className="panel-intro">{labels.personalDataIntro}</p>
             <button
                 className="button button-secondary"
                 type="button"
