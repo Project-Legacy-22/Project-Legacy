@@ -8,7 +8,7 @@ import type {
     RegistrationOutcome,
     Session,
 } from '@legacy/core-auth';
-import { adapterFailure } from './adapter.js';
+import { adapterFailure, withDeadline } from './adapter.js';
 import type { AdapterFailure } from './adapter.js';
 
 export interface SupabaseAuthSettings {
@@ -135,6 +135,12 @@ async function requestPasswordReset(settings: SupabaseAuthSettings, email: strin
     return fail('requestPasswordReset', error);
 }
 
+// Long enough for a slow but working provider, far short of the 25 seconds the
+// SDK's own retries take to give up. A renewal is on the critical path of a
+// request somebody is waiting on, and a session that cannot be renewed in five
+// seconds will not be renewed by waiting five times longer.
+const REFRESH_DEADLINE_MS = 5000;
+
 async function refresh(
     settings: SupabaseAuthSettings,
     refreshToken: string,
@@ -142,7 +148,18 @@ async function refresh(
     // A throwaway client, for the reason resetPassword below uses one: the
     // exchange stores the session it obtains on the instance that ran it, and
     // that session belongs to a single caller.
-    const result = await stateless(settings).auth.refreshSession({ refresh_token: refreshToken });
+    // Wrapped so a missed deadline reports like every other failure of this
+    // adapter, with the deadline error reachable as the cause.
+    let result;
+    try {
+        result = await withDeadline(
+            stateless(settings).auth.refreshSession({ refresh_token: refreshToken }),
+            REFRESH_DEADLINE_MS,
+            'refresh',
+        );
+    } catch (cause) {
+        return fail('refresh', cause);
+    }
 
     if (result.error !== null) {
         const { code, status } = result.error;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { adapterFailure, serviceRoleClient } from './adapter.js';
+import { adapterFailure, serviceRoleClient, withDeadline } from './adapter.js';
 
 // The seven adapters of this package report their failures through this
 // factory, so the shape of what they throw is decided here rather than in each
@@ -65,4 +65,28 @@ describe('serviceRoleClient', () => {
             data: { session: null },
         });
     });
+});
+
+describe('withDeadline', () => {
+    it('rends la main quand le travail repond avant l echeance', async () => {
+        await expect(withDeadline(Promise.resolve('fait'), 1000, 'refresh')).resolves.toBe('fait');
+    });
+
+    // Le defaut de #214 : le SDK retente pendant environ 25 secondes sans que
+    // ni la fenetre ni le predicat soient exposes, et la requete HTTP restait
+    // ouverte pendant tout ce temps.
+    it('echoue en nommant l echeance quand le travail ne repond jamais', async () => {
+        const jamais = new Promise<never>(() => undefined);
+
+        await expect(withDeadline(jamais, 10, 'refresh')).rejects.toThrow(
+            /refresh exceeded its 10 ms deadline/u,
+        );
+    });
+
+    it('laisse passer l echec du travail plutot que de le convertir en echeance', async () => {
+        const echec = Promise.reject(new Error('le fournisseur a refuse'));
+
+        await expect(withDeadline(echec, 1000, 'refresh')).rejects.toThrow('le fournisseur a refuse');
+    });
+
 });
