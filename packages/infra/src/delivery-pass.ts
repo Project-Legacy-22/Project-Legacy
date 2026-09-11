@@ -23,6 +23,7 @@ export interface DeliveryPassDependencies {
 export interface DeliveryPassResult {
     published: number;
     consumed: number;
+    failed: number;
 }
 
 export async function deliverPending({
@@ -35,8 +36,9 @@ export async function deliverPending({
     const published = await relayOnce({ outbox, bus, logger });
 
     let consumed = 0;
+    let failed = 0;
 
-    while (consumed < maxEvents) {
+    while (consumed + failed < maxEvents) {
         // depth() first: take() blocks for its timeout on an empty queue, and
         // this pass runs inside a request somebody is waiting on.
         if ((await bus.depth()) === 0) break;
@@ -44,9 +46,18 @@ export async function deliverPending({
         const event = await bus.take(1);
         if (event === null) break;
 
-        await consume(event, { notifications, logger });
-        consumed += 1;
+        try {
+            await consume(event, { notifications, logger });
+            consumed += 1;
+        } catch (error) {
+            // The event has already left the queue, and one it cannot apply
+            // must not stop the ones behind it: a task deleted since blocked
+            // ten valid events on the deployment. Losing it is the trade-off
+            // ADR-0007 recorded, and EN-35 closes with a dead-letter queue.
+            failed += 1;
+            logger.error({ err: error, eventId: event.id }, 'event could not be applied');
+        }
     }
 
-    return { published, consumed };
+    return { published, consumed, failed };
 }

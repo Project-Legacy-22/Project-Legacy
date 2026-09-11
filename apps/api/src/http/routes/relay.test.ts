@@ -12,7 +12,7 @@ let harness: Harness | undefined;
 
 async function serve(
     relaySecret: string | undefined,
-    deliverPending = vi.fn(async () => ({ published: 2, consumed: 2 })),
+    deliverPending = vi.fn(async () => ({ published: 2, consumed: 2, failed: 0 })),
 ): Promise<Harness> {
     const logger = recordingLogger();
     const useCases = makeAppUseCases({ notifications: { deliverPending } });
@@ -28,7 +28,7 @@ afterEach(async () => {
 
 describe('POST /internal/relay', () => {
     it('lance une passe de livraison et rend son compte', async () => {
-        const deliverPending = vi.fn(async () => ({ published: 3, consumed: 3 }));
+        const deliverPending = vi.fn(async () => ({ published: 3, consumed: 3, failed: 0 }));
         const served = await serve(SECRET, deliverPending);
 
         const response = await served.request('/internal/relay', {
@@ -37,12 +37,12 @@ describe('POST /internal/relay', () => {
         });
 
         expect(response.status).toBe(200);
-        await expect(response.json()).resolves.toEqual({ published: 3, consumed: 3 });
+        await expect(response.json()).resolves.toEqual({ published: 3, consumed: 3, failed: 0 });
         expect(deliverPending).toHaveBeenCalledTimes(1);
     });
 
     it('refuse sans le secret, et ne livre rien', async () => {
-        const deliverPending = vi.fn(async () => ({ published: 0, consumed: 0 }));
+        const deliverPending = vi.fn(async () => ({ published: 0, consumed: 0, failed: 0 }));
         const served = await serve(SECRET, deliverPending);
 
         const response = await served.request('/internal/relay', json('POST', {}));
@@ -67,7 +67,7 @@ describe('POST /internal/relay', () => {
     // n importe quel chemin inconnu -- ce qui est mieux qu un 403 qui
     // apprendrait a un scanner que le point d entree existe.
     it('ne se distingue pas d un chemin inconnu quand aucun secret n est configure', async () => {
-        const deliverPending = vi.fn(async () => ({ published: 0, consumed: 0 }));
+        const deliverPending = vi.fn(async () => ({ published: 0, consumed: 0, failed: 0 }));
         const served = await serve(undefined, deliverPending);
 
         const relais = await served.request('/internal/relais', {

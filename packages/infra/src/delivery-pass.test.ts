@@ -81,7 +81,7 @@ describe('deliverPending', () => {
             logger: recordingLogger(),
         });
 
-        expect(result).toEqual({ published: 2, consumed: 2 });
+        expect(result).toEqual({ published: 2, consumed: 2, failed: 0 });
         expect(notifications.notifies).toEqual(['event-1', 'event-2']);
     });
 
@@ -97,8 +97,31 @@ describe('deliverPending', () => {
             logger: recordingLogger(),
         });
 
-        expect(result).toEqual({ published: 0, consumed: 0 });
+        expect(result).toEqual({ published: 0, consumed: 0, failed: 0 });
         expect(bus.prises).toBe(0);
+    });
+
+    // Le defaut mesure sur le deploiement : une tache supprimee depuis faisait
+    // echouer sa notification sur une cle etrangere, et cette seule erreur
+    // faisait avorter la passe -- dix evenements valides restaient bloques
+    // derriere elle.
+    it('continue apres un evenement inapplicable', async () => {
+        const notifications = fakeNotifications();
+        let appels = 0;
+        notifications.notifyItemCreated = () => {
+            appels += 1;
+            if (appels === 1) return Promise.reject(new Error('cle etrangere violee'));
+            return Promise.resolve(true);
+        };
+
+        const result = await deliverPending({
+            outbox: fakeOutbox([anEvent('casse'), anEvent('valide')]),
+            bus: fakeBus(),
+            notifications,
+            logger: recordingLogger(),
+        });
+
+        expect(result).toEqual({ published: 2, consumed: 1, failed: 1 });
     });
 
     it('s arrete a son budget d evenements', async () => {
@@ -113,6 +136,6 @@ describe('deliverPending', () => {
         });
 
         // Le troisieme reste dans la file : la passe suivante le prendra.
-        expect(result).toEqual({ published: 3, consumed: 2 });
+        expect(result).toEqual({ published: 3, consumed: 2, failed: 0 });
     });
 });
