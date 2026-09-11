@@ -66,6 +66,29 @@ export class InvalidResetToken extends AuthError {
     }
 }
 
+// The current password given to a signed-in password change does not match.
+// The caller already holds a valid session, so naming the rule discloses
+// nothing an attacker with that session could not already learn; a vague
+// message would only puzzle a legitimate user who mistyped.
+export class IncorrectCurrentPassword extends AuthError {
+    constructor() {
+        super('incorrect_current_password', 403, 'The current password is incorrect.');
+    }
+}
+
+// One message for an unknown, spent or expired email-change confirmation link,
+// like InvalidResetToken: telling the three apart would say whether a change
+// was ever started for an address.
+export class InvalidEmailChangeToken extends AuthError {
+    constructor() {
+        super(
+            'invalid_email_change_token',
+            400,
+            'This confirmation link is invalid or has expired. Start the change again.',
+        );
+    }
+}
+
 export class SessionRequired extends AuthError {
     constructor() {
         super('session_required', 401, 'This request requires a valid session.');
