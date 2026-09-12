@@ -30,3 +30,9 @@ logs/
 .DS_Store
 Thumbs.db
 .vercel
+
+# Sortie des outils de migration de donnees. Un script de reprise porte
+# l adresse du compte destinataire en clair, parce que c est la cle qui le
+# resout : c est une donnee personnelle, et elle n a rien a faire dans
+# l historique du depot.
+data-out/
