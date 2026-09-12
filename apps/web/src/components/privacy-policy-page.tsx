@@ -54,9 +54,6 @@ export function PrivacyPolicyPage({ onBack }: PrivacyPolicyPageProps) {
                 <li>{labels.policyRecipientHibp}</li>
             </ul>
 
-            <h2>{labels.policyTransferTitle}</h2>
-            <p>{labels.policyTransferBody}</p>
-
             <h2>{labels.policyRightsTitle}</h2>
             <p>{labels.policyRightsBody}</p>
 

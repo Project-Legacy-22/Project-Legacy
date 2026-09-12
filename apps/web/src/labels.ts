@@ -167,16 +167,11 @@ export const labels = {
     policyHowLongNotifications: 'Notifications are erased after ninety days.',
     policyHowLongLogs: 'Logs are kept thirty days.',
     policyRecipientsTitle: 'Who else sees it',
-    policyRecipientsIntro: 'Three providers process data on our behalf, and nobody else:',
-    policyRecipientSupabase:
-        'Supabase, which hosts the database and handles sign-in. Your data is stored in Ireland (eu-west-1).',
-    policyRecipientVercel:
-        'Vercel, which serves the application and collects its logs. Requests are processed in Paris (cdg1).',
+    policyRecipientsIntro: 'Three providers process data on our behalf, and nobody else. Everything stays inside the European Union, but Supabase and Vercel are United States companies, so a United States authority can compel them to hand over data that never left Europe.',
+    policyRecipientSupabase: 'Supabase, which hosts the database and handles sign-in. Your data is stored in Ireland (eu-west-1).',
+    policyRecipientVercel: 'Vercel, which serves the application and collects its logs. Requests are processed in Paris (cdg1).',
     policyRecipientHibp:
         'Have I Been Pwned, which receives five characters of a hash when you set a new password, so we can refuse one that appears in a known breach. It identifies nobody and nothing is stored.',
-    policyTransferTitle: 'Where your data is, and who owns the companies holding it',
-    policyTransferBody:
-        'Everything is stored and processed inside the European Union: the database in Ireland, the application in Paris. Supabase and Vercel are United States companies, so a United States authority can compel them to hand over data even when it never leaves Europe. We say so rather than leave it implied, and the database can be exported and rebuilt elsewhere from versioned migrations if that becomes unacceptable.',
     policyRightsTitle: 'Your rights',
     policyRightsBody:
         'You can download everything held about you, and delete your account outright, from the application itself. Both are immediate. For anything else, write to the address above.',
