@@ -9,7 +9,7 @@ const { logger } = application;
 application
     .start()
     .then(() => {
-        const app = createServer(config, application.useCases, logger);
+        const app = createServer(config, application.useCases, { logger, metrics: application.metrics });
         app.listen(config.port, () => logger.info({ port: config.port }, 'server started'));
     })
     .catch((err: unknown) => {

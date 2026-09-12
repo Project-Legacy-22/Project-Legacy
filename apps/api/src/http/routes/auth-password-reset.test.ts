@@ -96,7 +96,7 @@ describe('API de reinitialisation de mot de passe', () => {
     async function serve(compromised: string[] = []) {
         const logger = recordingLogger();
         provider = inMemoryIdentityProvider(COMPTE);
-        harness = await listen(createServer(testConfig, useCasesOver(provider, compromised), logger), logger);
+        harness = await listen(createServer(testConfig, useCasesOver(provider, compromised), { logger: logger }), logger);
     }
 
     async function jetonPour(email: string): Promise<string> {

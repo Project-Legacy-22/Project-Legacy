@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { recordingLogger } from '../../../../packages/contracts/test/fakes/recording-logger.js';
+// L adaptateur par chemin relatif, comme les doubles des autres paquets : la
+// regle de couches interdit a `apps/api/src` d importer `@legacy/infra` par son
+// nom, et c est cette regle qui a fait sortir prom-client d ici.
+import { createPrometheusMetrics } from '../../../../packages/infra/src/prometheus-metrics.js';
 import { makeAppUseCases } from '../../test/fakes/app-use-cases.js';
 import { json, listen, testConfig } from '../../test/http-harness.js';
 import type { Harness } from '../../test/http-harness.js';
@@ -13,7 +17,10 @@ let harness: Harness | undefined;
 
 async function serve(): Promise<Harness> {
     harness = await listen(
-        createServer({ ...testConfig, relaySecret: SECRET }, makeAppUseCases(), recordingLogger()),
+        createServer({ ...testConfig, relaySecret: SECRET }, makeAppUseCases(), {
+            logger: recordingLogger(),
+            metrics: createPrometheusMetrics(),
+        }),
         recordingLogger(),
     );
 

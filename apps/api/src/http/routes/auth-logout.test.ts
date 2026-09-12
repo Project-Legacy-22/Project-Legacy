@@ -75,7 +75,7 @@ describe('POST /auth/logout', () => {
     async function serve() {
         const logger = recordingLogger();
         provider = inMemoryIdentityProvider(COMPTE);
-        harness = await listen(createServer(testConfig, useCasesOver(provider), logger), logger);
+        harness = await listen(createServer(testConfig, useCasesOver(provider), { logger: logger }), logger);
     }
 
     async function seSeConnecter(): Promise<string> {

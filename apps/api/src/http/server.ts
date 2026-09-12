@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import express from 'express';
 import type { Express, RequestHandler } from 'express';
-import type { Logger } from '@legacy/contracts';
+import type { Logger, Metrics } from '@legacy/contracts';
 
 import type { Config } from '../config.js';
 import type { AppUseCases } from '../composition-root.js';
@@ -12,7 +12,7 @@ import { authRouter } from './routes/auth.js';
 import { credentialsRouter } from './routes/credentials.js';
 import { itemsRouter } from './routes/items.js';
 import { notificationsRouter } from './routes/notifications.js';
-import { createMetrics } from './metrics.js';
+import { metricsRouter, observeRequests } from './metrics.js';
 import { relayRouter } from './routes/relay.js';
 import { projectsRouter } from './routes/projects.js';
 import { translateErrors } from './error-middleware.js';
@@ -96,7 +96,34 @@ function shellHandler(appShell: string | undefined): RequestHandler {
     };
 }
 
-export function createServer(config: Config, useCases: AppUseCases, logger: Logger): Express {
+// Journal et mesures sont la meme chose vue de deux facons : ce que le service
+// dit de lui-meme. Les passer groupes evite un quatrieme parametre, et dit
+// qu ils vont ensemble.
+export interface Observability {
+    logger: Logger;
+    // Absentes, le serveur tourne sans mesurer : une suite de tests n a pas a
+    // construire un adaptateur pour verifier une route.
+    metrics?: Metrics;
+}
+
+// Les mesures d abord : l observateur doit voir chaque requete, y compris
+// celles qu un middleware refuse ensuite. Le point d entree qui les sert
+// n existe que si un secret le protege.
+function mountObservability(app: Express, metrics: Metrics | undefined, secret: string | undefined): void {
+    if (metrics === undefined) return;
+
+    app.use(observeRequests(metrics));
+
+    if (secret !== undefined) {
+        app.use(metricsRouter(metrics, secret));
+    }
+}
+
+export function createServer(
+    config: Config,
+    useCases: AppUseCases,
+    { logger, metrics }: Observability,
+): Express {
     const app = express();
     const appShell = readAppShell(config.staticDir, logger);
 
@@ -111,13 +138,7 @@ export function createServer(config: Config, useCases: AppUseCases, logger: Logg
     // Before the body parser: a body that is too large or not JSON is refused
     // by express.json() with a next(error), and the error middleware needs the
     // trace id to already be on the response to report that refusal.
-    // Les mesures d abord : l observateur doit voir chaque requete, y compris
-    // celles qu un middleware refuse ensuite.
-    const metrics = config.relaySecret === undefined ? undefined : createMetrics(config.relaySecret);
-    if (metrics !== undefined) {
-        app.use(metrics.observe);
-        app.use(metrics.router);
-    }
+    mountObservability(app, metrics, config.relaySecret);
 
     app.use(withTraceId);
     app.use(securityHeaders());

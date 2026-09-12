@@ -24,3 +24,4 @@ export { consume } from './event-consumer.js';
 export { deliverPending } from './delivery-pass.js';
 export type { DeliveryPassDependencies, DeliveryPassResult } from './delivery-pass.js';
 export type { ConsumeDependencies, ConsumeOutcome } from './event-consumer.js';
+export { createPrometheusMetrics } from './prometheus-metrics.js';

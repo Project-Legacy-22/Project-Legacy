@@ -60,7 +60,7 @@ describe('API de changement d identifiants', () => {
         const logger = recordingLogger();
         provider = inMemoryIdentityProvider(COMPTES);
         harness = await listen(
-            createServer(testConfig, useCasesOver(provider, compromised), logger),
+            createServer(testConfig, useCasesOver(provider, compromised), { logger: logger }),
             logger,
         );
     }
