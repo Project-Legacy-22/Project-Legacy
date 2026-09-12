@@ -105,15 +105,80 @@ au-delà de 255 caractères.
 
 ## Sens 2 : de notre PostgreSQL vers un autre moteur
 
-C'est l'objet de #282, et ce document le portera quand il sera livré. Le principe est déjà
-tranché par l'ADR-0017, et il tient en une distinction qui doit être écrite plutôt que découverte :
+Une distinction d'abord, parce qu'elle doit être écrite plutôt que découverte :
 
-- **vers un PostgreSQL** reconstruit par les migrations versionnées, l'export est fidèle : rien ne
-  se perd ;
+- **vers un PostgreSQL** reconstruit par le schéma rendu, l'export est fidèle : rien ne se perd ;
 - **vers un MySQL ou un SQLite**, il l'est seulement si le schéma cible est **traduit du nôtre**.
   Réécrire les données dans la table `todo_items` de trois colonnes du projet d'origine perdrait le
   projet, le propriétaire, la priorité, l'échéance et les notifications. La sortie traduit donc le
   schéma ; elle ne revient pas au legacy.
+
+### 1. Produire l'export
+
+```bash
+npx supabase db dump --local --data-only -s public -f dump.sql
+```
+
+Sur le projet hébergé, remplacer `--local` par `--linked`. La commande écrit des `insert`, sauf
+si on lui demande `--use-copy` : c'est cette forme que l'outil lit.
+
+L'export doit être produit **en UTC**. Un horodatage portant un autre décalage est refusé plutôt
+que converti : ni `datetime(6)` ni le texte de SQLite ne porte de fuseau, et décaler toutes les
+dates au jugé est précisément le genre de silence que ces outils existent pour éviter.
+
+### 2. Écrire le schéma et les données pour les trois cibles
+
+```bash
+npm run data:export -- --from dump.sql --out data-out
+```
+
+Six fichiers dans `data-out/` : `<cible>-schema.sql` et `<cible>-data.sql` pour `postgres`,
+`mysql` et `sqlite`. On applique le schéma, puis les données.
+
+### Ce que la traduction du schéma porte, et ce qu'elle laisse
+
+| Nous | postgres | mysql | sqlite |
+|---|---|---|---|
+| `uuid` | `uuid` | `char(36)` | `text` |
+| `timestamptz` | `timestamptz` | `datetime(6)`, sans fuseau | `text`, UTC |
+| `jsonb` | `jsonb` | `json` | `text` |
+| énumération | le type qu'elle a déjà | `enum(...)` en ligne | `text` + `check` |
+
+Les types, la nullabilité, les clés, les clés étrangères, l'unicité et les valeurs par défaut
+traversent. Ne traversent pas : les contrôles de valeur (`char_length` ne s'écrit pas pareil en
+SQLite), les politiques de sécurité au niveau ligne, les déclencheurs, et le générateur
+d'identifiants — une fonction à nous, dont une cible n'a pas besoin puisqu'elle reçoit les
+identifiants avec les données.
+
+## Rejouer la preuve
+
+Une procédure qu'on ne peut pas rejouer n'est pas une preuve. Tout est dans le dépôt :
+
+```bash
+npm run test:migration
+```
+
+La commande démarre trois conteneurs — PostgreSQL 17, MySQL 8.4 et un Alpine qui ne porte que
+`sqlite3` — et rejoue les deux sens : un export `mysqldump` entre dans notre schéma, puis nos
+données ressortent vers les trois cibles, et les valeurs sont comparées de bout en bout.
+
+Aucun port n'est publié et aucun client n'a besoin d'être installé : tout passe par
+`docker compose exec`. Docker suffit, et la chaîne d'intégration exécute exactement la même
+commande. Les conteneurs vivent sous le profil `migration`, donc `npm run up` ne les démarre pas.
+
+```bash
+docker compose ps                          # les voir
+docker compose --profile migration down    # les arreter
+```
+
+Dans la chaîne d'intégration, le job `Migration de donnees` ne tourne que sur le chemin de
+livraison : la pull request de `dev` vers `main` et le push sur `main`. Sur une pull request
+ordinaire il est ignoré — trois moteurs à démarrer pour un code qui change rarement.
+
+La garde qui empêche le modèle de dériver est ailleurs, au niveau `integration` :
+`schema-model.integration.test.ts` compare `packages/data-migration/src/schema.ts` à
+`information_schema` de la vraie base. Une colonne ajoutée par une migration et absente du
+modèle fait échouer ce test, au lieu de disparaître silencieusement des exports.
 
 ## Exécutions réelles
 
@@ -121,4 +186,14 @@ Une procédure qu'on n'a jamais jouée n'est pas une procédure.
 
 | Date | Sens | Ce qui a été fait |
 |---|---|---|
-| | | |
+| 2026-09-12 | legacy vers nous | Un MySQL 8.4 chargé de six lignes `todo_items`, exporté par `mysqldump`, repris par `npm run data:import`. Quatre lignes reprises, deux refusées et nommées. Script appliqué sur PostgreSQL 17.6, puis réappliqué : rien de dupliqué. Adresse inconnue : la transaction est annulée. |
+| 2026-09-12 | nous vers ailleurs | Export des quatre tâches vers les trois cibles. Schéma et données appliqués sur PostgreSQL 17.6, MySQL 8.4 et SQLite 3.41. Comptes identiques, et une tâche nommée avec deux contre-obliques et une apostrophe retrouvée caractère pour caractère dans les trois. |
+
+Ces deux lignes sont l'exécution qui a servi à écrire la procédure. `npm run test:migration` les
+rejoue, et c'est cette commande qui vaut preuve : elle ne dépend d'aucun état laissé par la
+précédente, puisqu'elle refait les trois bases depuis rien.
+
+L'épreuve a trouvé deux défauts réels, ce qui est la raison de son existence. Le schéma rendu ne
+portait pas les valeurs par défaut, donc une cible refusait les lignes que notre propre script de
+reprise lui envoyait (`null value in column "version"`). Et une contre-oblique était divisée par
+deux en arrivant dans MySQL, où elle est une échappée à l'intérieur d'un littéral.
