@@ -41,6 +41,7 @@ export const LEVELS = {
         // Boots the same real server, for the deep link the reset email points
         // at and what it answers when the shell is missing.
         'apps/api/src/http/app-shell.test.ts',
+        'apps/api/src/http/metrics.test.ts',
     ],
 
     // Components mounted in jsdom, queried through src/test/react-root.tsx.

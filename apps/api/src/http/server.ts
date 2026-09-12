@@ -12,6 +12,7 @@ import { authRouter } from './routes/auth.js';
 import { credentialsRouter } from './routes/credentials.js';
 import { itemsRouter } from './routes/items.js';
 import { notificationsRouter } from './routes/notifications.js';
+import { createMetrics } from './metrics.js';
 import { relayRouter } from './routes/relay.js';
 import { projectsRouter } from './routes/projects.js';
 import { translateErrors } from './error-middleware.js';
@@ -110,6 +111,14 @@ export function createServer(config: Config, useCases: AppUseCases, logger: Logg
     // Before the body parser: a body that is too large or not JSON is refused
     // by express.json() with a next(error), and the error middleware needs the
     // trace id to already be on the response to report that refusal.
+    // Les mesures d abord : l observateur doit voir chaque requete, y compris
+    // celles qu un middleware refuse ensuite.
+    const metrics = config.relaySecret === undefined ? undefined : createMetrics(config.relaySecret);
+    if (metrics !== undefined) {
+        app.use(metrics.observe);
+        app.use(metrics.router);
+    }
+
     app.use(withTraceId);
     app.use(securityHeaders());
     app.use(cors(config.webOrigin));
