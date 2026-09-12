@@ -24,7 +24,7 @@ export const PASSWORD_POLICY = {
 // Bumped whenever the policy's substance changes -- a new purpose, a new
 // recipient, a different retention -- and never for wording. It lives with the
 // contracts because the interface renders it and the API records it.
-export const PRIVACY_POLICY_VERSION = '2026-09-10';
+export const PRIVACY_POLICY_VERSION = '2026-09-12';
 
 // One canonical form for an address, so that Foo@Example.com and
 // foo@example.com cannot become two accounts.

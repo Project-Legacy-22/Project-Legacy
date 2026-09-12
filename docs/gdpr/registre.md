@@ -21,6 +21,37 @@ le point de contact, comme la réunion de lancement l'a acté.
 Ces deux valeurs sont reprises telles quelles par la politique de confidentialité (`US-37`).
 Elles changent ici en premier.
 
+## Sous-traitants et localisation
+
+Les traitements ci-dessous nomment leurs destinataires. Cette section dit une fois pour toutes où
+ils se trouvent, parce que la colonne « Localisation » de chaque traitement désigne la table, pas le
+pays.
+
+| Sous-traitant | Ce qu'il fait | Où | Société |
+|---|---|---|---|
+| Supabase | base de données et authentification | Irlande, région `eu-west-1` | Supabase Inc., États-Unis |
+| Vercel | exécution de l'application et journaux | Paris, région `cdg1`, fixée par `vercel.json` | Vercel Inc., États-Unis |
+| Grafana Cloud | supervision : métriques et tableaux de bord | Allemagne, région `prod-eu-west-2` | Grafana Labs, États-Unis |
+| Have I Been Pwned | vérification d'un mot de passe compromis | réseau du fournisseur | opéré depuis l'Australie |
+
+Tout est donc stocké et traité dans l'Union. Ce qui n'est pas neutre pour autant : Supabase et
+Vercel sont des sociétés américaines, donc soumises au CLOUD Act, et une autorité américaine peut
+les contraindre à communiquer des données qui n'ont jamais quitté l'Europe. C'est une dépendance
+assumée, pas un oubli, et elle est écrite dans la politique de confidentialité plutôt que laissée
+implicite.
+
+Ce qui la rend réversible : le schéma est décrit par des migrations versionnées, donc un PostgreSQL
+quelconque le reconstruit. Ce qu'il faudrait réécrire est ce que Supabase fournit en plus du SQL,
+l'authentification et les politiques de sécurité au niveau ligne. Les conséquences complètes sont
+suivies par #273 et #274.
+
+Grafana Cloud ne reçoit aucune donnée personnelle, et c'est une contrainte de conception, pas une
+observation : l'ADR-0016 interdit d'étiqueter une métrique par un identifiant de compte, une
+adresse, un intitulé de tâche ou une adresse IP. Ce qui sort est un compteur ou une durée agrégée.
+
+Have I Been Pwned ne reçoit aucune donnée personnelle : cinq caractères d'une empreinte, qui
+n'identifient personne, et rien n'est conservé. Il est cité pour être exhaustif.
+
 ## Traitements
 
 ### T-01 — Compte et authentification
