@@ -31,6 +31,27 @@ describe('buildImportScript', () => {
         expect(sql.trimEnd().endsWith('commit;')).toBe(true);
     });
 
+    // Measured: the setting is on by default since PostgreSQL 9.1 and Supabase
+    // does not change it, so this is a guard rather than a fix. But a session
+    // where it is off -- a psql started with PGOPTIONS, a client that sets it
+    // -- would read `\\` as one backslash and halve every one of them without
+    // an error. An artefact must mean the same thing whoever applies it.
+    it('declares the settings that decide what a backslash means', () => {
+        const { sql } = buildImportScript([row()], TARGET);
+
+        expect(sql).toContain('set standard_conforming_strings = on;');
+        expect(sql).toContain("set client_encoding = 'UTF8';");
+        expect(sql.indexOf('set standard_conforming_strings')).toBeLessThan(
+            sql.indexOf('insert into public.items'),
+        );
+    });
+
+    it('keeps a backslash as a backslash, which those settings make true', () => {
+        const { sql } = buildImportScript([row({ name: 'chemin\\avec\\deux' })], TARGET);
+
+        expect(sql).toContain("'chemin\\avec\\deux'");
+    });
+
     // An address no account carries must cancel the import, not leave a project
     // nobody owns: the insert below it would otherwise run with a null owner.
     it('raises rather than importing when no account carries the address', () => {
