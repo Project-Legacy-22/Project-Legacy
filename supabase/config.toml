@@ -201,8 +201,10 @@ password_requirements = "lower_upper_letters_digits"
 # rp_origins = ["http://127.0.0.1:3000"]
 
 [auth.rate_limit]
-# Number of emails that can be sent per hour. Requires auth.email.smtp to be enabled.
-email_sent = 2
+# Sans effet tant que [auth.email.smtp] est desactive, mais pose pour le jour ou il le sera : deux
+# e-mails par heure rendraient une reinitialisation de mot de passe impraticable des la deuxieme
+# personne. Trente reste tres en dessous du palier gratuit de Resend, cent par jour.
+email_sent = 30
 # Number of SMS messages that can be sent per hour. Requires auth.sms to be enabled.
 sms_sent = 30
 # Number of anonymous sign-ins that can be made per hour per IP address. Requires enable_anonymous_sign_ins = true.
@@ -245,14 +247,26 @@ otp_expiry = 3600
 # Left disabled on purpose (ADR-0010): with SMTP off, the local stack captures every message in
 # its mail viewer instead of sending it, which is exactly what US-28 asks for in development. A
 # deployment enables this block and supplies the credentials through environment variables.
+# Le relais SMTP derriere GoTrue. Le fournisseur retenu est Resend : aucun SDK, aucun code d envoi,
+# et un changement de fournisseur ne touche que ces quatre valeurs (#149, ADR-0010).
+#
+# Le bloc reste commente, et ce n est pas un oubli. Un seul fichier sert la pile locale et le projet
+# heberge, et les deux ne peuvent pas etre d accord : le port differe -- 587 chez Resend, 54325 pour
+# le capteur local -- et un port tire de l environnement casse `supabase start` partout ou la
+# variable n est pas posee, ce que la CI a demontre.
+#
+# ATTENTION : le reglage vit dans le tableau de bord du projet heberge. Un `supabase config push`
+# pousse ce bloc tel qu il est ici, donc absent, et desactiverait Resend en silence. Avant tout
+# push : decommenter ces lignes, poser SUPABASE_AUTH_SMTP_PASS dans l environnement, pousser, puis
+# recommenter.
 # [auth.email.smtp]
 # enabled = true
-# host = "smtp.sendgrid.net"
+# host = "smtp.resend.com"
 # port = 587
-# user = "apikey"
-# pass = "env(SENDGRID_API_KEY)"
-# admin_email = "admin@email.com"
-# sender_name = "Admin"
+# user = "resend"
+# pass = "env(SUPABASE_AUTH_SMTP_PASS)"
+# admin_email = "no-reply@legacy22.test"
+# sender_name = "Legacy 22"
 
 # Password recovery email (US-28). The link carries the token hash as a plain query parameter on
 # our own path, so the exchange happens server-side (POST /auth/password/reset) and no token ever

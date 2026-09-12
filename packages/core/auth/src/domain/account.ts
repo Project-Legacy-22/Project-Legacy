@@ -21,11 +21,20 @@ export class AuthError extends Error {
     }
 }
 
-// One failure for both halves of a sign-in. Saying which of the two was wrong
-// would tell anyone which addresses have an account here.
+// One failure for every reason a sign-in can be refused. Saying which one
+// applies would tell anyone which addresses have an account here.
+//
+// The wording matters because it covers more than a wrong password: an address
+// whose confirmation was never followed is refused too, and telling that person
+// their password is incorrect sends them to reset a password that works. It
+// says what happened and offers the one way out that reveals nothing.
 export class InvalidCredentials extends AuthError {
     constructor() {
-        super('invalid_credentials', 401, 'Email address or password is incorrect.');
+        super(
+            'invalid_credentials',
+            401,
+            'We could not sign you in. Check the address and the password, or reset your password.',
+        );
     }
 }
 

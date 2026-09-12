@@ -28,7 +28,7 @@ export const labels = {
     // Says nothing about which of the two was wrong: the API refuses to, and a
     // sharper message here would hand back the list of addresses that exist on
     // the one screen where it shows.
-    signInRejected: 'Email address or password is incorrect.',
+    signInRejected: 'We could not sign you in. Check the address and the password, or reset your password.',
     registerFailed: 'Unable to create the account.',
     // Same reason: a registration answers the same way whether the address was
     // free or already taken, so the confirmation cannot claim an account exists.
