@@ -167,9 +167,10 @@ export const labels = {
     policyHowLongNotifications: 'Notifications are erased after ninety days.',
     policyHowLongLogs: 'Logs are kept thirty days.',
     policyRecipientsTitle: 'Who else sees it',
-    policyRecipientsIntro: 'Three providers process data on our behalf, and nobody else. Everything stays inside the European Union, but Supabase and Vercel are United States companies, so a United States authority can compel them to hand over data that never left Europe.',
+    policyRecipientsIntro: 'Four providers process data on our behalf, and nobody else. Everything stays inside the European Union, but Supabase and Vercel are United States companies, so a United States authority can compel them to hand over data that never left Europe.',
     policyRecipientSupabase: 'Supabase, which hosts the database and handles sign-in. Your data is stored in Ireland (eu-west-1).',
     policyRecipientVercel: 'Vercel, which serves the application and collects its logs. Requests are processed in Paris (cdg1).',
+    policyRecipientGrafana: 'Grafana Cloud, which receives technical measurements so we can see whether the application is healthy. It receives no personal data at all: no address, no account, no task. Hosted in Germany.',
     policyRecipientHibp:
         'Have I Been Pwned, which receives five characters of a hash when you set a new password, so we can refuse one that appears in a known breach. It identifies nobody and nothing is stored.',
     policyRightsTitle: 'Your rights',

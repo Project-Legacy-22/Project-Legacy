@@ -31,6 +31,7 @@ pays.
 |---|---|---|---|
 | Supabase | base de données et authentification | Irlande, région `eu-west-1` | Supabase Inc., États-Unis |
 | Vercel | exécution de l'application et journaux | Paris, région `cdg1`, fixée par `vercel.json` | Vercel Inc., États-Unis |
+| Grafana Cloud | supervision : métriques et tableaux de bord | Allemagne, région `prod-eu-west-2` | Grafana Labs, États-Unis |
 | Have I Been Pwned | vérification d'un mot de passe compromis | réseau du fournisseur | opéré depuis l'Australie |
 
 Tout est donc stocké et traité dans l'Union. Ce qui n'est pas neutre pour autant : Supabase et
@@ -43,6 +44,12 @@ Ce qui la rend réversible : le schéma est décrit par des migrations versionn�
 quelconque le reconstruit. Ce qu'il faudrait réécrire est ce que Supabase fournit en plus du SQL,
 l'authentification et les politiques de sécurité au niveau ligne. Les conséquences complètes sont
 suivies par #273 et #274.
+
+Grafana Cloud ne reçoit aucune donnée personnelle, et c'est une contrainte de conception, pas une
+observation : l'ADR-0016 interdit d'étiqueter une métrique par un identifiant de compte, une
+adresse, un intitulé de tâche ou une adresse IP. Ce qui sort est un compteur ou une durée agrégée.
+La première pile créée était en `prod-us-west-0`, aux États-Unis ; elle a été refaite en Allemagne
+avant d'être connectée, donc aucune donnée n'a quitté l'Union.
 
 Have I Been Pwned ne reçoit aucune donnée personnelle : cinq caractères d'une empreinte, qui
 n'identifient personne, et rien n'est conservé. Il est cité pour être exhaustif.

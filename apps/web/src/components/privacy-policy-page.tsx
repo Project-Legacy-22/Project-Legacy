@@ -51,6 +51,7 @@ export function PrivacyPolicyPage({ onBack }: PrivacyPolicyPageProps) {
             <ul>
                 <li>{labels.policyRecipientSupabase}</li>
                 <li>{labels.policyRecipientVercel}</li>
+                <li>{labels.policyRecipientGrafana}</li>
                 <li>{labels.policyRecipientHibp}</li>
             </ul>
 
