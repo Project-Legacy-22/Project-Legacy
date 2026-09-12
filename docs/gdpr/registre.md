@@ -48,8 +48,6 @@ suivies par #273 et #274.
 Grafana Cloud ne reçoit aucune donnée personnelle, et c'est une contrainte de conception, pas une
 observation : l'ADR-0016 interdit d'étiqueter une métrique par un identifiant de compte, une
 adresse, un intitulé de tâche ou une adresse IP. Ce qui sort est un compteur ou une durée agrégée.
-La première pile créée était en `prod-us-west-0`, aux États-Unis ; elle a été refaite en Allemagne
-avant d'être connectée, donc aucune donnée n'a quitté l'Union.
 
 Have I Been Pwned ne reçoit aucune donnée personnelle : cinq caractères d'une empreinte, qui
 n'identifient personne, et rien n'est conservé. Il est cité pour être exhaustif.

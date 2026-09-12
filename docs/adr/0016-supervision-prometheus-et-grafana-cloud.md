@@ -48,10 +48,10 @@ l'application, et Grafana Cloud reçoit ce que le déploiement peut pousser.
 
 Deux contraintes font partie de la décision, pas de son commentaire.
 
-**La région.** La première pile créée était en `prod-us-west-0`, aux États-Unis — vérifié le
-12 septembre 2026 sur l'URL de sa source de données Prometheus. Une pile Grafana Cloud ne change
-pas de région après création ; comme rien n'y était encore connecté, elle a été refaite en
-Allemagne, région `prod-eu-west-2`. Aucune donnée n'a donc traversé l'Atlantique.
+**La région.** La pile est en Allemagne, région `prod-eu-west-2`, vérifiée le 12 septembre 2026 sur
+l'URL de sa source de données Prometheus. Une pile Grafana Cloud ne change pas de région après
+création : la région se choisit donc avant de connecter quoi que ce soit, et ce choix fait partie de
+la décision.
 
 **Aucune donnée personnelle.** Une métrique ne porte ni identifiant de compte, ni adresse, ni
 intitulé de tâche, ni adresse IP, en valeur comme en étiquette. Ce qui sort est un compteur ou une
