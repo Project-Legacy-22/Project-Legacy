@@ -12,6 +12,7 @@
     "apps/web",
     "apps/worker",
     "packages/contracts",
+    "packages/data-migration",
     "packages/infra",
     "packages/core/items",
     "packages/core/auth",
