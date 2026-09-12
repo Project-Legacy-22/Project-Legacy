@@ -96,19 +96,19 @@ function shellHandler(appShell: string | undefined): RequestHandler {
     };
 }
 
-// Journal et mesures sont la meme chose vue de deux facons : ce que le service
-// dit de lui-meme. Les passer groupes evite un quatrieme parametre, et dit
-// qu ils vont ensemble.
+// The log and the measurements are one thing seen two ways: what the service
+// says about itself. Passing them grouped avoids a fourth parameter, and says
+// that they belong together.
 export interface Observability {
     logger: Logger;
-    // Absentes, le serveur tourne sans mesurer : une suite de tests n a pas a
-    // construire un adaptateur pour verifier une route.
+    // Absent, the server runs without measuring: a test suite has no reason to
+    // build an adapter in order to check a route.
     metrics?: Metrics;
 }
 
-// Les mesures d abord : l observateur doit voir chaque requete, y compris
-// celles qu un middleware refuse ensuite. Le point d entree qui les sert
-// n existe que si un secret le protege.
+// The measurements first: the observer must see every request, including the
+// ones a middleware turns away afterwards. The endpoint that serves them exists
+// only when a secret protects it.
 function mountObservability(app: Express, metrics: Metrics | undefined, secret: string | undefined): void {
     if (metrics === undefined) return;
 

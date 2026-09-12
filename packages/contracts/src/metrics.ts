@@ -1,10 +1,10 @@
-// Ce que l application mesure, vu par la couche HTTP.
+// What the application measures, as the HTTP layer sees it.
 //
-// L interface vit ici et l implementation dans packages/infra, pour la raison
-// que le garde de couches a rappelee : seule la racine de composition atteint un
-// adaptateur, et prom-client en est un. La couche HTTP sait ce qu est une route
-// et un code de statut ; elle n a pas a savoir dans quel format ces mesures
-// sortent.
+// The interface lives here and the implementation in packages/infra, for the
+// reason the layer guard pointed out: only the composition root reaches an
+// adapter, and prom-client is one. The HTTP layer knows what a route and a
+// status code are; it has no reason to know the format these measurements come
+// out in.
 export interface Measurement {
     method: string;
     route: string;

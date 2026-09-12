@@ -109,7 +109,7 @@ const RELAY_INTERVAL_MS = 1_000;
 export interface Application {
     useCases: AppUseCases;
     logger: Logger;
-    // Construites ici parce que seule cette couche atteint un adaptateur.
+    // Built here because this layer is the only one that reaches an adapter.
     metrics: Metrics;
     start(): Promise<void>;
     stop(): Promise<void>;
