@@ -48,6 +48,16 @@ const RULES = [
         local: /^\.\.?\//,
     },
     {
+        // L outil de reprise et de sortie des donnees ne depend de rien, pas
+        // meme de nos propres paquets : il sert le jour ou l application ne
+        // tourne plus, ou ne tourne plus ici. Un outil de sortie qui depend de
+        // ce qu on quitte n est pas un outil de sortie.
+        name: 'the data migration tool depends on nothing',
+        match: /^packages\/data-migration\//,
+        bare: [/^node:/],
+        local: /^\.\.?\//,
+    },
+    {
         name: 'infra knows contracts and core ports, never an application layer',
         match: /^packages\/infra\//,
         bare: [
