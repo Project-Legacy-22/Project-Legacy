@@ -71,12 +71,18 @@ export const authApi: AuthApi = {
             body: JSON.stringify(body),
         });
 
+        // A refusal and a failure are not the same answer, and they were being
+        // shown as one. The server deliberately does not say which half of a
+        // refusal was wrong, so 401 keeps a single message. Anything else has
+        // nothing to withhold: showing the refusal on a 500 sent somebody to
+        // check an address and a password that were both right, while GoTrue was
+        // answering Gateway Timeout.
+        if (response.status === 401) {
+            throw new ApiError(401, labels.signInRejected);
+        }
+
         if (!response.ok) {
-            // One message whatever the server said, because the server itself
-            // refuses to say which of the two was wrong. Repeating a more
-            // precise reason here would undo that on the only screen where it
-            // is visible.
-            throw new ApiError(response.status, labels.signInRejected);
+            throw new ApiError(response.status, labels.signInUnavailable);
         }
 
         try {

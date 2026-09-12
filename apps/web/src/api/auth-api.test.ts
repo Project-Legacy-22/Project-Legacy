@@ -64,6 +64,29 @@ describe('authApi.signIn', () => {
         );
     });
 
+    // Mesure sur le deploiement : GoTrue a repondu Gateway Timeout, l API a rendu
+    // 500, et l ecran disait « verifiez l adresse et le mot de passe ». Les deux
+    // etaient justes. Un refus et une panne ne sont pas la meme reponse.
+    it('distingue une panne du serveur d un refus d identifiants', async () => {
+        stubFetch(
+            response(
+                {
+                    type: 'internal_error',
+                    title: 'InternalError',
+                    status: 500,
+                    detail: 'The request could not be processed.',
+                    instance: '/auth/login',
+                    traceId: 'a-test-trace-id',
+                },
+                500,
+            ),
+        );
+
+        await expect(authApi.signIn(CREDENTIALS)).rejects.toEqual(
+            new ApiError(500, labels.signInUnavailable),
+        );
+    });
+
     it('signale une reponse illisible plutot que de la propager', async () => {
         stubFetch(response({ id: 42 }));
 

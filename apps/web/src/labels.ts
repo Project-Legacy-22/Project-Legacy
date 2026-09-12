@@ -29,6 +29,7 @@ export const labels = {
     // sharper message here would hand back the list of addresses that exist on
     // the one screen where it shows.
     signInRejected: 'We could not sign you in. Check the address and the password, or reset your password.',
+    signInUnavailable: 'Signing in is unavailable right now. Try again in a moment.',
     registerFailed: 'Unable to create the account.',
     // Same reason: a registration answers the same way whether the address was
     // free or already taken, so the confirmation cannot claim an account exists.
