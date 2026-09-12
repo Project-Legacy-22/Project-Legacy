@@ -1,7 +1,8 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { argv, exit, stderr, stdout } from 'node:process';
+import { argv, stdout } from 'node:process';
 
+import { fail, options, required } from './cli-options.js';
 import { readPostgresDump } from './postgres-dump.js';
 import { renderData } from './render-data.js';
 import { renderSchema } from './render-schema.js';
@@ -18,27 +19,9 @@ postgres, mysql and sqlite. Produce the dump with:
 
 Applies nothing, and reaches no database. See docs/data-migration.md.`;
 
-function options(args: readonly string[]): Map<string, string> {
-    const found = new Map<string, string>();
-
-    for (let at = 0; at < args.length; at += 2) {
-        const name = args[at] ?? '';
-        const value = args[at + 1];
-
-        if (!name.startsWith('--')) throw new Error(`\`${name}\` is not an option`);
-        if (value === undefined) throw new Error(`\`${name}\` carries no value`);
-
-        found.set(name.slice(2), value);
-    }
-
-    return found;
-}
-
 function run(args: readonly string[]): void {
     const found = options(args);
-    const from = found.get('from');
-    if (from === undefined || from === '') throw new Error('--from is missing');
-
+    const from = required(found, 'from');
     const out = found.get('out') ?? 'data-out';
     const snapshot = readPostgresDump(readFileSync(from, 'utf8'));
 
@@ -68,6 +51,5 @@ function run(args: readonly string[]): void {
 try {
     run(argv.slice(2));
 } catch (cause) {
-    stderr.write(`${cause instanceof Error ? cause.message : String(cause)}\n\n${USAGE}\n`);
-    exit(1);
+    fail(cause, USAGE);
 }
