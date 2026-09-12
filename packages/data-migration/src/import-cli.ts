@@ -1,7 +1,8 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { argv, exit, stderr, stdout } from 'node:process';
+import { argv, stdout } from 'node:process';
 
+import { fail, options, required } from './cli-options.js';
 import { buildImportScript, renderReport } from './import-script.js';
 import type { ImportTarget } from './import-script.js';
 import { readLegacyDump } from './legacy-dump.js';
@@ -12,31 +13,6 @@ const USAGE = `npm run data:import -- --from <export.sql> --engine mysql|sqlite 
 
 Reads a legacy export and writes a SQL import script plus its report. Applies
 nothing: read the script, then apply it yourself. See docs/data-migration.md.`;
-
-// Written by hand rather than pulled from a package: this tool declares no
-// dependency, because it has to work the day the application does not.
-function options(args: readonly string[]): Map<string, string> {
-    const found = new Map<string, string>();
-
-    for (let at = 0; at < args.length; at += 2) {
-        const name = args[at] ?? '';
-        const value = args[at + 1];
-
-        if (!name.startsWith('--')) throw new Error(`\`${name}\` is not an option`);
-        if (value === undefined) throw new Error(`\`${name}\` carries no value`);
-
-        found.set(name.slice(2), value);
-    }
-
-    return found;
-}
-
-function required(found: Map<string, string>, name: string): string {
-    const value = found.get(name);
-    if (value === undefined || value === '') throw new Error(`--${name} is missing`);
-
-    return value;
-}
 
 function engineOf(value: string): LegacyEngine {
     if (value === 'mysql' || value === 'sqlite') return value;
@@ -83,6 +59,5 @@ function run(args: readonly string[]): void {
 try {
     run(argv.slice(2));
 } catch (cause) {
-    stderr.write(`${cause instanceof Error ? cause.message : String(cause)}\n\n${USAGE}\n`);
-    exit(1);
+    fail(cause, USAGE);
 }

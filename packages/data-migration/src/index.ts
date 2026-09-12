@@ -1,4 +1,13 @@
+export { buildImportScript, renderReport } from './import-script.js';
+export type { ImportReport, ImportTarget, RowNote } from './import-script.js';
 export { readLegacyDump } from './legacy-dump.js';
 export type { LegacyItem } from './legacy-dump.js';
+export { readPostgresDump } from './postgres-dump.js';
+export type { Cell, Snapshot } from './postgres-dump.js';
+export { renderData } from './render-data.js';
+export { renderSchema } from './render-schema.js';
+export type { Dialect } from './render-schema.js';
+export { TABLES } from './schema.js';
+export type { Column, Enumeration, Table } from './schema.js';
 export { SqlTextError, tokenise } from './sql-tokens.js';
-export type { LegacyEngine, Token, TokenKind } from './sql-tokens.js';
+export type { LegacyEngine, SqlFlavour, Token, TokenKind } from './sql-tokens.js';

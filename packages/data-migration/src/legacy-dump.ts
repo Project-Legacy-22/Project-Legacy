@@ -1,5 +1,16 @@
+import {
+    expect,
+    insertedName,
+    peek,
+    readCell,
+    reader,
+    skipInsertInto,
+    skipStatement,
+    take,
+} from './statement-reader.js';
+import type { Cell, Reader } from './statement-reader.js';
 import { SqlTextError, tokenise } from './sql-tokens.js';
-import type { LegacyEngine, Token } from './sql-tokens.js';
+import type { LegacyEngine } from './sql-tokens.js';
 
 // The one table the original project had, in both its engines:
 // src/persistence/mysql.js and src/persistence/sqlite.js at commit 42752ef.
@@ -20,75 +31,18 @@ export interface LegacyItem {
     line: number;
 }
 
-type Cell = string | boolean | null;
-
-interface Reader {
-    tokens: Token[];
-    at: number;
-}
-
-function peek(reader: Reader): Token | undefined {
-    return reader.tokens[reader.at];
-}
-
-function take(reader: Reader): Token {
-    const token = reader.tokens[reader.at];
-    if (token === undefined) {
-        const last = reader.tokens[reader.tokens.length - 1];
-        throw new SqlTextError(last?.line ?? 1, 'the dump ends in the middle of a statement');
-    }
-
-    reader.at += 1;
-    return token;
-}
-
-function expect(reader: Reader, value: string): Token {
-    const token = take(reader);
-    if (token.value.toLowerCase() !== value) {
-        throw new SqlTextError(token.line, `\`${value}\` was expected, \`${token.value}\` was read`);
-    }
-
-    return token;
-}
-
-function isWord(token: Token | undefined, value: string): boolean {
-    return token?.kind === 'word' && token.value.toLowerCase() === value;
-}
-
-// A dump holds statements we have no use for: mysqldump's settings, the
-// schema, the other tables. Skipping to the next `;` lets them pass without
-// being understood.
-function skipStatement(reader: Reader): void {
-    while (reader.at < reader.tokens.length) {
-        const token = take(reader);
-        if (token.kind === 'punct' && token.value === ';') return;
-    }
-}
-
-// `insert into todo_items`, whatever the quoting and the case. A qualified
-// name (`legacy.todo_items`) keeps only its last part.
-function startsInsertIntoTable(reader: Reader): boolean {
-    if (!isWord(peek(reader), 'insert')) return false;
-    if (!isWord(reader.tokens[reader.at + 1], 'into')) return false;
-
-    const name = reader.tokens[reader.at + 2];
-    if (name?.kind !== 'word') return false;
-
-    return name.value.toLowerCase().split('.').pop() === TABLE;
-}
-
 // The order the statement declares, or the table's own when it declares none,
 // which is what both dumps write unless asked otherwise. A name we do not know
 // is refused rather than ignored: a fourth column means this is not the table
 // we think it is.
-function readColumnOrder(reader: Reader): readonly string[] {
-    if (peek(reader)?.value !== '(') return COLUMNS;
+function readColumnOrder(input: Reader): readonly string[] {
+    if (peek(input)?.value !== '(') return COLUMNS;
 
-    const opening = take(reader);
+    const opening = take(input);
     const order: string[] = [];
 
     for (;;) {
-        const token = take(reader);
+        const token = take(input);
 
         if (token.value === ')') break;
         if (token.value === ',') continue;
@@ -108,27 +62,6 @@ function readColumnOrder(reader: Reader): readonly string[] {
     return order;
 }
 
-function readCell(reader: Reader): Cell {
-    const token = take(reader);
-
-    if (token.kind === 'string') return token.value;
-    // The columns are varchars, so both dumps quote them; a bare number is
-    // unambiguous all the same.
-    if (token.kind === 'number') return token.value;
-
-    if (token.kind === 'word') {
-        const word = token.value.toLowerCase();
-        if (word === 'null') return null;
-        if (word === 'true') return true;
-        if (word === 'false') return false;
-    }
-
-    // Reached by `x'4f6b'`, which mysqldump writes with --hex-blob: the
-    // tokeniser hands over the word `x` then a string, and guessing which of
-    // the two holds the value is what this tool must not do.
-    throw new SqlTextError(token.line, `\`${token.value}\` is not a value`);
-}
-
 function asText(cell: Cell, line: number, column: string): string | null {
     if (cell === null || typeof cell === 'string') return cell;
     throw new SqlTextError(line, `${column} holds a boolean, where text was expected`);
@@ -144,16 +77,16 @@ function asFlag(cell: Cell, line: number): boolean | null {
     throw new SqlTextError(line, `completed holds \`${cell}\`, which is neither 0 nor 1`);
 }
 
-function readRow(reader: Reader, order: readonly string[]): LegacyItem {
-    const line = expect(reader, '(').line;
+function readRow(input: Reader, order: readonly string[]): LegacyItem {
+    const line = expect(input, '(').line;
     const cells = new Map<string, Cell>();
 
     for (const column of order) {
-        cells.set(column, readCell(reader));
-        if (peek(reader)?.value === ',') take(reader);
+        cells.set(column, readCell(input));
+        if (peek(input)?.value === ',') take(input);
     }
 
-    expect(reader, ')');
+    expect(input, ')');
 
     return {
         id: asText(cells.get('id') ?? null, line, 'id'),
@@ -163,22 +96,20 @@ function readRow(reader: Reader, order: readonly string[]): LegacyItem {
     };
 }
 
-function readInsert(reader: Reader, items: LegacyItem[]): void {
-    expect(reader, 'insert');
-    expect(reader, 'into');
-    take(reader);
+function readInsert(input: Reader, items: LegacyItem[]): void {
+    skipInsertInto(input);
 
-    const order = readColumnOrder(reader);
-    expect(reader, 'values');
+    const order = readColumnOrder(input);
+    expect(input, 'values');
 
     for (;;) {
-        items.push(readRow(reader, order));
+        items.push(readRow(input, order));
 
-        if (peek(reader)?.value !== ',') break;
-        take(reader);
+        if (peek(input)?.value !== ',') break;
+        take(input);
     }
 
-    skipStatement(reader);
+    skipStatement(input);
 }
 
 // Every `todo_items` row a dump carries, in the order the dump carries them.
@@ -187,12 +118,14 @@ function readInsert(reader: Reader, items: LegacyItem[]): void {
 // read: half a migration is worse than none, because nothing downstream would
 // know which half is missing.
 export function readLegacyDump(dump: string, engine: LegacyEngine): LegacyItem[] {
-    const reader: Reader = { tokens: tokenise(dump, engine), at: 0 };
+    const input = reader(tokenise(dump, engine));
     const items: LegacyItem[] = [];
 
-    while (reader.at < reader.tokens.length) {
-        if (startsInsertIntoTable(reader)) readInsert(reader, items);
-        else skipStatement(reader);
+    while (input.at < input.tokens.length) {
+        // The last part only: a legacy export may qualify the table with the
+        // database it came from, and that prefix means nothing here.
+        if (insertedName(input)?.at(-1) === TABLE) readInsert(input, items);
+        else skipStatement(input);
     }
 
     return items;
