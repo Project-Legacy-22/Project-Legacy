@@ -9,6 +9,7 @@ import {
     createSupabaseOutboxStore,
     createSupabasePersonalDataStore,
     createSupabaseProjectRepository,
+    createPrometheusMetrics,
     deliverPending,
     relayOnce,
 } from '@legacy/infra';
@@ -20,7 +21,7 @@ import type {
     OutboxStore,
     RelayDependencies,
 } from '@legacy/infra';
-import type { Logger } from '@legacy/contracts';
+import type { Logger, Metrics } from '@legacy/contracts';
 import {
     makeChangeEmail,
     makeChangePassword,
@@ -108,6 +109,8 @@ const RELAY_INTERVAL_MS = 1_000;
 export interface Application {
     useCases: AppUseCases;
     logger: Logger;
+    // Built here because this layer is the only one that reaches an adapter.
+    metrics: Metrics;
     start(): Promise<void>;
     stop(): Promise<void>;
 }
@@ -240,6 +243,7 @@ export function compose(config: Config): Application {
     const { store, identity, personalData, projects, outbox, notifications, bus } = createAdapters(config);
     const logger = createLogger(config.logLevel);
     const deliver = makeDeliverPending({ outbox, bus, notifications, logger });
+    const metrics = createPrometheusMetrics();
     const compromisedPasswords = createHibpPasswordRegistry({ logger });
 
     // The relay lives with the writer, not with the consumer: it reads a table
@@ -250,6 +254,7 @@ export function compose(config: Config): Application {
 
     return {
         logger,
+        metrics,
         useCases: {
             items: itemUseCases(store, deliver, logger),
             auth: authUseCases(identity, compromisedPasswords),

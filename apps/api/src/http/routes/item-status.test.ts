@@ -53,7 +53,7 @@ describe('PATCH /projects/:projectId/items/:id/status', () => {
             createServer(
                 testConfig,
                 makeItemRouteUseCases({ repository: store, provider, generatedId: UNKNOWN_ID, projectId: PROJECT_ID }),
-                logger,
+                { logger },
             ),
             logger,
             `${SESSION_COOKIE}=${session.accessToken}`,

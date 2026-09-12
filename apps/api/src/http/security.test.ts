@@ -80,7 +80,7 @@ describe('durcissement de l API', () => {
         authenticate?: IdentityProvider['authenticate'],
     ): Promise<void> {
         const logger = recordingLogger();
-        const app = createServer({ ...testConfig, ...overrides }, appUseCases(authenticate), logger);
+        const app = createServer({ ...testConfig, ...overrides }, appUseCases(authenticate), { logger: logger });
         harness = await listen(app, logger);
     }
 

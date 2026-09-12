@@ -53,7 +53,7 @@ const RULES = [
         bare: [
             /^@legacy\/(contracts|core-items|core-auth|core-notifications|core-projects)$/,
             /^node:/,
-            /^(@supabase\/supabase-js|pino|@redis\/client)$/,
+            /^(@supabase\/supabase-js|pino|@redis\/client|prom-client)$/,
         ],
         local: /^\.\.?\//,
     },

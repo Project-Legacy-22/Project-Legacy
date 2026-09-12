@@ -18,6 +18,7 @@
     "@legacy/core-projects": "*",
     "@redis/client": "^6.2.1",
     "@supabase/supabase-js": "2.115.0",
-    "pino": "^10.3.1"
+    "pino": "^10.3.1",
+    "prom-client": "^15.1.3"
   }
 }

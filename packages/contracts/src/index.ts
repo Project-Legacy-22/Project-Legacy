@@ -53,3 +53,4 @@ export {
 export { ITEM_CREATED_V1, ItemCreatedV1, ItemCreatedV1Payload, DomainEvent } from './events.js';
 export { ProblemDetails } from './problem-details.js';
 export type { Logger } from './logger.js';
+export type { Measurement, Metrics } from './metrics.js';

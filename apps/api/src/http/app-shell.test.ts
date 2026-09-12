@@ -16,7 +16,7 @@ let harness: Harness | undefined;
 async function serve(staticDir: string): Promise<{ served: Harness; logger: ReturnType<typeof recordingLogger> }> {
     const logger = recordingLogger();
     harness = await listen(
-        createServer({ ...testConfig, staticDir }, makeAppUseCases(), logger),
+        createServer({ ...testConfig, staticDir }, makeAppUseCases(), { logger: logger }),
         logger,
     );
 

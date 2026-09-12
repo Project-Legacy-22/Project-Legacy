@@ -103,7 +103,7 @@ describe('API des donnees personnelles', () => {
         );
         const useCases = useCasesOver(provider, inMemoryPersonalDataStore([ALICE, BOB]));
 
-        harness = await listen(createServer(testConfig, useCases, logger), logger);
+        harness = await listen(createServer(testConfig, useCases, { logger: logger }), logger);
     });
 
     afterEach(() => harness.close());

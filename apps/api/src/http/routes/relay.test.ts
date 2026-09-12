@@ -17,7 +17,7 @@ async function serve(
     const logger = recordingLogger();
     const useCases = makeAppUseCases({ notifications: { deliverPending } });
 
-    harness = await listen(createServer({ ...testConfig, relaySecret }, useCases, logger), logger);
+    harness = await listen(createServer({ ...testConfig, relaySecret }, useCases, { logger: logger }), logger);
     return harness;
 }
 

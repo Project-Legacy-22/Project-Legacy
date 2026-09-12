@@ -98,7 +98,7 @@ describe('projects API', () => {
         const session = await makeSignIn(provider)(ADRESSE, MOT_DE_PASSE);
         const logger = recordingLogger();
         harness = await listen(
-            createServer(testConfig, useCasesOver(repository, provider), logger),
+            createServer(testConfig, useCasesOver(repository, provider), { logger: logger }),
             logger,
             `${SESSION_COOKIE}=${session.accessToken}`,
         );

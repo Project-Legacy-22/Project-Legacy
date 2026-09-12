@@ -42,7 +42,7 @@ const RACINE = join(import.meta.dirname, '..', '..', '..', '..');
 function application(): Express {
     const config = { ...testConfig, relaySecret: 'un-secret-de-relais-assez-long-pour-le-schema' };
 
-    return createServer(config, makeAppUseCases(), recordingLogger());
+    return createServer(config, makeAppUseCases(), { logger: recordingLogger() });
 }
 
 // Express 5 exposes the mounted stack. A nested router -- the items routes live

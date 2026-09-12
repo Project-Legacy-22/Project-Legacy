@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import express from 'express';
 import type { Express, RequestHandler } from 'express';
-import type { Logger } from '@legacy/contracts';
+import type { Logger, Metrics } from '@legacy/contracts';
 
 import type { Config } from '../config.js';
 import type { AppUseCases } from '../composition-root.js';
@@ -12,6 +12,7 @@ import { authRouter } from './routes/auth.js';
 import { credentialsRouter } from './routes/credentials.js';
 import { itemsRouter } from './routes/items.js';
 import { notificationsRouter } from './routes/notifications.js';
+import { metricsRouter, observeRequests } from './metrics.js';
 import { relayRouter } from './routes/relay.js';
 import { projectsRouter } from './routes/projects.js';
 import { translateErrors } from './error-middleware.js';
@@ -95,7 +96,34 @@ function shellHandler(appShell: string | undefined): RequestHandler {
     };
 }
 
-export function createServer(config: Config, useCases: AppUseCases, logger: Logger): Express {
+// The log and the measurements are one thing seen two ways: what the service
+// says about itself. Passing them grouped avoids a fourth parameter, and says
+// that they belong together.
+export interface Observability {
+    logger: Logger;
+    // Absent, the server runs without measuring: a test suite has no reason to
+    // build an adapter in order to check a route.
+    metrics?: Metrics;
+}
+
+// The measurements first: the observer must see every request, including the
+// ones a middleware turns away afterwards. The endpoint that serves them exists
+// only when a secret protects it.
+function mountObservability(app: Express, metrics: Metrics | undefined, secret: string | undefined): void {
+    if (metrics === undefined) return;
+
+    app.use(observeRequests(metrics));
+
+    if (secret !== undefined) {
+        app.use(metricsRouter(metrics, secret));
+    }
+}
+
+export function createServer(
+    config: Config,
+    useCases: AppUseCases,
+    { logger, metrics }: Observability,
+): Express {
     const app = express();
     const appShell = readAppShell(config.staticDir, logger);
 
@@ -110,6 +138,8 @@ export function createServer(config: Config, useCases: AppUseCases, logger: Logg
     // Before the body parser: a body that is too large or not JSON is refused
     // by express.json() with a next(error), and the error middleware needs the
     // trace id to already be on the response to report that refusal.
+    mountObservability(app, metrics, config.relaySecret);
+
     app.use(withTraceId);
     app.use(securityHeaders());
     app.use(cors(config.webOrigin));
