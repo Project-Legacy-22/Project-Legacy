@@ -141,6 +141,35 @@
     margin-bottom: 6px;
 }
 
+/* Quatre colonnes de prose ne tiennent pas sur un telephone : le tableau defile
+   dans son propre conteneur plutot que de pousser la page. */
+.policy-processors-scroll {
+    overflow-x: auto;
+    margin: 12px 0 20px;
+}
+
+.policy-processors {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 40rem;
+}
+
+.policy-processors th,
+.policy-processors td {
+    padding: 10px 12px;
+    border: 1px solid #c4ced8;
+    text-align: left;
+    vertical-align: top;
+}
+
+.policy-processors thead th {
+    background: #f3f6f8;
+}
+
+.policy-processors tbody th {
+    white-space: nowrap;
+}
+
 .policy-version {
     margin-top: 0;
     color: var(--text-muted);

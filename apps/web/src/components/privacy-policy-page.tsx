@@ -1,6 +1,7 @@
 import { PRIVACY_POLICY_VERSION } from '@legacy/contracts';
 
 import { labels } from '../labels';
+import { ProcessorsTable } from './policy-processors';
 
 export interface PrivacyPolicyPageProps {
     onBack: () => void;
@@ -48,12 +49,8 @@ export function PrivacyPolicyPage({ onBack }: PrivacyPolicyPageProps) {
 
             <h2>{labels.policyRecipientsTitle}</h2>
             <p>{labels.policyRecipientsIntro}</p>
-            <ul>
-                <li>{labels.policyRecipientSupabase}</li>
-                <li>{labels.policyRecipientVercel}</li>
-                <li>{labels.policyRecipientGrafana}</li>
-                <li>{labels.policyRecipientHibp}</li>
-            </ul>
+            <ProcessorsTable />
+            <p>{labels.policyJurisdiction}</p>
 
             <h2>{labels.policyRightsTitle}</h2>
             <p>{labels.policyRightsBody}</p>
