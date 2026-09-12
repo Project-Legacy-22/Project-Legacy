@@ -175,6 +175,52 @@ jobs:
           echo "## Tests d integration" >> "$GITHUB_STEP_SUMMARY"
           echo "Duree : ${duree}s" >> "$GITHUB_STEP_SUMMARY"
 
+  migration:
+    name: Migration de donnees
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: verifier
+    # Sur le seul chemin de livraison : la pull request de dev vers main, et le
+    # push sur main qui la suit. La suite demarre trois moteurs et rejoue les
+    # deux sens de la migration ; la faire tourner sur chaque pull request
+    # couterait une minute et demie a chacune pour verifier un code qui ne
+    # change presque jamais. Une livraison, en revanche, est exactement le
+    # moment ou la reversibilite doit etre prouvee.
+    if: github.base_ref == 'main' || github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Installer les dependances
+        run: npm ci
+
+      # `npm run test:migration` demarre les conteneurs lui-meme. L etape est
+      # separee pour que le journal distingue un moteur qui ne demarre pas d un
+      # test qui echoue.
+      - name: Demarrer les trois moteurs
+        run: docker compose --profile migration up -d --wait
+
+      - name: Eprouver la migration dans les deux sens
+        run: |
+          set -euo pipefail
+          debut=$(date +%s)
+          npx vitest run --config vitest.migration.config.ts
+          duree=$(( $(date +%s) - debut ))
+          echo "## Migration de donnees" >> "$GITHUB_STEP_SUMMARY"
+          echo "Les deux sens eprouves sur PostgreSQL, MySQL et SQLite." >> "$GITHUB_STEP_SUMMARY"
+          echo "Duree : ${duree}s" >> "$GITHUB_STEP_SUMMARY"
+
+      # Les moteurs ne gardent aucun volume, mais un runner reutilise peut
+      # garder les conteneurs : les arreter evite qu une execution herite de
+      # l etat de la precedente.
+      - name: Arreter les moteurs
+        if: always()
+        run: docker compose --profile migration down
+
   qualite:
     name: Qualite (SonarCloud)
     runs-on: ubuntu-latest
