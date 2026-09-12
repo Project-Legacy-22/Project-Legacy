@@ -1,0 +1,2 @@
+export { SqlTextError, tokenise } from './sql-tokens.js';
+export type { LegacyEngine, Token, TokenKind } from './sql-tokens.js';
