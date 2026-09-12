@@ -10,7 +10,12 @@
 // string literal starts and ends will eventually cut a row in half, and it
 // will do it silently.
 
+// The two engines the original project used, and the one we use. They differ
+// only in how they write text, and MySQL is the odd one out: it escapes with a
+// backslash and quotes names with a backtick. PostgreSQL and SQLite both
+// double a quote and quote names with a double quote, which is standard SQL.
 export type LegacyEngine = 'mysql' | 'sqlite';
+export type SqlFlavour = LegacyEngine | 'postgres';
 
 export type TokenKind = 'word' | 'string' | 'number' | 'punct';
 
@@ -108,7 +113,7 @@ function escapedChar(sql: string, at: number, line: number): string {
     return MYSQL_ESCAPES[escaped] ?? escaped;
 }
 
-function readString(sql: string, scan: Scan, engine: LegacyEngine): Token {
+function readString(sql: string, scan: Scan, flavour: SqlFlavour): Token {
     const line = scan.line;
     let value = '';
     let at = scan.at + 1;
@@ -131,7 +136,7 @@ function readString(sql: string, scan: Scan, engine: LegacyEngine): Token {
             continue;
         }
 
-        if (char === '\\' && engine === 'mysql') {
+        if (char === '\\' && flavour === 'mysql') {
             value += escapedChar(sql, at, line);
             at += 2;
             continue;
@@ -170,12 +175,12 @@ function readWordOrNumber(sql: string, scan: Scan): Token {
     return token;
 }
 
-export function tokenise(sql: string, engine: LegacyEngine): Token[] {
+export function tokenise(sql: string, flavour: SqlFlavour): Token[] {
     const tokens: Token[] = [];
     const scan: Scan = { at: 0, line: 1 };
-    // A double quote opens a name in a SQLite dump; in a MySQL one it opens a
-    // value, or a name under ANSI_QUOTES. Decided once, here.
-    const nameQuotes = engine === 'sqlite' ? '`"' : '`';
+    // A double quote opens a name outside MySQL; there it opens a value, or a
+    // name under ANSI_QUOTES. Decided once, here.
+    const nameQuotes = flavour === 'mysql' ? '`' : '`"';
 
     for (;;) {
         skipBlank(sql, scan);
@@ -184,7 +189,7 @@ export function tokenise(sql: string, engine: LegacyEngine): Token[] {
         if (char === '') return tokens;
 
         if (char === "'") {
-            tokens.push(readString(sql, scan, engine));
+            tokens.push(readString(sql, scan, flavour));
         } else if (nameQuotes.includes(char)) {
             tokens.push(readQuotedName(sql, scan, char));
         } else if (char === '"') {

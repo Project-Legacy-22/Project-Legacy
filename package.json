@@ -40,6 +40,7 @@
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
     "db:lint": "supabase db lint --level warning",
+    "data:export": "tsx --conditions=development packages/data-migration/src/export-cli.ts",
     "data:import": "tsx --conditions=development packages/data-migration/src/import-cli.ts",
     "db:types": "node scripts/db-types.mjs"
   },
