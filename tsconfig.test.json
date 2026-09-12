@@ -21,6 +21,9 @@
     // support code that happens to live at the root, next to the configs that
     // consume the same patterns.
     "test/**/*.test.ts",
+    // Le harnais de l epreuve de migration : du code de test qui n est pas un
+    // fichier de test, comme test/fakes ailleurs.
+    "test/migration/**/*.ts",
     "vitest.levels.ts",
     "apps/api/**/*.test.ts",
     "apps/worker/**/*.test.ts",

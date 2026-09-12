@@ -32,6 +32,58 @@ services:
             timeout: 3s
             retries: 10
 
+    # Les trois moteurs sur lesquels l epreuve de migration tourne, sous un
+    # profil : `npm run up` ne les demarre pas, et ils ne coutent rien tant
+    # qu on ne les demande pas.
+    #
+    #   docker compose --profile migration up -d --wait
+    #   npm run test:migration
+    #
+    # Aucun port n est publie, et c est voulu : tout passe par
+    # `docker compose exec`, donc l epreuve ne demande ni client installe sur
+    # le poste ni port libre, et elle donne le meme resultat dans la chaine
+    # d integration.
+    migration-postgres:
+        profiles: ['migration']
+        image: postgres:17-alpine
+        environment:
+            POSTGRES_PASSWORD: migration
+        # Aucun volume : la base est refaite a chaque epreuve, et une epreuve
+        # qui part d un etat herite ne prouve rien.
+        healthcheck:
+            test: ['CMD-SHELL', 'pg_isready -U postgres']
+            interval: 3s
+            timeout: 3s
+            retries: 20
+
+    migration-mysql:
+        profiles: ['migration']
+        image: mysql:8.4
+        environment:
+            MYSQL_ROOT_PASSWORD: migration
+        healthcheck:
+            # `mysqladmin ping` repond des l initialisation, avant que les
+            # comptes existent : une vraie requete est le seul signal qui dit
+            # que le serveur accepte une connexion authentifiee.
+            test: ['CMD-SHELL', 'mysql -uroot -pmigration -e "select 1" >/dev/null 2>&1']
+            interval: 3s
+            timeout: 5s
+            retries: 40
+
+    migration-sqlite:
+        profiles: ['migration']
+        # Construit depuis alpine plutot que tire d une image tierce : trois
+        # lignes de Dockerfile valent mieux qu une dependance a l image de
+        # quelqu un d autre pour prouver notre propre reversibilite.
+        build:
+            context: .
+            dockerfile: docker/sqlite.Dockerfile
+        healthcheck:
+            test: ['CMD-SHELL', 'sqlite3 :memory: "select 1" >/dev/null']
+            interval: 3s
+            timeout: 3s
+            retries: 10
+
 volumes:
     # Volume nomme, gere par Docker : aucun chemin absolu ni repertoire du poste
     # n apparait ici, et les donnees survivent a `docker compose down`.

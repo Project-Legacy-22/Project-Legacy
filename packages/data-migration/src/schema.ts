@@ -27,11 +27,22 @@ export interface Enumeration {
     values: readonly string[];
 }
 
+// `now` is the only default that is not a literal, and the three engines
+// spell it differently. The identifier generators the database carries --
+// `uuid_generate_v7()` on four tables -- are deliberately absent: they are a
+// function of ours, and a target supplies its own identifiers or receives
+// them with the data, which is what our exports do.
+export type Default = 'now' | { literal: string | number };
+
 export interface Column {
     name: string;
     kind: ColumnKind;
     nullable: boolean;
     enumeration?: Enumeration;
+    // Part of the structure, not a detail: our import script leaves priority,
+    // version and the dates to the schema, so a target without them would
+    // refuse the very rows we send it. Measured against information_schema.
+    default?: Default;
 }
 
 export interface Reference {
@@ -60,6 +71,12 @@ function timestamp(name: string, nullable = false): Column {
     return { name, kind: 'timestamp', nullable };
 }
 
+// The written-at and changed-at pair every table of ours carries, both
+// defaulting to the moment of the write.
+function stamped(name: string): Column {
+    return { name, kind: 'timestamp', nullable: false, default: 'now' };
+}
+
 // In the order rows must be inserted: every reference points at a table that
 // appears before it. `renderSchema` and the data export both rely on it, and
 // `test/schema-order.test.ts` refuses an order that breaks the rule.
@@ -69,8 +86,8 @@ export const TABLES: readonly Table[] = [
         columns: [
             uuid('id'),
             text('email'),
-            timestamp('created_at'),
-            timestamp('updated_at'),
+            stamped('created_at'),
+            stamped('updated_at'),
             text('policy_version', true),
             timestamp('policy_accepted_at', true),
         ],
@@ -80,14 +97,14 @@ export const TABLES: readonly Table[] = [
     },
     {
         name: 'projects',
-        columns: [uuid('id'), text('name'), timestamp('created_at'), timestamp('updated_at')],
+        columns: [uuid('id'), text('name'), stamped('created_at'), stamped('updated_at')],
         primaryKey: ['id'],
         references: [],
         unique: [],
     },
     {
         name: 'project_memberships',
-        columns: [uuid('project_id'), uuid('user_id'), text('role'), timestamp('created_at')],
+        columns: [uuid('project_id'), uuid('user_id'), text('role'), stamped('created_at')],
         primaryKey: ['project_id', 'user_id'],
         references: [
             { column: 'project_id', table: 'projects', target: 'id' },
@@ -104,21 +121,23 @@ export const TABLES: readonly Table[] = [
             uuid('id'),
             uuid('user_id'),
             text('name'),
-            timestamp('created_at'),
-            timestamp('updated_at'),
+            stamped('created_at'),
+            stamped('updated_at'),
             uuid('project_id'),
             {
                 name: 'status',
                 kind: 'text',
                 nullable: false,
                 enumeration: { type: 'item_status', values: ['todo', 'doing', 'done'] },
+                default: { literal: 'todo' },
             },
-            { name: 'version', kind: 'integer', nullable: false },
+            { name: 'version', kind: 'integer', nullable: false, default: { literal: 1 } },
             {
                 name: 'priority',
                 kind: 'text',
                 nullable: false,
                 enumeration: { type: 'item_priority', values: ['low', 'normal', 'high'] },
+                default: { literal: 'normal' },
             },
             { name: 'due_date', kind: 'date', nullable: true },
         ],
@@ -137,7 +156,7 @@ export const TABLES: readonly Table[] = [
             timestamp('occurred_at'),
             { name: 'payload', kind: 'json', nullable: false },
             timestamp('published_at', true),
-            timestamp('created_at'),
+            stamped('created_at'),
         ],
         primaryKey: ['id'],
         references: [],
@@ -145,7 +164,7 @@ export const TABLES: readonly Table[] = [
     },
     {
         name: 'processed_events',
-        columns: [uuid('event_id'), timestamp('processed_at')],
+        columns: [uuid('event_id'), stamped('processed_at')],
         primaryKey: ['event_id'],
         references: [],
         unique: [],
@@ -158,8 +177,8 @@ export const TABLES: readonly Table[] = [
             uuid('item_id'),
             uuid('event_id'),
             timestamp('read_at', true),
-            timestamp('created_at'),
-            timestamp('updated_at'),
+            stamped('created_at'),
+            stamped('updated_at'),
         ],
         primaryKey: ['id'],
         references: [

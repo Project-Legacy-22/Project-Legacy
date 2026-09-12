@@ -69,15 +69,15 @@ describe('renderSchema', () => {
         );
         expect(sql).toContain(`create type "item_priority" as enum ('low', 'normal', 'high');`);
         // The name the database carries today, not one derived from the column.
-        expect(sql).toContain('"status" item_status not null');
+        expect(sql).toContain(`"status" item_status not null default 'todo'`);
     });
 
     it('gives MySQL an inline enum, and the types it has instead of ours', () => {
         const sql = renderSchema('mysql');
 
-        expect(sql).toContain(`\`status\` enum('todo', 'doing', 'done') not null`);
+        expect(sql).toContain(`\`status\` enum('todo', 'doing', 'done') not null default 'todo'`);
         expect(sql).toContain('`id` char(36) not null');
-        expect(sql).toContain('`created_at` datetime(6) not null');
+        expect(sql).toContain('`created_at` datetime(6) not null default current_timestamp(6)');
         expect(sql).toContain('`payload` json not null');
         expect(sql).not.toContain('create type');
     });
@@ -99,10 +99,31 @@ describe('renderSchema', () => {
     it('gives SQLite a check where the other two have a type', () => {
         const sql = renderSchema('sqlite');
 
-        expect(sql).toContain(`"status" text not null check ("status" in ('todo', 'doing', 'done'))`);
+        expect(sql).toContain(
+            `"status" text not null default 'todo' check ("status" in ('todo', 'doing', 'done'))`,
+        );
         expect(sql).toContain('"id" text not null');
-        expect(sql).toContain('"created_at" text not null');
+        expect(sql).toContain('"created_at" text not null default current_timestamp');
         expect(sql).not.toContain('create type');
+    });
+
+    // Found by the container round trip: our own import script leaves
+    // priority, version and the dates to the schema, so a target without those
+    // defaults refused the very rows we sent it -- `null value in column
+    // "version" violates not-null constraint`.
+    it.each(DIALECTS)('carries the defaults our own writes depend on for %s', dialect => {
+        const sql = renderSchema(dialect);
+
+        expect(sql).toMatch(/"?`?version`?"? (?:int|integer) not null default 1/u);
+        expect(sql).toMatch(/default 'normal'/u);
+        expect(sql).toMatch(/default (?:now\(\)|current_timestamp)/u);
+    });
+
+    // The identifier generator is a function of ours. A target supplies its
+    // own identifiers, or receives them with the data, which is what our
+    // exports do -- so exporting the default would only fail to apply.
+    it.each(DIALECTS)('leaves the identifier generator behind for %s', dialect => {
+        expect(renderSchema(dialect)).not.toContain('uuid_generate');
     });
 
     it.each(DIALECTS)('keeps one notification per event for %s', dialect => {
