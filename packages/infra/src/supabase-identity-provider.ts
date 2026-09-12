@@ -11,7 +11,7 @@ import type {
     RegistrationOutcome,
     Session,
 } from '@legacy/core-auth';
-import { adapterFailure, withDeadline } from './adapter.js';
+import { adapterFailure, retryingOnOutage, withDeadline } from './adapter.js';
 import type { AdapterFailure } from './adapter.js';
 
 export interface SupabaseAuthSettings {
@@ -339,12 +339,14 @@ async function registerWith(
     // The consent rides along as user metadata, so the mirror trigger reads it
     // in the transaction that creates the account. Written by a second call
     // afterwards, it could be missing from an account that exists.
-    const { error } = await client.auth.admin.createUser({
-        email,
-        password,
-        email_confirm: true,
-        user_metadata: { policy_version: policyVersion },
-    });
+    const { error } = await retryingOnOutage(() =>
+        client.auth.admin.createUser({
+            email,
+            password,
+            email_confirm: true,
+            user_metadata: { policy_version: policyVersion },
+        }),
+    );
 
     if (error === null) return 'created';
     // Answered exactly like a free address by the use case, so the form cannot
@@ -363,7 +365,9 @@ export function createSupabaseIdentityProvider(settings: SupabaseAuthSettings): 
 
 
     async function authenticate(email: string, password: string): Promise<Session | undefined> {
-        const result = await client.auth.signInWithPassword({ email, password });
+        const result = await retryingOnOutage(() =>
+            client.auth.signInWithPassword({ email, password }),
+        );
 
         if (result.error !== null) {
             const { code } = result.error;

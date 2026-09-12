@@ -74,3 +74,25 @@ export async function withDeadline<T>(
         if (timer !== undefined) clearTimeout(timer);
     }
 }
+
+// GoTrue answers Gateway Timeout when the hosted instance has been idle: one
+// measured at 5.1 s on a sign-in. signInWithPassword does not retry -- only
+// _refreshAccessToken carries the SDK's retryable() wrapper -- so that single
+// timeout became a 500 and the person was told their password was wrong.
+//
+// Retried once, and only for the errors the SDK itself classes as retryable: a
+// refused password is an answer, not an outage, and retrying it would double
+// the cost of every wrong attempt.
+const RETRYABLE = 'AuthRetryableFetchError';
+const RETRY_PAUSE_MS = 250;
+
+export async function retryingOnOutage<T extends { error: { name?: string } | null }>(
+    call: () => Promise<T>,
+): Promise<T> {
+    const first = await call();
+    if (first.error === null || first.error.name !== RETRYABLE) return first;
+
+    await new Promise(resolve => setTimeout(resolve, RETRY_PAUSE_MS));
+
+    return call();
+}
