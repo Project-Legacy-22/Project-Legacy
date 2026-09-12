@@ -1,5 +1,5 @@
 import { TABLES } from './schema.js';
-import type { Column, Enumeration, Table } from './schema.js';
+import type { Column, Default, Enumeration, Table } from './schema.js';
 
 // The three targets an exit can aim at. `postgres` is the faithful one: our
 // migrations rebuild it and nothing is lost. The other two are reachable only
@@ -42,6 +42,15 @@ const TYPES: Record<Dialect, Record<Column['kind'], string>> = {
         json: 'text',
         integer: 'integer',
     },
+};
+
+// `now()` is PostgreSQL's spelling, `current_timestamp` the standard one.
+// MySQL needs the precision spelled out, or it drops the microseconds our
+// timestamps carry.
+const NOW: Record<Dialect, string> = {
+    postgres: 'now()',
+    mysql: 'current_timestamp(6)',
+    sqlite: 'current_timestamp',
 };
 
 const QUOTES: Record<Dialect, [string, string]> = {
@@ -90,10 +99,17 @@ function columnType(table: Table, column: Column, dialect: Dialect): string {
     return TYPES[dialect][column.kind];
 }
 
+function defaultFor(value: Default, dialect: Dialect): string {
+    if (value === 'now') return ` default ${NOW[dialect]}`;
+
+    return ` default ${typeof value.literal === 'number' ? value.literal : literal(value.literal)}`;
+}
+
 function columnLine(table: Table, column: Column, dialect: Dialect): string {
     const { enumeration } = column;
     const type = columnType(table, column, dialect);
     const nullable = column.nullable ? '' : ' not null';
+    const fallback = column.default === undefined ? '' : defaultFor(column.default, dialect);
     const check =
         enumeration !== undefined && dialect === 'sqlite'
             ? ` check (${quoteName(column.name, dialect)} in (${enumeration.values
@@ -101,7 +117,7 @@ function columnLine(table: Table, column: Column, dialect: Dialect): string {
                   .join(', ')}))`
             : '';
 
-    return `  ${quoteName(column.name, dialect)} ${type}${nullable}${check}`;
+    return `  ${quoteName(column.name, dialect)} ${type}${nullable}${fallback}${check}`;
 }
 
 function keyLines(table: Table, dialect: Dialect): string[] {
@@ -155,9 +171,9 @@ export function renderSchema(dialect: Dialect): string {
     return [
         `-- Legacy 22 schema, rendered for ${dialect}.`,
         '--',
-        '-- Value checks, row-level security policies, triggers and the auth',
-        '-- schema are not here: docs/data-migration.md says why, and what that',
-        '-- leaves to do on the target.',
+        '-- Value checks, row-level security policies, triggers, the identifier',
+        '-- generators and the auth schema are not here: docs/data-migration.md',
+        '-- says why, and what that leaves to do on the target.',
         '',
         ...enumTypes(dialect),
         ...(dialect === 'postgres' ? [''] : []),

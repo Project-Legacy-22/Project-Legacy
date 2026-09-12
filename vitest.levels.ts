@@ -55,6 +55,12 @@ export const LEVELS = {
     // A real route, a real database. Its own config and its own command: it
     // needs the local Supabase stack, which npm test must not require.
     integration: ['apps/api/test/integration/**/*.test.ts'],
+
+    // The migration scripts, applied to three real engines in containers.
+    // Its own config and its own command as well: it needs the `migration`
+    // profile of compose.yaml up, and nothing else -- no client installed on
+    // the machine, no free port. `npm run test:migration` starts it.
+    migration: ['test/migration/**/*.migration.test.ts'],
 } as const;
 
 export type Level = keyof typeof LEVELS;

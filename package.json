@@ -36,6 +36,7 @@
     "test:http": "vitest run --project http",
     "test:dom": "vitest run --project dom",
     "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:migration": "docker compose --profile migration up -d --wait --quiet-pull && vitest run --config vitest.migration.config.ts",
     "db:start": "supabase start",
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
