@@ -177,6 +177,14 @@ function script(rows: PreparedRow[], target: ImportTarget, report: ImportReport)
 
 begin;
 
+-- The artefact means the same thing whoever applies it. In a session where
+-- standard_conforming_strings is off, a doubled backslash would read as one
+-- and every one of them would be halved, without an error -- and a silently
+-- changed task is worse than a missing one, because the missing one is in the
+-- report. pg_dump writes the same two lines at the top of its own output.
+set standard_conforming_strings = on;
+set client_encoding = 'UTF8';
+
 do ${TAG}
 declare
   v_owner uuid;
