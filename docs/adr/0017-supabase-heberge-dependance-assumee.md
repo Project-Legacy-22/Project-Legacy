@@ -59,10 +59,23 @@ région et sa société ; la politique de confidentialité dit au lecteur ce que
 qui y accède, y compris que la clé de service contourne les politiques de ligne et n'est utilisée
 que par l'application.
 
-**La sortie reste possible.** Le schéma est décrit par des migrations versionnées, donc un
-PostgreSQL quelconque le reconstruit. Ce qui n'est pas du SQL — l'authentification et les politiques
-de ligne — est la part à réécrire, et elle est nommée plutôt que découverte le jour où il faut
-partir. La procédure de sauvegarde et de sortie est l'objet de #274.
+**La sortie reste possible, et dans les deux sens.** Le schéma est décrit par des migrations
+versionnées, donc un PostgreSQL quelconque le reconstruit. Ce qui n'est pas du SQL —
+l'authentification et les politiques de ligne — est la part à réécrire, et elle est nommée plutôt
+que découverte le jour où il faut partir.
+
+Un schéma reconstructible ne suffit pourtant pas : il faut aussi que les données circulent. Deux
+chemins sont donc exigés, et éprouvés avant d'en avoir besoin plutôt que sous la contrainte :
+reprendre des données venues d'un MySQL ou d'un SQLite — les deux moteurs du projet
+d'origine — vers notre PostgreSQL (#275), et ressortir les nôtres vers un PostgreSQL quelconque,
+un MySQL ou un SQLite (#274).
+
+Ces deux sorties ne se valent pas, et la différence doit être écrite plutôt que découverte. Vers un
+PostgreSQL reconstruit par les migrations, l'export est fidèle : rien ne se perd. Vers un MySQL ou
+un SQLite, il est fidèle **seulement si le schéma cible est traduit du nôtre** ; réécrire les
+données dans la table `todo_items` de trois colonnes du projet d'origine perdrait le projet, le
+propriétaire, la priorité, l'échéance et les notifications. Le chemin de sortie traduit donc le
+schéma, il ne revient pas au legacy.
 
 ## Conséquences
 
@@ -72,9 +85,13 @@ partir. La procédure de sauvegarde et de sortie est l'objet de #274.
   comportement entre les deux est un défaut, pas une fatalité.
 
 **Négatives / dette acceptée**
-- Un sous-traitant soumis au CLOUD Act. Ce projet ne traite ni données de santé ni données
-  sensibles au sens du règlement ; un domaine qui en traiterait devrait reprendre cette décision,
-  et l'option B deviendrait le point de départ.
+- Un sous-traitant soumis au CLOUD Act. Aujourd'hui le projet ne traite ni données de santé ni
+  données sensibles au sens de l'article 9 : la contrainte ne se pose pas, et c'est ce qui rend
+  l'option A acceptable. Elle se posera le jour où une donnée sensible entrera dans le périmètre.
+  Ce jour-là, le passage à l'option B doit être **une migration, pas une réécriture** : un
+  changement d'hébergeur et de juridiction, pas un changement d'application. C'est la raison
+  d'être des deux chemins de données ci-dessus. Les construire maintenant, alors que rien ne
+  l'impose, est le seul moment où on peut les éprouver sans urgence.
 - Aucun engagement de conservation sur l'offre gratuite. C'est la raison pour laquelle une
   sauvegarde hors de Supabase est exigée et non recommandée.
 - GoTrue et les politiques de ligne sont du coût de sortie, pas du code à nous.
@@ -88,7 +105,9 @@ partir. La procédure de sauvegarde et de sortie est l'objet de #274.
 
 Une suspension du projet dont on ne se relève pas avec la seule sauvegarde du dépôt. Ou une
 fonctionnalité qui exige de sortir de Supabase et qu'on découvre non réversible parce qu'elle
-reposait sur autre chose que du SQL.
+reposait sur autre chose que du SQL. Ou une donnée sensible qui entre dans le périmètre alors que
+le chemin de sortie n'a jamais été exécuté : la réversibilité serait alors une intention, pas une
+propriété.
 
 ## Références
 
