@@ -95,14 +95,15 @@ export default defineConfig({
                 // l API : il assemble et boucle. Ce qu il decide -- que faire
                 // d un evenement -- vit dans event-consumer.ts, qui est teste.
                 'apps/worker/src/index.ts',
-                // Les deux commandes de migration de donnees, pour la meme
+                // Les commandes de migration de donnees, pour la meme
                 // raison : elles lisent argv, lisent un fichier, en ecrivent
-                // deux et impriment un compte rendu. Tout ce qu elles decident
+                // d autres et impriment un compte rendu. Tout ce qu elles decident
                 // -- ce qui est repris, ce qui est refuse, ce qui est rendu --
                 // vit dans import-script.ts, render-schema.ts et render-data.ts,
                 // qui sont testes, et l enchainement complet est eprouve sur
                 // trois moteurs reels par `npm run test:migration`.
                 'packages/data-migration/src/import-cli.ts',
+                'packages/data-migration/src/export-cli.ts',
                 // Generated from the database schema by `npm run db:types`;
                 // excluded per standards/03-testing.md section 7.
                 'packages/infra/src/database.types.ts',
