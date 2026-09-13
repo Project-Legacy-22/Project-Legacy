@@ -11,8 +11,9 @@ A measurement of the screens that exist on 2026-09-10, against WCAG 2.1 AA. It r
 conformant, what is not, and — for each gap — the issue that owns the fix. It is an audit, not a
 remediation: nothing here changes behaviour.
 
-The Kanban board and the end-to-end keyboard path are out of scope. They are in #182, which
-waits on the code that does not exist yet.
+The Kanban board and the end-to-end keyboard path were out of scope on that date: the code did
+not exist yet. They were measured on 2026-09-13 as #182, and that half is the last section of
+this page. Everything above it is the 2026-09-10 measurement, unchanged.
 
 ## How it was measured
 
@@ -38,6 +39,7 @@ guarantee.
 | Task list | clean, guarded | **not walked** | `header` + `main` | one |
 | Personal data | clean, guarded | **not walked** | inside `main` | section `h2` |
 | Session check / error | not measurable | not applicable | **none** | **none** |
+| Kanban board | clean in five states, guarded | walked, guarded | inside `main` | column `h3` |
 
 "Guarded" means a committed test fails if the property is lost. "Clean" without "guarded" means
 it holds today and nothing keeps it holding.
@@ -199,3 +201,72 @@ npx vitest run apps/web/src/components/reset-password-page.test.tsx
 This page audits; it does not fix. Gaps 3, 4 and 8 belong to #49, gaps 1, 2 and 7 to the
 remediation half of #181, gap 5 waits on #152, and gap 6 has its own issue. The Kanban and the
 full keyboard path are #182.
+
+## The Kanban half, measured on 2026-09-13 (#182)
+
+The board did not exist when the rest of this page was written. It does now, and so does the
+logout that ends the journey, so the two criteria #182 held are measured here.
+
+### The board against WCAG 2.1 AA
+
+`axe-core`, tags `wcag2a` / `wcag2aa` / `wcag21aa`, run on the whole document in **five states**,
+because a component passes in one state and fails in another:
+
+| State | Result |
+|---|---|
+| three columns filled | no violation |
+| two columns left empty | no violation |
+| the move form open | no violation |
+| a move in flight, `aria-busy` set on the column | no violation |
+| a move refused by the server | no violation |
+
+Guarded by `apps/web/src/kanban-accessibility.test.tsx`. The empty column is a state of its own
+and not the filled one with fewer rows: it replaces the list with a sentence, so it produces a
+different tree.
+
+### The tab order
+
+**Left to right, column by column** — the order the columns are read in. An empty column has no
+stop of its own, so `Tab` steps over it rather than landing on the sentence that stands in for
+the list. Both are guarded.
+
+**Focus survives a move.** The task leaves one column and is remounted in another, so the button
+that was focused is destroyed. `useFocusedMove` puts focus back on it. Verified by removing that
+line: one test turns red, and only that one. Without it, focus falls back to `body` and a
+keyboard user restarts the board from the top.
+
+### The journey, end to end
+
+`apps/web/src/keyboard-journey.test.tsx` walks the path US-14 asks for, screen by screen: sign-in,
+registration, sign-in again, the board, a move, and signing out.
+
+Two things it establishes that a single-screen audit cannot:
+
+- **the mode switch does not drop focus.** `auth-page.tsx` gives `AuthForm` a `key={screen}` on
+  purpose, so the fields of the previous mode do not linger. A remount is exactly where focus
+  gets lost without anyone noticing, because the screen still looks right.
+- **registration and sign-in are two steps, not one.** Registering answers the same whether the
+  address existed or not, so it cannot be used to find out who has an account — and the person is
+  then told to sign in. The journey crosses that boundary with the keyboard alone.
+
+### What this cannot prove, and why it is still enough
+
+jsdom does not turn `Enter` on a focused `<button>` into a click, the way a browser does. So the
+journey proves that every control is **reachable** with `Tab`, in the reading order, and that
+focus is never dropped — then activates with a click.
+
+That is not a hole. Every control on the path is a native `<button>`, `<input>` or `<select>`, and
+those are operated by `Enter` and `Space` by definition. The guarantee comes from the element; what
+needed testing is that the element is reachable at all, which is what fails when an action hides
+behind a pointer-only gesture or when a remount loses focus.
+
+The drag and drop of `kanban-board.tsx` is one such pointer-only gesture, and it is **not** the
+only way to move a task: `move-item-form.tsx` does the same thing with a `<select>` and a submit,
+and the form focuses its own select so a keyboard user lands on the control the step is about.
+The keyboard alternative US-15 required is therefore not an addition made here — it is the path
+the board was built with, and it is now guarded.
+
+### What is still not walked
+
+`Personal data` remains unwalked with the keyboard, and gap 7 above keeps it. The board half of
+that gap is closed; the account half is not, and #246 owns it.
