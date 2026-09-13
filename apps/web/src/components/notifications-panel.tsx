@@ -19,7 +19,13 @@ export function NotificationsPanel({ api }: NotificationsPanelProps) {
     const list = useNotificationsList(api, isOpen);
 
     return (
-        <section className="notifications-panel" aria-busy={isOpen && list.loadState.status === 'loading'}>
+        // aria-label rather than nothing: a section without an accessible
+        // name is not a region, so the whole panel escaped region navigation.
+        <section
+            className="notifications-panel"
+            aria-label={labels.notificationsTitle}
+            aria-busy={isOpen && list.loadState.status === 'loading'}
+        >
             <button
                 type="button"
                 className="button button-quiet"

@@ -12,7 +12,11 @@ export interface SessionBannerProps {
 // has anything unread for them, and the one way to leave.
 export function SessionBanner({ email, unread, isSigningOut, onSignOut }: SessionBannerProps) {
     return (
-        <div className="session-banner">
+        // A named section, not a div: the banner carries the identity, the
+        // unread count and the way out, and none of that was reachable by
+        // region navigation before. Not moved into <header class="site-header">
+        // -- that block is dark with white text, and this one writes in grey.
+        <section className="session-banner" aria-label={labels.sessionRegion}>
             <p>
                 {labels.signedInAs(email)}
                 {/* role="status" : le compte change tout seul, quand le worker a
@@ -30,6 +34,6 @@ export function SessionBanner({ email, unread, isSigningOut, onSignOut }: Sessio
             >
                 {isSigningOut ? labels.signingOut : labels.signOut}
             </button>
-        </div>
+        </section>
     );
 }

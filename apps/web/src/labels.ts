@@ -40,6 +40,9 @@ export const labels = {
     // Why this screen is back (US-27). It says what happened rather than what
     // failed: nothing went wrong, the session reached the end of its life.
     sessionExpired: 'Your session has expired. Sign in again to pick up where you left off.',
+    // Names the region the banner becomes, so it can be reached by region
+    // navigation. A section without an accessible name is not exposed as one.
+    sessionRegion: 'Your session',
     signedInAs(email: string): string {
         return `Signed in as ${email}`;
     },
