@@ -36,3 +36,8 @@ Thumbs.db
 # resout : c est une donnee personnelle, et elle n a rien a faire dans
 # l historique du depot.
 data-out/
+
+# Sauvegardes de la base. Le vidage des donnees embarque le schema auth, donc
+# les comptes et leurs empreintes de mot de passe : ces fichiers sont des
+# donnees personnelles et n ont rien a faire dans l historique du depot.
+backups/
