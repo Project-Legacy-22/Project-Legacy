@@ -111,6 +111,26 @@ const RULES = [
     },
 ];
 
+// A path no rule matches was not checked at all, and the script still printed
+// « frontieres respectees » -- green while guarding nothing. The partition has
+// to be total: every source file is covered by a rule, or listed here with the
+// reason it is not. Same failure mode as an undeclared test level, which
+// test/test-levels.test.ts already refuses.
+const EXEMPT = [
+    {
+        match: /^apps\/api\/src\/composition-root\.ts$/,
+        why: 'la racine de composition est, par definition, le seul endroit qui atteint un adaptateur',
+    },
+    {
+        match: /^apps\/api\/test\//,
+        why: 'du code de support de test : il importe son outillage et des doubles, comme les fichiers .test.ts que sourceFiles ecarte deja',
+    },
+];
+
+function isExempt(path) {
+    return EXEMPT.some(exemption => exemption.match.test(path));
+}
+
 function sourceFiles(dir) {
     const found = [];
     for (const entry of readdirSync(dir)) {
@@ -151,15 +171,33 @@ function fileViolations(path, content, rule) {
 }
 
 const violations = [];
+const unruled = [];
+
+function inspect(file, intoViolations, intoUnruled) {
+    const path = relative(root, file).split(sep).join('/');
+    const rule = RULES.find(r => r.match.test(path));
+
+    if (rule === undefined) {
+        if (!isExempt(path)) intoUnruled.push(path);
+        return;
+    }
+
+    intoViolations.push(...fileViolations(path, readFileSync(file, 'utf8'), rule));
+}
 
 for (const dir of ['apps', 'packages']) {
-    for (const file of sourceFiles(join(root, dir))) {
-        const path = relative(root, file).split(sep).join('/');
-        const rule = RULES.find(r => r.match.test(path));
-        if (!rule) continue;
+    for (const file of sourceFiles(join(root, dir))) inspect(file, violations, unruled);
+}
 
-        violations.push(...fileViolations(path, readFileSync(file, 'utf8'), rule));
-    }
+if (unruled.length > 0) {
+    console.error('\n  Aucune regle de dependance ne couvre ces fichiers :\n');
+    for (const path of unruled) console.error(`    ${path}`);
+    console.error(
+        '\n  Un chemin sans regle n est pas verifie, et ce controle le dirait quand meme vert.\n' +
+            '  Ajouter une regle dans RULES, ou une exemption dans EXEMPT avec sa raison.\n' +
+            '  Voir standards/01-architecture.md section 2.3.\n',
+    );
+    process.exit(1);
 }
 
 if (violations.length > 0) {
