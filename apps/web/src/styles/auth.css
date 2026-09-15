@@ -117,16 +117,30 @@
 }
 
 .site-footer {
-    width: min(100% - 32px, 60rem);
+    /* Alignee sur .main-content : un pied de page plus etroit que le contenu
+       au-dessus se lit comme une erreur de mise en page. */
+    width: min(1600px, 100% - 32px);
     margin: 32px auto 24px;
     padding-top: 16px;
     border-top: 1px solid var(--border-rule);
 }
 
 .policy-page {
-    width: min(100% - 32px, 46rem);
+    /* La page suit la fenetre, comme .main-content, et la prose garde sa mesure
+       juste en dessous. Le plafond global de 46rem faisait l inverse : il
+       serrait la table des sous-traitants -- quatre colonnes de texte dans
+       736 px -- et le defilement horizontal de cette table compensait un
+       manque de place au lieu que la place soit donnee. */
+    width: min(1600px, 100% - 32px);
     margin: 48px auto;
     line-height: 1.6;
+}
+
+/* Le meme raisonnement que .panel p dans layout.css : une ligne de 1500 px ne
+   se lit plus. Le conteneur s elargit, la ligne non. */
+.policy-page p,
+.policy-page li {
+    max-width: 80ch;
 }
 
 .policy-page h2 {
