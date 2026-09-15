@@ -49,6 +49,25 @@ export function serviceRoleClient(settings: SupabaseSettings): SupabaseClient<Da
     });
 }
 
+// PostgreSQL renders a timestamptz with a numeric offset (`+00:00`), while
+// the contracts' canonical form ends in `Z`. Both denote the same instant, and
+// `z.iso.datetime()` accepts only the second: read straight through, a row we
+// wrote ourselves is rejected by our own schema.
+//
+// Written here rather than in one adapter because it was in one adapter. The
+// outbox carried a private copy, the notification store never got it, and the
+// notification list came back refused by the browser with the count beside it
+// correct (#344). A rule about how this database renders dates belongs with
+// the client that reads it, once.
+//
+// The raw value is returned when it cannot be parsed, instead of letting
+// toISOString throw a RangeError: a row that cannot be read must be refused by
+// the schema, which names the row, rather than by an exception nobody catches.
+export function asInstant(value: string): string {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? value : parsed.toISOString();
+}
+
 // A deadline for a call whose own retries cannot be bounded: the SDK retries a
 // failed refresh for about 25 seconds and exposes no way to shorten it (#214).
 export async function withDeadline<T>(

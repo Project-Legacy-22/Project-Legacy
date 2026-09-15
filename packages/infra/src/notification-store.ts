@@ -12,7 +12,7 @@ import type {
 
 import type { Database } from './database.types.js';
 import type { SupabaseSettings } from './supabase-item-repository.js';
-import { adapterFailure, serviceRoleClient } from './adapter.js';
+import { adapterFailure, asInstant, serviceRoleClient } from './adapter.js';
 import type { AdapterFailure } from './adapter.js';
 
 type NotificationRow = Database['public']['Tables']['notifications']['Row'];
@@ -28,13 +28,15 @@ export interface NotificationStore extends NotificationRepository {
 
 const fail: AdapterFailure = adapterFailure('notifications');
 
+// Both dates go through asInstant: this is the only DTO of the application
+// that carries a timestamptz out to a client, and the client validates it.
 function toNotification(row: NotificationRow): Notification {
     return {
         id: row.id,
         itemId: row.item_id,
         userId: row.user_id,
-        readAt: row.read_at,
-        createdAt: row.created_at,
+        readAt: row.read_at === null ? null : asInstant(row.read_at),
+        createdAt: asInstant(row.created_at),
     };
 }
 

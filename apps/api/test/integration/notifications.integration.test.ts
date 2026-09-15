@@ -3,6 +3,8 @@ import { randomUUID } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { NotificationPageDto } from '@legacy/contracts';
+
 import { json } from '../http-harness.js';
 import type { Harness } from '../http-harness.js';
 import { integrationConfig, realApplication, registerAndSignIn, serveAs } from './support.js';
@@ -91,6 +93,22 @@ describe('notifications API (integration)', () => {
             };
 
             expect(page.notifications.map(n => n.id)).toContain(notificationId);
+        });
+
+        // Le garde qui manquait, et la raison pour laquelle #344 a atteint la
+        // production : la route construit son DTO par affectation, pas par
+        // parse, donc TypeScript est satisfait pendant que la chaine porte une
+        // forme que le client refuse. Seul le navigateur validait cette
+        // reponse, et il n est dans aucune suite. Ici la base est reelle, donc
+        // les dates sont celles que PostgreSQL rend vraiment.
+        it('rend une page que le contrat accepte, dates comprises', async () => {
+            const body = await (await asOwner.request('/notifications')).json();
+
+            const lu = NotificationPageDto.safeParse(body);
+
+            expect(
+                lu.success ? [] : lu.error.issues.map(i => `${i.path.join('.')}: ${i.message}`),
+            ).toEqual([]);
         });
 
         it('un autre compte ne voit pas cette notification dans sa liste', async () => {
