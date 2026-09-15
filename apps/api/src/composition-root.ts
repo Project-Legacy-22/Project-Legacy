@@ -11,6 +11,7 @@ import {
     createSupabaseProjectRepository,
     createBusStateReadings,
     createPrometheusMetrics,
+    createSupabaseStateReadings,
     deliverPending,
     relayOnce,
 } from '@legacy/infra';
@@ -162,7 +163,10 @@ function createAdapters(config: Config): Adapters {
         outbox: createSupabaseOutboxStore(supabase),
         notifications: createSupabaseNotificationStore(supabase),
         bus,
-        stateReadings: bus === undefined ? [] : createBusStateReadings(bus),
+        stateReadings: [
+            ...createSupabaseStateReadings(supabase),
+            ...(bus === undefined ? [] : createBusStateReadings(bus)),
+        ],
     };
 }
 
