@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { adapterFailure, retryingOnOutage, serviceRoleClient, withDeadline } from './adapter.js';
+import {
+    adapterFailure,
+    asInstant,
+    retryingOnOutage,
+    serviceRoleClient,
+    withDeadline,
+} from './adapter.js';
 
 // The seven adapters of this package report their failures through this
 // factory, so the shape of what they throw is decided here rather than in each
@@ -137,5 +143,40 @@ describe('retryingOnOutage', () => {
         const call = () => Promise.resolve({ error: panne });
 
         await expect(retryingOnOutage(call)).resolves.toEqual({ error: panne });
+    });
+});
+
+// The rule that cost #344. PostgreSQL renders a timestamptz with a numeric
+// offset; `z.iso.datetime()` accepts only the form ending in Z. The outbox
+// carried a private copy of this conversion, the notification store never got
+// it, and the browser refused the notification list while the unread count
+// next to it was right.
+describe('asInstant', () => {
+    it('turns the offset PostgreSQL renders into the form the contracts accept', () => {
+        expect(asInstant('2026-09-15T10:11:12.345+00:00')).toBe('2026-09-15T10:11:12.345Z');
+    });
+
+    // The form PostgREST really sends, taken from the fixture of
+    // supabase-identity-provider.test.ts: microsecond precision and the full
+    // offset. Milliseconds are as far as the contracts go, so the tail is
+    // dropped -- which is a loss of precision, not of correctness, and worth
+    // stating rather than discovering.
+    it('reads the microsecond precision PostgREST sends, down to the millisecond', () => {
+        expect(asInstant('2026-09-08T14:30:00.123456+00:00')).toBe('2026-09-08T14:30:00.123Z');
+    });
+
+    it('keeps the instant, not just the shape, when the offset is not zero', () => {
+        expect(asInstant('2026-09-15T12:11:12.345+02:00')).toBe('2026-09-15T10:11:12.345Z');
+    });
+
+    it('leaves a value already in canonical form alone', () => {
+        expect(asInstant('2026-09-15T10:11:12.345Z')).toBe('2026-09-15T10:11:12.345Z');
+    });
+
+    // Returned raw rather than thrown on: a row that cannot be read must be
+    // refused by the schema, which names it, not by a RangeError nobody
+    // catches halfway through a batch.
+    it('gives back what it was handed when that is not a date', () => {
+        expect(asInstant('pas une date')).toBe('pas une date');
     });
 });
