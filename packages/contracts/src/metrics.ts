@@ -12,9 +12,23 @@ export interface Measurement {
     seconds: number;
 }
 
+// One reading, taken. Absent from the list when it could not be taken: a
+// count that did not load is not a count of zero.
+export interface StateValue {
+    name: string;
+    value: number;
+    labels?: Readonly<Record<string, string>>;
+}
+
 export interface Metrics {
     observe(measurement: Measurement): void;
     render(): Promise<{ contentType: string; body: string }>;
+    // The same readings render() exposes, as data rather than as text.
+    //
+    // Two shapes because two readers: the exposition format exists for a
+    // scraper, and a dashboard datasource speaks JSON. Deriving one from the
+    // other would mean parsing our own output back.
+    state(): Promise<StateValue[]>;
 }
 
 // A number the service reads about itself at the moment it is asked, rather
