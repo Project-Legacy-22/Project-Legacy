@@ -42,6 +42,7 @@
     "db:reset": "supabase db reset",
     "db:lint": "supabase db lint --level warning",
     "backup": "node scripts/backup.mjs",
+    "metrics:push": "node scripts/push-metrics.mjs",
     "data:export": "tsx --conditions=development packages/data-migration/src/export-cli.ts",
     "data:import": "tsx --conditions=development packages/data-migration/src/import-cli.ts",
     "db:types": "node scripts/db-types.mjs"

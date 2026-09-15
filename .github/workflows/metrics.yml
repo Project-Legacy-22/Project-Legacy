@@ -1,0 +1,64 @@
+# Pousse les metriques du deploiement vers Grafana Cloud.
+#
+# Meme raison d etre que relay.yml : Vercel n a pas de processus qui tourne
+# entre deux requetes, donc personne n y scrute rien, et Grafana Cloud ne peut
+# pas atteindre un point d entree protege par un secret. Quelque chose
+# d exterieur doit lire et pousser.
+#
+# Toutes les quinze minutes et non toutes les cinq : une metrique de ce projet
+# ne bouge pas assez vite pour qu une resolution plus fine apporte quelque
+# chose, et le relais occupe deja le quart d heure.
+#
+# Le job saute proprement quand une valeur manque, comme celui du relais : une
+# pile sans jeton n est pas une erreur, c est une pile pas encore branchee.
+
+name: metriques
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: metriques
+  cancel-in-progress: false
+
+jobs:
+  pousser:
+    name: Pousser les metriques
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      # Aucune dependance a installer : le script n utilise que le runtime.
+      # C est la raison pour laquelle il encode lui-meme le protobuf et le
+      # snappy de remote_write plutot que de tirer une image.
+      - name: Pousser
+        env:
+          TARGET: ${{ vars.RELAY_URL }}
+          RELAY_SECRET: ${{ secrets.RELAY_SECRET }}
+          GRAFANA_PUSH_URL: ${{ vars.GRAFANA_PUSH_URL }}
+          GRAFANA_PUSH_USER: ${{ vars.GRAFANA_PUSH_USER }}
+          GRAFANA_PUSH_TOKEN: ${{ secrets.GRAFANA_PUSH_TOKEN }}
+        run: |
+          manquant=""
+          for nom in TARGET RELAY_SECRET GRAFANA_PUSH_URL GRAFANA_PUSH_USER GRAFANA_PUSH_TOKEN; do
+            if [ -z "${!nom}" ]; then manquant="$manquant $nom"; fi
+          done
+
+          if [ -n "$manquant" ]; then
+            echo "::notice::rien a pousser, il manque :$manquant"
+            exit 0
+          fi
+
+          sortie=$(node scripts/push-metrics.mjs)
+          echo "$sortie"
+          echo "::notice::$sortie"
