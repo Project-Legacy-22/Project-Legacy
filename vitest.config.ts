@@ -127,6 +127,7 @@ export default defineConfig({
                 // request.
                 'packages/infra/src/supabase-item-repository.ts',
                 'packages/infra/src/supabase-project-repository.ts',
+                'packages/infra/src/supabase-membership-repository.ts',
                 'packages/infra/src/supabase-personal-data-store.ts',
                 'packages/infra/src/outbox-store.ts',
                 'packages/infra/src/notification-store.ts',
