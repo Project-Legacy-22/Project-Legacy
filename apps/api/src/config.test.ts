@@ -119,4 +119,33 @@ describe('loadConfig', () => {
         expect(() => loadConfig({ ...VALID_ENV, TRUST_PROXY: '-1' })).toThrow(/TRUST_PROXY/);
         expect(() => loadConfig({ ...VALID_ENV, TRUST_PROXY: '1.5' })).toThrow(/TRUST_PROXY/);
     });
+
+    // Les etiquettes de legacy22_build_info. Douze caracteres : de quoi
+    // retrouver le commit, pas de quoi allonger chaque serie.
+    it('tronque le commit du deploiement a douze caracteres', () => {
+        const config = loadConfig({
+            ...VALID_ENV,
+            VERCEL_GIT_COMMIT_SHA: '3deb3cbc1f2044556677889900aabbccddeeff11',
+            VERCEL_GIT_COMMIT_REF: 'main',
+            VERCEL_ENV: 'production',
+        });
+
+        expect(config.deployment).toEqual({
+            commit: '3deb3cbc1f20',
+            ref: 'main',
+            environment: 'production',
+        });
+    });
+
+    // Une etiquette vide se lit comme une valeur -- on croit lire une branche
+    // qui s appelle rien. Une valeur nommee se lit comme ce qu elle est.
+    it('nomme l absence plutot que de laisser une etiquette vide', () => {
+        const config = loadConfig({ ...VALID_ENV, VERCEL_GIT_COMMIT_REF: '   ' });
+
+        expect(config.deployment.commit).toBe('unknown');
+        expect(config.deployment.ref).toBe('unknown');
+        // « local » et non « unknown » : hors de Vercel, ce n est pas une
+        // valeur manquante, c est un endroit.
+        expect(config.deployment.environment).toBe('local');
+    });
 });

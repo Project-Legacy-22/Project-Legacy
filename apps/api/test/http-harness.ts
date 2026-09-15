@@ -42,6 +42,8 @@ export const testConfig: Config = {
     trustProxy: 0,
     // Aucune passe declenchable : les suites qui en ont besoin la surchargent.
     relaySecret: undefined,
+    // Nomme comme ce qu il est : ces suites ne tournent sur aucun deploiement.
+    deployment: { commit: 'unknown', ref: 'unknown', environment: 'local' },
 };
 
 export function json(method: string, body: unknown): TestRequestInit {

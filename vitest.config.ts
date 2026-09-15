@@ -131,6 +131,12 @@ export default defineConfig({
                 'packages/infra/src/outbox-store.ts',
                 'packages/infra/src/notification-store.ts',
                 'packages/infra/src/redis-event-bus.ts',
+                // Same nature: six counts and a filter, expressed in
+                // supabase-js. What they count is asserted against a real
+                // database by state-readings.integration.test.ts. The
+                // broker half lives in bus-state-readings.ts, which a
+                // hand-written EventBus does exercise, and stays measured.
+                'packages/infra/src/supabase-state-readings.ts',
                 // Front composition root: it mounts the app and nothing else,
                 // exactly like the API entry point above.
                 'apps/web/src/main.tsx',

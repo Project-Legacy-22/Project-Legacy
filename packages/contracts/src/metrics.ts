@@ -16,3 +16,26 @@ export interface Metrics {
     observe(measurement: Measurement): void;
     render(): Promise<{ contentType: string; body: string }>;
 }
+
+// A number the service reads about itself at the moment it is asked, rather
+// than one it counted while running.
+//
+// Why both kinds have to exist: a counter only knows what its own process
+// observed, and on a serverless target the process answering /internal/metrics
+// has just started for that very call. The instances that served the real
+// traffic are gone before anyone reads them, so their counters are never seen.
+// A reading taken at render time depends on no such history: it says the same
+// thing whichever instance answers.
+//
+// What a reading may expose is a number about the service, never a row of it.
+// A count is not personal data; the rows behind it are (ADR-0016).
+export interface StateReading {
+    name: string;
+    help: string;
+    // Fixed for the life of the process, not derived from a request: what
+    // identifies the build, never what identifies a caller. A label is where
+    // an identifier would slip in, so the only ones written here are the ones
+    // a reviewer can read in the composition root.
+    labels?: Readonly<Record<string, string>>;
+    read(): Promise<number>;
+}

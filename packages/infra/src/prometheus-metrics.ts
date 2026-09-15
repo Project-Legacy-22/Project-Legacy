@@ -1,6 +1,6 @@
 import { Counter, Histogram, Registry } from 'prom-client';
 
-import type { Measurement, Metrics } from '@legacy/contracts';
+import type { Logger, Measurement, Metrics, StateReading } from '@legacy/contracts';
 
 // The measurement adapter. It knows prom-client; nobody else does.
 //
@@ -10,7 +10,86 @@ import type { Measurement, Metrics } from '@legacy/contracts';
 // that knows what a route pattern is.
 const SECOND_BUCKETS = [0.05, 0.1, 0.25, 0.5, 1, 2.5, 5];
 
-export function createPrometheusMetrics(): Metrics {
+// How many state readings could not be taken on this call.
+//
+// Without it, a failed reading would be indistinguishable from a reading that
+// was never configured -- both absent -- and the absence would be silent. This
+// series turns the failure into a number someone can graph and alert on.
+const FAILED = 'legacy22_state_readings_failed';
+
+// What gaugeLines needs of a reading, which is everything but the reading
+// itself: legacy22_state_readings_failed is rendered the same way and has no
+// read() of its own.
+type GaugeShape = Pick<StateReading, 'name' | 'help'> & Partial<Pick<StateReading, 'labels'>>;
+
+export interface MetricsOptions {
+    // Read at render time, in the order given. Empty is a valid service: the
+    // HTTP measurements below need no adapter of their own.
+    readings?: readonly StateReading[];
+    logger?: Logger;
+}
+
+// Quotes and backslashes are escaped because the exposition format gives them
+// a meaning inside a label value. Neither can occur in what we write today --
+// a commit is hexadecimal, a branch name has neither -- but the escape belongs
+// with the renderer rather than with the trust that no future label will.
+function labelPart(labels: Readonly<Record<string, string>> | undefined): string {
+    const pairs = Object.entries(labels ?? {}).map(
+        ([key, value]) => `${key}="${value.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`,
+    );
+
+    return pairs.length === 0 ? '' : `{${pairs.join(',')}}`;
+}
+
+function gaugeLines(reading: GaugeShape, value: number): string[] {
+    return [
+        `# HELP ${reading.name} ${reading.help}`,
+        `# TYPE ${reading.name} gauge`,
+        `${reading.name}${labelPart(reading.labels)} ${value}`,
+    ];
+}
+
+// Nothing rather than zero when a reading fails.
+//
+// A count that did not load is not a count of zero, and a panel showing « 0
+// tasks » because the database was slow states something false with the same
+// confidence as the truth. An absent series reads as « no measurement », which
+// is what actually happened. The one exception is a reading whose failure *is*
+// the measurement -- see legacy22_redis_up -- and that one returns 0 itself
+// rather than throwing.
+async function readingLines(
+    reading: StateReading,
+    logger: Logger | undefined,
+): Promise<string[] | undefined> {
+    try {
+        return gaugeLines(reading, await reading.read());
+    } catch (err: unknown) {
+        logger?.warn({ err, reading: reading.name }, 'state reading failed, series omitted');
+        return undefined;
+    }
+}
+
+// Every reading is taken, even when one of them throws: the endpoint must
+// still answer with what it could gather. A single slow table would otherwise
+// take the whole of the observability down with it.
+async function stateExposition(
+    readings: readonly StateReading[],
+    logger: Logger | undefined,
+): Promise<string> {
+    const taken = await Promise.all(readings.map(one => readingLines(one, logger)));
+    const failed = taken.filter(lines => lines === undefined).length;
+
+    return [
+        ...taken.flatMap(lines => lines ?? []),
+        ...gaugeLines(
+            { name: FAILED, help: 'State readings that could not be taken on this call.' },
+            failed,
+        ),
+    ].join('\n');
+}
+
+export function createPrometheusMetrics(options: MetricsOptions = {}): Metrics {
+    const { readings = [], logger } = options;
     const registry = new Registry();
 
     const requests = new Counter({
@@ -34,8 +113,20 @@ export function createPrometheusMetrics(): Metrics {
             duration.observe({ method, route }, seconds);
         },
 
+        // The counted metrics and the read ones are rendered side by side, in
+        // one exposition. The read ones are written by hand rather than through
+        // a prom-client Gauge because an unlabelled Gauge always emits, and
+        // defaults to zero: it has no way to say « this one could not be
+        // read », which is the distinction the comment above exists for.
         async render() {
-            return { contentType: registry.contentType, body: await registry.metrics() };
+            const [counted, state] = await Promise.all([
+                registry.metrics(),
+                stateExposition(readings, logger),
+            ]);
+
+            const parts = [counted.trimEnd(), state.trimEnd()].filter(part => part !== '');
+
+            return { contentType: registry.contentType, body: `${parts.join('\n')}\n` };
         },
     };
 }

@@ -9,7 +9,10 @@ import {
     createSupabaseOutboxStore,
     createSupabasePersonalDataStore,
     createSupabaseProjectRepository,
+    createBuildStateReading,
+    createBusStateReadings,
     createPrometheusMetrics,
+    createSupabaseStateReadings,
     deliverPending,
     relayOnce,
 } from '@legacy/infra';
@@ -21,7 +24,7 @@ import type {
     OutboxStore,
     RelayDependencies,
 } from '@legacy/infra';
-import type { Logger, Metrics } from '@legacy/contracts';
+import type { Logger, Metrics, StateReading } from '@legacy/contracts';
 import {
     makeChangeEmail,
     makeChangePassword,
@@ -125,6 +128,10 @@ interface Adapters {
     // Absent when no broker is configured. Serving HTTP does not need one; the
     // relay does, and start() is where that is enforced.
     bus: EventBus | undefined;
+    // What the metrics endpoint reads when it is asked, rather than what the
+    // process counted. Built here because a reading reaches an adapter, and
+    // this is the only place allowed to.
+    stateReadings: readonly StateReading[];
 }
 
 // Every adapter the application talks to, built in one place. Extracted from
@@ -132,6 +139,12 @@ interface Adapters {
 // without wading through how the use cases are assembled.
 function createAdapters(config: Config): Adapters {
     const supabase = { url: config.supabaseUrl, serviceRoleKey: config.supabaseServiceRoleKey };
+    // Hoisted out of the object below because the readings need it too. A
+    // second createRedisEventBus would open a second connection to the same
+    // queue, and the depth one of them reports would not be the depth the
+    // relay sees.
+    const bus =
+        config.redisUrl === undefined ? undefined : createRedisEventBus({ url: config.redisUrl });
 
     return {
         store: createSupabaseItemStore(supabase),
@@ -150,10 +163,15 @@ function createAdapters(config: Config): Adapters {
         projects: createSupabaseProjectRepository(supabase),
         outbox: createSupabaseOutboxStore(supabase),
         notifications: createSupabaseNotificationStore(supabase),
-        bus:
-            config.redisUrl === undefined
-                ? undefined
-                : createRedisEventBus({ url: config.redisUrl }),
+        bus,
+        stateReadings: [
+            // En premier parce qu elle ne depend de rien : elle repond meme
+            // quand la base et le courtier se taisent, ce qui en fait la
+            // seule qui puisse dire quel deploiement s est tu.
+            createBuildStateReading(config.deployment),
+            ...createSupabaseStateReadings(supabase),
+            ...(bus === undefined ? [] : createBusStateReadings(bus)),
+        ],
     };
 }
 
@@ -240,10 +258,11 @@ export function itemUseCases(
 }
 
 export function compose(config: Config): Application {
-    const { store, identity, personalData, projects, outbox, notifications, bus } = createAdapters(config);
+    const { store, identity, personalData, projects, outbox, notifications, bus, stateReadings } =
+        createAdapters(config);
     const logger = createLogger(config.logLevel);
     const deliver = makeDeliverPending({ outbox, bus, notifications, logger });
-    const metrics = createPrometheusMetrics();
+    const metrics = createPrometheusMetrics({ readings: stateReadings, logger });
     const compromisedPasswords = createHibpPasswordRegistry({ logger });
 
     // The relay lives with the writer, not with the consumer: it reads a table
