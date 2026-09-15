@@ -568,6 +568,62 @@ end $$;
 
 rollback;
 
+-- La notification de la personne ajoutee : revendication de l evenement et
+-- ecriture de l effet, ou ni l une ni l autre.
+begin;
+
+do $$
+declare
+  proprietaire uuid := '00000000-0000-7000-8000-0000000000f3';
+  invite       uuid := '00000000-0000-7000-8000-0000000000f4';
+  projet       uuid;
+  event_un     uuid := '00000000-0000-7000-8000-0000000000d3';
+  applique     boolean;
+begin
+  insert into auth.users (id, email)
+  values (proprietaire, 'notify-owner@localhost'),
+         (invite, 'notify-guest@localhost');
+
+  select project_id into projet
+  from public.project_memberships
+  where user_id = proprietaire and role = 'owner'
+  limit 1;
+
+  applique := public.record_member_added_notification(event_un, invite, projet);
+
+  if not applique then
+    raise exception 'le premier appel aurait du appliquer l effet';
+  end if;
+
+  -- Le genre nomme un projet et aucune tache : c est ce que
+  -- notifications_kind_chk impose, et ce que l interface lira.
+  if not exists (
+    select 1 from public.notifications
+    where event_id = event_un
+      and user_id = invite
+      and project_id = projet
+      and item_id is null
+      and kind = 'membership.created'
+  ) then
+    raise exception 'la notification d appartenance n a pas ete ecrite comme attendu';
+  end if;
+
+  -- Une redelivrance : deja traite, donc aucun effet de plus.
+  applique := public.record_member_added_notification(event_un, invite, projet);
+
+  if applique then
+    raise exception 'la redelivrance aurait du repondre deja traite';
+  end if;
+
+  if (select count(*) from public.notifications where event_id = event_un) <> 1 then
+    raise exception 'la redelivrance a ecrit une seconde notification';
+  end if;
+
+  raise notice 'membership notification assertions passed';
+end $$;
+
+rollback;
+
 -- Behavioural checks for the two authorization cases ADR-0001 requires. All
 -- fixtures live in a rolled-back transaction, so the script is repeatable.
 begin;

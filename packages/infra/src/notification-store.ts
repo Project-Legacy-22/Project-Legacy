@@ -24,6 +24,10 @@ export interface NotificationStore extends NotificationRepository {
     // processed_events, not by reading first and writing after: two workers
     // racing would both pass that read.
     notifyItemCreated(eventId: string, userId: string, itemId: string): Promise<boolean>;
+    // Meme contrat, meme idempotence : la cle est l identifiant de
+    // l evenement, et processed_events n en porte qu une ligne quel que
+    // soit le genre de la notification.
+    notifyMemberAdded(eventId: string, userId: string, projectId: string): Promise<boolean>;
 }
 
 const fail: AdapterFailure = adapterFailure('notifications');
@@ -106,6 +110,19 @@ export function createSupabaseNotificationStore(settings: SupabaseSettings): Not
 
             // false when the event had already been handled, which is the
             // expected outcome of a redelivery.
+            return data === true;
+        },
+
+        async notifyMemberAdded(eventId, userId, projectId) {
+            // Une seule requete, pour la meme raison que ci-dessus.
+            const { data, error } = await client.rpc('record_member_added_notification', {
+                p_event_id: eventId,
+                p_user_id: userId,
+                p_project_id: projectId,
+            });
+
+            if (error) fail('notifyMemberAdded', error);
+
             return data === true;
         },
 

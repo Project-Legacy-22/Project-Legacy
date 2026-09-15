@@ -39,10 +39,36 @@ export const ItemCreatedV1 = z.strictObject({
     payload: ItemCreatedV1Payload,
 });
 
+export const MEMBERSHIP_CREATED_V1 = 'membership.created.v1';
+
+// Three identifiers, and no address. The address is what the person typed to
+// find the account, so it is content -- the same rule that keeps the item name
+// out of the payload above. A consumer that needs to name someone reads the
+// address back from the component that owns it, which keeps the broker out of
+// what the export and erasure paths have to reach.
+//
+// `addedBy` is what lets the notification say « added by » rather than
+// « added », which is the reason the invitation travels through the event flow
+// at all.
+export const MembershipCreatedV1Payload = z.strictObject({
+    projectId: z.uuid(),
+    memberId: z.uuid(),
+    addedBy: z.uuid(),
+});
+
+export const MembershipCreatedV1 = z.strictObject({
+    id: z.uuid(),
+    name: z.literal(MEMBERSHIP_CREATED_V1),
+    occurredAt: z.iso.datetime(),
+    payload: MembershipCreatedV1Payload,
+});
+
 // Discriminated on the name so a second event type is added here without
 // touching the consumers of the first.
-export const DomainEvent = z.discriminatedUnion('name', [ItemCreatedV1]);
+export const DomainEvent = z.discriminatedUnion('name', [ItemCreatedV1, MembershipCreatedV1]);
 
 export type ItemCreatedV1Payload = z.infer<typeof ItemCreatedV1Payload>;
 export type ItemCreatedV1 = z.infer<typeof ItemCreatedV1>;
+export type MembershipCreatedV1Payload = z.infer<typeof MembershipCreatedV1Payload>;
+export type MembershipCreatedV1 = z.infer<typeof MembershipCreatedV1>;
 export type DomainEvent = z.infer<typeof DomainEvent>;
