@@ -10,9 +10,16 @@ import { z } from 'zod';
 // branch on it before knowing whether it can read the payload at all.
 export const ITEM_CREATED_V1 = 'item.created.v1';
 
-// Nothing personal crosses the bus. The item name is content the user typed;
-// it stays in the database, and a consumer that needs it reads it back through
-// the owning component. An event carries identifiers and nothing else.
+// No content crosses the bus. The item name is what the user typed; it stays
+// in the database, and a consumer that needs it reads it back through the
+// owning component. An event carries identifiers and nothing else.
+//
+// « No content » is not « nothing personal », and the difference is not
+// pedantry: ownerId is a pseudonymous identifier, and recital 26 of the GDPR
+// keeps pseudonymised data personal as long as the controller can re-identify
+// -- which we can, since users.id leads to an address. The broker is therefore
+// a recipient of personal data and is declared as one in the register and in
+// the privacy policy. It was not, for as long as this comment said otherwise.
 //
 // The schema is strict on purpose: adding a field to a published payload then
 // fails loudly here, instead of being silently stripped and lost between the
