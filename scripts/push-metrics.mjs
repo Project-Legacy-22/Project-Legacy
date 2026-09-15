@@ -18,13 +18,14 @@
 
 import { argv, env, exit, stderr, stdout } from 'node:process';
 
-const USAGE = `npm run metrics:push
+const USAGE = `npm run metrics:push [-- --pass '<json>']
 
 Reads TARGET/internal/metrics with RELAY_SECRET and pushes it to
 GRAFANA_PUSH_URL with GRAFANA_PUSH_USER and GRAFANA_PUSH_TOKEN.
 
-  --dry-run   read and parse, print what would be pushed, send nothing
-  --self-test push one series named legacy22_push_check, read nothing
+  --pass <json>  the result of a delivery pass, pushed as gauges
+  --dry-run      read and parse, print what would be pushed, send nothing
+  --self-test    push one series named legacy22_push_check, read nothing
 
 Every value comes from the environment; nothing is hard-coded.`;
 
@@ -153,6 +154,48 @@ export function parseExposition(body) {
     return series;
 }
 
+// ------------------------------------------------------------- what we push
+
+// Always present, and that is its whole purpose.
+//
+// A counter carrying labels emits nothing until a request has been observed,
+// and on a serverless target the instance answering /internal/metrics has
+// usually just started -- it has observed none. The first real run of this
+// pusher therefore found « no series, nothing to push », and Grafana stayed
+// empty while every part of the chain worked.
+//
+// This series depends on no observation. It says the deployment answered and
+// the push reached Grafana, which is the one thing a dashboard must be able to
+// show before anything else.
+export function liveness() {
+    return [{ labels: { __name__: 'legacy22_up' }, value: 1 }];
+}
+
+// The numbers a delivery pass returns, as gauges.
+//
+// These are the only measurements of this system that are clean on a
+// serverless target: instantaneous values, so no reset to absorb and no wrong
+// sum between instances. They are also the ones that say something -- an
+// outbox that stops draining is visible here and nowhere else, which is the
+// gain ADR-0016 announced.
+export function passGauges(raw) {
+    if (raw === undefined) return [];
+
+    let pass;
+    try {
+        pass = JSON.parse(raw);
+    } catch {
+        throw new Error(`--pass is not JSON: ${raw.slice(0, 120)}`);
+    }
+
+    return ['published', 'consumed', 'failed']
+        .filter(field => typeof pass[field] === 'number')
+        .map(field => ({
+            labels: { __name__: `legacy22_outbox_${field}` },
+            value: pass[field],
+        }));
+}
+
 // ------------------------------------------------------------------ the run
 
 function required(name) {
@@ -206,16 +249,16 @@ async function run(args) {
         return;
     }
 
-    const series = await readExposition();
+    const at = args.indexOf('--pass');
+    const series = [
+        ...liveness(),
+        ...passGauges(at === -1 ? undefined : args[at + 1]),
+        ...(await readExposition()),
+    ];
     const names = [...new Set(series.map(one => one.labels['__name__']))];
 
     if (args.includes('--dry-run')) {
         stdout.write(`${series.length} series, ${names.length} names: ${names.join(', ')}\n`);
-        return;
-    }
-
-    if (series.length === 0) {
-        stdout.write('the endpoint returned no series, nothing to push.\n');
         return;
     }
 

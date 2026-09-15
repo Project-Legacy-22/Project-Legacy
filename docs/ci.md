@@ -3,7 +3,7 @@
 Ce que GitHub Actions exécute, quand, et ce qui empêche une pull request d'être intégrée. État au
 12 septembre 2026 ; chaque affirmation se vérifie dans `.github/workflows/`.
 
-## Les sept campagnes
+## Les six campagnes
 
 | Campagne | Déclenchée par | Ce qu'elle fait |
 |---|---|---|
@@ -12,8 +12,7 @@ Ce que GitHub Actions exécute, quand, et ce qui empêche une pull request d'êt
 | `guard-branches` | chaque push | refuse un commit qui n'a pas l'origine attendue |
 | `image` | push sur `main` | rejoue `ci`, puis publie l'image sur GHCR et crée la release |
 | `pages` | push sur `dev` | publie le rapport de couverture sur GitHub Pages |
-| `relais` | toutes les cinq minutes | déclenche une passe de livraison de l'outbox sur le déploiement |
-| `metriques` | toutes les quinze minutes | lit `/internal/metrics` sur le déploiement et pousse vers Grafana Cloud |
+| `relais` | toutes les cinq minutes | déclenche une passe de livraison de l'outbox, puis pousse ce qu'elle rend vers Grafana Cloud |
 
 ## Les neuf vérifications de `ci`
 
