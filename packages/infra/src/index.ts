@@ -30,3 +30,4 @@ export type { MetricsOptions } from './prometheus-metrics.js';
 // Les valeurs lues a l instant de la mesure, seule forme correcte sur une
 // cible sans processus persistant.
 export { createBusStateReadings } from './bus-state-readings.js';
+export { createSupabaseStateReadings } from './supabase-state-readings.js';
