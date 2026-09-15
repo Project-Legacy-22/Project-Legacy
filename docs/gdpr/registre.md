@@ -32,7 +32,7 @@ pays.
 | Supabase | base de données et authentification | Irlande, région `eu-west-1` | Supabase Inc., États-Unis |
 | Vercel | exécution de l'application et journaux | Paris, région `cdg1`, fixée par `vercel.json` | Vercel Inc., États-Unis |
 | Grafana Cloud | supervision : métriques et tableaux de bord | Allemagne, région `prod-eu-west-2` | Grafana Labs, États-Unis |
-| File d'événements (Redis) | transport des événements entre l'API et le consommateur de notifications | même région que l'application, dans l'Union ; provisionnée depuis le projet Vercel | voir ci-dessous |
+| File d'événements (Upstash for Redis) | transport des événements entre l'API et le consommateur de notifications | Union européenne ; provisionnée depuis le projet Vercel | Upstash, Inc., États-Unis |
 | Have I Been Pwned | vérification d'un mot de passe compromis | réseau du fournisseur | opéré depuis l'Australie |
 
 Tout est donc stocké et traité dans l'Union. Ce qui n'est pas neutre pour autant : Supabase et
@@ -61,10 +61,16 @@ dans ce registre. Elle était trop forte. Ce qui est vrai, et qui reste une bonn
 qu'aucun **contenu** ne le traverse, et que les identifiants y sont effacés dès que la notification
 est écrite. « Aucun contenu » et « rien de personnel » ne sont pas la même phrase.
 
-La file est provisionnée depuis le projet Vercel et se trouve dans la même région que
-l'application. La société qui l'opère se lit dans l'onglet Storage du projet, et doit être nommée
-ici comme les autres : c'est la seule ligne de ce tableau dont la colonne « Société » renvoie plus
-bas au lieu de porter un nom.
+La file est **Upstash for Redis**, magasin `upstash-kv-cyclamen-leaf`, créé le 11 septembre 2026
+et provisionné depuis l'onglet Storage du projet Vercel — Vercel est donc le revendeur, et Upstash
+l'opérateur. Cela ajoute une société américaine de plus à la liste, avec la même conséquence que
+pour les trois autres : le CLOUD Act s'applique au sous-traitant même quand la région est
+européenne.
+
+L'offre est gratuite, ce qui pour cette ligne ne pose pas le problème de conservation que
+`docs/backup-and-exit.md` décrit pour la base : rien n'est censé y séjourner. Un événement y passe
+le temps d'une livraison, et il est effacé dès que la notification est écrite. Une file vidée est
+l'état normal ; une file qui se remplit est un incident, pas un stock.
 
 **Qui a accès, et c'est le même partout.** Les six développeurs de l'équipe ont le même accès à
 chacun de ces outils. Il n'y a pas de séparation de rôle sur l'accès à l'infrastructure, et ce
