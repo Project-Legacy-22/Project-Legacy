@@ -97,7 +97,9 @@ export type Database = {
           created_at: string
           event_id: string
           id: string
-          item_id: string
+          item_id: string | null
+          kind: string
+          project_id: string | null
           read_at: string | null
           updated_at: string
           user_id: string
@@ -106,7 +108,9 @@ export type Database = {
           created_at?: string
           event_id: string
           id?: string
-          item_id: string
+          item_id?: string | null
+          kind: string
+          project_id?: string | null
           read_at?: string | null
           updated_at?: string
           user_id: string
@@ -115,7 +119,9 @@ export type Database = {
           created_at?: string
           event_id?: string
           id?: string
-          item_id?: string
+          item_id?: string | null
+          kind?: string
+          project_id?: string | null
           read_at?: string | null
           updated_at?: string
           user_id?: string
@@ -133,6 +139,13 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
