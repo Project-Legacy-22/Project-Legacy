@@ -58,9 +58,40 @@ const EnvSchema = z.object({
     // livraison. Absent, la route n existe pas : une cible qui fait tourner le
     // relais en continu n en a pas besoin.
     RELAY_SECRET: z.string().min(32).optional(),
+    // Ce que Vercel pose sur chaque deploiement. Optionnels parce qu ils
+    // n existent nulle part ailleurs : en developpement, dans un conteneur et
+    // en integration continue, l application doit demarrer sans eux.
+    VERCEL_GIT_COMMIT_SHA: z.string().optional(),
+    VERCEL_GIT_COMMIT_REF: z.string().optional(),
+    VERCEL_ENV: z.enum(['production', 'preview', 'development']).optional(),
 });
 
+// Douze caracteres : de quoi retrouver le commit, pas de quoi allonger une
+// etiquette que chaque serie porterait.
+const SHORT_COMMIT = 12;
+
+// « unknown » et non la chaine vide quand la variable manque. Une etiquette
+// vide se lit comme une valeur -- on croit lire une branche qui s appelle rien
+// -- alors qu une valeur nommee se lit comme ce qu elle est, une absence.
+const ABSENT = 'unknown';
+
+function named(value: string | undefined, length = 0): string {
+    const clean = (value ?? '').trim();
+    if (clean === '') return ABSENT;
+
+    return length === 0 ? clean : clean.slice(0, length);
+}
+
 export type LogLevel = (typeof LOG_LEVELS)[number];
+
+// Le deploiement qui repond, tel qu il s identifie. Sert d etiquettes a
+// legacy22_build_info, pour qu un creux sur un graphe puisse etre rapproche
+// d une livraison.
+export interface Deployment {
+    commit: string;
+    ref: string;
+    environment: string;
+}
 
 export interface Config {
     port: number;
@@ -74,6 +105,7 @@ export interface Config {
     webOrigin: string;
     trustProxy: number;
     relaySecret: string | undefined;
+    deployment: Deployment;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -101,5 +133,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
         webOrigin: parsed.data.WEB_ORIGIN,
         trustProxy: parsed.data.TRUST_PROXY,
         relaySecret: parsed.data.RELAY_SECRET,
+        deployment: {
+            commit: named(parsed.data.VERCEL_GIT_COMMIT_SHA, SHORT_COMMIT),
+            ref: named(parsed.data.VERCEL_GIT_COMMIT_REF),
+            // « local » plutot que « unknown » : hors de Vercel, ce n est pas
+            // une valeur manquante, c est un endroit.
+            environment: parsed.data.VERCEL_ENV ?? 'local',
+        },
     };
 }

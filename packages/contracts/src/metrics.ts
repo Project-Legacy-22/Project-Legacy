@@ -32,5 +32,10 @@ export interface Metrics {
 export interface StateReading {
     name: string;
     help: string;
+    // Fixed for the life of the process, not derived from a request: what
+    // identifies the build, never what identifies a caller. A label is where
+    // an identifier would slip in, so the only ones written here are the ones
+    // a reviewer can read in the composition root.
+    labels?: Readonly<Record<string, string>>;
     read(): Promise<number>;
 }
