@@ -9,6 +9,7 @@ import {
     createSupabaseOutboxStore,
     createSupabasePersonalDataStore,
     createSupabaseProjectRepository,
+    createBuildStateReading,
     createBusStateReadings,
     createPrometheusMetrics,
     createSupabaseStateReadings,
@@ -164,6 +165,10 @@ function createAdapters(config: Config): Adapters {
         notifications: createSupabaseNotificationStore(supabase),
         bus,
         stateReadings: [
+            // En premier parce qu elle ne depend de rien : elle repond meme
+            // quand la base et le courtier se taisent, ce qui en fait la
+            // seule qui puisse dire quel deploiement s est tu.
+            createBuildStateReading(config.deployment),
             ...createSupabaseStateReadings(supabase),
             ...(bus === undefined ? [] : createBusStateReadings(bus)),
         ],

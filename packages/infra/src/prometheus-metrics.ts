@@ -17,6 +17,11 @@ const SECOND_BUCKETS = [0.05, 0.1, 0.25, 0.5, 1, 2.5, 5];
 // series turns the failure into a number someone can graph and alert on.
 const FAILED = 'legacy22_state_readings_failed';
 
+// What gaugeLines needs of a reading, which is everything but the reading
+// itself: legacy22_state_readings_failed is rendered the same way and has no
+// read() of its own.
+type GaugeShape = Pick<StateReading, 'name' | 'help'> & Partial<Pick<StateReading, 'labels'>>;
+
 export interface MetricsOptions {
     // Read at render time, in the order given. Empty is a valid service: the
     // HTTP measurements below need no adapter of their own.
@@ -24,8 +29,24 @@ export interface MetricsOptions {
     logger?: Logger;
 }
 
-function gaugeLines(name: string, help: string, value: number): string[] {
-    return [`# HELP ${name} ${help}`, `# TYPE ${name} gauge`, `${name} ${value}`];
+// Quotes and backslashes are escaped because the exposition format gives them
+// a meaning inside a label value. Neither can occur in what we write today --
+// a commit is hexadecimal, a branch name has neither -- but the escape belongs
+// with the renderer rather than with the trust that no future label will.
+function labelPart(labels: Readonly<Record<string, string>> | undefined): string {
+    const pairs = Object.entries(labels ?? {}).map(
+        ([key, value]) => `${key}="${value.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`,
+    );
+
+    return pairs.length === 0 ? '' : `{${pairs.join(',')}}`;
+}
+
+function gaugeLines(reading: GaugeShape, value: number): string[] {
+    return [
+        `# HELP ${reading.name} ${reading.help}`,
+        `# TYPE ${reading.name} gauge`,
+        `${reading.name}${labelPart(reading.labels)} ${value}`,
+    ];
 }
 
 // Nothing rather than zero when a reading fails.
@@ -41,7 +62,7 @@ async function readingLines(
     logger: Logger | undefined,
 ): Promise<string[] | undefined> {
     try {
-        return gaugeLines(reading.name, reading.help, await reading.read());
+        return gaugeLines(reading, await reading.read());
     } catch (err: unknown) {
         logger?.warn({ err, reading: reading.name }, 'state reading failed, series omitted');
         return undefined;
@@ -60,7 +81,10 @@ async function stateExposition(
 
     return [
         ...taken.flatMap(lines => lines ?? []),
-        ...gaugeLines(FAILED, 'State readings that could not be taken on this call.', failed),
+        ...gaugeLines(
+            { name: FAILED, help: 'State readings that could not be taken on this call.' },
+            failed,
+        ),
     ].join('\n');
 }
 

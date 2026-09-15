@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { Logger, StateReading } from '@legacy/contracts';
 
+import { createBuildStateReading } from './build-state-reading.js';
 import { createPrometheusMetrics } from './prometheus-metrics.js';
 
 // What the exposition must keep true when a reading misbehaves.
@@ -90,6 +91,36 @@ describe('the exposition of state readings', () => {
 
         expect(body).toContain('legacy22_http_requests_total{method="GET"');
         expect(body).toContain('legacy22_redis_up 1');
+    });
+
+    it('writes the labels of a reading that carries them', async () => {
+        const body = await bodyOf([
+            createBuildStateReading({
+                commit: '3deb3cbc1f20',
+                ref: 'main',
+                environment: 'production',
+            }),
+        ]);
+
+        expect(body).toContain(
+            'legacy22_build_info{commit="3deb3cbc1f20",ref="main",environment="production"} 1',
+        );
+    });
+
+    // Neither character can occur in a commit or a branch name today. The
+    // escape is here so that the renderer stays correct when a label it does
+    // not yet carry arrives, rather than resting on that.
+    it('escapes what the exposition format reserves inside a label', async () => {
+        const body = await bodyOf([
+            {
+                name: 'legacy22_awkward',
+                help: 'A label with a quote and a backslash.',
+                labels: { ref: 'a "quoted" \\ branch' },
+                read: () => Promise.resolve(1),
+            },
+        ]);
+
+        expect(body).toContain('legacy22_awkward{ref="a \\"quoted\\" \\\\ branch"} 1');
     });
 
     // A service with no readings is legitimate: the HTTP measurements need no
