@@ -1,6 +1,6 @@
 import { Counter, Histogram, Registry } from 'prom-client';
 
-import type { Logger, Measurement, Metrics, StateReading } from '@legacy/contracts';
+import type { Logger, Measurement, Metrics, StateReading, StateValue } from '@legacy/contracts';
 
 // The measurement adapter. It knows prom-client; nobody else does.
 //
@@ -16,17 +16,23 @@ const SECOND_BUCKETS = [0.05, 0.1, 0.25, 0.5, 1, 2.5, 5];
 // was never configured -- both absent -- and the absence would be silent. This
 // series turns the failure into a number someone can graph and alert on.
 const FAILED = 'legacy22_state_readings_failed';
-
-// What gaugeLines needs of a reading, which is everything but the reading
-// itself: legacy22_state_readings_failed is rendered the same way and has no
-// read() of its own.
-type GaugeShape = Pick<StateReading, 'name' | 'help'> & Partial<Pick<StateReading, 'labels'>>;
+const FAILED_HELP = 'State readings that could not be taken on this call.';
 
 export interface MetricsOptions {
-    // Read at render time, in the order given. Empty is a valid service: the
-    // HTTP measurements below need no adapter of their own.
+    // Read when the endpoint is asked, in the order given. Empty is a valid
+    // service: the HTTP measurements below need no adapter of their own.
     readings?: readonly StateReading[];
     logger?: Logger;
+}
+
+// A reading and what it answered, kept together until the last moment.
+//
+// The exposition needs the help text, the JSON does not. Putting `help` into
+// StateValue would send it to every dashboard response for no reader; keeping
+// the reading instead lets each renderer take what it needs.
+interface Taken {
+    reading: StateReading;
+    value: number;
 }
 
 // Quotes and backslashes are escaped because the exposition format gives them
@@ -41,11 +47,14 @@ function labelPart(labels: Readonly<Record<string, string>> | undefined): string
     return pairs.length === 0 ? '' : `{${pairs.join(',')}}`;
 }
 
-function gaugeLines(reading: GaugeShape, value: number): string[] {
+function gaugeLines(
+    gauge: { name: string; help: string; labels?: Readonly<Record<string, string>> },
+    value: number,
+): string[] {
     return [
-        `# HELP ${reading.name} ${reading.help}`,
-        `# TYPE ${reading.name} gauge`,
-        `${reading.name}${labelPart(reading.labels)} ${value}`,
+        `# HELP ${gauge.name} ${gauge.help}`,
+        `# TYPE ${gauge.name} gauge`,
+        `${gauge.name}${labelPart(gauge.labels)} ${value}`,
     ];
 }
 
@@ -57,35 +66,48 @@ function gaugeLines(reading: GaugeShape, value: number): string[] {
 // is what actually happened. The one exception is a reading whose failure *is*
 // the measurement -- see legacy22_redis_up -- and that one returns 0 itself
 // rather than throwing.
-async function readingLines(
+async function take(
     reading: StateReading,
     logger: Logger | undefined,
-): Promise<string[] | undefined> {
+): Promise<Taken | undefined> {
     try {
-        return gaugeLines(reading, await reading.read());
+        return { reading, value: await reading.read() };
     } catch (err: unknown) {
         logger?.warn({ err, reading: reading.name }, 'state reading failed, series omitted');
         return undefined;
     }
 }
 
-// Every reading is taken, even when one of them throws: the endpoint must
-// still answer with what it could gather. A single slow table would otherwise
-// take the whole of the observability down with it.
-async function stateExposition(
+// Every reading is taken, even when one of them throws: what could be
+// gathered must still be served. A single slow table would otherwise take the
+// whole of the observability down with it.
+async function takeAll(
     readings: readonly StateReading[],
     logger: Logger | undefined,
-): Promise<string> {
-    const taken = await Promise.all(readings.map(one => readingLines(one, logger)));
-    const failed = taken.filter(lines => lines === undefined).length;
+): Promise<{ taken: Taken[]; failed: number }> {
+    const results = await Promise.all(readings.map(one => take(one, logger)));
+    const taken = results.filter((one): one is Taken => one !== undefined);
 
+    return { taken, failed: results.length - taken.length };
+}
+
+function stateExposition({ taken, failed }: { taken: Taken[]; failed: number }): string {
     return [
-        ...taken.flatMap(lines => lines ?? []),
-        ...gaugeLines(
-            { name: FAILED, help: 'State readings that could not be taken on this call.' },
-            failed,
-        ),
+        ...taken.flatMap(one => gaugeLines(one.reading, one.value)),
+        ...gaugeLines({ name: FAILED, help: FAILED_HELP }, failed),
     ].join('\n');
+}
+
+function asValues({ taken, failed }: { taken: Taken[]; failed: number }): StateValue[] {
+    const values = taken.map(one =>
+        one.reading.labels === undefined
+            ? { name: one.reading.name, value: one.value }
+            : { name: one.reading.name, value: one.value, labels: one.reading.labels },
+    );
+
+    // Present in both shapes, for the same reason: without it, an absent
+    // series cannot be told from a reading that was never configured.
+    return [...values, { name: FAILED, value: failed }];
 }
 
 export function createPrometheusMetrics(options: MetricsOptions = {}): Metrics {
@@ -121,12 +143,21 @@ export function createPrometheusMetrics(options: MetricsOptions = {}): Metrics {
         async render() {
             const [counted, state] = await Promise.all([
                 registry.metrics(),
-                stateExposition(readings, logger),
+                takeAll(readings, logger).then(stateExposition),
             ]);
 
             const parts = [counted.trimEnd(), state.trimEnd()].filter(part => part !== '');
 
             return { contentType: registry.contentType, body: `${parts.join('\n')}\n` };
+        },
+
+        // The same readings, taken the same way, for a caller that wants data
+        // rather than an exposition. The counted metrics are not here: a
+        // counter on this target says almost nothing -- the route label only
+        // ever holds /internal/relay -- and a caller asking for the current
+        // state has no use for one.
+        async state() {
+            return asValues(await takeAll(readings, logger));
         },
     };
 }

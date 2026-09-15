@@ -39,10 +39,10 @@ export const PROCESSORS: readonly Processor[] = [
         access: 'The six developers of the team, with no distinction between them.',
     },
     {
-        name: 'Event queue (Redis, provisioned with the Vercel project)',
+        name: 'Event queue (Upstash for Redis, provisioned with the Vercel project)',
         holds:
             'Two identifiers per task you create: the task and its owner. No address, no task name, no content. They are removed as soon as the notification is written.',
-        where: 'Same region as the application, in the European Union.',
+        where: 'European Union. Operated by Upstash, Inc., a United States company.',
         access: 'The six developers of the team, with no distinction between them.',
     },
     {
