@@ -4,9 +4,14 @@
 
 // Carries no message text: the wording belongs to the interface, and storing
 // it would freeze today's phrasing into every row (see the outbox migration).
+//
+// The task is optional, and that is what the notifications table now says: an
+// invitation to a project names no task. What a notification does name is
+// decided by its kind, which arrives with the membership flow -- until then
+// every row here has a task, and the type no longer promises it.
 export interface Notification {
     id: string;
-    itemId: string;
+    itemId: string | null;
     userId: string;
     readAt: string | null;
     createdAt: string;

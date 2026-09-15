@@ -448,8 +448,11 @@ begin
 
   insert into public.processed_events (event_id) values (event_cible), (event_temoin);
 
-  insert into public.notifications (user_id, item_id, event_id)
-  values (cible, item_cible, event_cible), (temoin, item_temoin, event_temoin);
+  -- `kind` est nomme parce qu il n a pas de defaut : une insertion qui
+  -- l oublie doit echouer, et c est ici que ce choix se verifie.
+  insert into public.notifications (user_id, item_id, event_id, kind)
+  values (cible, item_cible, event_cible, 'item.created'),
+         (temoin, item_temoin, event_temoin, 'item.created');
 
   perform public.erase_account(cible);
 
