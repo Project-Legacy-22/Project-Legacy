@@ -12,6 +12,9 @@ pas un outil de sortie. Le second parce qu'un script relu avant d'être appliqu�
 qui laisse une chance de refuser une reprise qui s'est trompée — et qu'appliquer une migration est
 une décision qui appartient à une personne, pas à un programme.
 
+Pour sauvegarder et restaurer sans changer de moteur — et pour ce que coûterait un départ de
+Supabase — c'est `docs/backup-and-exit.md`.
+
 ## Ce qui ne traverse jamais
 
 Avant les procédures, ce qu'aucune des deux ne transporte, parce que ce n'est pas du SQL :
