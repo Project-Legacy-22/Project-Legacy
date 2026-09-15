@@ -174,7 +174,12 @@ export const TABLES: readonly Table[] = [
         columns: [
             uuid('id'),
             uuid('user_id'),
-            uuid('item_id'),
+            // Les deux sont nullables, et exclusifs : une notification nomme
+            // une tache ou un projet selon son genre. Le `check` qui l impose
+            // reste en PostgreSQL, comme les autres verifications de valeur.
+            uuid('item_id', true),
+            uuid('project_id', true),
+            text('kind'),
             uuid('event_id'),
             timestamp('read_at', true),
             stamped('created_at'),
@@ -184,6 +189,7 @@ export const TABLES: readonly Table[] = [
         references: [
             { column: 'user_id', table: 'users', target: 'id' },
             { column: 'item_id', table: 'items', target: 'id' },
+            { column: 'project_id', table: 'projects', target: 'id' },
             { column: 'event_id', table: 'processed_events', target: 'event_id' },
         ],
         // One notification per event, not per delivery: the rule that makes a
