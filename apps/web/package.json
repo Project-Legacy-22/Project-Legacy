@@ -20,8 +20,8 @@
     "@vitejs/plugin-react": "^6.1.1",
     "axe-core": "^4.13.0",
     "jsdom": "^26.1.0",
-    "postcss": "^8.5.26",
-    "vite": "^8.2.2",
+    "postcss": "^8.5.28",
+    "vite": "^8.3.0",
     "vitest": "^4.1.11"
   }
 }
