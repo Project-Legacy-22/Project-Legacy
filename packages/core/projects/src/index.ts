@@ -10,6 +10,8 @@ export {
 } from './domain/project.js';
 export type { Project, ProjectRole } from './domain/project.js';
 export type { Membership } from './domain/membership.js';
+export { MEMBERSHIP_CREATED_V1, membershipCreated } from './domain/event.js';
+export type { DomainEvent, MembershipCreatedV1 } from './domain/event.js';
 
 export type { ProjectRepository, ProjectPage, ProjectPageQuery } from './ports/project-repository.js';
 export type { MembershipRepository } from './ports/membership-repository.js';

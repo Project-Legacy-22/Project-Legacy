@@ -1,6 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { Membership, MembershipRepository, ProjectRole } from '@legacy/core-projects';
+import type {
+    DomainEvent,
+    Membership,
+    MembershipRepository,
+    ProjectRole,
+} from '@legacy/core-projects';
 
 import { adapterFailure, serviceRoleClient } from './adapter.js';
 import type { AdapterFailure, SupabaseSettings } from './adapter.js';
@@ -63,6 +68,31 @@ export function createSupabaseMembershipRepository(
             if (error) fail('membersOf', error);
 
             return (data ?? []).map(row => toMembership(row as MembershipRow));
+        },
+
+        // Une seule requete, donc une seule transaction : la fonction ecrit
+        // l appartenance et l evenement, ou ni l un ni l autre. Deux appels
+        // PostgREST seraient deux transactions.
+        //
+        // L autorisation -- etre proprietaire -- a ete verifiee par le cas
+        // d usage avant d arriver ici. Le service-role n est pas contraint par
+        // RLS, donc ce controle applicatif ne doit pas etre retire.
+        async addWithEvent({ projectId, memberId }, event: DomainEvent) {
+            const { data, error } = await client.rpc('add_member_with_event', {
+                p_project_id: projectId,
+                p_user_id: memberId,
+                p_event_id: event.id,
+                p_event_name: event.name,
+                p_occurred_at: event.occurredAt,
+                p_payload: event.payload,
+            });
+
+            if (error) fail('addWithEvent', error);
+
+            // La fonction rend false quand la personne etait deja membre.
+            // `?? false` couvre le cas ou PostgREST rendrait null : mieux vaut
+            // annoncer « rien ajoute » que de laisser passer un undefined.
+            return data ?? false;
         },
     };
 }
