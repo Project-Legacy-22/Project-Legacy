@@ -45,6 +45,8 @@ export {
     ListProjectsQuery,
     ProjectRole,
     ProjectDto,
+    ProjectMemberDto,
+    ProjectMemberListDto,
     ProjectPageDto,
     MAX_PROJECT_NAME_LENGTH,
     DEFAULT_PROJECT_PAGE_SIZE,

@@ -5,6 +5,7 @@ import {
     createRedisEventBus,
     createSupabaseIdentityProvider,
     createSupabaseItemStore,
+    createSupabaseMembershipRepository,
     createSupabaseNotificationStore,
     createSupabaseOutboxStore,
     createSupabasePersonalDataStore,
@@ -46,7 +47,12 @@ import {
     makeListNotifications,
     makeMarkNotificationRead,
 } from '@legacy/core-notifications';
-import { makeAddProject, makeListProjects, makeRemoveProject } from '@legacy/core-projects';
+import {
+    makeAddProject,
+    makeListProjectMembers,
+    makeListProjects,
+    makeRemoveProject,
+} from '@legacy/core-projects';
 
 import { afterWrite } from './after-write.js';
 import type { Config } from './config.js';
@@ -84,6 +90,7 @@ export interface ProjectUseCases {
     listProjects: ReturnType<typeof makeListProjects>;
     addProject: ReturnType<typeof makeAddProject>;
     removeProject: ReturnType<typeof makeRemoveProject>;
+    listProjectMembers: ReturnType<typeof makeListProjectMembers>;
 }
 
 export interface NotificationUseCases {
@@ -123,6 +130,10 @@ interface Adapters {
     identity: ReturnType<typeof createSupabaseIdentityProvider>;
     personalData: ReturnType<typeof createSupabasePersonalDataStore>;
     projects: ReturnType<typeof createSupabaseProjectRepository>;
+    // Les appartenances ont leur propre port : project_memberships n a pas de
+    // politique de lecture des autres membres, donc c est le cas d usage qui
+    // decide qui peut lire la liste.
+    memberships: ReturnType<typeof createSupabaseMembershipRepository>;
     outbox: OutboxStore;
     notifications: NotificationStore;
     // Absent when no broker is configured. Serving HTTP does not need one; the
@@ -161,6 +172,7 @@ function createAdapters(config: Config): Adapters {
         // (US-13), which no single domain's repository is allowed to know about.
         personalData: createSupabasePersonalDataStore(supabase),
         projects: createSupabaseProjectRepository(supabase),
+        memberships: createSupabaseMembershipRepository(supabase),
         outbox: createSupabaseOutboxStore(supabase),
         notifications: createSupabaseNotificationStore(supabase),
         bus,
@@ -258,7 +270,7 @@ export function itemUseCases(
 }
 
 export function compose(config: Config): Application {
-    const { store, identity, personalData, projects, outbox, notifications, bus, stateReadings } =
+    const { store, identity, personalData, projects, memberships, outbox, notifications, bus, stateReadings } =
         createAdapters(config);
     const logger = createLogger(config.logLevel);
     const deliver = makeDeliverPending({ outbox, bus, notifications, logger });
@@ -288,6 +300,7 @@ export function compose(config: Config): Application {
                 listProjects: makeListProjects(projects),
                 addProject: makeAddProject({ repository: projects, newId: uuid }),
                 removeProject: makeRemoveProject(projects),
+                listProjectMembers: makeListProjectMembers(memberships),
             },
             notifications: {
                 listNotifications: makeListNotifications(notifications),

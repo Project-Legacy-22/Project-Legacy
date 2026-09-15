@@ -8,6 +8,7 @@ export { createHibpPasswordRegistry } from './hibp-password-registry.js';
 export type { HibpSettings } from './hibp-password-registry.js';
 export type { ItemStore } from './item-store.js';
 export { createSupabaseProjectRepository } from './supabase-project-repository.js';
+export { createSupabaseMembershipRepository } from './supabase-membership-repository.js';
 export { createLogger } from './logger.js';
 
 // La chaine evenementielle de US-10 : le relais vide l outbox vers le broker,
