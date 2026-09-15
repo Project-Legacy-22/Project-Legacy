@@ -63,8 +63,12 @@ person just asked for.
 
 ## Gaps
 
-Each entry states where it is, which success criterion it touches, and who owns the fix. None is
-fixed here.
+Each entry states where it is, which success criterion it touches, and who owns the fix. None was
+fixed on 2026-09-10, the date of the measurement.
+
+Five have been closed since, and each entry below says by whom and when. They are kept rather
+than deleted: an audit that erases what it found stops being a record. What is still open is
+gap 7, and only its account half -- #246 owns it.
 
 ### 1. The entry screen is unguarded — `auth-page.tsx`
 
@@ -97,7 +101,12 @@ by region". The banner is the one thing that escapes it.
 
 **WCAG 1.3.1 Info and Relationships (A)**, and region navigation in practice.
 
-**Owner**: #49 (`EN-48`), blocked.
+**Closed on 2026-09-13 by #247.** Both blocks became named regions where they stand. They were
+deliberately *not* moved into `<header class="site-header">`: that block is dark with white text
+and the banner writes in grey, so nesting it there would have traded a landmark for a contrast
+failure. Held by `landmarks.test.tsx`, which refuses any reachable control outside a landmark and
+names the orphan -- verified by putting the banner back as a bare `div`, which reports
+`button: Sign out`.
 
 ### 4. The session screens have no structure and no way out — `app.tsx:112` and `app.tsx:116`
 
@@ -106,7 +115,9 @@ recovery at all — only reloading the page leaves it.
 
 **WCAG 1.3.1 (A)** for the structure, **3.3.3 Error Suggestion (AA)** for the dead end.
 
-**Owner**: #49 (`EN-48`), blocked.
+**Closed by #49, verified on 2026-09-13.** The screen now renders
+`<main class="auth-page session-check" aria-labelledby="session-check-heading">` with an `h1`, and
+the error branch carries a `Try again` button wired to a re-check.
 
 ### 5. `aria-label` on an element with no role — `items-section.tsx:19`
 
@@ -116,7 +127,9 @@ may be announced twice or not at all.
 
 **WCAG 4.1.2 Name, Role, Value (A).**
 
-**Owner**: blocked by #152, which modifies this file.
+**Closed on 2026-09-13 by #247**, its blocker having merged. The number is shown with
+`aria-hidden`, the sentence is read from a visually hidden span: the count is now announced once,
+by the content, and no label sits on a role-less element.
 
 ### 6. The document level is simulated, never verified
 
@@ -131,7 +144,9 @@ test covers it, and the suites are written in a way that would stay green if it 
 **WCAG 3.1.1 Language of Page (A)** and **2.4.2 Page Titled (A)**, both satisfied in production
 and unguarded.
 
-**Owner**: unowned before this audit. See the issue opened alongside this page.
+**Closed on 2026-09-13 by #247.** `landmarks.test.tsx` reads `apps/web/index.html` from disk --
+not from `document`, which the suites set themselves -- and refuses the loss of `lang` or of a
+title naming the product.
 
 ### 7. Two screens are never walked with the keyboard
 
@@ -147,7 +162,8 @@ harness for it exists since #190.
 Loading, empty and error are not reachable as separate states in a test today, so `axe` has
 never run on them.
 
-**Owner**: #49 (`EN-48`), which defines them, blocked.
+**Closed by #49, verified on 2026-09-13.** `view-state.test.tsx` carries the case « has no
+automatically detectable WCAG A or AA violation in any of the three states ».
 
 ## One finding the issue overstated
 
