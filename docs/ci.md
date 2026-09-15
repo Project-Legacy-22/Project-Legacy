@@ -94,10 +94,15 @@ pour que cela ne puisse pas arriver en silence.
 workflow `image` à chaque livraison sur `main`, pour qu'une exécution hors Vercel soit possible.
 La production, elle, est servie par Vercel.
 
-**État au 15 septembre 2026** : aucun déploiement récent ne porte la cible `production`, et le
-projet est marqué `live: false` chez Vercel. La production sert donc le dernier `main` livré, et
-la livraison depuis `dev` est en attente. C'est écrit ici plutôt que supposé : un document qui
-laisserait croire que `dev` est en ligne serait faux.
+**État au 15 septembre 2026**, mesuré par l'API Vercel et par l'historique des workflows :
+
+- la production sert le commit `3deb3cb`, déployé le 11 septembre depuis `main` — la livraison
+  #235. Tout ce que `dev` a reçu depuis n'existe qu'en prévisualisation ;
+- l'image GHCR et la release, elles, datent du **3 septembre**. Le workflow `image` a échoué sur
+  le push du 11 septembre, à l'étape SonarCloud, et l'étape de publication a donc été sautée.
+
+Les deux artefacts ne sont donc pas au même niveau, et c'est écrit ici plutôt que supposé : un
+document qui laisserait croire que l'image suit la production serait faux.
 
 ## Références
 
