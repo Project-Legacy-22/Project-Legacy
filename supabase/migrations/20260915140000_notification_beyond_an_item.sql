@@ -23,11 +23,16 @@ alter table public.notifications alter column item_id drop not null;
 -- Chaque genre dit ce qu il doit porter, et ce qu il ne doit pas porter. La
 -- seconde moitie compte autant : une notification d appartenance qui nommerait
 -- aussi une tache serait deux notifications dans une ligne.
+--
+-- Le genre porte le nom de l evenement qui le produit, sans sa version :
+-- 'item.created' pour 'item.created.v1', 'membership.created' pour
+-- 'membership.created.v1'. Deux vocabulaires pour une meme chose finiraient par
+-- diverger, et c est au lecteur du code qu il en couterait.
 alter table public.notifications
   add constraint notifications_kind_chk check (
     (kind = 'item.created'         and item_id    is not null and project_id is null)
     or
-    (kind = 'project.member.added' and project_id is not null and item_id    is null)
+    (kind = 'membership.created'   and project_id is not null and item_id    is null)
   );
 
 -- Le genre nomme, puisque le defaut n existe plus.
