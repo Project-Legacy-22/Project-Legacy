@@ -129,6 +129,14 @@ describe('TodoPage accessibility', () => {
         expect(document.querySelector('[role="status"]')?.textContent).toBe(labels.loadingItems);
     });
 
+    it('exposes loading on the items region, not only as text', async () => {
+        await renderPage({ items: [], loadState: { status: 'loading' } });
+        expect(getElement<HTMLElement>('[aria-labelledby="items-heading"]').getAttribute('aria-busy')).toBe('true');
+
+        await renderPage({ loadState: { status: 'ready' } });
+        expect(getElement<HTMLElement>('[aria-labelledby="items-heading"]').getAttribute('aria-busy')).toBe('false');
+    });
+
     it('shows an explicit empty state when the list is ready', async () => {
         await renderPage({
             items: [],
@@ -136,8 +144,20 @@ describe('TodoPage accessibility', () => {
             hasNextPage: false,
         });
 
-        expect(document.querySelector('.empty-message')?.textContent).toBe(labels.emptyItems);
+        // An empty state has to say what is missing and offer what fills it:
+        // a line saying there is nothing, with no way to add anything, is one
+        // of the two defects EN-48 names.
+        const empty = getElement<HTMLElement>('.empty-message');
+        expect(empty.querySelector('p')?.textContent).toBe(labels.emptyItems);
         expect(document.querySelectorAll('.kanban-column')).toHaveLength(3);
+
+        const fill = getElement<HTMLButtonElement>('.empty-message button');
+        expect(fill.textContent).toBe(labels.addItem);
+
+        // And the action has to land where the task is typed, not merely
+        // scroll the field into view.
+        await click(fill);
+        expect(document.activeElement).toBe(getElement<HTMLInputElement>('#item-name'));
     });
 
     it('moves focus to the list heading before retry removes its button', async () => {

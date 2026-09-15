@@ -7,6 +7,7 @@ import type {
 } from '../hooks/use-projects';
 import { labels } from '../labels';
 import { ProjectForm } from './project-form';
+import { ViewState } from './view-state';
 
 export interface ProjectsSectionProps {
     projects: readonly ProjectDto[];
@@ -111,33 +112,29 @@ function ProjectsPagination(props: ProjectsSectionProps) {
     );
 }
 
-function ProjectsContent(props: ProjectsSectionProps) {
-    if (props.loadState.status === 'loading') {
-        return (
-            <p className="status-message" role="status">
-                {labels.loadingProjects}
-            </p>
-        );
-    }
-    if (props.loadState.status === 'error') {
-        return (
-            <div className="error-message" role="alert">
-                <p>{props.loadState.message}</p>
-                <button className="button button-secondary" type="button" onClick={props.onRetry}>
-                    {labels.retry}
-                </button>
-            </div>
-        );
-    }
+function focusProjectName(): void {
+    document.querySelector<HTMLInputElement>('#project-name')?.focus();
+}
 
+// The form stays outside the state: somebody whose list failed to load can
+// still create a project, and the form was previously removed along with the
+// list on every load and every failure.
+function ProjectsContent(props: ProjectsSectionProps) {
     return (
         <>
             <ProjectForm isAdding={props.isAdding} onAdd={props.onAdd} />
-            {props.projects.length === 0 ? (
-                <p className="empty-message">{labels.emptyProjects}</p>
-            ) : (
+            <ViewState
+                state={props.loadState}
+                loadingMessage={labels.loadingProjects}
+                empty={{
+                    isEmpty: props.projects.length === 0,
+                    message: labels.emptyProjects,
+                    action: { label: labels.createProject, onAction: focusProjectName },
+                }}
+                onRetry={props.onRetry}
+            >
                 <ProjectList {...props} />
-            )}
+            </ViewState>
             <ProjectsPagination {...props} />
         </>
     );
@@ -145,7 +142,11 @@ function ProjectsContent(props: ProjectsSectionProps) {
 
 export function ProjectsSection(props: ProjectsSectionProps) {
     return (
-        <section className="panel projects-panel" aria-labelledby="projects-heading">
+        <section
+            className="panel projects-panel"
+            aria-labelledby="projects-heading"
+            aria-busy={props.loadState.status === 'loading'}
+        >
             <div className="section-heading">
                 <p className="section-kicker">{labels.projectsKicker}</p>
                 <h2 id="projects-heading">{labels.projectsTitle}</h2>

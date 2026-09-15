@@ -46,7 +46,7 @@ describe('item planning HTTP boundary', () => {
             createServer(
                 testConfig,
                 makeItemRouteUseCases({ repository: store, provider, generatedId: GENERATED_ID, projectId: PROJECT_ID }),
-                logger,
+                { logger },
             ),
             logger,
             `${SESSION_COOKIE}=${session.accessToken}`,

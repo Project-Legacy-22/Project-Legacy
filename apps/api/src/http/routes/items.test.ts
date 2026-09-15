@@ -67,7 +67,7 @@ describe('items API', () => {
                     generatedId: GENERATED_ID,
                     projectId: PROJECT_ID,
                 }),
-                logger,
+                { logger },
             ),
             logger,
             `${SESSION_COOKIE}=${session.accessToken}`,

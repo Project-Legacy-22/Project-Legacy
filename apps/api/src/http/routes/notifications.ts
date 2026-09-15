@@ -42,7 +42,10 @@ export function notificationsRouter(useCases: NotificationUseCases): Router {
         if (!query.success) return next(query.error);
 
         useCases
-            .listNotifications(accountOf(res).id, { limit: query.data.limit, cursor: query.data.cursor })
+            .listNotifications(accountOf(res).id, {
+                limit: query.data.limit,
+                cursor: query.data.cursor,
+            })
             .then(page => res.send(toNotificationPageDto(page)))
             .catch(next);
     };

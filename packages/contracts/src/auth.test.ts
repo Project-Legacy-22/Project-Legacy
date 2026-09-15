@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+    ChangeEmailBody,
+    ChangePasswordBody,
+    ConfirmEmailChangeBody,
     PASSWORD_POLICY,
     PRIVACY_POLICY_VERSION,
     RegisterAccountBody,
@@ -74,6 +77,58 @@ describe('ResetPasswordBody', () => {
 describe('SignInBody', () => {
     it('n impose pas la politique a un mot de passe deja existant', () => {
         expect(() => SignInBody.parse({ email: 'alice@example.com', password: 'court' })).not.toThrow();
+    });
+});
+
+describe('ChangePasswordBody (US-36)', () => {
+    it('n exige du mot de passe actuel que sa presence', () => {
+        const parsed = ChangePasswordBody.parse({
+            currentPassword: 'x',
+            newPassword: 'NouveauMotDePasse1',
+        });
+
+        expect(parsed.currentPassword).toBe('x');
+    });
+
+    it('refuse un mot de passe actuel vide', () => {
+        expect(() =>
+            ChangePasswordBody.parse({ currentPassword: '', newPassword: 'NouveauMotDePasse1' }),
+        ).toThrow();
+    });
+
+    // Ce mot de passe n existe pas encore : la longueur minimale s applique des
+    // la frontiere, comme pour une reinitialisation.
+    it('refuse un nouveau mot de passe plus court que la politique', () => {
+        expect(() =>
+            ChangePasswordBody.parse({
+                currentPassword: 'AncienMotDePasse1',
+                newPassword: 'x'.repeat(PASSWORD_POLICY.minimumLength - 1),
+            }),
+        ).toThrow();
+    });
+});
+
+describe('ChangeEmailBody (US-36)', () => {
+    it('canonicalise la nouvelle adresse', () => {
+        expect(ChangeEmailBody.parse({ newEmail: '  Bob@Example.COM ' })).toEqual({
+            newEmail: 'bob@example.com',
+        });
+    });
+
+    it('refuse une adresse qui n en est pas une', () => {
+        expect(() => ChangeEmailBody.parse({ newEmail: 'pas-une-adresse' })).toThrow();
+    });
+});
+
+describe('ConfirmEmailChangeBody (US-36)', () => {
+    it('accepte un jeton opaque', () => {
+        expect(ConfirmEmailChangeBody.parse({ token: 'peu-importe-la-forme' })).toEqual({
+            token: 'peu-importe-la-forme',
+        });
+    });
+
+    it('refuse une confirmation sans jeton', () => {
+        expect(() => ConfirmEmailChangeBody.parse({ token: '' })).toThrow();
     });
 });
 

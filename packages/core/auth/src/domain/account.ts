@@ -21,11 +21,20 @@ export class AuthError extends Error {
     }
 }
 
-// One failure for both halves of a sign-in. Saying which of the two was wrong
-// would tell anyone which addresses have an account here.
+// One failure for every reason a sign-in can be refused. Saying which one
+// applies would tell anyone which addresses have an account here.
+//
+// The wording matters because it covers more than a wrong password: an address
+// whose confirmation was never followed is refused too, and telling that person
+// their password is incorrect sends them to reset a password that works. It
+// says what happened and offers the one way out that reveals nothing.
 export class InvalidCredentials extends AuthError {
     constructor() {
-        super('invalid_credentials', 401, 'Email address or password is incorrect.');
+        super(
+            'invalid_credentials',
+            401,
+            'We could not sign you in. Check the address and the password, or reset your password.',
+        );
     }
 }
 
@@ -62,6 +71,29 @@ export class InvalidResetToken extends AuthError {
             'invalid_reset_token',
             400,
             'This password reset link is invalid or has expired. Request a new one.',
+        );
+    }
+}
+
+// The current password given to a signed-in password change does not match.
+// The caller already holds a valid session, so naming the rule discloses
+// nothing an attacker with that session could not already learn; a vague
+// message would only puzzle a legitimate user who mistyped.
+export class IncorrectCurrentPassword extends AuthError {
+    constructor() {
+        super('incorrect_current_password', 403, 'The current password is incorrect.');
+    }
+}
+
+// One message for an unknown, spent or expired email-change confirmation link,
+// like InvalidResetToken: telling the three apart would say whether a change
+// was ever started for an address.
+export class InvalidEmailChangeToken extends AuthError {
+    constructor() {
+        super(
+            'invalid_email_change_token',
+            400,
+            'This confirmation link is invalid or has expired. Start the change again.',
         );
     }
 }

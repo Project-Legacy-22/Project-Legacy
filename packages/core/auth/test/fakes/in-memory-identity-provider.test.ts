@@ -131,3 +131,78 @@ describe('inMemoryIdentityProvider session rotation', () => {
         await expect(p.refresh('refresh:account-1:999')).resolves.toBeUndefined();
     });
 });
+
+// Le changement d identifiants en etant connecte (US-36), modelise pour les
+// suites de cas d usage et d API. Ce qui est fixe : un changement de mot de
+// passe garde la session courante et revoque les autres, et un changement d
+// adresse ne prend effet qu une fois le jeton confirme.
+describe('inMemoryIdentityProvider credential change', () => {
+    const AUTRE = 'AutreMotDePasse3';
+    const NEUVE = 'neuf@example.com';
+
+    async function sessionDe(
+        p: ReturnType<typeof provider>,
+        email = ADRESSE,
+        password = ANCIEN,
+    ): Promise<{ accessToken: string; refreshToken: string }> {
+        const session = await p.authenticate(email, password);
+        if (session === undefined) throw new Error('authentification attendue');
+        return session;
+    }
+
+    it('garde la session qui change le mot de passe et revoque les autres', async () => {
+        const p = provider();
+        const courante = await sessionDe(p);
+        const autre = await sessionDe(p);
+
+        await p.changePassword(courante.accessToken, courante.refreshToken, NOUVEAU);
+
+        await expect(p.identify(courante.accessToken)).resolves.toBeDefined();
+        await expect(p.identify(autre.accessToken)).resolves.toBeUndefined();
+        await expect(p.refresh(autre.refreshToken)).resolves.toBeUndefined();
+    });
+
+    it('applique le nouveau mot de passe', async () => {
+        const p = provider();
+        const session = await sessionDe(p);
+
+        await p.changePassword(session.accessToken, session.refreshToken, NOUVEAU);
+
+        await expect(p.authenticate(ADRESSE, NOUVEAU)).resolves.toBeDefined();
+        await expect(p.authenticate(ADRESSE, ANCIEN)).resolves.toBeUndefined();
+    });
+
+    it('ne change l adresse qu une fois le jeton confirme', async () => {
+        const p = provider();
+        const session = await sessionDe(p);
+
+        await expect(
+            p.changeEmail(session.accessToken, session.refreshToken, NEUVE),
+        ).resolves.toBe('confirmation-requested');
+        // L ancienne adresse reste l identifiant tant que rien n est confirme.
+        await expect(p.authenticate(ADRESSE, ANCIEN)).resolves.toBeDefined();
+
+        await p.confirmEmailChange(p.emailChangeTokenFor(ADRESSE) ?? '');
+
+        await expect(p.authenticate(NEUVE, ANCIEN)).resolves.toBeDefined();
+        await expect(p.authenticate(ADRESSE, ANCIEN)).resolves.toBeUndefined();
+    });
+
+    it('repond a l identique sur une adresse deja prise', async () => {
+        const p = inMemoryIdentityProvider([
+            { id: 'account-1', email: ADRESSE, password: ANCIEN },
+            { id: 'account-2', email: 'bob@example.com', password: AUTRE },
+        ]);
+        const session = await sessionDe(p);
+
+        await expect(
+            p.changeEmail(session.accessToken, session.refreshToken, 'bob@example.com'),
+        ).resolves.toBe('address-unavailable');
+    });
+
+    it('rejette un jeton de confirmation inconnu', async () => {
+        const p = provider();
+
+        await expect(p.confirmEmailChange('jamais-emis')).resolves.toBe('token-rejected');
+    });
+});

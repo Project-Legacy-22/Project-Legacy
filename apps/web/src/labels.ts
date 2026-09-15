@@ -1,5 +1,6 @@
 import type { ItemStatus } from '@legacy/contracts';
 
+import { credentialsLabels } from './credentials-labels';
 import { itemPlanningLabels } from './item-planning-labels';
 
 const ITEM_STATUS_LABELS: Record<ItemStatus, string> = {
@@ -27,16 +28,21 @@ export const labels = {
     // Says nothing about which of the two was wrong: the API refuses to, and a
     // sharper message here would hand back the list of addresses that exist on
     // the one screen where it shows.
-    signInRejected: 'Email address or password is incorrect.',
+    signInRejected: 'We could not sign you in. Check the address and the password, or reset your password.',
+    signInUnavailable: 'Signing in is unavailable right now. Try again in a moment.',
     registerFailed: 'Unable to create the account.',
     // Same reason: a registration answers the same way whether the address was
     // free or already taken, so the confirmation cannot claim an account exists.
     registerAccepted: 'If that address was available, the account now exists. You can sign in.',
     sessionCheckFailed: 'Unable to check the session.',
     checkingSession: 'Checking your session…',
+    sessionCheckTitle: 'Session',
     // Why this screen is back (US-27). It says what happened rather than what
     // failed: nothing went wrong, the session reached the end of its life.
     sessionExpired: 'Your session has expired. Sign in again to pick up where you left off.',
+    // Names the region the banner becomes, so it can be reached by region
+    // navigation. A section without an accessible name is not exposed as one.
+    sessionRegion: 'Your session',
     signedInAs(email: string): string {
         return `Signed in as ${email}`;
     },
@@ -109,6 +115,9 @@ export const labels = {
     resetPasswordSucceeded: 'Your password has been changed and every other session was signed out. You can sign in now.',
     resetPasswordFailed: 'Unable to set a new password.',
     requestNewResetLink: 'Request a new link',
+
+    ...credentialsLabels,
+
     notificationsFailed: 'Unable to read your notifications.',
     unreadNotifications(count: number): string {
         return count === 1 ? '1 unread notification' : `${String(count)} unread notifications`;
@@ -162,9 +171,8 @@ export const labels = {
     policyHowLongNotifications: 'Notifications are erased after ninety days.',
     policyHowLongLogs: 'Logs are kept thirty days.',
     policyRecipientsTitle: 'Who else sees it',
-    policyRecipientsIntro: 'Three providers process data on our behalf, and nobody else:',
-    policyRecipientSupabase: 'Supabase, which hosts the database and handles sign-in.',
-    policyRecipientVercel: 'Vercel, which serves the application and collects its logs.',
+    policyRecipientsIntro: 'Four providers process data on our behalf, and nobody else. This is what each one holds, where it holds it, and who can reach it.',
+    policyJurisdiction: 'Nothing is stored or processed outside the European Union. Supabase, Vercel and Grafana Labs are United States companies, so a United States authority can compel them to hand over data that never left Europe. We say so rather than leave it implied.',
     policyRecipientHibp:
         'Have I Been Pwned, which receives five characters of a hash when you set a new password, so we can refuse one that appears in a known breach. It identifies nobody and nothing is stored.',
     policyRightsTitle: 'Your rights',
@@ -241,7 +249,7 @@ export const labels = {
     retryLoadingMore: 'Try loading more again',
     allItemsLoaded: 'All items loaded',
     retry: 'Try again',
-    emptyItems: 'No items yet. Add one above.',
+    emptyItems: 'No item in this project yet.',
     kanbanInstructions: 'Drag tasks between columns, or use each task’s Move button for a keyboard-accessible choice.',
     move: 'Move',
     movingItem: 'Moving…',

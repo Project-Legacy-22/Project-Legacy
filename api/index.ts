@@ -28,4 +28,7 @@ import { createServer } from '../apps/api/dist/http/server.js';
 const config = loadConfig();
 const application = compose(config);
 
-export default createServer(config, application.useCases, application.logger);
+export default createServer(config, application.useCases, {
+    logger: application.logger,
+    metrics: application.metrics,
+});

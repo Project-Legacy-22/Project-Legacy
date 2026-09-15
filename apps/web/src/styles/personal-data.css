@@ -1,3 +1,11 @@
+/* La classe intro est celle de l en-tete bleu fonce : sur un panneau blanc son
+   #e5edf4 etait invisible. */
+.panel-intro {
+    margin-bottom: 16px;
+    color: #39495c;
+    line-height: 1.6;
+}
+
 /* Section des donnees personnelles (US-13). Elle reutilise .panel,
    .section-heading, .form-field et .button-danger : rien ici n a besoin d un
    vocabulaire visuel propre, seule la mise en garde en a un. */

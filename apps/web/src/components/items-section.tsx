@@ -12,8 +12,12 @@ export function ItemsSection(props: ItemsContentProps & { projectName: string })
                         {labels.itemsInProject(props.projectName)}
                     </h2>
                 </div>
-                <p className="item-count" aria-label={labels.itemCount(props.items.length)}>
-                    {props.items.length}
+                {/* The number is shown, the sentence is read. aria-label on a
+                    paragraph is only inconsistently exposed -- it carries no
+                    role -- so the count was announced twice or not at all. */}
+                <p className="item-count">
+                    <span aria-hidden="true">{props.items.length}</span>
+                    <span className="visually-hidden">{labels.itemCount(props.items.length)}</span>
                 </p>
             </div>
             <ItemsContent {...props} />

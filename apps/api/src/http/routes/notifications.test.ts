@@ -97,7 +97,7 @@ describe('notifications API', () => {
         const logger = recordingLogger();
 
         harness = await listen(
-            createServer(testConfig, useCasesOver(store, provider), logger),
+            createServer(testConfig, useCasesOver(store, provider), { logger: logger }),
             logger,
             `${SESSION_COOKIE}=${session.accessToken}`,
         );

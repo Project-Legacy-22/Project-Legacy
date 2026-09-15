@@ -16,6 +16,8 @@ export const LEVELS = {
         // The guard below lives at this level too: it needs no server and no
         // real service, only git and these patterns.
         'test/*.test.ts',
+        'apps/api/src/after-write.test.ts',
+        'apps/api/src/item-use-cases.test.ts',
         'apps/api/src/config.test.ts',
         // Composition only, plus the one refusal start() owes before it dials
         // anything: no server and no real service are involved.
@@ -36,6 +38,10 @@ export const LEVELS = {
         // Boots the same real server, for what the whole app answers rather
         // than one route: headers, CORS, body limits.
         'apps/api/src/http/security.test.ts',
+        // Boots the same real server, for the deep link the reset email points
+        // at and what it answers when the shell is missing.
+        'apps/api/src/http/app-shell.test.ts',
+        'apps/api/src/http/metrics.test.ts',
     ],
 
     // Components mounted in jsdom, queried through src/test/react-root.tsx.
@@ -49,6 +55,12 @@ export const LEVELS = {
     // A real route, a real database. Its own config and its own command: it
     // needs the local Supabase stack, which npm test must not require.
     integration: ['apps/api/test/integration/**/*.test.ts'],
+
+    // The migration scripts, applied to three real engines in containers.
+    // Its own config and its own command as well: it needs the `migration`
+    // profile of compose.yaml up, and nothing else -- no client installed on
+    // the machine, no free port. `npm run test:migration` starts it.
+    migration: ['test/migration/**/*.migration.test.ts'],
 } as const;
 
 export type Level = keyof typeof LEVELS;

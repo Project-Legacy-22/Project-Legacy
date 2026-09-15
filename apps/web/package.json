@@ -11,16 +11,17 @@
   },
   "dependencies": {
     "@legacy/contracts": "*",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
   },
   "devDependencies": {
-    "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.7",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",
     "axe-core": "^4.13.0",
     "jsdom": "^26.1.0",
-    "vite": "^8.2.2",
+    "postcss": "^8.5.28",
+    "vite": "^8.3.0",
     "vitest": "^4.1.11"
   }
 }

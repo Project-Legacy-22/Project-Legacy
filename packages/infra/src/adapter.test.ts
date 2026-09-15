@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { adapterFailure, serviceRoleClient } from './adapter.js';
+import { adapterFailure, retryingOnOutage, serviceRoleClient, withDeadline } from './adapter.js';
 
 // The seven adapters of this package report their failures through this
 // factory, so the shape of what they throw is decided here rather than in each
@@ -64,5 +64,78 @@ describe('serviceRoleClient', () => {
         await expect(client.auth.getSession()).resolves.toMatchObject({
             data: { session: null },
         });
+    });
+});
+
+describe('withDeadline', () => {
+    it('rends la main quand le travail repond avant l echeance', async () => {
+        await expect(withDeadline(Promise.resolve('fait'), 1000, 'refresh')).resolves.toBe('fait');
+    });
+
+    // Le defaut de #214 : le SDK retente pendant environ 25 secondes sans que
+    // ni la fenetre ni le predicat soient exposes, et la requete HTTP restait
+    // ouverte pendant tout ce temps.
+    it('echoue en nommant l echeance quand le travail ne repond jamais', async () => {
+        const jamais = new Promise<never>(() => undefined);
+
+        await expect(withDeadline(jamais, 10, 'refresh')).rejects.toThrow(
+            /refresh exceeded its 10 ms deadline/u,
+        );
+    });
+
+    it('laisse passer l echec du travail plutot que de le convertir en echeance', async () => {
+        const echec = Promise.reject(new Error('le fournisseur a refuse'));
+
+        await expect(withDeadline(echec, 1000, 'refresh')).rejects.toThrow('le fournisseur a refuse');
+    });
+
+});
+
+describe('retryingOnOutage', () => {
+    const panne = { name: 'AuthRetryableFetchError', message: 'Gateway Timeout' };
+
+    it('retente une panne passagere et rend la seconde reponse', async () => {
+        const reponses = [{ error: panne }, { error: null }];
+        let appels = 0;
+        const call = () => {
+            const reponse = reponses[appels] ?? { error: null };
+            appels += 1;
+            return Promise.resolve(reponse);
+        };
+
+        await expect(retryingOnOutage(call)).resolves.toEqual({ error: null });
+        expect(appels).toBe(2);
+    });
+
+    // Un mot de passe refuse est une reponse, pas une panne : le retenter
+    // doublerait le cout de chaque tentative fausse.
+    it('ne retente pas un refus', async () => {
+        let appels = 0;
+        const call = () => {
+            appels += 1;
+            return Promise.resolve({ error: { name: 'AuthApiError', message: 'Invalid login credentials' } });
+        };
+
+        await retryingOnOutage(call);
+
+        expect(appels).toBe(1);
+    });
+
+    it('n appelle qu une fois quand la premiere reponse est bonne', async () => {
+        let appels = 0;
+        const call = () => {
+            appels += 1;
+            return Promise.resolve({ error: null });
+        };
+
+        await retryingOnOutage(call);
+
+        expect(appels).toBe(1);
+    });
+
+    it('rend la seconde panne quand la seconde tentative echoue aussi', async () => {
+        const call = () => Promise.resolve({ error: panne });
+
+        await expect(retryingOnOutage(call)).resolves.toEqual({ error: panne });
     });
 });

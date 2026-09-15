@@ -1,0 +1,28 @@
+// Account credentials (US-36). The email-change and password-changed lines
+// stay neutral: the API answers a taken and a free address the same way.
+export const credentialsLabels = {
+    credentialsKicker: 'Sign-in details',
+    credentialsTitle: 'Change your email address or password',
+    credentialsIntro: 'Your email address is what you sign in with. Changing it needs a confirmation on the new address; changing your password signs out your other sessions.',
+    changeEmailTitle: 'Change email address',
+    changeEmailIntro: 'Enter the new address. We send a confirmation link to it, and your current address stays the sign-in address until you follow it.',
+    newEmailLabel: 'New email address',
+    emailInvalid: 'Enter a valid email address.',
+    changeEmailSubmit: 'Send confirmation link',
+    changingEmail: 'Sending…',
+    emailChangeRequested: 'If that address is available, a confirmation link is on its way to it. Your sign-in address stays the same until you follow it.',
+    emailChangeFailed: 'Unable to start the email change. Try again in a moment.',
+    changePasswordTitle: 'Change password',
+    currentPasswordLabel: 'Current password',
+    currentPasswordRequired: 'Enter your current password.',
+    changePasswordSubmit: 'Change password',
+    changingPassword: 'Saving…',
+    passwordChanged: 'Your password has been changed. Your other sessions have been signed out.',
+    changePasswordFailed: 'Unable to change the password.',
+    confirmEmailChangeTitle: 'Confirm your email address',
+    confirmEmailChangeIntro: 'You followed a link to confirm a change of the email address on a Legacy 22 account.',
+    confirmEmailChangeSubmit: 'Confirm the change',
+    confirmingEmailChange: 'Confirming…',
+    confirmEmailChangeSucceeded: 'This confirmation is recorded. Once the link sent to the other address has been followed too, the new address is your sign-in address.',
+    confirmEmailChangeFailed: 'Unable to confirm this email address change.',
+} as const;

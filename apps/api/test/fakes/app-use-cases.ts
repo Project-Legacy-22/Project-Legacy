@@ -32,6 +32,9 @@ function unexercised(): AppUseCases {
             requestPasswordReset: refusing('requestPasswordReset'),
             resetPassword: refusing('resetPassword'),
             signOut: refusing('signOut'),
+            changePassword: refusing('changePassword'),
+            changeEmail: refusing('changeEmail'),
+            confirmEmailChange: refusing('confirmEmailChange'),
         },
         account: {
             exportPersonalData: refusing('exportPersonalData'),
@@ -46,6 +49,10 @@ function unexercised(): AppUseCases {
             countUnread: refusing('countUnread'),
             listNotifications: refusing('listNotifications'),
             markNotificationRead: refusing('markNotificationRead'),
+            // Zeros rather than a refusal: this one is housekeeping the routes
+            // ask for on the way past, not a use case a suite exercises. A
+            // suite that cares about it overrides it.
+            deliverPending: () => Promise.resolve({ published: 0, consumed: 0, failed: 0 }),
         },
     };
 }

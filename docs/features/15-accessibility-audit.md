@@ -3,7 +3,7 @@
 - **Issue**: #15 (`US-14`), audited as #181 (`US-14a`), reported by #193
 - **Epic**: A11y
 - **Delivered**: 2026-09-10
-- **Decisions that apply**: `D-15` (WCAG 2.1 AA as the target) — **still unratified**
+- **Decisions that apply**: ADR-0014 (WCAG 2.1 AA as the target), ratified 2026-09-11
 
 ## What this page is
 
@@ -11,8 +11,9 @@ A measurement of the screens that exist on 2026-09-10, against WCAG 2.1 AA. It r
 conformant, what is not, and — for each gap — the issue that owns the fix. It is an audit, not a
 remediation: nothing here changes behaviour.
 
-The Kanban board and the end-to-end keyboard path are out of scope. They are in #182, which
-waits on the code that does not exist yet.
+The Kanban board and the end-to-end keyboard path were out of scope on that date: the code did
+not exist yet. They were measured on 2026-09-13 as #182, and that half is the last section of
+this page. Everything above it is the 2026-09-10 measurement, unchanged.
 
 ## How it was measured
 
@@ -38,6 +39,7 @@ guarantee.
 | Task list | clean, guarded | **not walked** | `header` + `main` | one |
 | Personal data | clean, guarded | **not walked** | inside `main` | section `h2` |
 | Session check / error | not measurable | not applicable | **none** | **none** |
+| Kanban board | clean in five states, guarded | walked, guarded | inside `main` | column `h3` |
 
 "Guarded" means a committed test fails if the property is lost. "Clean" without "guarded" means
 it holds today and nothing keeps it holding.
@@ -61,8 +63,12 @@ person just asked for.
 
 ## Gaps
 
-Each entry states where it is, which success criterion it touches, and who owns the fix. None is
-fixed here.
+Each entry states where it is, which success criterion it touches, and who owns the fix. None was
+fixed on 2026-09-10, the date of the measurement.
+
+Five have been closed since, and each entry below says by whom and when. They are kept rather
+than deleted: an audit that erases what it found stops being a record. What is still open is
+gap 7, and only its account half -- #246 owns it.
 
 ### 1. The entry screen is unguarded — `auth-page.tsx`
 
@@ -95,7 +101,12 @@ by region". The banner is the one thing that escapes it.
 
 **WCAG 1.3.1 Info and Relationships (A)**, and region navigation in practice.
 
-**Owner**: #49 (`EN-48`), blocked.
+**Closed on 2026-09-13 by #247.** Both blocks became named regions where they stand. They were
+deliberately *not* moved into `<header class="site-header">`: that block is dark with white text
+and the banner writes in grey, so nesting it there would have traded a landmark for a contrast
+failure. Held by `landmarks.test.tsx`, which refuses any reachable control outside a landmark and
+names the orphan -- verified by putting the banner back as a bare `div`, which reports
+`button: Sign out`.
 
 ### 4. The session screens have no structure and no way out — `app.tsx:112` and `app.tsx:116`
 
@@ -104,7 +115,9 @@ recovery at all — only reloading the page leaves it.
 
 **WCAG 1.3.1 (A)** for the structure, **3.3.3 Error Suggestion (AA)** for the dead end.
 
-**Owner**: #49 (`EN-48`), blocked.
+**Closed by #49, verified on 2026-09-13.** The screen now renders
+`<main class="auth-page session-check" aria-labelledby="session-check-heading">` with an `h1`, and
+the error branch carries a `Try again` button wired to a re-check.
 
 ### 5. `aria-label` on an element with no role — `items-section.tsx:19`
 
@@ -114,7 +127,9 @@ may be announced twice or not at all.
 
 **WCAG 4.1.2 Name, Role, Value (A).**
 
-**Owner**: blocked by #152, which modifies this file.
+**Closed on 2026-09-13 by #247**, its blocker having merged. The number is shown with
+`aria-hidden`, the sentence is read from a visually hidden span: the count is now announced once,
+by the content, and no label sits on a role-less element.
 
 ### 6. The document level is simulated, never verified
 
@@ -129,7 +144,9 @@ test covers it, and the suites are written in a way that would stay green if it 
 **WCAG 3.1.1 Language of Page (A)** and **2.4.2 Page Titled (A)**, both satisfied in production
 and unguarded.
 
-**Owner**: unowned before this audit. See the issue opened alongside this page.
+**Closed on 2026-09-13 by #247.** `landmarks.test.tsx` reads `apps/web/index.html` from disk --
+not from `document`, which the suites set themselves -- and refuses the loss of `lang` or of a
+title naming the product.
 
 ### 7. Two screens are never walked with the keyboard
 
@@ -145,7 +162,8 @@ harness for it exists since #190.
 Loading, empty and error are not reachable as separate states in a test today, so `axe` has
 never run on them.
 
-**Owner**: #49 (`EN-48`), which defines them, blocked.
+**Closed by #49, verified on 2026-09-13.** `view-state.test.tsx` carries the case « has no
+automatically detectable WCAG A or AA violation in any of the three states ».
 
 ## One finding the issue overstated
 
@@ -199,3 +217,72 @@ npx vitest run apps/web/src/components/reset-password-page.test.tsx
 This page audits; it does not fix. Gaps 3, 4 and 8 belong to #49, gaps 1, 2 and 7 to the
 remediation half of #181, gap 5 waits on #152, and gap 6 has its own issue. The Kanban and the
 full keyboard path are #182.
+
+## The Kanban half, measured on 2026-09-13 (#182)
+
+The board did not exist when the rest of this page was written. It does now, and so does the
+logout that ends the journey, so the two criteria #182 held are measured here.
+
+### The board against WCAG 2.1 AA
+
+`axe-core`, tags `wcag2a` / `wcag2aa` / `wcag21aa`, run on the whole document in **five states**,
+because a component passes in one state and fails in another:
+
+| State | Result |
+|---|---|
+| three columns filled | no violation |
+| two columns left empty | no violation |
+| the move form open | no violation |
+| a move in flight, `aria-busy` set on the column | no violation |
+| a move refused by the server | no violation |
+
+Guarded by `apps/web/src/kanban-accessibility.test.tsx`. The empty column is a state of its own
+and not the filled one with fewer rows: it replaces the list with a sentence, so it produces a
+different tree.
+
+### The tab order
+
+**Left to right, column by column** — the order the columns are read in. An empty column has no
+stop of its own, so `Tab` steps over it rather than landing on the sentence that stands in for
+the list. Both are guarded.
+
+**Focus survives a move.** The task leaves one column and is remounted in another, so the button
+that was focused is destroyed. `useFocusedMove` puts focus back on it. Verified by removing that
+line: one test turns red, and only that one. Without it, focus falls back to `body` and a
+keyboard user restarts the board from the top.
+
+### The journey, end to end
+
+`apps/web/src/keyboard-journey.test.tsx` walks the path US-14 asks for, screen by screen: sign-in,
+registration, sign-in again, the board, a move, and signing out.
+
+Two things it establishes that a single-screen audit cannot:
+
+- **the mode switch does not drop focus.** `auth-page.tsx` gives `AuthForm` a `key={screen}` on
+  purpose, so the fields of the previous mode do not linger. A remount is exactly where focus
+  gets lost without anyone noticing, because the screen still looks right.
+- **registration and sign-in are two steps, not one.** Registering answers the same whether the
+  address existed or not, so it cannot be used to find out who has an account — and the person is
+  then told to sign in. The journey crosses that boundary with the keyboard alone.
+
+### What this cannot prove, and why it is still enough
+
+jsdom does not turn `Enter` on a focused `<button>` into a click, the way a browser does. So the
+journey proves that every control is **reachable** with `Tab`, in the reading order, and that
+focus is never dropped — then activates with a click.
+
+That is not a hole. Every control on the path is a native `<button>`, `<input>` or `<select>`, and
+those are operated by `Enter` and `Space` by definition. The guarantee comes from the element; what
+needed testing is that the element is reachable at all, which is what fails when an action hides
+behind a pointer-only gesture or when a remount loses focus.
+
+The drag and drop of `kanban-board.tsx` is one such pointer-only gesture, and it is **not** the
+only way to move a task: `move-item-form.tsx` does the same thing with a `<select>` and a submit,
+and the form focuses its own select so a keyboard user lands on the control the step is about.
+The keyboard alternative US-15 required is therefore not an addition made here — it is the path
+the board was built with, and it is now guarded.
+
+### What is still not walked
+
+`Personal data` remains unwalked with the keyboard, and gap 7 above keeps it. The board half of
+that gap is closed; the account half is not, and #246 owns it.

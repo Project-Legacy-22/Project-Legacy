@@ -2,15 +2,18 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import express from 'express';
-import type { Express } from 'express';
-import type { Logger } from '@legacy/contracts';
+import type { Express, RequestHandler } from 'express';
+import type { Logger, Metrics } from '@legacy/contracts';
 
 import type { Config } from '../config.js';
 import type { AppUseCases } from '../composition-root.js';
 import { accountRouter } from './routes/account.js';
 import { authRouter } from './routes/auth.js';
+import { credentialsRouter } from './routes/credentials.js';
 import { itemsRouter } from './routes/items.js';
 import { notificationsRouter } from './routes/notifications.js';
+import { metricsRouter, observeRequests } from './metrics.js';
+import { relayRouter } from './routes/relay.js';
 import { projectsRouter } from './routes/projects.js';
 import { translateErrors } from './error-middleware.js';
 import { requireAccount } from './session.js';
@@ -39,21 +42,90 @@ const RESET_WINDOW_MS = 5 * 60 * 1000;
 const RESET_REQUESTS_PER_EMAIL = 3;
 const RESET_EMAIL_WINDOW_MS = 60 * 60 * 1000;
 
+// Changing a signed-in credential (US-36). The per-caller budget matches
+// sign-in and is shared by the password change and the confirmation endpoint.
+// The email change also carries a per-address budget over an hour, the same
+// shape as a reset request, so one inbox cannot be flooded with confirmation
+// mail.
+const CREDENTIALS_MAX_ATTEMPTS = 10;
+const CREDENTIALS_WINDOW_MS = 5 * 60 * 1000;
+const EMAIL_CHANGES_PER_ADDRESS = 3;
+const EMAIL_CHANGE_WINDOW_MS = 60 * 60 * 1000;
+
 // Read once at startup, not per request: the deep link for the recovery email
 // needs the app shell, and a route that hits the file system on every call
 // would be one more thing to rate-limit for no reason. Absent in development,
 // where Vite serves this path.
-function readAppShell(staticDir: string): string | undefined {
+// Une coquille introuvable disparaissait en silence : la route du lien profond
+// n etait pas montee, la requete tombait dans la garde de session, et la
+// personne qui suivait un lien de reinitialisation recevait un 401 parlant
+// d une session dont elle n avait pas besoin (#232).
+function readAppShell(staticDir: string, logger: Logger): string | undefined {
+    const file = path.join(staticDir, 'index.html');
+
     try {
-        return readFileSync(path.join(staticDir, 'index.html'), 'utf8');
-    } catch {
+        return readFileSync(file, 'utf8');
+    } catch (error) {
+        logger.warn({ err: error, file }, 'application shell not found, deep links answer 503');
         return undefined;
     }
 }
 
-export function createServer(config: Config, useCases: AppUseCases, logger: Logger): Express {
+// Le lien de reinitialisation et celui de changement d adresse sont ouverts
+// directement par le navigateur : la coquille doit etre servie pour que le front
+// recupere le jeton.
+//
+// Monte dans tous les cas, et repond 503 quand la coquille manque : c est ce qui
+// distingue une coquille manquante d une session manquante (#232). Conditionne a
+// la coquille, la route disparaissait et la requete tombait dans la garde de
+// session -- quelqu un qui suivait un lien de reinitialisation s entendait dire
+// qu une session etait requise pour changer le mot de passe qu il avait oublie.
+function shellHandler(appShell: string | undefined): RequestHandler {
+    return (_req, res) => {
+        if (appShell === undefined) {
+            res.status(503).send({
+                type: 'app_shell_unavailable',
+                title: 'AppShellUnavailable',
+                status: 503,
+                detail: 'The application shell is not available on this deployment.',
+            });
+            return;
+        }
+
+        res.type('html').send(appShell);
+    };
+}
+
+// The log and the measurements are one thing seen two ways: what the service
+// says about itself. Passing them grouped avoids a fourth parameter, and says
+// that they belong together.
+export interface Observability {
+    logger: Logger;
+    // Absent, the server runs without measuring: a test suite has no reason to
+    // build an adapter in order to check a route.
+    metrics?: Metrics;
+}
+
+// The measurements first: the observer must see every request, including the
+// ones a middleware turns away afterwards. The endpoint that serves them exists
+// only when a secret protects it.
+function mountObservability(app: Express, metrics: Metrics | undefined, secret: string | undefined): void {
+    if (metrics === undefined) return;
+
+    app.use(observeRequests(metrics));
+
+    if (secret !== undefined) {
+        app.use(metricsRouter(metrics, secret));
+    }
+}
+
+export function createServer(
+    config: Config,
+    useCases: AppUseCases,
+    { logger, metrics }: Observability,
+): Express {
     const app = express();
-    const appShell = readAppShell(config.staticDir);
+    const appShell = readAppShell(config.staticDir, logger);
 
     // req.ip, and therefore the rate limiter's client key, is only as
     // trustworthy as this setting: it says how many proxy hops in front of the
@@ -66,6 +138,8 @@ export function createServer(config: Config, useCases: AppUseCases, logger: Logg
     // Before the body parser: a body that is too large or not JSON is refused
     // by express.json() with a next(error), and the error middleware needs the
     // trace id to already be on the response to report that refusal.
+    mountObservability(app, metrics, config.relaySecret);
+
     app.use(withTraceId);
     app.use(securityHeaders());
     app.use(cors(config.webOrigin));
@@ -89,14 +163,24 @@ export function createServer(config: Config, useCases: AppUseCases, logger: Logg
     // act on the caller's own account, so they resolve it the same way.
     app.use(accountRouter(useCases.account, useCases.auth, { secureCookie: config.secureCookies }));
 
-    // The reset link in the recovery email is a deep link the browser opens
-    // directly. Serve the app shell for it so the front-end can pick up the
-    // token; every other path still falls through to the session guard.
-    if (appShell !== undefined) {
-        app.get('/reset-password', (_req, res) => {
-            res.type('html').send(appShell);
-        });
-    }
+    // Same shape as accountRouter: the password and email changes act on the
+    // caller's own account, and the confirmation endpoint is public because its
+    // link is opened from an email client (US-36).
+    app.use(
+        credentialsRouter(useCases.auth, {
+            secureCookie: config.secureCookies,
+            maxAttempts: CREDENTIALS_MAX_ATTEMPTS,
+            windowMs: CREDENTIALS_WINDOW_MS,
+            emailChangesPerAddress: EMAIL_CHANGES_PER_ADDRESS,
+            emailChangeWindowMs: EMAIL_CHANGE_WINDOW_MS,
+        }),
+    );
+
+    // Les liens profonds des e-mails d authentification, ouverts directement par
+    // le navigateur.
+    const serveShell = shellHandler(appShell);
+    app.get('/reset-password', serveShell);
+    app.get('/confirm-email-change', serveShell);
 
     // Items belong to somebody since US-11: no session, no items. The guard
     // also renews the session it is given when it can, so an hour-long access
@@ -106,8 +190,15 @@ export function createServer(config: Config, useCases: AppUseCases, logger: Logg
     // no state, and building it three times would only make three closures.
     const session = requireAccount(useCases.auth, config.secureCookies);
 
+    // Monte avant les routes gardees par la session : ce middleware s applique
+    // a tout ce qui le suit, et l appelant ici est un workflow sans session.
+    if (config.relaySecret !== undefined) {
+        app.use(relayRouter(useCases.notifications, config.relaySecret));
+    }
+
     app.use(session, projectsRouter(useCases.projects), itemsRouter(useCases.items));
     app.use(session, notificationsRouter(useCases.notifications));
+
 
     // Registered last: express only treats a middleware as an error handler
     // once every route has had its chance to fail.

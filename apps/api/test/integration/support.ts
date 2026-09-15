@@ -74,5 +74,5 @@ export async function registerAndSignIn(app: Application, password: string): Pro
 
 export async function serveAs(app: Application, cookie?: string): Promise<Harness> {
     const logger = recordingLogger();
-    return listen(createServer(integrationConfig(), app.useCases, logger), logger, cookie);
+    return listen(createServer(integrationConfig(), app.useCases, { logger: logger }), logger, cookie);
 }

@@ -112,7 +112,7 @@ describe('duree de vie de la session', () => {
         );
         const logger = recordingLogger();
 
-        harness = await listen(createServer(testConfig, useCasesOver(provider), logger), logger);
+        harness = await listen(createServer(testConfig, useCasesOver(provider), { logger: logger }), logger);
     });
 
     afterEach(() => harness.close());

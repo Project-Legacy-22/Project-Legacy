@@ -46,6 +46,7 @@ export const SESSION = {
 export const SIGNUP = 'POST /auth/v1/signup';
 export const TOKEN = 'POST /auth/v1/token';
 export const USER = 'GET /auth/v1/user';
+export const ADMIN_CREATE = 'POST /auth/v1/admin/users';
 export const ADMIN_DELETE = `DELETE /auth/v1/admin/users/${UTILISATEUR.id}`;
 export const RECOVER = 'POST /auth/v1/recover';
 export const VERIFY = 'POST /auth/v1/verify';

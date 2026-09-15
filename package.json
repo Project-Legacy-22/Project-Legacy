@@ -12,6 +12,7 @@
     "apps/web",
     "apps/worker",
     "packages/contracts",
+    "packages/data-migration",
     "packages/infra",
     "packages/core/items",
     "packages/core/auth",
@@ -35,10 +36,14 @@
     "test:http": "vitest run --project http",
     "test:dom": "vitest run --project dom",
     "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:migration": "docker compose --profile migration up -d --wait --quiet-pull && vitest run --config vitest.migration.config.ts",
     "db:start": "supabase start",
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
     "db:lint": "supabase db lint --level warning",
+    "backup": "node scripts/backup.mjs",
+    "data:export": "tsx --conditions=development packages/data-migration/src/export-cli.ts",
+    "data:import": "tsx --conditions=development packages/data-migration/src/import-cli.ts",
     "db:types": "node scripts/db-types.mjs"
   },
   "devDependencies": {
@@ -49,10 +54,10 @@
     "eslint": "^10.10.0",
     "globals": "^17.12.0",
     "nodemon": "^3.1.9",
-    "supabase": "^2.116.0",
+    "supabase": "^2.117.0",
     "tsx": "^4.23.13",
     "typescript": "~5.9.3",
-    "typescript-eslint": "^8.69.0",
+    "typescript-eslint": "^8.70.0",
     "vitest": "^4.1.11"
   },
   "overrides": {

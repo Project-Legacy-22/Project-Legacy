@@ -8,22 +8,8 @@ import type { AccountDto, AuthApi } from './api/auth-api';
 import type { NotificationDto, NotificationPageDto, NotificationsApi } from './api/notifications-api';
 import { click, createReactTestRoot, flushTimers, getElement } from './test/react-root';
 import type { ReactTestRoot } from './test/react-root';
+import { deferred } from './test/deferred';
 import { labels } from './labels';
-
-interface Deferred<T> {
-    promise: Promise<T>;
-    resolve: (value: T) => void;
-}
-
-function deferred<T>(): Deferred<T> {
-    let resolve: Deferred<T>['resolve'] = () => {
-        throw new Error('Deferred promise was not initialized.');
-    };
-    const promise = new Promise<T>(promiseResolve => {
-        resolve = promiseResolve;
-    });
-    return { promise, resolve };
-}
 
 let testRoot: ReactTestRoot;
 
@@ -122,6 +108,24 @@ describe('App notifications panel', () => {
         expect(document.querySelector('.empty-message')?.textContent).toBe(labels.emptyNotifications);
     });
 
+    it('expose le chargement sur le panneau, et pas seulement en texte', async () => {
+        // Une reponse differee, sans quoi l etat de chargement est deja fini
+        // quand le clic est attendu et ne peut pas etre observe.
+        const page = deferred<NotificationPageDto>();
+        const notifications = createNotifications({
+            listNotifications: vi.fn(() => page.promise),
+        });
+        await testRoot.render(<App api={createApi()} auth={createAuth()} notifications={notifications} />);
+
+        await click(getElement<HTMLButtonElement>('.notifications-panel button'));
+        expect(getElement<HTMLElement>('.notifications-panel').getAttribute('aria-busy')).toBe('true');
+
+        page.resolve({ notifications: [], nextCursor: null });
+        await flushTimers();
+
+        expect(getElement<HTMLElement>('.notifications-panel').getAttribute('aria-busy')).toBe('false');
+    });
+
     it('se replie a un second clic, sans redemander la liste', async () => {
         const listNotifications = vi.fn(async (): Promise<NotificationPageDto> => ({
             notifications: [],
@@ -186,20 +190,27 @@ describe('App notifications panel', () => {
         );
     });
 
-    it('signale un echec de chargement de la liste', async () => {
-        const notifications = createNotifications({
-            listNotifications: vi.fn(async () => {
-                throw new Error('panne du serveur');
-            }),
+    it('signale un echec de chargement de la liste et relance la requete', async () => {
+        const listNotifications = vi.fn(async () => {
+            throw new Error('panne du serveur');
         });
+        const notifications = createNotifications({ listNotifications });
         await testRoot.render(<App api={createApi()} auth={createAuth()} notifications={notifications} />);
 
         await click(getElement<HTMLButtonElement>('.notifications-panel button'));
         await flushTimers();
 
-        expect(getElement<HTMLElement>('#notifications-panel-content [role="alert"]').textContent).toBe(
-            labels.loadNotificationsFailed,
-        );
+        const alerte = getElement<HTMLElement>('#notifications-panel-content [role="alert"]');
+        expect(alerte.querySelector('p')?.textContent).toBe(labels.loadNotificationsFailed);
+
+        // Le critere de EN-48 n est pas qu un bouton existe, c est qu il
+        // relance la requete. Le panneau n en avait aucun : la seule sortie
+        // etait de le refermer et de le rouvrir, ce que rien ne disait.
+        const appelsAvant = listNotifications.mock.calls.length;
+        await click(getElement<HTMLButtonElement>('[role="alert"] button'));
+        await flushTimers();
+
+        expect(listNotifications.mock.calls.length).toBeGreaterThan(appelsAvant);
     });
 
     it('signale un echec de chargement de la suite, avec un bouton pour ressayer', async () => {

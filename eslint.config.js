@@ -40,6 +40,7 @@ export default tseslint.config(
                 // every *.test.ts file would fail to parse.
                 project: [
                     './packages/contracts/tsconfig.json',
+                    './packages/data-migration/tsconfig.json',
                     './packages/core/items/tsconfig.json',
                     './packages/core/auth/tsconfig.json',
                     './packages/infra/tsconfig.json',

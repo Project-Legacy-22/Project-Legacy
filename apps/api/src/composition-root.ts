@@ -9,17 +9,23 @@ import {
     createSupabaseOutboxStore,
     createSupabasePersonalDataStore,
     createSupabaseProjectRepository,
+    createPrometheusMetrics,
+    deliverPending,
     relayOnce,
 } from '@legacy/infra';
 import type {
+    DeliveryPassResult,
     EventBus,
     ItemStore,
     NotificationStore,
     OutboxStore,
     RelayDependencies,
 } from '@legacy/infra';
-import type { Logger } from '@legacy/contracts';
+import type { Logger, Metrics } from '@legacy/contracts';
 import {
+    makeChangeEmail,
+    makeChangePassword,
+    makeConfirmEmailChange,
     makeEraseAccount,
     makeExportPersonalData,
     makeIdentifyCaller,
@@ -31,6 +37,7 @@ import {
     makeSignOut,
 } from '@legacy/core-auth';
 import { makeListItems, makeAddItem, makeChangeItem, makeMoveItem, makeRemoveItem } from '@legacy/core-items';
+import type { ItemRepository } from '@legacy/core-items';
 import {
     makeCountUnreadNotifications,
     makeListNotifications,
@@ -38,6 +45,7 @@ import {
 } from '@legacy/core-notifications';
 import { makeAddProject, makeListProjects, makeRemoveProject } from '@legacy/core-projects';
 
+import { afterWrite } from './after-write.js';
 import type { Config } from './config.js';
 
 export interface ItemUseCases {
@@ -56,6 +64,9 @@ export interface AuthUseCases {
     requestPasswordReset: ReturnType<typeof makeRequestPasswordReset>;
     resetPassword: ReturnType<typeof makeResetPassword>;
     signOut: ReturnType<typeof makeSignOut>;
+    changePassword: ReturnType<typeof makeChangePassword>;
+    changeEmail: ReturnType<typeof makeChangeEmail>;
+    confirmEmailChange: ReturnType<typeof makeConfirmEmailChange>;
 }
 
 // Kept apart from AuthUseCases, which requireAccount receives on every request
@@ -76,6 +87,10 @@ export interface NotificationUseCases {
     listNotifications: ReturnType<typeof makeListNotifications>;
     markNotificationRead: ReturnType<typeof makeMarkNotificationRead>;
     countUnread: ReturnType<typeof makeCountUnreadNotifications>;
+    // Une passe de livraison, demandee au lieu d etre planifiee. Sur une cible
+    // sans processus long, personne ne fait tourner le relais : la route qui
+    // lit les notifications et le workflow planifie l appellent.
+    deliverPending: () => Promise<DeliveryPassResult>;
 }
 
 export interface AppUseCases {
@@ -94,6 +109,8 @@ const RELAY_INTERVAL_MS = 1_000;
 export interface Application {
     useCases: AppUseCases;
     logger: Logger;
+    // Built here because this layer is the only one that reaches an adapter.
+    metrics: Metrics;
     start(): Promise<void>;
     stop(): Promise<void>;
 }
@@ -180,12 +197,53 @@ function authUseCases(
         requestPasswordReset: makeRequestPasswordReset(identity),
         resetPassword: makeResetPassword({ provider: identity, compromisedPasswords }),
         signOut: makeSignOut(identity),
+        changePassword: makeChangePassword({ provider: identity, compromisedPasswords }),
+        changeEmail: makeChangeEmail(identity),
+        confirmEmailChange: makeConfirmEmailChange(identity),
+    };
+}
+
+// Rien a livrer quand aucun courtier n est configure : servir du HTTP n en
+// demande pas, et la passe doit alors ne rien faire plutot que d echouer.
+function makeDeliverPending(dependencies: {
+    outbox: OutboxStore;
+    bus: EventBus | undefined;
+    notifications: NotificationStore;
+    logger: Logger;
+}): () => Promise<DeliveryPassResult> {
+    const { bus } = dependencies;
+
+    if (bus === undefined) return () => Promise.resolve({ published: 0, consumed: 0, failed: 0 });
+
+    return () => deliverPending({ ...dependencies, bus });
+}
+
+// La creation est le seul producteur d evenement : le declencheur de livraison
+// vit donc au plus pres du fait ecrit. Voir after-write.ts.
+export function itemUseCases(
+    // Un depot, pas un store : ces cas d usage n ouvrent ni ne ferment rien.
+    store: ItemRepository,
+    deliver: () => Promise<unknown>,
+    logger: Logger,
+): ItemUseCases {
+    return {
+        listItems: makeListItems(store),
+        addItem: afterWrite(
+            makeAddItem({ repository: store, newId: uuid, now: () => new Date() }),
+            deliver,
+            logger,
+        ),
+        changeItem: makeChangeItem(store),
+        moveItem: makeMoveItem(store),
+        removeItem: makeRemoveItem(store),
     };
 }
 
 export function compose(config: Config): Application {
     const { store, identity, personalData, projects, outbox, notifications, bus } = createAdapters(config);
     const logger = createLogger(config.logLevel);
+    const deliver = makeDeliverPending({ outbox, bus, notifications, logger });
+    const metrics = createPrometheusMetrics();
     const compromisedPasswords = createHibpPasswordRegistry({ logger });
 
     // The relay lives with the writer, not with the consumer: it reads a table
@@ -196,14 +254,9 @@ export function compose(config: Config): Application {
 
     return {
         logger,
+        metrics,
         useCases: {
-            items: {
-                listItems: makeListItems(store),
-                addItem: makeAddItem({ repository: store, newId: uuid, now: () => new Date() }),
-                changeItem: makeChangeItem(store),
-                moveItem: makeMoveItem(store),
-                removeItem: makeRemoveItem(store),
-            },
+            items: itemUseCases(store, deliver, logger),
             auth: authUseCases(identity, compromisedPasswords),
             account: {
                 exportPersonalData: makeExportPersonalData({
@@ -221,6 +274,7 @@ export function compose(config: Config): Application {
                 listNotifications: makeListNotifications(notifications),
                 markNotificationRead: makeMarkNotificationRead(notifications),
                 countUnread: makeCountUnreadNotifications(notifications),
+                deliverPending: deliver,
             },
         },
         // start() no longer creates the schema -- that is what migrations are

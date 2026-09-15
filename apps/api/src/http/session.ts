@@ -6,7 +6,7 @@ import type { AuthUseCases } from '../composition-root.js';
 import { readCookie } from './cookies.js';
 
 export const SESSION_COOKIE = 'session';
-const REFRESH_COOKIE = 'refresh';
+export const REFRESH_COOKIE = 'refresh';
 
 // A day without a single request ends the session: the browser stops holding
 // the refresh cookie and the next visit starts at the sign-in screen. Every
@@ -61,9 +61,21 @@ export function clearSessionCookies(res: Response, secure: boolean): void {
 // value travels through a typed view and is checked on the way out.
 interface AccountLocals {
     account?: unknown;
+    sessionTokens?: unknown;
+}
+
+// The caller's current session, for a route that has to act as them against the
+// identity provider rather than as an administrator (US-36). It is put here, not
+// read from the request's Cookie header, because after a renewal the header
+// still carries the stale pair while these are the fresh one.
+export interface SessionTokens {
+    accessToken: string;
+    refreshToken: string;
 }
 
 const MANQUANT = 'requireAccount doit etre monte avant tout usage de accountOf.';
+const SANS_JETONS =
+    'sessionTokensOf exige requireAccount en amont et les deux cookies de session.';
 
 function isAccount(value: unknown): value is Account {
     if (typeof value !== 'object' || value === null) return false;
@@ -75,12 +87,33 @@ function isAccount(value: unknown): value is Account {
     return typeof id === 'string' && typeof email === 'string';
 }
 
+function areSessionTokens(value: unknown): value is SessionTokens {
+    if (typeof value !== 'object' || value === null) return false;
+
+    const { accessToken, refreshToken } = value as Partial<SessionTokens>;
+
+    return (
+        typeof accessToken === 'string' &&
+        accessToken !== '' &&
+        typeof refreshToken === 'string' &&
+        refreshToken !== ''
+    );
+}
+
 export function accountOf(res: Response): Account {
     const { account } = res.locals as AccountLocals;
 
     if (!isAccount(account)) throw new Error(MANQUANT);
 
     return account;
+}
+
+export function sessionTokensOf(res: Response): SessionTokens {
+    const { sessionTokens } = res.locals as AccountLocals;
+
+    if (!areSessionTokens(sessionTokens)) throw new Error(SANS_JETONS);
+
+    return sessionTokens;
 }
 
 interface Admission {
@@ -98,17 +131,20 @@ async function admit(
     { useCases, secureCookie }: Admission,
 ): Promise<AuthError | undefined> {
     const accessToken = readCookie(req.headers.cookie, SESSION_COOKIE);
+    const cookieRefreshToken = readCookie(req.headers.cookie, REFRESH_COOKIE);
 
     if (accessToken !== undefined) {
         const account = await useCases.identifyCaller(accessToken);
 
         if (account !== undefined) {
-            (res.locals as AccountLocals).account = account;
+            const locals = res.locals as AccountLocals;
+            locals.account = account;
+            locals.sessionTokens = { accessToken, refreshToken: cookieRefreshToken ?? '' };
             return undefined;
         }
     }
 
-    const refreshToken = readCookie(req.headers.cookie, REFRESH_COOKIE);
+    const refreshToken = cookieRefreshToken;
 
     if (refreshToken === undefined) return new SessionRequired();
 
@@ -127,7 +163,14 @@ async function admit(
     }
 
     setSessionCookies(res, session, secureCookie);
-    (res.locals as AccountLocals).account = session.account;
+    const locals = res.locals as AccountLocals;
+    locals.account = session.account;
+    // The fresh pair, not the one the request arrived with: that refresh token
+    // was just consumed by the rotation.
+    locals.sessionTokens = {
+        accessToken: session.accessToken,
+        refreshToken: session.refreshToken,
+    };
     return undefined;
 }
 

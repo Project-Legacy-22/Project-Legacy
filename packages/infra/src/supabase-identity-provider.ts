@@ -3,12 +3,15 @@ import type { Session as GoTrueSession } from '@supabase/supabase-js';
 
 import type {
     Account,
+    EmailChangeConfirmation,
+    EmailChangeOutcome,
     IdentityProvider,
+    PasswordChangeOutcome,
     PasswordResetOutcome,
     RegistrationOutcome,
     Session,
 } from '@legacy/core-auth';
-import { adapterFailure } from './adapter.js';
+import { adapterFailure, retryingOnOutage, withDeadline } from './adapter.js';
 import type { AdapterFailure } from './adapter.js';
 
 export interface SupabaseAuthSettings {
@@ -26,8 +29,12 @@ export interface SupabaseAuthSettings {
 // reach the error middleware as a 500 rather than be mistaken for a rejected
 // credential. Silently treating an unknown error as "wrong password" would turn
 // an outage into a wall of plausible refusals.
-const ALREADY_REGISTERED = 'user_already_exists';
-const INVALID_CREDENTIALS = 'invalid_credentials';
+// GoTrue answers one or the other depending on the call: signUp says
+// user_already_exists, admin.createUser says email_exists.
+const ALREADY_REGISTERED = new Set(['user_already_exists', 'email_exists']);
+// Deux refus, pas une panne : le second vient d un compte cree avant que
+// l inscription confirme l adresse elle-meme, et il repondait 500.
+const SIGN_IN_REFUSED = new Set(['invalid_credentials', 'email_not_confirmed']);
 const UNUSABLE_TOKEN = new Set(['bad_jwt', 'session_expired', 'session_not_found']);
 
 // A refresh token GoTrue will not exchange. It distinguishes a token it never
@@ -50,9 +57,10 @@ const UNUSABLE_REFRESH_TOKEN = new Set([
 // to finish rather than report a failure for work already done.
 const USER_NOT_FOUND = 404;
 
-// The recovery link was already used, has expired, or never existed. All of
-// them mean the same thing to the caller: ask for a new link.
-const RECOVERY_REJECTED = new Set([
+// An OTP link -- password recovery, or an email-change confirmation -- that was
+// already used, has expired, or never existed. All of them mean the same thing
+// to the caller: start again.
+const OTP_REJECTED = new Set([
     'otp_expired',
     'otp_disabled',
     'bad_jwt',
@@ -62,6 +70,11 @@ const RECOVERY_REJECTED = new Set([
     'validation_failed',
 ]);
 const WEAK_PASSWORD = 'weak_password';
+
+// GoTrue's answer when the address handed to updateUser({ email }) already has
+// an account. The use case turns it into the same reply a free address gets, so
+// the form cannot be used to tell which addresses are registered (US-36).
+const EMAIL_ALREADY_TAKEN = new Set(['email_exists', 'user_already_exists']);
 
 // GoTrue's own throttle on recovery emails. With the local mail catcher it is
 // inert, but in production it must not surface as a 500: the caller has just
@@ -135,6 +148,9 @@ async function requestPasswordReset(settings: SupabaseAuthSettings, email: strin
     return fail('requestPasswordReset', error);
 }
 
+// Far short of the 25 seconds the SDK's own retries take to give up (#214).
+const REFRESH_DEADLINE_MS = 5000;
+
 async function refresh(
     settings: SupabaseAuthSettings,
     refreshToken: string,
@@ -142,7 +158,16 @@ async function refresh(
     // A throwaway client, for the reason resetPassword below uses one: the
     // exchange stores the session it obtains on the instance that ran it, and
     // that session belongs to a single caller.
-    const result = await stateless(settings).auth.refreshSession({ refresh_token: refreshToken });
+    let result;
+    try {
+        result = await withDeadline(
+            stateless(settings).auth.refreshSession({ refresh_token: refreshToken }),
+            REFRESH_DEADLINE_MS,
+            'refresh',
+        );
+    } catch (cause) {
+        return fail('refresh', cause);
+    }
 
     if (result.error !== null) {
         const { code, status } = result.error;
@@ -175,7 +200,7 @@ async function resetPassword(
     const verified = await scoped.auth.verifyOtp({ type: 'recovery', token_hash: recoveryToken });
     if (verified.error !== null) {
         const { code, status } = verified.error;
-        if (code !== undefined && RECOVERY_REJECTED.has(code)) return 'token-rejected';
+        if (code !== undefined && OTP_REJECTED.has(code)) return 'token-rejected';
         if (status === 401 || status === 403) return 'token-rejected';
         return fail('resetPassword', verified.error);
     }
@@ -196,6 +221,90 @@ async function resetPassword(
     return 'password-changed';
 }
 
+// The caller's two cookie tokens, kept together so a signed-in change can act
+// as them rather than as an administrator.
+interface CallerSession {
+    accessToken: string;
+    refreshToken: string;
+}
+
+// Restores the caller's session onto a throwaway client so the change acts as
+// them: the admin key would bypass the password policy and rate limits GoTrue
+// applies here, and those are checks US-36 wants kept. setSession makes a
+// GET /user call to validate the token, which is why a bad one surfaces here.
+async function actingAs(settings: SupabaseAuthSettings, session: CallerSession) {
+    const scoped = stateless(settings);
+    const { error } = await scoped.auth.setSession({
+        access_token: session.accessToken,
+        refresh_token: session.refreshToken,
+    });
+
+    return { scoped, error };
+}
+
+async function changePassword(
+    settings: SupabaseAuthSettings,
+    session: CallerSession,
+    newPassword: string,
+): Promise<PasswordChangeOutcome> {
+    const { scoped, error } = await actingAs(settings, session);
+    if (error !== null) return fail('changePassword', error);
+
+    const updated = await scoped.auth.updateUser({ password: newPassword });
+    if (updated.error !== null) {
+        if (updated.error.code === WEAK_PASSWORD) return 'weak-password';
+        return fail('changePassword', updated.error);
+    }
+
+    // 'others' revokes every session of the account except the one these tokens
+    // hold: the caller stays signed in, every other browser does not (US-36).
+    const signedOut = await scoped.auth.signOut({ scope: 'others' });
+    if (signedOut.error !== null) return fail('changePassword', signedOut.error);
+
+    return 'password-changed';
+}
+
+async function changeEmail(
+    settings: SupabaseAuthSettings,
+    session: CallerSession,
+    newEmail: string,
+): Promise<EmailChangeOutcome> {
+    const { scoped, error } = await actingAs(settings, session);
+    if (error !== null) return fail('changeEmail', error);
+
+    // GoTrue emails a confirmation link (to both addresses, with
+    // double_confirm_changes on); the address of record is untouched until it is
+    // followed.
+    const updated = await scoped.auth.updateUser({ email: newEmail });
+    if (updated.error !== null) {
+        const { code } = updated.error;
+        if (code !== undefined && EMAIL_ALREADY_TAKEN.has(code)) return 'address-unavailable';
+        // Asking again after being told a link is on its way must look
+        // identical, not become a 500 (same reason as requestPasswordReset).
+        if (code === EMAIL_RATE_LIMITED) return 'confirmation-requested';
+        return fail('changeEmail', updated.error);
+    }
+
+    return 'confirmation-requested';
+}
+
+async function confirmEmailChange(
+    settings: SupabaseAuthSettings,
+    token: string,
+): Promise<EmailChangeConfirmation> {
+    const scoped = stateless(settings);
+
+    const verified = await scoped.auth.verifyOtp({ type: 'email_change', token_hash: token });
+    if (verified.error !== null) {
+        const { code, status } = verified.error;
+        if (code !== undefined && OTP_REJECTED.has(code)) return 'token-rejected';
+        if (status === 401 || status === 403) return 'token-rejected';
+        return fail('confirmEmailChange', verified.error);
+    }
+
+    return 'confirmed';
+}
+
 // The Supabase Auth adapter (ADR-0008). It uses the anon key, not the
 // service-role key: sign-up and sign-in are the endpoints that apply the
 // project's password policy and the provider's own rate limits, and the admin
@@ -207,23 +316,42 @@ interface Registration {
 }
 
 async function registerWith(
-    client: ReturnType<typeof stateless>,
+    client: ReturnType<typeof admin>,
     { email, password, policyVersion }: Registration,
 ): Promise<RegistrationOutcome> {
-    // Email confirmation is disabled, so a successful sign-up also returns a
-    // session. It is discarded: registering does not log anybody in, and the
-    // response must not differ from the one an existing address produces.
-    // The consent rides along as user metadata, so the mirror trigger reads
-    // it in the transaction that creates the account. Written by a second
-    // call afterwards, it could be missing from an account that exists.
-    const { error } = await client.auth.signUp({
-        email,
-        password,
-        options: { data: { policy_version: policyVersion } },
-    });
+    // Created through the admin API rather than signUp, because signUp asks
+    // GoTrue to send a confirmation email whenever the project it talks to is
+    // configured to confirm addresses. config.toml says not to, but that
+    // setting belongs to the project and not to this repository: the hosted one
+    // had it on, with no SMTP behind it, so every registration on the
+    // deployment answered 500 with `Error sending confirmation email` while
+    // every local run passed. Registration now means the same thing on every
+    // target.
+    //
+    // email_confirm marks the address as confirmed at creation. This
+    // application does not verify addresses -- nothing here claims to -- so the
+    // alternative would be accounts that can never sign in.
+    //
+    // The password policy and the breach check are ours (change-password.ts and
+    // register-account.ts), and the route carries its own rate limiter, so
+    // going around GoTrue's own checks on this path costs nothing we relied on.
+    //
+    // The consent rides along as user metadata, so the mirror trigger reads it
+    // in the transaction that creates the account. Written by a second call
+    // afterwards, it could be missing from an account that exists.
+    const { error } = await retryingOnOutage(() =>
+        client.auth.admin.createUser({
+            email,
+            password,
+            email_confirm: true,
+            user_metadata: { policy_version: policyVersion },
+        }),
+    );
 
     if (error === null) return 'created';
-    if (error.code === ALREADY_REGISTERED) return 'already-registered';
+    // Answered exactly like a free address by the use case, so the form cannot
+    // be used to tell which addresses are registered.
+    if (error.code !== undefined && ALREADY_REGISTERED.has(error.code)) return 'already-registered';
 
     return fail('register', error);
 }
@@ -233,14 +361,17 @@ export function createSupabaseIdentityProvider(settings: SupabaseAuthSettings): 
     const adminClient = admin(settings);
 
     const register = (email: string, password: string, policyVersion: string) =>
-        registerWith(client, { email, password, policyVersion });
+        registerWith(adminClient, { email, password, policyVersion });
 
 
     async function authenticate(email: string, password: string): Promise<Session | undefined> {
-        const result = await client.auth.signInWithPassword({ email, password });
+        const result = await retryingOnOutage(() =>
+            client.auth.signInWithPassword({ email, password }),
+        );
 
         if (result.error !== null) {
-            if (result.error.code === INVALID_CREDENTIALS) return undefined;
+            const { code } = result.error;
+            if (code !== undefined && SIGN_IN_REFUSED.has(code)) return undefined;
             return fail('authenticate', result.error);
         }
 
@@ -283,5 +414,10 @@ export function createSupabaseIdentityProvider(settings: SupabaseAuthSettings): 
         requestPasswordReset: email => requestPasswordReset(settings, email),
         resetPassword: (token, password) => resetPassword(settings, token, password),
         signOut: accessToken => signOut(settings, accessToken),
+        changePassword: (accessToken, refreshToken, newPassword) =>
+            changePassword(settings, { accessToken, refreshToken }, newPassword),
+        changeEmail: (accessToken, refreshToken, newEmail) =>
+            changeEmail(settings, { accessToken, refreshToken }, newEmail),
+        confirmEmailChange: token => confirmEmailChange(settings, token),
     };
 }

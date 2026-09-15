@@ -33,6 +33,29 @@ export interface RedisSettings {
     url: string;
 }
 
+// A serverless function never calls connect(): it has no startup, and its
+// process is gone before the next request. Every command therefore opens the
+// connection if it has to, and the shared promise keeps two concurrent commands
+// from both calling connect -- node-redis rejects the second.
+// Le client n est vu que par ce dont l ouverture a besoin : l instanciation
+// generique de createClient ne se laisse pas nommer sous exactOptionalPropertyTypes.
+export function opener(client: {
+    isOpen: boolean;
+    connect: () => Promise<unknown>;
+}): () => Promise<void> {
+    let opening: Promise<unknown> | undefined;
+
+    return async () => {
+        if (client.isOpen) return;
+
+        opening ??= client.connect().finally(() => {
+            opening = undefined;
+        });
+
+        await opening;
+    };
+}
+
 export function createRedisEventBus(settings: RedisSettings): EventBus {
     const client = createClient({ url: settings.url });
 
@@ -41,6 +64,8 @@ export function createRedisEventBus(settings: RedisSettings): EventBus {
     client.on('error', () => {
         // Reported by whoever awaits the failing call; nothing to do here.
     });
+
+    const ensureOpen = opener(client);
 
     return {
         async connect() {
@@ -57,6 +82,7 @@ export function createRedisEventBus(settings: RedisSettings): EventBus {
 
         async publish(event) {
             try {
+                await ensureOpen();
                 await client.lPush(EVENT_QUEUE, JSON.stringify(event));
             } catch (error) {
                 fail('publish', error);
@@ -69,6 +95,7 @@ export function createRedisEventBus(settings: RedisSettings): EventBus {
             // older producer, would otherwise throw past every caller and take
             // the worker down for one bad entry.
             try {
+                await ensureOpen();
                 const popped = await client.brPop(EVENT_QUEUE, timeoutSeconds);
                 if (popped === null) return null;
 
@@ -85,6 +112,7 @@ export function createRedisEventBus(settings: RedisSettings): EventBus {
 
         async depth() {
             try {
+                await ensureOpen();
                 return await client.lLen(EVENT_QUEUE);
             } catch (error) {
                 return fail('depth', error);

@@ -47,8 +47,19 @@ async function attempt(
 
 // Asked once on mount. The cookie is httpOnly, so the page cannot read it: the
 // only way to know whether a session is valid is to ask the API.
-function useSessionCheck(api: AuthApi): [SessionState, Dispatch<SetStateAction<SessionState>>] {
+function useSessionCheck(
+    api: AuthApi,
+): [SessionState, Dispatch<SetStateAction<SessionState>>, () => void] {
     const [state, setState] = useState<SessionState>({ status: 'checking' });
+    // Bumped by recheck(), and a dependency of the effect below. Without it the
+    // error branch of this check had no way out but reloading the page, which
+    // is the one exit an interface should never be the only offer.
+    const [attempt, setAttempt] = useState(0);
+
+    const recheck = useCallback(() => {
+        setState({ status: 'checking' });
+        setAttempt(previous => previous + 1);
+    }, []);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -64,9 +75,9 @@ function useSessionCheck(api: AuthApi): [SessionState, Dispatch<SetStateAction<S
             });
 
         return () => controller.abort();
-    }, [api]);
+    }, [api, attempt]);
 
-    return [state, setState];
+    return [state, setState, recheck];
 }
 
 // Split out of useSessionActions to keep that hook under the project's
@@ -181,7 +192,7 @@ function useSessionActions(api: AuthApi, setState: Dispatch<SetStateAction<Sessi
 }
 
 export function useSession(api: AuthApi) {
-    const [state, setState] = useSessionCheck(api);
+    const [state, setState, recheck] = useSessionCheck(api);
 
     // The account behind this session no longer exists. Erasure (US-13) is the
     // only caller today; a real sign-out is US-47 and will need the API to drop
@@ -206,5 +217,5 @@ export function useSession(api: AuthApi) {
         );
     }, [setState]);
 
-    return { state, forget, expire, ...useSessionActions(api, setState) };
+    return { state, forget, expire, recheck, ...useSessionActions(api, setState) };
 }

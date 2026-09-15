@@ -24,7 +24,7 @@ export const PASSWORD_POLICY = {
 // Bumped whenever the policy's substance changes -- a new purpose, a new
 // recipient, a different retention -- and never for wording. It lives with the
 // contracts because the interface renders it and the API records it.
-export const PRIVACY_POLICY_VERSION = '2026-09-10';
+export const PRIVACY_POLICY_VERSION = '2026-09-12';
 
 // One canonical form for an address, so that Foo@Example.com and
 // foo@example.com cannot become two accounts.
@@ -77,6 +77,31 @@ export const ResetPasswordBody = z.object({
     password: z.string().min(PASSWORD_POLICY.minimumLength),
 });
 
+// Changing a password while signed in (US-36). The current password is only
+// checked non-empty here: proving it is the domain's job, and the boundary
+// must not hint at its shape. The new password gets the same length floor as a
+// reset -- this password does not exist yet -- with the full class-mix rule
+// left to the domain.
+export const ChangePasswordBody = z.object({
+    currentPassword: z.string().min(1),
+    newPassword: z.string().min(PASSWORD_POLICY.minimumLength),
+});
+
+// Changing an email address while signed in (US-36). Only the new address is
+// sent: the account is the session's. The reply is the same whether the
+// address is free or already registered, so nothing here may reject a
+// well-formed address that simply belongs to someone else.
+export const ChangeEmailBody = z.object({
+    newEmail: emailSchema,
+});
+
+// Completing an email change carries the token from the confirmation link. Like
+// a reset token it is opaque, so the boundary only checks that something was
+// sent.
+export const ConfirmEmailChangeBody = z.object({
+    token: z.string().min(1),
+});
+
 // What a caller may learn about itself. There is no endpoint that returns
 // anybody else's account.
 export const AccountDto = z.object({
@@ -89,4 +114,7 @@ export type SignInBody = z.infer<typeof SignInBody>;
 export type DeleteAccountBody = z.infer<typeof DeleteAccountBody>;
 export type RequestPasswordResetBody = z.infer<typeof RequestPasswordResetBody>;
 export type ResetPasswordBody = z.infer<typeof ResetPasswordBody>;
+export type ChangePasswordBody = z.infer<typeof ChangePasswordBody>;
+export type ChangeEmailBody = z.infer<typeof ChangeEmailBody>;
+export type ConfirmEmailChangeBody = z.infer<typeof ConfirmEmailChangeBody>;
 export type AccountDto = z.infer<typeof AccountDto>;

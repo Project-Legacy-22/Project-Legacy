@@ -105,7 +105,7 @@ describe('API d authentification', () => {
     async function serve(inscrits: { id: string; email: string; password: string }[] = []) {
         const logger = recordingLogger();
         const provider = inMemoryIdentityProvider(inscrits);
-        harness = await listen(createServer(testConfig, useCasesOver(provider), logger), logger);
+        harness = await listen(createServer(testConfig, useCasesOver(provider), { logger: logger }), logger);
     }
 
     const compteExistant = [{ id: ACCOUNT_ID, email: ADRESSE, password: MOT_DE_PASSE }];

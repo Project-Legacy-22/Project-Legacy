@@ -154,12 +154,19 @@ enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails. The password recovery email (US-28) builds its link from this value, so it points at
 # the origin a developer actually opens: Vite on 5173, which proxies /auth to the API on 3000. A
-# deployment overrides this with the real public origin.
-site_url = "http://localhost:5173"
+# deployment overrides this with the real public origin, and that override is no
+# longer a sentence: SUPABASE_AUTH_SITE_URL carries it, so `supabase config push`
+# cannot quietly point the deployed reset link at a developer's machine.
+site_url = "env(SUPABASE_AUTH_SITE_URL)"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["http://127.0.0.1:5173", "http://127.0.0.1:3000", "https://127.0.0.1:3000"]
+additional_redirect_urls = [
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:3000",
+  "https://127.0.0.1:3000",
+  "env(SUPABASE_AUTH_REDIRECT_URL)",
+]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.
@@ -194,8 +201,10 @@ password_requirements = "lower_upper_letters_digits"
 # rp_origins = ["http://127.0.0.1:3000"]
 
 [auth.rate_limit]
-# Number of emails that can be sent per hour. Requires auth.email.smtp to be enabled.
-email_sent = 2
+# Sans effet tant que [auth.email.smtp] est desactive, mais pose pour le jour ou il le sera : deux
+# e-mails par heure rendraient une reinitialisation de mot de passe impraticable des la deuxieme
+# personne. Trente reste tres en dessous du palier gratuit de Resend, cent par jour.
+email_sent = 30
 # Number of SMS messages that can be sent per hour. Requires auth.sms to be enabled.
 sms_sent = 30
 # Number of anonymous sign-ins that can be made per hour per IP address. Requires enable_anonymous_sign_ins = true.
@@ -238,14 +247,26 @@ otp_expiry = 3600
 # Left disabled on purpose (ADR-0010): with SMTP off, the local stack captures every message in
 # its mail viewer instead of sending it, which is exactly what US-28 asks for in development. A
 # deployment enables this block and supplies the credentials through environment variables.
+# Le relais SMTP derriere GoTrue. Le fournisseur retenu est Resend : aucun SDK, aucun code d envoi,
+# et un changement de fournisseur ne touche que ces quatre valeurs (#149, ADR-0010).
+#
+# Le bloc reste commente, et ce n est pas un oubli. Un seul fichier sert la pile locale et le projet
+# heberge, et les deux ne peuvent pas etre d accord : le port differe -- 587 chez Resend, 54325 pour
+# le capteur local -- et un port tire de l environnement casse `supabase start` partout ou la
+# variable n est pas posee, ce que la CI a demontre.
+#
+# ATTENTION : le reglage vit dans le tableau de bord du projet heberge. Un `supabase config push`
+# pousse ce bloc tel qu il est ici, donc absent, et desactiverait Resend en silence. Avant tout
+# push : decommenter ces lignes, poser SUPABASE_AUTH_SMTP_PASS dans l environnement, pousser, puis
+# recommenter.
 # [auth.email.smtp]
 # enabled = true
-# host = "smtp.sendgrid.net"
+# host = "smtp.resend.com"
 # port = 587
-# user = "apikey"
-# pass = "env(SENDGRID_API_KEY)"
-# admin_email = "admin@email.com"
-# sender_name = "Admin"
+# user = "resend"
+# pass = "env(SUPABASE_AUTH_SMTP_PASS)"
+# admin_email = "no-reply@legacy22.test"
+# sender_name = "Legacy 22"
 
 # Password recovery email (US-28). The link carries the token hash as a plain query parameter on
 # our own path, so the exchange happens server-side (POST /auth/password/reset) and no token ever
@@ -253,6 +274,14 @@ otp_expiry = 3600
 [auth.email.template.recovery]
 subject = "Reset your Legacy 22 password"
 content_path = "./supabase/templates/recovery.html"
+
+# Email-change confirmation (US-36). Same server-side exchange as recovery: the link carries the
+# token hash on our own path (GET /confirm-email-change serves the app shell, POST
+# /auth/me/email/confirm exchanges it). With double_confirm_changes on, GoTrue sends this same
+# template to both the current and the new address, each with its own token hash.
+[auth.email.template.email_change]
+subject = "Confirm your Legacy 22 email address"
+content_path = "./supabase/templates/email-change.html"
 
 # Uncomment to customize email template
 # [auth.email.template.invite]

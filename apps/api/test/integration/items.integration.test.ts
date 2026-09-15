@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createClient } from '@supabase/supabase-js';
 
@@ -82,11 +84,20 @@ describe('items API (integration)', () => {
         });
         const cleared = await database.from('items').delete().eq('project_id', owner.projectId);
         expect(cleared.error).toBeNull();
+        // The tie-break tested here is `id asc`, so the identifiers have to
+        // order -- not to be fixed. A prefix drawn per run gives both: the
+        // last segment carries the order, and two runs against a database that
+        // was not reset between them no longer collide on the primary key.
+        // Every other case in this file lets the database assign identifiers,
+        // for the same reason registerAndSignIn draws a fresh address.
+        const rang = randomUUID().slice(0, 8);
+        const identifiant = (ordre: number): string =>
+            `${rang}-0000-7000-8000-${String(ordre).padStart(12, '0')}`;
         const rows = [
-            { id: '00000000-0000-7000-8000-000000000104', name: 'Normal sans date', priority: 'normal' as const, due_date: null },
-            { id: '00000000-0000-7000-8000-000000000103', name: 'Haute tard', priority: 'high' as const, due_date: '2026-09-20' },
-            { id: '00000000-0000-7000-8000-000000000102', name: 'Haute proche B', priority: 'high' as const, due_date: '2026-09-12' },
-            { id: '00000000-0000-7000-8000-000000000101', name: 'Haute proche A', priority: 'high' as const, due_date: '2026-09-12' },
+            { id: identifiant(4), name: 'Normal sans date', priority: 'normal' as const, due_date: null },
+            { id: identifiant(3), name: 'Haute tard', priority: 'high' as const, due_date: '2026-09-20' },
+            { id: identifiant(2), name: 'Haute proche B', priority: 'high' as const, due_date: '2026-09-12' },
+            { id: identifiant(1), name: 'Haute proche A', priority: 'high' as const, due_date: '2026-09-12' },
         ].map((row) => ({ ...row, project_id: owner.projectId, user_id: owner.id }));
         const inserted = await database.from('items').insert(rows);
         expect(inserted.error).toBeNull();
@@ -98,14 +109,8 @@ describe('items API (integration)', () => {
         );
         const second = (await secondResponse.json()) as { items: { id: string }[] };
 
-        expect(first.items.map((item) => item.id)).toEqual([
-            '00000000-0000-7000-8000-000000000101',
-            '00000000-0000-7000-8000-000000000102',
-        ]);
-        expect(second.items.map((item) => item.id)).toEqual([
-            '00000000-0000-7000-8000-000000000103',
-            '00000000-0000-7000-8000-000000000104',
-        ]);
+        expect(first.items.map((item) => item.id)).toEqual([identifiant(1), identifiant(2)]);
+        expect(second.items.map((item) => item.id)).toEqual([identifiant(3), identifiant(4)]);
     });
 
     describe('isolation entre comptes', () => {
