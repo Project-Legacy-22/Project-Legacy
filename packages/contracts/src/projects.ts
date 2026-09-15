@@ -34,6 +34,20 @@ export const ProjectDto = z.object({
     itemCount: z.number().int().nonnegative(),
 });
 
+// Who is in a project. The address is here on purpose: the users table holds
+// no display name, so naming a member to the others means naming their
+// address. It is read per project, by someone already in it -- there is no
+// endpoint that lists or searches accounts, and there must not be one.
+export const ProjectMemberDto = z.object({
+    userId: z.uuid(),
+    email: z.email(),
+    role: ProjectRole,
+});
+
+export const ProjectMemberListDto = z.object({
+    members: z.array(ProjectMemberDto),
+});
+
 export const ProjectPageDto = z.object({
     projects: z.array(ProjectDto),
     nextCursor: z.string().nullable(),
@@ -43,6 +57,8 @@ export type ProjectIdParams = z.infer<typeof ProjectIdParams>;
 export type ProjectItemIdParams = z.infer<typeof ProjectItemIdParams>;
 export type CreateProjectBody = z.infer<typeof CreateProjectBody>;
 export type ListProjectsQuery = z.infer<typeof ListProjectsQuery>;
+export type ProjectMemberDto = z.infer<typeof ProjectMemberDto>;
+export type ProjectMemberListDto = z.infer<typeof ProjectMemberListDto>;
 export type ProjectRole = z.infer<typeof ProjectRole>;
 export type ProjectDto = z.infer<typeof ProjectDto>;
 export type ProjectPageDto = z.infer<typeof ProjectPageDto>;
