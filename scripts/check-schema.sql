@@ -495,6 +495,79 @@ end $$;
 
 rollback;
 
+-- L appartenance et son evenement, ecrits ensemble ou pas du tout.
+--
+-- Verifie ici plutot qu au niveau integration, pour une raison qui n est pas de
+-- commodite : le `rollback` garantit qu aucune ligne d outbox ne survit a ce
+-- test. Une ligne portant `membership.created.v1` bloquerait le relais, qui
+-- refuse une ligne hors catalogue -- et le catalogue de packages/contracts ne
+-- connaitra ce nom qu avec #359, une fois le consommateur capable de l ecrire
+-- en notification.
+begin;
+
+do $$
+declare
+  proprietaire uuid := '00000000-0000-7000-8000-0000000000f1';
+  invite       uuid := '00000000-0000-7000-8000-0000000000f2';
+  projet       uuid;
+  event_un     uuid := '00000000-0000-7000-8000-0000000000d1';
+  event_deux   uuid := '00000000-0000-7000-8000-0000000000d2';
+  ajoute       boolean;
+  annonces     integer;
+begin
+  insert into auth.users (id, email)
+  values (proprietaire, 'membership-owner@localhost'),
+         (invite, 'membership-guest@localhost');
+
+  select project_id into projet
+  from public.project_memberships
+  where user_id = proprietaire and role = 'owner'
+  limit 1;
+
+  ajoute := public.add_member_with_event(
+    projet, invite, event_un, 'membership.created.v1', now(),
+    jsonb_build_object('projectId', projet, 'memberId', invite, 'addedBy', proprietaire)
+  );
+
+  if not ajoute then
+    raise exception 'add_member_with_event n a pas ajoute le membre';
+  end if;
+
+  if not exists (
+    select 1 from public.project_memberships
+    where project_id = projet and user_id = invite and role = 'member'
+  ) then
+    raise exception 'l appartenance n a pas ete ecrite';
+  end if;
+
+  -- Non publie : c est le relais qui publie, pas la fonction.
+  if not exists (
+    select 1 from public.outbox
+    where id = event_un and name = 'membership.created.v1' and published_at is null
+  ) then
+    raise exception 'l evenement manque, ou a ete ecrit comme deja publie';
+  end if;
+
+  -- Le proprietaire qui hesite, ou qui double-clique.
+  ajoute := public.add_member_with_event(
+    projet, invite, event_deux, 'membership.created.v1', now(),
+    jsonb_build_object('projectId', projet, 'memberId', invite, 'addedBy', proprietaire)
+  );
+
+  if ajoute then
+    raise exception 'le second appel aurait du ne rien ajouter';
+  end if;
+
+  select count(*) into annonces from public.outbox where id in (event_un, event_deux);
+  if annonces <> 1 then
+    raise exception 'ajouter deux fois a annonce % fois, attendu 1', annonces;
+  end if;
+
+  raise notice 'membership assertions passed';
+end $$;
+
+rollback;
+
 -- Behavioural checks for the two authorization cases ADR-0001 requires. All
 -- fixtures live in a rolled-back transaction, so the script is repeatable.
 begin;
