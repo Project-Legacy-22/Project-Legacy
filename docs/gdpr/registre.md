@@ -32,6 +32,7 @@ pays.
 | Supabase | base de données et authentification | Irlande, région `eu-west-1` | Supabase Inc., États-Unis |
 | Vercel | exécution de l'application et journaux | Paris, région `cdg1`, fixée par `vercel.json` | Vercel Inc., États-Unis |
 | Grafana Cloud | supervision : métriques et tableaux de bord | Allemagne, région `prod-eu-west-2` | Grafana Labs, États-Unis |
+| File d'événements (Redis) | transport des événements entre l'API et le consommateur de notifications | même région que l'application, dans l'Union ; provisionnée depuis le projet Vercel | voir ci-dessous |
 | Have I Been Pwned | vérification d'un mot de passe compromis | réseau du fournisseur | opéré depuis l'Australie |
 
 Tout est donc stocké et traité dans l'Union. Ce qui n'est pas neutre pour autant : Supabase et
@@ -48,6 +49,27 @@ suivies par #273 et #274.
 Grafana Cloud ne reçoit aucune donnée personnelle, et c'est une contrainte de conception, pas une
 observation : l'ADR-0016 interdit d'étiqueter une métrique par un identifiant de compte, une
 adresse, un intitulé de tâche ou une adresse IP. Ce qui sort est un compteur ou une durée agrégée.
+
+**La file d'événements, elle, en reçoit — et il faut le dire précisément.** Chaque tâche créée y
+fait transiter deux identifiants, celui de la tâche et celui de son propriétaire, et rien d'autre :
+ni adresse, ni intitulé, aucun contenu. Ce sont des identifiants **pseudonymes**, et le
+considérant 26 du règlement est clair : une donnée pseudonymisée reste une donnée personnelle dès
+lors que le responsable peut réidentifier, ce que nous pouvons puisque `users.id` mène à l'adresse.
+
+La formule « aucune donnée personnelle ne traverse le bus » a longtemps figuré dans le code et
+dans ce registre. Elle était trop forte. Ce qui est vrai, et qui reste une bonne propriété, c'est
+qu'aucun **contenu** ne le traverse, et que les identifiants y sont effacés dès que la notification
+est écrite. « Aucun contenu » et « rien de personnel » ne sont pas la même phrase.
+
+La file est provisionnée depuis le projet Vercel et se trouve dans la même région que
+l'application. La société qui l'opère se lit dans l'onglet Storage du projet, et doit être nommée
+ici comme les autres : c'est la seule ligne de ce tableau dont la colonne « Société » renvoie plus
+bas au lieu de porter un nom.
+
+**Qui a accès, et c'est le même partout.** Les six développeurs de l'équipe ont le même accès à
+chacun de ces outils. Il n'y a pas de séparation de rôle sur l'accès à l'infrastructure, et ce
+n'est pas une mesure de sécurité qu'on peut invoquer : la politique de confidentialité l'énonce
+telle quelle, après avoir annoncé pendant un temps un accès plus restreint qu'il ne l'était.
 
 Have I Been Pwned ne reçoit aucune donnée personnelle : cinq caractères d'une empreinte, qui
 n'identifient personne, et rien n'est conservé. Il est cité pour être exhaustif.

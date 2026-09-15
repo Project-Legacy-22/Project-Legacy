@@ -8,9 +8,14 @@
 //
 // Chaque ligne est vérifiable. La région de Supabase se lit par
 // `supabase projects list`, celle de Vercel est déclarée dans `vercel.json`,
-// celle de Grafana dans l'URL de sa source de données Prometheus. Une ligne qui
-// ne se vérifie pas n'a rien à faire ici : c'est une politique, pas une
-// intention.
+// celle de Grafana dans l'URL de sa source de données Prometheus, celle de la
+// file d'événements dans l'onglet Storage du projet Vercel. Une ligne qui ne se
+// vérifie pas n'a rien à faire ici : c'est une politique, pas une intention.
+//
+// L'accès est le même partout, et c'est un fait à écrire plutôt qu'à arrondir :
+// les six développeurs de l'équipe ont le même accès à chaque outil. Il n'y a
+// pas de séparation de rôle sur l'accès à l'infrastructure. Annoncer un accès
+// plus restreint qu'il ne l'est tromperait le lecteur dans le sens qui compte.
 
 export interface Processor {
     name: string;
@@ -25,20 +30,27 @@ export const PROCESSORS: readonly Processor[] = [
         holds: 'Your address, your password hash, your projects, your tasks and your notifications.',
         where: 'Ireland (AWS eu-west-1).',
         access:
-            'Row-level policies restrict every read to the owner of the row. The team holds a service key that bypasses them, used only by this application, never by a person.',
+            'Row-level policies restrict every read to the owner of the row. A service key bypasses them; it is used by this application and never by a person. The six developers of the team can all reach the dashboard.',
     },
     {
         name: 'Vercel',
         holds: 'Every request and its response pass through, so the body of what you send and receive transits there. Logs keep method, path, status and duration.',
         where: 'Paris (region cdg1, declared in vercel.json).',
-        access: 'The three team members who administer the project.',
+        access: 'The six developers of the team, with no distinction between them.',
+    },
+    {
+        name: 'Event queue (Redis, provisioned with the Vercel project)',
+        holds:
+            'Two identifiers per task you create: the task and its owner. No address, no task name, no content. They are removed as soon as the notification is written.',
+        where: 'Same region as the application, in the European Union.',
+        access: 'The six developers of the team, with no distinction between them.',
     },
     {
         name: 'Grafana Cloud',
         holds:
             'Technical measurements only: counters and durations by route and status code. No address, no account, no task, no IP address, as a value or as a label.',
         where: 'Germany (region prod-eu-west-2).',
-        access: 'The team members who administer the monitoring.',
+        access: 'The six developers of the team, with no distinction between them.',
     },
     {
         name: 'Have I Been Pwned',
