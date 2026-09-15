@@ -68,7 +68,9 @@ Un schéma reconstructible ne suffit pourtant pas : il faut aussi que les donné
 chemins sont donc exigés, et éprouvés avant d'en avoir besoin plutôt que sous la contrainte :
 reprendre des données venues d'un MySQL ou d'un SQLite — les deux moteurs du projet
 d'origine — vers notre PostgreSQL (#275), et ressortir les nôtres vers un PostgreSQL quelconque,
-un MySQL ou un SQLite (#274).
+un MySQL ou un SQLite (#282). Les deux chemins sont livrés, et `npm run test:migration` les rejoue
+sur trois moteurs réels ; `docs/data-migration.md` porte les commandes. Sauvegarder, restaurer et
+mesurer ce qu'un départ coûterait est l'objet de `docs/backup-and-exit.md` (#274).
 
 Ces deux sorties ne se valent pas, et la différence doit être écrite plutôt que découverte. Vers un
 PostgreSQL reconstruit par les migrations, l'export est fidèle : rien ne se perd. Vers un MySQL ou
@@ -113,4 +115,6 @@ propriété.
 
 - Faits mesurés : `supabase projects list`, 12 septembre 2026
 - ADR-0004 (Supabase comme SGBD), ADR-0005 (accès aux données et migrations)
-- `docs/gdpr/registre.md`, section « Sous-traitants et localisation » ; #274 pour la sortie
+- `docs/gdpr/registre.md`, section « Sous-traitants et localisation »
+- `docs/backup-and-exit.md` pour la sauvegarde, la restauration éprouvée et le coût d'un départ
+- `docs/data-migration.md` pour les deux sens de circulation des données
