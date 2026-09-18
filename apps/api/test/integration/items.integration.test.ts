@@ -113,6 +113,64 @@ describe('items API (integration)', () => {
         expect(second.items.map((item) => item.id)).toEqual([identifiant(3), identifiant(4)]);
     });
 
+    describe('recherche et filtres (US-32)', () => {
+        const database = createClient<Database>(integrationConfig().supabaseUrl, integrationConfig().supabaseServiceRoleKey, {
+            auth: { persistSession: false, autoRefreshToken: false },
+        });
+
+        beforeAll(async () => {
+            const cleared = await database.from('items').delete().eq('project_id', owner.projectId);
+            expect(cleared.error).toBeNull();
+            const rows = [
+                { name: 'Relire le café des sponsors', status: 'todo' as const, priority: 'high' as const, due_date: '2026-09-20' },
+                { name: 'Preparer la demo', status: 'todo' as const, priority: 'normal' as const, due_date: null },
+                { name: 'Ecrire le rapport', status: 'doing' as const, priority: 'high' as const, due_date: null },
+                { name: 'Deployer', status: 'done' as const, priority: 'low' as const, due_date: null },
+            ].map((row) => ({ ...row, project_id: owner.projectId, user_id: owner.id }));
+            const inserted = await database.from('items').insert(rows);
+            expect(inserted.error).toBeNull();
+        });
+
+        // The generated name_search column applies Postgres's own unaccent, so
+        // this proves the real database behavior, not just the JS-side
+        // normalization the fake and the fingerprint also use.
+        it.each(['cafe', 'CAFE', 'Café', 'CAFÉ'])('trouve un nom accentue sans distinction de casse ni d accent avec "%s"', async (search) => {
+            const response = await asOwner.request(`${itemsOf(owner)}?search=${encodeURIComponent(search)}`);
+            const page = (await response.json()) as { items: { name: string | null }[] };
+
+            expect(page.items.map((item) => item.name)).toEqual(['Relire le café des sponsors']);
+        });
+
+        it('combine un filtre de statut et de priorite', async () => {
+            const response = await asOwner.request(`${itemsOf(owner)}?status=doing&priority=high`);
+            const page = (await response.json()) as { items: { name: string | null }[] };
+
+            expect(page.items.map((item) => item.name)).toEqual(['Ecrire le rapport']);
+        });
+
+        it('applique la recherche et les filtres uniquement dans le projet du compte connecte', async () => {
+            const response = await asIntruder.request(`${itemsOf(owner)}?search=cafe&status=todo`);
+
+            expect(response.status).toBe(404);
+            expect((await response.json()) as object).toMatchObject({ type: 'project_not_found' });
+        });
+
+        it('accepte le meme curseur sous les memes criteres et le refuse sous des criteres differents', async () => {
+            const first = (await (
+                await asOwner.request(`${itemsOf(owner)}?limit=1&status=todo`)
+            ).json()) as { items: { name: string | null }[]; nextCursor: string | null };
+            expect(first.nextCursor).not.toBeNull();
+            const cursor = encodeURIComponent(String(first.nextCursor));
+
+            const repeated = await asOwner.request(`${itemsOf(owner)}?limit=1&status=todo&cursor=${cursor}`);
+            const mismatched = await asOwner.request(`${itemsOf(owner)}?limit=1&status=doing&cursor=${cursor}`);
+
+            expect(repeated.status).toBe(200);
+            expect(mismatched.status).toBe(400);
+            expect((await mismatched.json()) as object).toMatchObject({ type: 'invalid_item_cursor' });
+        });
+    });
+
     describe('isolation entre comptes', () => {
         let itemId: string;
 

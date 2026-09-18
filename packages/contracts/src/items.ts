@@ -64,9 +64,16 @@ const CURSOR_MAX_LENGTH = 256;
 
 const pageSize = z.coerce.number().int().min(1).max(MAX_ITEM_PAGE_SIZE);
 
+// A query string carries no null, only present/absent/a string, so the
+// due-date filter uses the literal 'none' as a sentinel for "no due date"
+// where the JSON request bodies elsewhere in this file use null directly.
 export const ListItemsQuery = z.object({
     limit: pageSize.default(DEFAULT_ITEM_PAGE_SIZE),
     cursor: z.string().min(1).max(CURSOR_MAX_LENGTH).optional(),
+    search: z.string().trim().min(1).max(MAX_ITEM_NAME_LENGTH).optional(),
+    status: ItemStatus.optional(),
+    priority: ItemPriority.optional(),
+    dueDate: z.union([ItemDueDate, z.literal('none')]).optional(),
 });
 
 export const ItemPageDto = z.object({
