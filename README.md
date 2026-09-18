@@ -225,6 +225,8 @@ en arrière.
 Détail complet dans [docs/features/14-export-and-delete-account.md](docs/features/14-export-and-delete-account.md).
 Le regroupement par projet est décrit dans
 [docs/features/17-projects.md](docs/features/17-projects.md).
+Le retrait d'un membre, qui conserve son compte et les tâches du projet, est décrit dans
+[docs/features/354-remove-project-member.md](docs/features/354-remove-project-member.md).
 
 Le tableau Kanban et ses déplacements accessibles sont décrits dans
 [docs/features/16-kanban-move.md](docs/features/16-kanban-move.md).

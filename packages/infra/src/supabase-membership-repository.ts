@@ -1,6 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { Membership, MembershipRepository, ProjectRole } from '@legacy/core-projects';
+import {
+    LastProjectOwner,
+    ProjectMemberNotFound,
+    ProjectNotFound,
+    ProjectOwnerRequired,
+} from '@legacy/core-projects';
+import type { Membership, MemberRemovalRepository, ProjectRole } from '@legacy/core-projects';
 
 import { adapterFailure, serviceRoleClient } from './adapter.js';
 import type { AdapterFailure, SupabaseSettings } from './adapter.js';
@@ -42,9 +48,20 @@ function toMembership(row: MembershipRow): Membership {
     return { userId: row.user_id, email: row.users.email, role: asRole(row.role) };
 }
 
+function checkRemovalResult(result: unknown, projectId: string): void {
+    switch (result) {
+        case 'removed': return;
+        case 'project_not_found': throw new ProjectNotFound(projectId);
+        case 'owner_required': throw new ProjectOwnerRequired();
+        case 'member_not_found': throw new ProjectMemberNotFound();
+        case 'last_owner': throw new LastProjectOwner();
+        default: fail('removeMember', new Error('Invalid member removal result'));
+    }
+}
+
 export function createSupabaseMembershipRepository(
     settings: SupabaseSettings,
-): MembershipRepository {
+): MemberRemovalRepository {
     const client: SupabaseClient<Database> = serviceRoleClient(settings);
 
     return {
@@ -63,6 +80,15 @@ export function createSupabaseMembershipRepository(
             if (error) fail('membersOf', error);
 
             return (data ?? []).map(row => toMembership(row as MembershipRow));
+        },
+        async removeMember({ projectId, callerId, memberId }) {
+            const { data, error } = await client.rpc('remove_project_member', {
+                p_project_id: projectId,
+                p_caller_id: callerId,
+                p_member_id: memberId,
+            });
+            if (error) fail('removeMember', error);
+            checkRemovalResult(data, projectId);
         },
     };
 }
