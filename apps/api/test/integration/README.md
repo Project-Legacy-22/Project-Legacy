@@ -13,6 +13,11 @@ pour de vrai.
   inscrit et connecte de vrais comptes par l'authentification réelle.
 - `projects.integration.test.ts` — projet par défaut, création avec appartenance,
   visibilité des membres, refus des non-membres et cascade de suppression.
+- `remove-project-member.integration.test.ts` — retrait via HTTP, conservation des tâches
+  et du compte, révocation de l'accès au projet via l'API et RLS, protection de la RPC.
+- `member-removal-concurrency.integration.test.ts` — transactions simultanées contre
+  PostgreSQL : conservation du dernier propriétaire et refus d'un appelant retiré pendant
+  l'attente. Nécessite Docker ; la base est identifiée par le port de l'API testée.
 - `project-counts.integration.test.ts` — compteur aligné sur les tâches visibles,
   y compris pour un projet vide ou contenant uniquement des tâches supprimées
   logiquement. Exerce le vrai agrégat PostgREST utilisé par l'API.
