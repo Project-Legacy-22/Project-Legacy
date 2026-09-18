@@ -18,6 +18,9 @@ pour de vrai.
 - `member-removal-concurrency.integration.test.ts` — transactions simultanées contre
   PostgreSQL : conservation du dernier propriétaire et refus d'un appelant retiré pendant
   l'attente. Nécessite Docker ; la base est identifiée par le port de l'API testée.
+  Ces tests appellent `/usr/bin/docker` sous Linux (y compris WSL) ou
+  `/Applications/Docker.app/Contents/Resources/bin/docker` sous macOS. Ils ne cherchent
+  pas l'exécutable dans `PATH` ; un test vérifie les requêtes et transactions avec un `PATH` vide.
 - `project-counts.integration.test.ts` — compteur aligné sur les tâches visibles,
   y compris pour un projet vide ou contenant uniquement des tâches supprimées
   logiquement. Exerce le vrai agrégat PostgREST utilisé par l'API.
