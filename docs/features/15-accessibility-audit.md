@@ -12,8 +12,13 @@ conformant, what is not, and — for each gap — the issue that owns the fix. I
 remediation: nothing here changes behaviour.
 
 The Kanban board and the end-to-end keyboard path were out of scope on that date: the code did
-not exist yet. They were measured on 2026-09-13 as #182, and that half is the last section of
-this page. Everything above it is the 2026-09-10 measurement, unchanged.
+not exist yet. They were measured on 2026-09-13 as #182, and the account screen on 2026-09-18 as
+#246; each has its own section at the end of this page.
+
+The table below and the gap list are the only parts that are kept up to date, because a table
+that describes a screen as it no longer is misleads faster than no table at all. Each cell that
+a later measurement changed says which issue changed it. Everything else is the 2026-09-10 text,
+unchanged.
 
 ## How it was measured
 
@@ -37,7 +42,8 @@ guarantee.
 | Forgot password | clean, guarded | walked, guarded | inherits the page | inherits |
 | New password | clean, guarded | walked, guarded | one `main` | one |
 | Task list | clean, guarded | **not walked** | `header` + `main` | one |
-| Personal data | clean, guarded | **not walked** | inside `main` | section `h2` |
+| Sign-in details | clean, guarded | walked, guarded | inside `main` | section `h2` |
+| Personal data | clean, guarded | walked, guarded | inside `main` | section `h2` |
 | Session check / error | not measurable | not applicable | **none** | **none** |
 | Kanban board | clean in five states, guarded | walked, guarded | inside `main` | column `h3` |
 
@@ -155,7 +161,11 @@ harness for it exists since #190.
 
 **WCAG 2.1.1 Keyboard (A)**, **2.4.3 Focus Order (A)** — not shown to fail, not shown to hold.
 
-**Owner**: the remediation half of #181, blocked by #152 and #176, which modify both screens.
+**Closed on 2026-09-18.** The board half went with #182; the account half is
+`account-keyboard-journey.test.tsx`, added by #246 and described in the last section of this
+page. Both screens now fail a test when their tab order or their focus handling is lost.
+
+What the walk found on the way is a different gap, and it has its own entry below.
 
 ### 8. The three view states are not audited
 
@@ -164,6 +174,30 @@ never run on them.
 
 **Closed by #49, verified on 2026-09-13.** `view-state.test.tsx` carries the case « has no
 automatically detectable WCAG A or AA violation in any of the three states ».
+
+### 9. The account forms disable the control that holds the focus — found on 2026-09-18
+
+Measured while walking the account screen for #246. Each of the four actions there disables, for
+the duration of its call, the control that was just activated: the export button, and the field
+and submit button of the email change, the password change and the deletion.
+
+A `disabled` element leaves the tab order, and the focus fixup rule of the HTML standard then
+moves focus off it — to the `body`. Re-enabling does not bring focus back. A keyboard user who
+changes their password is returned to the top of the document for having done so, and hears
+nothing about it.
+
+**WCAG 2.4.3 Focus Order (A).**
+
+The repository had already decided this question elsewhere and for this exact reason:
+`items-pagination.tsx` carries `aria-disabled` rather than `disabled`, and
+`test/react-root.tsx` records why. The account screen was written without that precedent in
+view.
+
+**Half closed by #246**, which applied the same treatment to the export button — the one control
+of the four whose disabling protected nothing, since it guards no field. The three forms are
+**#368**: a form submits on `Enter` from a field without going through its button, so refusing a
+second submission there is a change to the submit handler and not only to an attribute, and
+whether the fields become `readOnly` or stay editable is a decision rather than a detail.
 
 ## One finding the issue overstated
 
@@ -189,6 +223,11 @@ jsdom is not a browser, and the limits are structural rather than temporary:
   whether an announcement is *useful*, and no automated tool does.
 - **Leaving the page.** The keyboard simulation wraps from the last element to the first, where
   a browser would move to its own toolbar.
+- **Focus taken away by the document.** jsdom leaves `document.activeElement` on an element that
+  becomes `disabled`; a browser applies the focus fixup rule and moves focus to the `body`. An
+  assertion on `activeElement` therefore passes here whatever the markup says. Gap 9 is stated
+  from the cause — a control leaving the tab order — because the cause is what this rung can
+  see.
 
 Closing these is the browser rung, #27 (`EN-26`), deliberately deferred — see
 `docs/testing-levels.md`.
@@ -216,7 +255,8 @@ npx vitest run apps/web/src/components/reset-password-page.test.tsx
 
 This page audits; it does not fix. Gaps 3, 4 and 8 belong to #49, gaps 1, 2 and 7 to the
 remediation half of #181, gap 5 waits on #152, and gap 6 has its own issue. The Kanban and the
-full keyboard path are #182.
+full keyboard path are #182, the account walk is #246, and what that walk found is gap 9,
+half closed by #246 and half owned by #368.
 
 ## The Kanban half, measured on 2026-09-13 (#182)
 
@@ -282,7 +322,57 @@ and the form focuses its own select so a keyboard user lands on the control the 
 The keyboard alternative US-15 required is therefore not an addition made here — it is the path
 the board was built with, and it is now guarded.
 
-### What is still not walked
+### What was still not walked, on that date
 
-`Personal data` remains unwalked with the keyboard, and gap 7 above keeps it. The board half of
-that gap is closed; the account half is not, and #246 owns it.
+`Personal data` remained unwalked with the keyboard, and gap 7 above kept it. The board half of
+that gap was closed here; the account half was not, and #246 owned it. It was walked five days
+later, and the section below is that measurement.
+
+## The account half, measured on 2026-09-18 (#246)
+
+The section above left the account screen unwalked. `apps/web/src/account-keyboard-journey.test.tsx`
+walks it, and this is what the walk established.
+
+### The tab order
+
+Eight stops, in the order the two sections are read:
+
+| # | Stop | Section |
+|---|---|---|
+| 1 | New email address | Sign-in details |
+| 2 | Send confirmation link | Sign-in details |
+| 3 | Current password | Sign-in details |
+| 4 | New password | Sign-in details |
+| 5 | Change password | Sign-in details |
+| 6 | Download my data | Your data |
+| 7 | Confirm by typing your email address | Your data |
+| 8 | Delete my account | Your data |
+
+The order is asserted against a list written out in the test rather than read from the document:
+a list derived from the page would agree with the page, including after two fields had been
+swapped. Verified by swapping the two password fields — one test turns red, and only that one.
+
+The download comes before the deletion because the section means it to: the deletion warning ends
+on "Download your data first if you want to keep it", and a warning that points at a control the
+reader has already walked past is advice arriving too late. That intent is an order, so the walk
+asserts it.
+
+### The download, the one success that leaves nothing on screen
+
+The file goes to the browser's downloads and the page looks exactly as it did before. Without an
+announcement, a screen reader user has no way of knowing the export worked — which is why
+`ActionFeedback` renders the confirmation into a visually hidden `aria-live="polite"` region.
+Verified by emptying that region: the journey turns red.
+
+### What the walk found
+
+The export button disabled itself while the export ran, which took it out of the tab order — gap
+9 above. It now carries `aria-disabled`, like the pagination button, and the journey guards the
+property in the form this rung can see: the control is still in `tabbables()` while the export is
+in flight, and a second activation does not reach the API. Verified by putting `disabled` back:
+two tests turn red.
+
+The same pattern remains in the three account forms and is #368. It is not fixed here because
+refusing a second submission on a form is a change to its submit handler — `Enter` in a field
+submits without going through the button — and because whether a field should become `readOnly`
+or stay editable while a call is in flight is a decision, not an attribute swap.
