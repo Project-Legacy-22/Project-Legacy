@@ -286,3 +286,28 @@ the board was built with, and it is now guarded.
 
 `Personal data` remains unwalked with the keyboard, and gap 7 above keeps it. The board half of
 that gap is closed; the account half is not, and #246 owns it.
+
+## Email address change confirmation, measured on 2026-09-18 (#245)
+
+`confirm-email-change-page.tsx` did not exist when the rest of this page was written: it shipped
+with the account screens for changing e-mail and password, after the 2026-09-10 measurement
+above. Like `auth-page.tsx` before it, it had a test file, `confirm-email-change-page.test.tsx`,
+but that file exercised the token exchange and the two outcomes through `App`, never an `axe`
+pass or the keyboard path — the same gap #194 closed for the entry screen, on a screen that
+arrived after #194 did.
+
+**`axe-core`**, tags `wcag2a` / `wcag2aa` / `wcag21aa`, clean in both states the screen has:
+waiting to confirm, and confirmed. Guarded in the same file.
+
+**Tab order.** Before confirming, one stop: the confirm button. `Enter` and `Space` on a native
+`<button>` are not re-tested, for the reason given above for the Kanban board. After confirming,
+the escape — the link back to sign in — joins the reachable set, the same shape
+`reset-password-page.test.tsx` already verifies for its own escape hatch.
+
+No focus is moved when the screen switches from waiting to confirmed: the success message and the
+link are appended after the button, in reading order, so a person tabbing forward still reaches
+the link without focus having to be placed by hand. This differs from the Kanban journey above,
+where a remount destroys the focused element and something has to catch it; here nothing is
+destroyed, so nothing needs to.
+
+Guarded by `apps/web/src/components/confirm-email-change-page.test.tsx`.
