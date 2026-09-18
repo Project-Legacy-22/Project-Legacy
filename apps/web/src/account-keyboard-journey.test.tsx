@@ -5,6 +5,7 @@ import type { CredentialsApi } from './api/credentials-api';
 import { App } from './app';
 import { labels } from './labels';
 import { ACCOUNT, createApi, createAuth, createCredentialsApi, createProjectsApi } from './test/app-fixture';
+import { deferred } from './test/deferred';
 import {
     accessibleName,
     click,
@@ -205,6 +206,42 @@ describe('the keyboard journey of the account screen', () => {
         expect(save).toHaveBeenCalledOnce();
         expect(announcement()).toContain(labels.exportDone);
         expect(focusedName()).toBe(labels.exportData);
+    });
+
+    // The control that carries the focus must not turn inert while it works.
+    // A disabled element leaves the tab order, and the focus fixup rule of the
+    // HTML standard then moves focus to the body -- which jsdom does not do, so
+    // asserting on document.activeElement here would pass whatever the markup
+    // said. The cause is what this suite can see, so the cause is what it
+    // guards: the control stays reachable for as long as the export runs.
+    it('keeps the download reachable while it is being prepared', async () => {
+        const pending = deferred<Blob>();
+        await show({ account: accountApi({ exportPersonalData: vi.fn(() => pending.promise) }) });
+
+        const download = stopNamed(labels.exportData);
+        download.focus();
+        await click(download);
+
+        const inFlight = stopNamed(labels.exportingData);
+        expect(accountStops()).toContain(inFlight);
+        expect(inFlight.getAttribute('aria-disabled')).toBe('true');
+
+        pending.resolve(EXPORTED);
+        await flushTimers();
+    });
+
+    it('does not start a second export while the first one is running', async () => {
+        const pending = deferred<Blob>();
+        const account = accountApi({ exportPersonalData: vi.fn(() => pending.promise) });
+        await show({ account });
+
+        await click(stopNamed(labels.exportData));
+        await click(stopNamed(labels.exportingData));
+
+        expect(account.exportPersonalData).toHaveBeenCalledOnce();
+
+        pending.resolve(EXPORTED);
+        await flushTimers();
     });
 
     // A refusal the interface raises itself, without asking the API: the field
