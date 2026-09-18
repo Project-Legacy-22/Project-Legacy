@@ -307,6 +307,10 @@ export type Database = {
         Args: { p_event_id: string; p_item_id: string; p_user_id: string }
         Returns: boolean
       }
+      remove_project_member: {
+        Args: { p_caller_id: string; p_member_id: string; p_project_id: string }
+        Returns: string
+      }
       unaccent: { Args: { "": string }; Returns: string }
       uuid_generate_v7: { Args: never; Returns: string }
     }
