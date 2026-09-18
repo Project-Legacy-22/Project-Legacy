@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import type { RequestHandler } from 'express';
-import { CreateProjectBody, ListProjectsQuery, ProjectIdParams } from '@legacy/contracts';
+import { CreateProjectBody, ListProjectsQuery, ProjectIdParams, ProjectMemberIdParams } from '@legacy/contracts';
 import type { ProjectDto, ProjectMemberListDto, ProjectPageDto } from '@legacy/contracts';
 import type { Membership, Project, ProjectPage } from '@legacy/core-projects';
 
@@ -30,6 +30,18 @@ function toMemberListDto(members: readonly Membership[]): ProjectMemberListDto {
             email: member.email,
             role: member.role,
         })),
+    };
+}
+
+function removeMember(useCases: ProjectUseCases): RequestHandler {
+    return async (req, res) => {
+        const { projectId, userId } = ProjectMemberIdParams.parse(req.params);
+        await useCases.removeProjectMember({
+            projectId,
+            memberId: userId,
+            callerId: accountOf(res).id,
+        });
+        res.status(204).end();
     };
 }
 
@@ -85,6 +97,7 @@ export function projectsRouter(useCases: ProjectUseCases): Router {
     router.get('/projects/:projectId/members', members);
     router.post('/projects', add);
     router.delete('/projects/:projectId', remove);
+    router.delete('/projects/:projectId/members/:userId', removeMember(useCases));
 
     return router;
 }

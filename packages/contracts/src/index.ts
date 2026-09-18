@@ -41,6 +41,7 @@ export { PersonalDataExportDto } from './personal-data.js';
 export {
     ProjectIdParams,
     ProjectItemIdParams,
+    ProjectMemberIdParams,
     CreateProjectBody,
     ListProjectsQuery,
     ProjectRole,
