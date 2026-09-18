@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { LastProjectOwner, ProjectMemberNotFound, ProjectNotFound, ProjectOwnerRequired } from '@legacy/core-projects';
 import { createSupabaseMembershipRepository } from '@legacy/infra';
@@ -18,6 +18,8 @@ beforeAll(async () => {
     member = await registerAndSignIn(app, 'ConcurrentRemoval2026');
 });
 
+afterEach(() => vi.unstubAllEnvs());
+
 function repository() {
     const config = integrationConfig();
     return createSupabaseMembershipRepository({
@@ -35,6 +37,20 @@ async function waitForCompetingRemoval(): Promise<void> {
 }
 
 describe('concurrent member removal on real PostgreSQL transactions', () => {
+    it('runs database queries and held transactions without the host PATH', async () => {
+        const projectId = await sharedProject(app, { owner, member });
+        vi.stubEnv('PATH', '');
+
+        const transaction = await holdRemoval({ projectId, callerId: owner.id, memberId: member.id });
+        try {
+            expect(databaseQuery('select 1')).toBe('1');
+        } finally {
+            await transaction.finish('rollback');
+        }
+
+        expect(await app.useCases.projects.listProjectMembers(projectId, owner.id)).toHaveLength(2);
+    });
+
     it('keeps the remaining owner when both owners try to leave', async () => {
         const projectId = await sharedProject(app, { owner, member }, 'owner');
         const first = await holdRemoval({ projectId, callerId: owner.id, memberId: owner.id });

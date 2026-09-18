@@ -4,6 +4,12 @@ import { ProjectMemberIdParams } from '@legacy/contracts';
 import type { MemberRemoval } from '@legacy/core-projects';
 import { integrationConfig } from './support.js';
 
+// Use the installed client directly: PATH can include writable directories.
+// Linux CI uses the system package; macOS uses the Docker Desktop bundle.
+const dockerExecutable = process.platform === 'darwin'
+    ? '/Applications/Docker.app/Contents/Resources/bin/docker'
+    : '/usr/bin/docker';
+
 // Match the tested API port rather than taking the first running database:
 // developers may keep their own local stack beside an isolated test stack.
 export function testedDatabase(): string {
@@ -11,7 +17,7 @@ export function testedDatabase(): string {
     if (!['localhost', '127.0.0.1'].includes(api.hostname) || api.port === '') {
         throw new Error('Concurrency tests require a local Supabase stack');
     }
-    const gateway = execFileSync('docker', [
+    const gateway = execFileSync(dockerExecutable, [
         'ps', '--filter', `publish=${api.port}`, '--format', '{{.Names}}',
     ], { encoding: 'utf8' }).trim();
     if (!/^supabase_kong_[a-zA-Z0-9_-]+$/u.test(gateway)) {
@@ -21,7 +27,7 @@ export function testedDatabase(): string {
 }
 
 export function databaseQuery(query: string): string {
-    return execFileSync('docker', [
+    return execFileSync(dockerExecutable, [
         'exec', testedDatabase(), 'psql', '-U', 'postgres', '-XqAt',
         '-v', 'ON_ERROR_STOP=1', '-c', query,
     ], { encoding: 'utf8' }).trim();
@@ -34,7 +40,7 @@ export async function holdRemoval(removal: MemberRemoval) {
     const { userId: memberId } = ProjectMemberIdParams.parse({
         projectId, userId: removal.memberId,
     });
-    const child = spawn('docker', [
+    const child = spawn(dockerExecutable, [
         'exec', '-i', testedDatabase(), 'psql', '-U', 'postgres', '-XqAt', '-v', 'ON_ERROR_STOP=1',
     ]);
     let stderr = '';
