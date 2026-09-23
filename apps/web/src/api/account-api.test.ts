@@ -60,7 +60,9 @@ describe('accountApi.exportPersonalData', () => {
     it('retombe sur son propre message quand la reponse n en porte pas', async () => {
         stubFetch(new Response('pas du json', { status: 500 }));
 
-        await expect(accountApi.exportPersonalData()).rejects.toEqual(new ApiError(500, labels.exportFailed));
+        await expect(accountApi.exportPersonalData()).rejects.toEqual(
+            new ApiError(500, `${labels.exportFailed} ${labels.serverError(undefined)}`),
+        );
     });
 });
 
@@ -90,7 +92,7 @@ describe('accountApi.deleteAccount', () => {
         stubFetch(new Response('', { status: 503 }));
 
         await expect(accountApi.deleteAccount({ confirmation: ADRESSE })).rejects.toEqual(
-            new ApiError(503, labels.deleteAccountFailed),
+            new ApiError(503, `${labels.deleteAccountFailed} ${labels.serviceUnavailable(undefined)}`),
         );
     });
 });

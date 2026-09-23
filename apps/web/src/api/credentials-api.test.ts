@@ -81,7 +81,7 @@ describe('credentialsApi.changeEmail', () => {
         stubFetch(problem(429, 'Address bob@example.com already registered.'));
 
         await expect(credentialsApi.changeEmail({ newEmail: 'bob@example.com' })).rejects.toEqual(
-            new ApiError(429, labels.emailChangeFailed),
+            new ApiError(429, `${labels.emailChangeFailed} ${labels.tooManyRequests(undefined)}`),
         );
     });
 });

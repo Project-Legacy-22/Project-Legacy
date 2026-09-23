@@ -6,6 +6,7 @@ import {
 
 import { ApiError, errorMessage, requestJson } from './items-api';
 import { labels } from '../labels';
+import { send } from './failure';
 
 export type { NotificationDto, NotificationPageDto } from '@legacy/contracts';
 
@@ -31,12 +32,12 @@ function notificationsPath(cursor?: string): string {
 
 export const notificationsApi: NotificationsApi = {
     async unreadCount(signal) {
-        const response = await fetch('/notifications/unread-count', {
+        const response = await send('/notifications/unread-count', {
             headers: { Accept: 'application/json' },
             signal,
         });
 
-        if (!response.ok) throw new ApiError(response.status, labels.notificationsFailed);
+        if (!response.ok) throw new ApiError(response.status, await errorMessage(response, labels.notificationsFailed));
 
         try {
             return NotificationSummaryDto.parse(await response.json()).unread;
@@ -58,7 +59,7 @@ export const notificationsApi: NotificationsApi = {
     },
 
     async markAsRead(id) {
-        const response = await fetch(`/notifications/${encodeURIComponent(id)}/read`, {
+        const response = await send(`/notifications/${encodeURIComponent(id)}/read`, {
             method: 'PATCH',
             headers: { Accept: 'application/json' },
         });

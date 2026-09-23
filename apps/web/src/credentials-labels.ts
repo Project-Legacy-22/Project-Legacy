@@ -11,7 +11,7 @@ export const credentialsLabels = {
     changeEmailSubmit: 'Send confirmation link',
     changingEmail: 'Sending…',
     emailChangeRequested: 'If that address is available, a confirmation link is on its way to it. Your sign-in address stays the same until you follow it.',
-    emailChangeFailed: 'Unable to start the email change. Try again in a moment.',
+    emailChangeFailed: 'Unable to start the email change.',
     changePasswordTitle: 'Change password',
     currentPasswordLabel: 'Current password',
     currentPasswordRequired: 'Enter your current password.',
