@@ -126,6 +126,24 @@ npm run db:types     # régénère packages/infra/src/database.types.ts après u
 npm run db:lint      # contrôles statiques sur le schéma
 ```
 
+### Données de démonstration
+
+`supabase/seed.sql` charge un jeu de démonstration à chaque `npm run db:reset`, et au premier
+`npm run db:start` d'une pile neuve. Il crée deux comptes, trois projets, des tâches réparties
+sur les trois colonnes avec priorités et échéances (dont une en retard et une à échéance du
+jour de chargement) et une notification non lue. Les échéances sont calculées à partir du jour
+où le jeu est chargé : rejouer `npm run db:reset` avant une démonstration les remet à jour.
+
+| Compte | Mot de passe | Contenu |
+|---|---|---|
+| `camille.demo@example.com` | `DemoLegacy2026` | deux projets, une notification non lue |
+| `hugo.demo@example.com` | `DemoLegacy2026` | un projet |
+
+Ces comptes n'existent que sur la pile locale. Le fichier refuse de s'exécuter sur toute base
+qui n'utilise pas le secret JWT publié par le CLI Supabase pour le développement local : une
+base hébergée ne reçoit jamais ce jeu, même par `supabase db reset --linked`. Les adresses
+sont sur `example.com` et les noms sont inventés.
+
 ## Démarrer les étages séparément
 
 `npm run up` couvre le cas courant. Les commandes ci-dessous servent quand on veut agir sur
