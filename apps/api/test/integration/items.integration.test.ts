@@ -78,14 +78,14 @@ describe('items API (integration)', () => {
         });
     });
 
-    it('trie par priorite, echeance puis identifiant sur plusieurs pages', async () => {
+    it('trie par priorite, echeance puis position sur plusieurs pages', async () => {
         const database = createClient<Database>(integrationConfig().supabaseUrl, integrationConfig().supabaseServiceRoleKey, {
             auth: { persistSession: false, autoRefreshToken: false },
         });
         const cleared = await database.from('items').delete().eq('project_id', owner.projectId);
         expect(cleared.error).toBeNull();
-        // The tie-break tested here is `id asc`, so the identifiers have to
-        // order -- not to be fixed. A prefix drawn per run gives both: the
+        // The tie-break tested here is position asc. Set each position to its
+        // identifier, matching the creation path. A prefix drawn per run gives both: the
         // last segment carries the order, and two runs against a database that
         // was not reset between them no longer collide on the primary key.
         // Every other case in this file lets the database assign identifiers,
@@ -98,7 +98,7 @@ describe('items API (integration)', () => {
             { id: identifiant(3), name: 'Haute tard', priority: 'high' as const, due_date: '2026-09-20' },
             { id: identifiant(2), name: 'Haute proche B', priority: 'high' as const, due_date: '2026-09-12' },
             { id: identifiant(1), name: 'Haute proche A', priority: 'high' as const, due_date: '2026-09-12' },
-        ].map((row) => ({ ...row, project_id: owner.projectId, user_id: owner.id }));
+        ].map((row) => ({ ...row, position: row.id, project_id: owner.projectId, user_id: owner.id }));
         const inserted = await database.from('items').insert(rows);
         expect(inserted.error).toBeNull();
 

@@ -3,6 +3,7 @@ export {
     CreateItemBody,
     UpdateItemBody,
     MoveItemBody,
+    ReorderItemBody,
     ItemStatus,
     ItemPriority,
     ItemDueDate,

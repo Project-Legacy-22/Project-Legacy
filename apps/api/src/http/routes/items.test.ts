@@ -36,6 +36,7 @@ type Page = { items: { id: string }[]; nextCursor: string | null };
 function anItemOf(candidate: { id: string; ownerId: string; name?: string; projectId?: string }): Item {
     return {
         id: candidate.id,
+        position: candidate.id,
         name: candidate.name ?? 'Acheter du pain',
         status: 'todo',
         version: 1,
@@ -146,6 +147,7 @@ describe('items API', () => {
             expect(response.status).toBe(200);
             await expect(response.json()).resolves.toEqual({
                 id: GENERATED_ID,
+                position: GENERATED_ID,
                 projectId: PROJECT_ID,
                 name: 'Acheter du pain',
                 status: 'todo',

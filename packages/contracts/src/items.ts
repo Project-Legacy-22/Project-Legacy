@@ -37,6 +37,13 @@ export const MoveItemBody = z.object({
     version: z.number().int().positive(),
 });
 
+// A position is the opaque key of an adjacent task, not a client-provided
+// array index that could shift while another page is being loaded.
+export const ReorderItemBody = z.object({
+    position: z.uuid(),
+    version: z.number().int().positive(),
+});
+
 // The legacy database can still contain null names. Responses acknowledge
 // that historical state while every new write remains subject to itemNameSchema.
 export const ItemDto = z.object({
@@ -45,6 +52,7 @@ export const ItemDto = z.object({
     name: z.string().nullable(),
     status: ItemStatus,
     version: z.number().int().positive(),
+    position: z.uuid(),
     priority: ItemPriority,
     dueDate: ItemDueDate.nullable(),
 });
@@ -87,6 +95,7 @@ export type ItemIdParams = z.infer<typeof ItemIdParams>;
 export type CreateItemBody = z.infer<typeof CreateItemBody>;
 export type UpdateItemBody = z.infer<typeof UpdateItemBody>;
 export type MoveItemBody = z.infer<typeof MoveItemBody>;
+export type ReorderItemBody = z.infer<typeof ReorderItemBody>;
 export type ItemStatus = z.infer<typeof ItemStatus>;
 export type ItemPriority = z.infer<typeof ItemPriority>;
 export type ItemDto = z.infer<typeof ItemDto>;

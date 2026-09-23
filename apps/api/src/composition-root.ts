@@ -40,7 +40,7 @@ import {
     makeSignIn,
     makeSignOut,
 } from '@legacy/core-auth';
-import { makeListItems, makeAddItem, makeChangeItem, makeMoveItem, makeRemoveItem } from '@legacy/core-items';
+import { makeListItems, makeAddItem, makeChangeItem, makeMoveItem, makeReorderItem, makeRemoveItem } from '@legacy/core-items';
 import type { ItemRepository } from '@legacy/core-items';
 import {
     makeCountUnreadNotifications,
@@ -63,6 +63,7 @@ export interface ItemUseCases {
     addItem: ReturnType<typeof makeAddItem>;
     changeItem: ReturnType<typeof makeChangeItem>;
     moveItem: ReturnType<typeof makeMoveItem>;
+    reorderItem: ReturnType<typeof makeReorderItem>;
     removeItem: ReturnType<typeof makeRemoveItem>;
 }
 
@@ -267,6 +268,7 @@ export function itemUseCases(
         ),
         changeItem: makeChangeItem(store),
         moveItem: makeMoveItem(store),
+        reorderItem: makeReorderItem(store),
         removeItem: makeRemoveItem(store),
     };
 }

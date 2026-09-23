@@ -21,6 +21,7 @@ const ITEMS_PATH = `/projects/${PROJECT_ID}/items`;
 function anItem(): Item {
     return {
         id: EXISTING_ID,
+        position: EXISTING_ID,
         name: 'Intact',
         status: 'todo',
         version: 1,
