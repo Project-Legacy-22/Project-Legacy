@@ -26,6 +26,7 @@ export function PersonalDataSection({
     onDelete,
 }: PersonalDataSectionProps) {
     const isExporting = activity === 'exporting';
+    const isBusy = activity !== 'idle';
 
     return (
         <section className="panel" aria-labelledby="personal-data-heading">
@@ -37,8 +38,16 @@ export function PersonalDataSection({
             <button
                 className="button button-secondary"
                 type="button"
-                onClick={() => void onExport()}
-                disabled={activity !== 'idle'}
+                // aria-disabled rather than disabled, the choice the pagination
+                // button already made. A disabled element leaves the tab order,
+                // and the focus fixup rule of the HTML standard then moves
+                // focus off it -- onto the body, on the very control the person
+                // just activated. Re-enabling does not bring focus back, so
+                // exporting would cost a keyboard user their place and send
+                // them back to the top of the document. Inert but reachable is
+                // what this needs, and the handler carries the refusal.
+                aria-disabled={isBusy}
+                onClick={isBusy ? undefined : () => void onExport()}
             >
                 {isExporting ? labels.exportingData : labels.exportData}
             </button>
