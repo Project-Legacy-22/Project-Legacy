@@ -10,6 +10,7 @@ import {
     makeSignOut,
 } from '@legacy/core-auth';
 import type { IdentityProvider } from '@legacy/core-auth';
+import { ServiceUnavailable } from '@legacy/contracts';
 import { makeAddItem, makeChangeItem, makeListItems, makeRemoveItem } from '@legacy/core-items';
 // The reference fakes for a port live with the port they implement; copying one
 // here would let the copy drift from the contract it stands for.
@@ -202,6 +203,31 @@ describe('durcissement de l API', () => {
             expect(raw).not.toMatch(/accounts|SELECT|relation|\bat \w+/i);
             expect(harness.logger.lines.some(line => line.level === 'error')).toBe(true);
         });
+
+        // #383: a provider that throttled us is not a fault of ours. The client
+        // gets 503 and when to ask again, never the dependency's name.
+        it('answers a throttled provider with 503 and a delay, not 500', async () => {
+            const throttled = () =>
+                Promise.reject(
+                    new ServiceUnavailable('rate_limited', 'identity provider: authenticate', {
+                        cause: new Error('Request rate limit reached'),
+                    }),
+                );
+            await serve({}, throttled);
+
+            const response = await harness.request(
+                '/auth/login',
+                json('POST', { email: ADRESSE, password: MOT_DE_PASSE }),
+            );
+            const raw = await response.text();
+            const body = JSON.parse(raw) as { type: string; detail: string };
+
+            expect(response.status).toBe(503);
+            expect(response.headers.get('retry-after')).toBe('30');
+            expect(body.type).toBe('service_unavailable');
+            expect(raw).not.toMatch(/identity provider|rate limit/i);
+            expect(harness.logger.lines.some(line => line.message === 'dependency unavailable')).toBe(true);
+        });
     });
 
     describe('confiance proxy et cle du limiteur de debit', () => {
@@ -229,6 +255,17 @@ describe('durcissement de l API', () => {
             const responses = await Promise.all(badLogins(oneClient));
 
             expect(responses.filter(response => response.status === 429)).not.toHaveLength(0);
+        });
+
+        it('tells a limited client how many seconds remain before it may try again', async () => {
+            await serve({ trustProxy: 1 });
+
+            const responses = await Promise.all(badLogins(oneClient));
+            const limited = responses.find(response => response.status === 429);
+            const retryAfter = Number(limited?.headers.get('retry-after'));
+
+            expect(retryAfter).toBeGreaterThanOrEqual(1);
+            expect(retryAfter).toBeLessThanOrEqual(5 * 60);
         });
 
         it('ne confond pas des adresses transmises distinctes quand un proxy est declare', async () => {
