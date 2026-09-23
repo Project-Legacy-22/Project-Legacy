@@ -22,6 +22,7 @@ function unexercised(): AppUseCases {
             addItem: refusing('addItem'),
             changeItem: refusing('changeItem'),
             moveItem: refusing('moveItem'),
+            reorderItem: refusing('reorderItem'),
             removeItem: refusing('removeItem'),
         },
         auth: {

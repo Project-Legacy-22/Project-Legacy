@@ -6,6 +6,7 @@ const PROJECT_ID = '00000000-0000-7000-8000-000000000010';
 const ITEM_ID = '00000000-0000-7000-8000-000000000020';
 const ITEM = {
     id: ITEM_ID,
+    position: ITEM_ID,
     projectId: PROJECT_ID,
     name: 'Prepare the review',
     status: 'todo' as const,

@@ -45,6 +45,7 @@ export type Database = {
           id: string
           name: string
           name_search: string | null
+          position: string
           priority: Database["public"]["Enums"]["item_priority"]
           project_id: string
           status: Database["public"]["Enums"]["item_status"]
@@ -58,6 +59,7 @@ export type Database = {
           id?: string
           name: string
           name_search?: string | null
+          position?: string
           priority?: Database["public"]["Enums"]["item_priority"]
           project_id: string
           status?: Database["public"]["Enums"]["item_status"]
@@ -71,6 +73,7 @@ export type Database = {
           id?: string
           name?: string
           name_search?: string | null
+          position?: string
           priority?: Database["public"]["Enums"]["item_priority"]
           project_id?: string
           status?: Database["public"]["Enums"]["item_status"]
@@ -339,6 +342,34 @@ export type Database = {
         Args: { p_caller_id: string; p_member_id: string; p_project_id: string }
         Returns: string
       }
+      swap_item_position: {
+        Args: {
+          p_expected_version: number
+          p_item_id: string
+          p_position: string
+          p_project_id: string
+        }
+        Returns: {
+          created_at: string
+          due_date: string | null
+          id: string
+          name: string
+          name_search: string | null
+          position: string
+          priority: Database["public"]["Enums"]["item_priority"]
+          project_id: string
+          status: Database["public"]["Enums"]["item_status"]
+          updated_at: string
+          user_id: string
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "items"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       unaccent: { Args: { "": string }; Returns: string }
       uuid_generate_v7: { Args: never; Returns: string }
     }
@@ -480,4 +511,3 @@ export const Constants = {
     },
   },
 } as const
-

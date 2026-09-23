@@ -26,7 +26,7 @@ import { describe, expect, it } from 'vitest';
 
 const OWNERS: Readonly<Record<string, string>> = {
     'public.add_member_with_event': '20260915160000_add_member_with_event',
-    'public.create_item_with_event': '20260910221142_item_priority_due_date',
+    'public.create_item_with_event': '20260923120000_item_position',
     'public.create_project_for_owner': '20260908083028_add_projects_and_memberships',
     'public.erase_account': '20260908144244_extend_account_erasure_for_projects',
     'public.immutable_unaccent': '20260918130000_item_name_search',
@@ -36,6 +36,7 @@ const OWNERS: Readonly<Record<string, string>> = {
     'public.record_member_added_notification': '20260915180000_record_member_added_notification',
     'public.remove_project_member': '20260918074845_remove_project_member',
     'public.set_updated_at': '20260903120000_initial_schema',
+    'public.swap_item_position': '20260923120000_item_position',
     'public.uuid_generate_v7': '20260903120000_initial_schema',
 };
 

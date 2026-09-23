@@ -33,6 +33,7 @@ type Page = { items: { id: string; name: string | null }[]; nextCursor: string |
 function anItemOf(candidate: { id: string; ownerId: string; name?: string; projectId?: string }): Item {
     return {
         id: candidate.id,
+        position: candidate.id,
         name: candidate.name ?? 'Acheter du pain',
         status: 'todo',
         version: 1,

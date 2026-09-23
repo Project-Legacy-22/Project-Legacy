@@ -35,4 +35,5 @@ the acceptance criteria: it describes the feature as it now behaves, in the pres
 | [#37](37-account-credentials.md) | Change my email address and my password | Auth |
 | [#48](48-logout.md) | Sign out | Auth |
 | [#49](49-view-states.md) | Coherent loading, empty and error states | A11y |
+| [#50](50-reorder-task.md) | Reorder tasks within a Kanban column | Tasks |
 | [#354](354-remove-project-member.md) | Remove a project member without deleting their tasks | Projects |

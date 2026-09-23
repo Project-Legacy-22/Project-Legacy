@@ -1,4 +1,4 @@
-import { criteriaFingerprint, InvalidItemCursor, matchesCriteria } from '../../src/index.js';
+import { criteriaFingerprint, InvalidItemCursor, InvalidItemPosition, matchesCriteria } from '../../src/index.js';
 import type { DomainEvent, Item, ItemPageQuery, ItemRepository, ItemSearchCriteria } from '../../src/index.js';
 
 const PRIORITY_RANK = { high: 0, normal: 1, low: 2 } as const;
@@ -9,7 +9,9 @@ function compareItems(left: Item, right: Item): number {
     if (left.dueDate === null && right.dueDate !== null) return 1;
     if (left.dueDate !== null && right.dueDate === null) return -1;
     const dueDate = (left.dueDate ?? '').localeCompare(right.dueDate ?? '');
-    return dueDate !== 0 ? dueDate : left.id.localeCompare(right.id);
+    if (dueDate !== 0) return dueDate;
+    const position = left.position.localeCompare(right.position);
+    return position !== 0 ? position : left.id.localeCompare(right.id);
 }
 
 // The same envelope shape as the Supabase adapter (priority/dueDate/id sort
@@ -21,6 +23,7 @@ function compareItems(left: Item, right: Item): number {
 interface ItemPosition {
     priority: Item['priority'];
     dueDate: string | null;
+    position: string;
     id: string;
     criteria: string;
 }
@@ -38,9 +41,10 @@ function fromBase64Url(input: string): string {
 function isPosition(value: unknown): value is ItemPosition {
     if (typeof value !== 'object' || value === null) return false;
     const candidate = value as Record<string, unknown>;
-    return Object.keys(candidate).length === 4
+    return Object.keys(candidate).length === 5
         && typeof candidate.priority === 'string'
         && (candidate.dueDate === null || typeof candidate.dueDate === 'string')
+        && typeof candidate.position === 'string'
         && typeof candidate.id === 'string'
         && typeof candidate.criteria === 'string';
 }
@@ -49,6 +53,7 @@ function encodeCursor(item: Item, criteria: ItemSearchCriteria): string {
     return toBase64Url(JSON.stringify({
         priority: item.priority,
         dueDate: item.dueDate,
+        position: item.position,
         id: item.id,
         criteria: criteriaFingerprint(criteria),
     }));
@@ -132,7 +137,8 @@ export function inMemoryItemRepository(
                     return Promise.reject(new InvalidItemCursor());
                 }
                 from = projectItems.findIndex(
-                    (item) => item.priority === position.priority && item.dueDate === position.dueDate && item.id === position.id,
+                    (item) => item.priority === position.priority && item.dueDate === position.dueDate
+                        && item.position === position.position && item.id === position.id,
                 ) + 1;
                 // Refused rather than silently answered with the first page,
                 // exactly as a cursor this API never issued is refused.
@@ -169,6 +175,23 @@ export function inMemoryItemRepository(
             const moved = { ...item, status, version: item.version + 1 };
             items.set(id, moved);
             return Promise.resolve(moved);
+        },
+        swapPosition: ({ id, projectId, position, expectedVersion }) => {
+            const item = items.get(id);
+            if (item?.projectId !== projectId || item.version !== expectedVersion) return Promise.resolve(undefined);
+            const group = [...items.values()]
+                .filter((candidate) => candidate.projectId === projectId && candidate.status === item.status
+                    && candidate.priority === item.priority && candidate.dueDate === item.dueDate)
+                .sort((left, right) => left.position.localeCompare(right.position));
+            const sourceIndex = group.findIndex((candidate) => candidate.id === id);
+            const targetIndex = group.findIndex((candidate) => candidate.position === position);
+            if (Math.abs(sourceIndex - targetIndex) !== 1) return Promise.reject(new InvalidItemPosition());
+            const target = group[targetIndex];
+            if (target === undefined) return Promise.reject(new InvalidItemPosition());
+            const reordered = { ...item, position: target.position, version: item.version + 1 };
+            items.set(item.id, reordered);
+            items.set(target.id, { ...target, position: item.position, version: target.version + 1 });
+            return Promise.resolve(reordered);
         },
         remove: (id) => {
             items.delete(id);

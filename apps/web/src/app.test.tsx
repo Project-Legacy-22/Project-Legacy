@@ -120,9 +120,9 @@ describe('App item workflow', () => {
         expect(document.querySelectorAll('.todo-item')).toHaveLength(1);
         expect(getElement<HTMLElement>('.item-name').textContent).toBe(secondItem.name);
         await waitFor(
-            () => document.activeElement === document.querySelector('.todo-item .button-secondary'),
+            () => document.activeElement === document.querySelector('.todo-item .item-move'),
         );
-        expect(document.activeElement).toBe(getElement<HTMLButtonElement>('.todo-item .button-secondary'));
+        expect(document.activeElement).toBe(getElement<HTMLButtonElement>('.todo-item .item-move'));
     });
 });
 

@@ -33,6 +33,7 @@ function pageProps(overrides: Partial<TodoPageProps> = {}): TodoPageProps {
         hasActiveFilters: false,
         onAdd: vi.fn(async (): Promise<AddItemResult> => ({ status: 'success' })),
         onMove: vi.fn(async () => true),
+        onReorder: vi.fn(async () => true),
         onUpdate: vi.fn(async () => true),
         onRemove: vi.fn(async () => true),
         onLoadMore: vi.fn(),

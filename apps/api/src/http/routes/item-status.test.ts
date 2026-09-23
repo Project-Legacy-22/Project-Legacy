@@ -25,6 +25,7 @@ const PATH = `/projects/${PROJECT_ID}/items`;
 function anItem(ownerId = OWNER_ID): Item {
     return {
         id: EXISTING_ID,
+        position: EXISTING_ID,
         projectId: PROJECT_ID,
         ownerId,
         name: 'Prepare the review',

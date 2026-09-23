@@ -21,6 +21,7 @@ export interface ItemsState {
     hasActiveFilters: boolean;
     addItem: (body: CreateItemBody) => Promise<AddItemResult>;
     moveItem: ReturnType<typeof useItemActions>['moveItem'];
+    reorderItem: ReturnType<typeof useItemActions>['reorderItem'];
     updateItem: ReturnType<typeof useItemActions>['updateItem'];
     removeItem: ReturnType<typeof useItemActions>['removeItem'];
     loadMore: () => void;
@@ -50,6 +51,7 @@ export function useItems(api: ItemsApi, projectId: string | null): ItemsState {
         hasActiveFilters: itemsFilters.hasActiveFilters,
         addItem: actions.addItem,
         moveItem: actions.moveItem,
+        reorderItem: actions.reorderItem,
         updateItem: actions.updateItem,
         removeItem: actions.removeItem,
         loadMore: () => {

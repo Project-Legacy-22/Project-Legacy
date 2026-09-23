@@ -4,6 +4,7 @@ import {
     CreateItemBody,
     UpdateItemBody,
     MoveItemBody,
+    ReorderItemBody,
     ProjectIdParams,
     ProjectItemIdParams,
     ListItemsQuery,
@@ -24,6 +25,7 @@ function toItemDto(item: Item): ItemDto {
         name: item.name,
         status: item.status,
         version: item.version,
+        position: item.position,
         priority: item.priority,
         dueDate: item.dueDate,
     };
@@ -77,6 +79,23 @@ function moveItem(useCases: ItemUseCases): RequestHandler {
             })
             .then((item) => res.send(toItemDto(item)))
             .catch(next);
+    };
+}
+
+function reorderItem(useCases: ItemUseCases): RequestHandler {
+    return (req, res, next) => {
+        const params = ProjectItemIdParams.safeParse(req.params);
+        if (!params.success) return next(params.error);
+        const body = ReorderItemBody.safeParse(req.body);
+        if (!body.success) return next(body.error);
+
+        useCases.reorderItem({
+            id: params.data.id,
+            projectId: params.data.projectId,
+            memberId: accountOf(res).id,
+            position: body.data.position,
+            expectedVersion: body.data.version,
+        }).then((item) => res.send(toItemDto(item))).catch(next);
     };
 }
 
@@ -144,6 +163,7 @@ export function itemsRouter(useCases: ItemUseCases): Router {
     router.post('/projects/:projectId/items', add);
     router.put('/projects/:projectId/items/:id', change);
     router.patch('/projects/:projectId/items/:id/status', moveItem(useCases));
+    router.patch('/projects/:projectId/items/:id/position', reorderItem(useCases));
     router.delete('/projects/:projectId/items/:id', remove);
 
     return router;

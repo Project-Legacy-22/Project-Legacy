@@ -38,6 +38,8 @@ interface Observed {
 }
 
 function container(): string {
+    // An isolated test stack can coexist with the contributor's usual one.
+    if (process.env.SUPABASE_DB_CONTAINER) return process.env.SUPABASE_DB_CONTAINER;
     const found = execFileSync(
         'docker',
         ['ps', '--filter', 'name=supabase_db', '--format', '{{.Names}}'],
@@ -131,7 +133,9 @@ describe('the schema the migration tools describe', () => {
             for (const column of table.columns) {
                 // The identifier generator is a function of ours, deliberately
                 // left out: a target receives identifiers with the data.
-                if (table.primaryKey.includes(column.name)) continue;
+                // The position UUID is generated only by our source database;
+                // exports carry it explicitly to every target engine.
+                if (table.primaryKey.includes(column.name) || (table.name === 'items' && column.name === 'position')) continue;
 
                 const row = rows.find(one => one.table === table.name && one.column === column.name);
 

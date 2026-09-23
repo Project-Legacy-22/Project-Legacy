@@ -5,6 +5,7 @@ const DEFAULTS: Item = {
     name: 'A sample item',
     status: 'todo',
     version: 1,
+    position: '2e2b7d0e-9a0a-4c1a-8e0a-8f3a0e6a2b31',
     priority: 'normal',
     dueDate: null,
     projectId: '00000000-0000-7000-8000-000000000010',
@@ -12,5 +13,5 @@ const DEFAULTS: Item = {
 };
 
 export function anItem(overrides: Partial<Item> = {}): Item {
-    return { ...DEFAULTS, ...overrides };
+    return { ...DEFAULTS, ...overrides, position: overrides.position ?? overrides.id ?? DEFAULTS.position };
 }
