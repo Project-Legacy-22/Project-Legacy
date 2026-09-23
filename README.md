@@ -1,43 +1,98 @@
 # Legacy 22
 
-Legacy 22 reprend l'application TodoList de `docker/getting-started-app` pour la faire évoluer
-vers une application Kanban maintenable. Le dépôt utilise TypeScript et des workspaces npm.
+Legacy 22 reprend l'application TodoList de `docker/getting-started-app` et en fait une
+application Kanban maintenable : comptes et sessions, projets partagés entre membres, tâches
+avec statut, priorité et échéance, tableau Kanban utilisable au clavier, écran d'accueil de ce
+qui demande de l'attention, notifications produites par un flux événementiel, export et
+suppression des données personnelles.
+
+**Ce qu'elle n'est pas** : ni un outil de gestion de projet complet (pas de sous-tâches, de
+commentaires, de pièces jointes, de colonnes personnalisées ni de temps réel), ni une
+application mobile. Ces sujets sont documentés comme hors périmètre dans le backlog, pas
+improvisés.
+
+## Où elle tourne
+
+| Cible | Adresse | Ce qu'elle sert |
+|---|---|---|
+| Production | <https://project-legacy-web-legacy-9eee.vercel.app> | la branche `main`, front et API sur la même origine |
+| Prévisualisations | une adresse par pull request et pour `dev`, dans les contrôles de la PR | le code de la branche, sur la même base que la production |
+| Image Docker | `ghcr.io/project-legacy-22/project-legacy` | chaque livraison sur `main`, pour une exécution hors Vercel |
+| Poste de développement | <http://localhost:5173> | après `npm run up`, avec une base et un broker locaux |
+
+La production ne sert pas le worker : sur Vercel, la passe de livraison des événements est
+déclenchée par l'écriture elle-même et par un appel planifié toutes les cinq minutes
+(`docs/ci.md`). Elle ne contient aucun compte de démonstration : ceux-ci n'existent que sur la
+pile locale.
+
+## Documentation
+
+| Sujet | Où |
+|---|---|
+| Architecture, couches, flux d'une requête et flux événementiel | [docs/architecture.md](docs/architecture.md) |
+| Décisions et leurs raisons | [docs/adr/](docs/adr/README.md) |
+| Catalogue des événements | [docs/events/catalog.md](docs/events/catalog.md) |
+| Intégration continue, livraison, déploiement | [docs/ci.md](docs/ci.md) |
+| Chaque fonctionnalité livrée, ses règles et ses cas d'erreur | [docs/features/](docs/features/README.md) |
+| Niveaux de tests | [docs/testing-levels.md](docs/testing-levels.md) |
+| Registre des traitements RGPD | [docs/gdpr/registre.md](docs/gdpr/registre.md) |
+| Sauvegarde, restauration et sortie de Supabase | [docs/backup-and-exit.md](docs/backup-and-exit.md) |
+| Reprise des données de l'ancienne application | [docs/data-migration.md](docs/data-migration.md) |
 
 ## Commandes
 
 | Commande | Ce qu'elle fait |
 |---|---|
 | `npm run up` | démarre tout : broker, base de données, API, front et worker |
-| `npm run dev:worker` | le worker seul, pour le redémarrer pendant une démonstration |
 | `npm run down` | arrête le broker et la base de données |
+| `npm run dev` | API et serveur Vite, en lisant `.env` |
+| `npm run dev:api`, `npm run dev:web`, `npm run dev:worker` | un seul étage, par exemple le worker pendant une démonstration |
 | `npm run lint` | analyse statique sur tout le dépôt, `apps/web` compris |
 | `npm run typecheck` | types de la production et des tests, workspace web, puis contrôle des frontières de couches |
-| `npm test` | tous les tests, Node et front, avec un rapport de couverture unique dans `coverage/` |
-| `npm run dev` | API et serveur Vite en développement |
+| `npm test` | tests unitaires, HTTP et du front, avec un rapport de couverture unique dans `coverage/` |
+| `npm run test:unit`, `npm run test:http`, `npm run test:dom` | un seul niveau de la suite ci-dessus |
+| `npm run test:integration` | tests contre la pile Supabase locale et le broker, qui doivent tourner |
+| `npm run test:migration` | reprise et sortie des données, rejouées sur trois moteurs en conteneurs |
 | `npm run build` | build de production, front écrit dans `apps/api/dist/static` |
+| `npm start`, `npm run start:worker` | le build de production de l'API, du worker |
 | `npm run db:start` | pile Supabase locale et application des migrations |
-| `npm run db:reset` | rejoue les migrations depuis une base vide |
+| `npm run db:reset` | rejoue les migrations depuis une base vide, puis le jeu de démonstration |
 | `npm run db:types` | régénère les types TypeScript du schéma |
+| `npm run db:lint` | contrôles statiques sur le schéma |
+| `npm run backup` | sauvegarde du projet hébergé lié, voir [docs/backup-and-exit.md](docs/backup-and-exit.md) |
+| `npm run data:export`, `npm run data:import` | sortie et reprise des données, voir [docs/data-migration.md](docs/data-migration.md) |
 
 ## Prérequis
 
-- Node.js 20.19, ou Node.js 22.12 et versions ultérieures
-- npm avec prise en charge des workspaces
-- Docker, en cours d'exécution : il fait tourner la base de données et le broker
+| Outil | Version | Où c'est fixé |
+|---|---|---|
+| Node.js | 22.12.0 recommandé ; `^20.19.0` ou `>=22.12.0` acceptés | `.nvmrc`, champ `engines` de `package.json` |
+| npm | celui livré avec Node, 10 ou plus : les workspaces et `npm ci` en dépendent | |
+| Docker | un moteur démarré, avec `docker compose` (v2) | la base locale et le broker tournent en conteneurs |
+
+Le CLI Supabase n'est pas à installer : c'est une dépendance de développement (`supabase` dans
+`package.json`), appelée par `npx supabase` depuis les scripts. Avec `nvm`, `nvm use` lit
+`.nvmrc`.
 
 ## Organisation
 
 ```text
+api/                     Point d'entrée de la fonction Vercel, qui sert l'application Express
 apps/
 ├── api/                 API Express et composition de l'application
 ├── web/                 Interface React construite avec Vite
 └── worker/              Consommateur d'événements, processus distinct
 packages/
-├── contracts/           Schémas et types partagés aux frontières
+├── contracts/           Schémas zod et types partagés aux frontières
 ├── core/auth/           Domaine et cas d'usage de l'authentification
-├── core/items/          Domaine et cas d'usage des éléments
-├── core/projects/       Domaine et cas d'usage des projets
-└── infra/               Adaptateurs de persistance, d'identité et journalisation
+├── core/items/          Domaine et cas d'usage des tâches
+├── core/projects/       Domaine et cas d'usage des projets et de leurs membres
+├── core/notifications/  Domaine et cas d'usage des notifications
+├── data-migration/      Reprise et sortie des données, sans dépendance
+└── infra/               Adaptateurs : Supabase, Redis, identité, métriques, journalisation
+supabase/                Migrations versionnées, configuration locale, jeu de démonstration
+test/                    Tests transverses : niveaux, migrations, registre des fonctions SQL
+docs/                    Architecture, ADR, fonctionnalités, CI, RGPD
 ```
 
 Le front utilise les contrats de `packages/contracts` pour valider les réponses de l'API.
@@ -59,7 +114,7 @@ imprimées par le CLI Supabase : aucun fichier à copier, aucune valeur à rense
 - Front avec rechargement à chaud : http://localhost:5173
 - API : http://localhost:3000
 - Studio Supabase : http://localhost:54323
-- Les requêtes `/projects` et `/auth` du front sont transmises à l'API par le proxy Vite.
+- Les requêtes `/auth`, `/projects` et `/notifications` du front sont transmises à l'API par le proxy Vite.
 
 `Ctrl+C` arrête l'API et le front. Le broker et la base restent debout, avec leurs données ;
 `npm run down` les arrête. Relancer `npm run up` repart de l'état laissé la fois précédente.
@@ -74,14 +129,23 @@ réelle. `apps/api/src/config.ts` est le seul module qui lit l'environnement ; t
 reçoit des valeurs typées. Ajouter une variable ailleurs créerait une seconde source de
 configuration, que le fichier d'exemple cesserait de décrire.
 
-| Variable | Rôle |
-|---|---|
-| `SUPABASE_URL` | point d'entrée de la base. Requise : l'API refuse de démarrer sans elle |
-| `SUPABASE_SERVICE_ROLE_KEY` | clé de service utilisée par l'API. Requise |
-| `REDIS_URL` | broker déclaré dans `compose.yaml`. Requise pour qui relaie ou consomme : `start()` de l'API la réclame, le worker refuse de charger sans elle. Un déploiement qui ne fait que servir du HTTP peut s'en passer, aucune route ne touchant au bus |
-| `REDIS_PORT` | port hôte du broker, `6379` par défaut |
-| `WORKER_BLOCK_SECONDS` | attente bloquante du worker entre deux lectures, `5` par défaut |
-| `LOG_LEVEL` | niveau pino parmi `fatal`, `error`, `warn`, `info`, `debug`, `trace`, `silent`. `info` par défaut ; une valeur inconnue empêche le démarrage |
+| Variable | Origine | Rôle, et ce qui se passe si elle manque |
+|---|---|---|
+| `SUPABASE_URL` | `supabase status -o env` en local, tableau de bord Supabase sinon | point d'entrée de la base. Requise : l'API refuse de démarrer en la nommant |
+| `SUPABASE_SERVICE_ROLE_KEY` | idem | clé de service, ne quitte jamais le serveur. Requise |
+| `SUPABASE_ANON_KEY` | idem | clé publique utilisée par l'authentification. Requise |
+| `REDIS_URL` | `compose.yaml` en local, Upstash sur Vercel | broker des événements. Requise pour qui relaie ou consomme : `start()` de l'API la réclame, le worker refuse de charger sans elle. Un déploiement qui ne fait que servir du HTTP peut s'en passer |
+| `RELAY_SECRET` | à générer, 32 caractères au moins | secret de `POST /internal/relay`, `/internal/metrics` et `/internal/state`. Absente, ces routes n'existent pas |
+| `WEB_ORIGIN` | l'adresse du front | seule origine admise pour un appel cross-origin. `http://localhost:5173` par défaut |
+| `TRUST_PROXY` | `1` derrière un proxy, comme sur Vercel | nombre de proxys dont l'adresse transmise est crue, clé du limiteur de débit. `0` par défaut |
+| `NODE_ENV` | `production` en production | pose `Secure` sur les cookies de session. `development` par défaut |
+| `LOG_LEVEL` | | niveau pino parmi `fatal`, `error`, `warn`, `info`, `debug`, `trace`, `silent`. `info` par défaut ; une valeur inconnue empêche le démarrage |
+| `REDIS_PORT` | | port hôte du broker local, `6379` par défaut |
+| `WORKER_BLOCK_SECONDS` | | attente bloquante du worker entre deux lectures, `5` par défaut |
+| `SUPABASE_AUTH_SMTP_PASS` | fournisseur d'e-mails | lu par `supabase/config.toml` seulement pour pousser la configuration d'envoi d'e-mails ; inutile en local, où le capteur de courrier suffit |
+
+`VERCEL_GIT_COMMIT_SHA`, `VERCEL_GIT_COMMIT_REF` et `VERCEL_ENV` sont posées par Vercel et
+nomment la version qui répond dans les métriques ; rien ne les exige ailleurs.
 
 Une variable requise absente arrête l'API au démarrage avec un message qui la nomme, plutôt
 que de la laisser échouer à la première requête.
@@ -104,14 +168,11 @@ seuls, sans passer par `npm run up`.
 Les valeurs de production viennent du tableau de bord Supabase et ne sont jamais versionnées.
 `.env` et ses variantes sont exclus par le `.gitignore`, à l'exception de `.env.example`.
 
-La CI exécute gitleaks sur le code **et sur l'historique** à chaque pull request : un secret
-retiré par un commit ultérieur reste lisible dans les commits précédents, donc scanner le
-seul état courant laisserait passer le cas qui compte. Le job échoue si une correspondance
-est trouvée, sans recopier la valeur dans le journal d'exécution.
-
-Les exceptions sont dans `.gitleaks.toml`, chacune avec sa justification. Y ajouter une
-entrée n'est pas une façon de faire passer un scan : si la valeur est un vrai secret, elle
-doit être révoquée, pas mise sur liste blanche.
+Aucun scan de secrets automatique ne tourne en intégration continue : celui qui existait a été
+retiré parce qu'il échouait en permanence sur des valeurs de test, et un contrôle toujours rouge
+n'informe plus personne. La règle ne change pas pour autant : un secret dans une pull request la
+fait refuser en relecture, et une valeur publiée par erreur est révoquée, pas seulement retirée,
+puisque l'historique la garde.
 
 ## Base de données
 
@@ -161,13 +222,18 @@ L'API refuse de démarrer si `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` ou
 ## Authentification
 
 Les sessions et les mots de passe sont gérés par Supabase Auth ([ADR-0008](docs/adr/0008-strategie-de-session-supabase-auth.md)).
-L'API expose trois routes :
 
 | Route | Effet |
 |---|---|
 | `POST /auth/register` | Crée un compte. Répond toujours `201`, sans corps ni session |
-| `POST /auth/login` | Ouvre une session et pose le jeton dans un cookie `httpOnly` |
+| `POST /auth/login` | Ouvre une session : deux cookies `httpOnly`, jeton d'accès et jeton de renouvellement |
 | `GET /auth/me` | Renvoie le compte de la session en cours, ou `401` |
+| `POST /auth/logout` | Ferme la session et efface les cookies |
+| `POST /auth/password/forgot`, `POST /auth/password/reset` | Réinitialisation du mot de passe par lien |
+| `PUT /auth/me/password`, `PUT /auth/me/email`, `POST /auth/me/email/confirm` | Changement du mot de passe et de l'adresse |
+
+Une session expirée est renouvelée sur la requête qui la présente, tant que le cookie de
+renouvellement est valide ([docs/features/28-session-lifetime.md](docs/features/28-session-lifetime.md)).
 
 Toutes les routes `/projects` exigent une session valide. Les éléments sont accessibles sous
 le projet auquel ils appartiennent.
@@ -285,8 +351,8 @@ docker run --rm -p 3000:3000 \
   ghcr.io/project-legacy-22/project-legacy:latest
 ```
 
-Le registre est privé : `docker login ghcr.io` avec un jeton personnel disposant du droit
-`read:packages` est nécessaire avant le `pull`.
+Le `pull` demande d'être authentifié auprès de GHCR : `docker login ghcr.io` avec un jeton
+personnel disposant du droit `read:packages`.
 
 ### Variables d'environnement
 
@@ -324,7 +390,9 @@ la racine du dépôt, et *Production Branch* sur `main`. Les aperçus se déclen
 
 ### L'API sur le même déploiement
 
-`api/index.ts` exporte l'application Express, et `vercel.json` y réécrit `/auth` et `/items`.
+`api/index.ts` exporte l'application Express, et `vercel.json` y réécrit `/auth`, `/projects`,
+`/notifications` et `/internal` ; `/reset-password` et `/confirm-email-change`, liens reçus par
+e-mail, servent la page du front.
 Le navigateur ne voit donc qu'une seule origine, ce qui est la condition pour que le cookie de
 session `httpOnly` fonctionne — `apps/web/vite.config.ts` explique pourquoi une API sur une
 autre origine le mettrait hors d'atteinte.
@@ -337,9 +405,11 @@ Elle n'appelle pas `application.start()`. Ce contrôle de santé sert à un proc
 doit refuser de démarrer mal configuré ; une fonction n'a pas ce cycle de vie, et `supabase-js`
 ne tient aucune connexion à ouvrir.
 
-**Ce que cela n'héberge pas** : aucun processus long ne survit en sans-serveur, donc le
-consommateur d'événements Redis prévu par `EN-35` devra vivre ailleurs. L'image publiée sur
-GHCR par `EN-08` reste le livrable de l'exécution en conteneur.
+**Ce que cela n'héberge pas** : aucun processus long ne survit en sans-serveur, donc ni le
+worker ni l'intervalle du relais. La passe de livraison y est appelée par l'écriture elle-même
+et par le workflow `relais`, toutes les cinq minutes, sur `POST /internal/relay` ; la même
+passe publie puis consomme ([docs/architecture.md](docs/architecture.md), section « Le flux
+événementiel »). L'image publiée sur GHCR reste le livrable de l'exécution en conteneur.
 
 ### Variables à poser sur Vercel
 
@@ -352,8 +422,15 @@ hébergé, distinct de la pile locale.
 | `SUPABASE_SERVICE_ROLE_KEY` | idem, à ne jamais exposer au navigateur |
 | `SUPABASE_ANON_KEY` | idem |
 | `NODE_ENV` | `production`, pour que le cookie de session porte `Secure` |
+| `TRUST_PROXY` | `1` : Vercel est un proxy, et le limiteur de débit doit lire l'adresse qu'il transmet |
+| `RELAY_SECRET` | le même que le secret `RELAY_SECRET` du dépôt, que présente le workflow `relais` |
+| `REDIS_URL` | posée par l'intégration Upstash du projet Vercel |
 
-Le schéma s'applique au projet hébergé avec `supabase link` puis `supabase db push`.
+Une migration mergée doit atteindre le projet hébergé avant le code qui s'en sert : les
+prévisualisations et la production partagent cette base. `supabase link` puis
+`supabase db push` l'appliquent, et le workflow `migrations` (#385) le fait après chaque
+intégration verte sur `dev`. Une migration doit donc rester additive : la production tourne
+encore le code de la dernière livraison quand elle la reçoit.
 
 ## Contrôles locaux
 
@@ -373,7 +450,7 @@ npm run build
 | `npm run db:types` | Régénère `packages/infra/src/database.types.ts` |
 | `npm run db:lint` | Contrôles statiques sur le schéma |
 | `npm run typecheck` | Vérifie TypeScript et les frontières entre modules |
-| `npm test` | Exécute les tests du front, dont le contrôle axe |
+| `npm test` | Exécute les tests unitaires, HTTP et du front, dont le contrôle axe |
 | `npm run build` | Produit le build complet de production |
 | `npm start` | Démarre le build de production |
 
