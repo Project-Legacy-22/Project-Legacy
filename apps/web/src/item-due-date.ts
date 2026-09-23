@@ -5,7 +5,7 @@ function localDate(dueDate: string): Date {
     return new Date(year ?? 0, (month ?? 1) - 1, day ?? 1, 12);
 }
 
-function localToday(now: Date): string {
+export function localToday(now: Date): string {
     const year = String(now.getFullYear()).padStart(4, '0');
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
