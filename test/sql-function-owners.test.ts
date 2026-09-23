@@ -25,6 +25,7 @@ import { describe, expect, it } from 'vitest';
 // the definition being replaced and decide what carries over.
 
 const OWNERS: Readonly<Record<string, string>> = {
+    'public.add_member_with_event': '20260915160000_add_member_with_event',
     'public.create_item_with_event': '20260910221142_item_priority_due_date',
     'public.create_project_for_owner': '20260908083028_add_projects_and_memberships',
     'public.erase_account': '20260908144244_extend_account_erasure_for_projects',

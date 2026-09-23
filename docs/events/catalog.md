@@ -61,6 +61,35 @@ Payload :
 
 Le nom de l'item est délibérément absent : c'est du contenu utilisateur.
 
+### `membership.created.v1`
+
+Une appartenance à un projet a été créée : quelqu'un a été ajouté à un projet.
+
+| | |
+|---|---|
+| **Producteur** | `apps/api`, cas d'usage `addProjectMember` de `packages/core/projects` |
+| **Consommateurs** | `apps/worker` |
+| **Effet attendu** | une notification non lue pour la personne ajoutée, disant par qui |
+| **Statut** | en préparation — la fonction `add_member_with_event` et le schéma du domaine existent ; le schéma de `packages/contracts` et la branche du consommateur arrivent avec #359 |
+
+Payload :
+
+| Champ | Type | Pourquoi il est là |
+|---|---|---|
+| `projectId` | uuid | Désigne le projet rejoint. Un consommateur qui a besoin de son nom le relit. |
+| `memberId` | uuid | Désigne le destinataire de l'effet, sans transporter son identité réelle. |
+| `addedBy` | uuid | Sans lui, la notification pourrait dire « ajouté » mais pas « par qui », et c'est la raison pour laquelle l'invitation passe par le flux. |
+
+L'adresse est délibérément absente : c'est ce que la personne a tapé pour trouver le compte,
+donc du contenu. Un consommateur qui a besoin de nommer quelqu'un relit l'adresse auprès du
+composant qui la détient.
+
+**Pourquoi le schéma de contrats n'est pas encore là.** Un événement que le consommateur refuse
+est perdu : la passe de livraison le retire de la file sans le remettre, ce que l'ADR-0007
+assume et qu'EN-35 fermera avec une file de rebut. Publier ce nom avant que le consommateur
+sache l'écrire en notification perdrait donc les invitations émises entre les deux. Rien ne
+l'émet pour l'instant.
+
 ## Ajouter un événement
 
 1. Décrire le schéma dans `packages/contracts/src/events.ts` et l'ajouter à l'union
