@@ -1,6 +1,7 @@
 import { v7 as uuid } from 'uuid';
 import {
     createHibpPasswordRegistry,
+    createSupabaseAttentionReader,
     createLogger,
     createRedisEventBus,
     createSupabaseIdentityProvider,
@@ -40,7 +41,15 @@ import {
     makeSignIn,
     makeSignOut,
 } from '@legacy/core-auth';
-import { makeListItems, makeAddItem, makeChangeItem, makeMoveItem, makeReorderItem, makeRemoveItem } from '@legacy/core-items';
+import {
+    makeListItems,
+    makeAddItem,
+    makeChangeItem,
+    makeMoveItem,
+    makeReorderItem,
+    makeRemoveItem,
+    makeListAttention,
+} from '@legacy/core-items';
 import type { ItemRepository } from '@legacy/core-items';
 import {
     makeCountUnreadNotifications,
@@ -106,8 +115,15 @@ export interface NotificationUseCases {
     deliverPending: () => Promise<DeliveryPassResult>;
 }
 
+// Its own group: it reads items across projects through its own port, and
+// none of the item use cases above shares that adapter.
+export interface AttentionUseCases {
+    listAttention: ReturnType<typeof makeListAttention>;
+}
+
 export interface AppUseCases {
     items: ItemUseCases;
+    attention: AttentionUseCases;
     auth: AuthUseCases;
     account: AccountUseCases;
     projects: ProjectUseCases;
@@ -130,6 +146,7 @@ export interface Application {
 
 interface Adapters {
     store: ItemStore;
+    attention: ReturnType<typeof createSupabaseAttentionReader>;
     identity: ReturnType<typeof createSupabaseIdentityProvider>;
     personalData: ReturnType<typeof createSupabasePersonalDataStore>;
     projects: ReturnType<typeof createSupabaseProjectRepository>;
@@ -162,6 +179,7 @@ function createAdapters(config: Config): Adapters {
 
     return {
         store: createSupabaseItemStore(supabase),
+        attention: createSupabaseAttentionReader(supabase),
         // A second client, with the public key: sign-up and sign-in are the
         // endpoints that apply the project's password policy, and the
         // service-role key would bypass it.
@@ -274,8 +292,9 @@ export function itemUseCases(
 }
 
 export function compose(config: Config): Application {
-    const { store, identity, personalData, projects, memberships, outbox, notifications, bus, stateReadings } =
-        createAdapters(config);
+    const adapters = createAdapters(config);
+    const { store, attention, identity, personalData, projects, memberships, outbox, notifications, bus } = adapters;
+    const { stateReadings } = adapters;
     const logger = createLogger(config.logLevel);
     const deliver = makeDeliverPending({ outbox, bus, notifications, logger });
     const metrics = createPrometheusMetrics({ readings: stateReadings, logger });
@@ -292,6 +311,7 @@ export function compose(config: Config): Application {
         metrics,
         useCases: {
             items: itemUseCases(store, deliver, logger),
+            attention: { listAttention: makeListAttention(attention) },
             auth: authUseCases(identity, compromisedPasswords),
             account: {
                 exportPersonalData: makeExportPersonalData({

@@ -18,7 +18,7 @@ import { accountOf } from '../session.js';
 // The response shape clients depend on. The entity carries an ownerId since
 // EN-09; it is an internal fact and never crosses the HTTP boundary, so every
 // response is mapped through here rather than sent raw.
-function toItemDto(item: Item): ItemDto {
+export function toItemDto(item: Item): ItemDto {
     return {
         id: item.id,
         projectId: item.projectId,
