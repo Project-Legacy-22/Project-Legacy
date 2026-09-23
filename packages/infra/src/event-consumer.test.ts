@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { ITEM_CREATED_V1 } from '@legacy/contracts';
+import { ITEM_CREATED_V1, MEMBERSHIP_CREATED_V1 } from '@legacy/contracts';
 import type { DomainEvent } from '@legacy/contracts';
 
 import { consume } from './event-consumer.js';
@@ -20,7 +20,10 @@ const EVENT: DomainEvent = {
 interface Notification {
     eventId: string;
     userId: string;
-    itemId: string;
+    // L une ou l autre, jamais les deux : la contrainte notifications_kind_chk
+    // refuse une ligne qui nommerait une tache et un projet.
+    itemId?: string;
+    projectId?: string;
 }
 
 // Un vrai magasin en memoire, avec la meme regle d unicite que la base : la
@@ -37,6 +40,15 @@ function fakeNotifications(): NotificationStore & { created: Notification[] } {
             if (handled.has(eventId)) return Promise.resolve(false);
             handled.add(eventId);
             created.push({ eventId, userId, itemId });
+            return Promise.resolve(true);
+        },
+        // Le meme ensemble `handled`, deliberement : processed_events porte une
+        // ligne par evenement, quel que soit le genre de la notification. Deux
+        // ensembles separes laisseraient passer un rejeu croise.
+        notifyMemberAdded: (eventId, userId, projectId) => {
+            if (handled.has(eventId)) return Promise.resolve(false);
+            handled.add(eventId);
+            created.push({ eventId, userId, projectId });
             return Promise.resolve(true);
         },
         countUnread: userId =>
@@ -99,6 +111,66 @@ describe('consume', () => {
     });
 });
 
+const PROJET_ID = '01931f3a-0000-7000-8000-000000000010';
+const MEMBRE_ID = '00000000-0000-7000-8000-000000000011';
+const AJOUTE_PAR = '00000000-0000-7000-8000-000000000012';
+
+const EVENT_APPARTENANCE: DomainEvent = {
+    id: '01931f3a-0000-7000-8000-000000000020',
+    name: MEMBERSHIP_CREATED_V1,
+    occurredAt: '2026-09-15T10:00:00.000Z',
+    payload: { projectId: PROJET_ID, memberId: MEMBRE_ID, addedBy: AJOUTE_PAR },
+};
+
+describe('consume, une appartenance creee', () => {
+    it('notifie la personne ajoutee, et elle seule', async () => {
+        const notifications = fakeNotifications();
+
+        const outcome = await consume(EVENT_APPARTENANCE, {
+            notifications,
+            logger: recordingLogger(),
+        });
+
+        expect(outcome).toBe('applied');
+        expect(notifications.created).toEqual([
+            { eventId: EVENT_APPARTENANCE.id, userId: MEMBRE_ID, projectId: PROJET_ID },
+        ]);
+        // Celle qui ajoute sait ce qu elle vient de faire : la lui annoncer
+        // serait du bruit, et une notification de plus a effacer.
+        expect(notifications.created.map(n => n.userId)).not.toContain(AJOUTE_PAR);
+    });
+
+    it('ne notifie pas deux fois a la redelivrance', async () => {
+        const notifications = fakeNotifications();
+
+        await consume(EVENT_APPARTENANCE, { notifications, logger: recordingLogger() });
+        const second = await consume(EVENT_APPARTENANCE, {
+            notifications,
+            logger: recordingLogger(),
+        });
+
+        expect(second).toBe('alreadyHandled');
+        expect(notifications.created).toHaveLength(1);
+    });
+
+    // La propriete qu on oublie : processed_events porte une ligne par
+    // evenement, pas une par genre. Deux registres separes laisseraient un
+    // rejeu croise produire deux effets pour un seul identifiant.
+    it('partage le registre des evenements traites avec les autres genres', async () => {
+        const notifications = fakeNotifications();
+        const memeIdentifiant: DomainEvent = { ...EVENT_APPARTENANCE, id: EVENT.id };
+
+        await consume(EVENT, { notifications, logger: recordingLogger() });
+        const second = await consume(memeIdentifiant, {
+            notifications,
+            logger: recordingLogger(),
+        });
+
+        expect(second).toBe('alreadyHandled');
+        expect(notifications.created).toHaveLength(1);
+    });
+});
+
 // Les deux ecritures du consommateur -- la reservation et la notification --
 // sont desormais faites par une seule fonction de base de donnees. Le faux
 // ci-dessous se comporte comme elle : ou les deux existent, ou aucune. Un faux
@@ -107,6 +179,7 @@ describe('consume, atomicite de l effet', () => {
     it('ne marque pas un evenement traite quand la notification n a pas pu etre creee', async () => {
         const notifications: NotificationStore = {
             notifyItemCreated: () => Promise.reject(new Error('notifications: notify failed')),
+            notifyMemberAdded: () => Promise.reject(new Error('notifications: notify failed')),
             countUnread: () => Promise.resolve(0),
             findPageForAccount: () => Promise.reject(new Error('not exercised by this suite')),
             markAsRead: () => Promise.reject(new Error('not exercised by this suite')),
@@ -131,6 +204,8 @@ describe('consume, atomicite de l effet', () => {
                 }
                 return store.notifyItemCreated(eventId, userId, itemId);
             },
+            notifyMemberAdded: (eventId, userId, projectId) =>
+                store.notifyMemberAdded(eventId, userId, projectId),
             countUnread: userId => store.countUnread(userId),
             findPageForAccount: () => Promise.reject(new Error('not exercised by this suite')),
             markAsRead: () => Promise.reject(new Error('not exercised by this suite')),

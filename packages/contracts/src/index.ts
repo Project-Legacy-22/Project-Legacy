@@ -3,6 +3,7 @@ export {
     CreateItemBody,
     UpdateItemBody,
     MoveItemBody,
+    ReorderItemBody,
     ItemStatus,
     ItemPriority,
     ItemDueDate,
@@ -41,16 +42,30 @@ export { PersonalDataExportDto } from './personal-data.js';
 export {
     ProjectIdParams,
     ProjectItemIdParams,
+    ProjectMemberIdParams,
     CreateProjectBody,
     ListProjectsQuery,
     ProjectRole,
     ProjectDto,
+    ProjectMemberDto,
+    ProjectMemberListDto,
     ProjectPageDto,
     MAX_PROJECT_NAME_LENGTH,
     DEFAULT_PROJECT_PAGE_SIZE,
     MAX_PROJECT_PAGE_SIZE,
 } from './projects.js';
-export { ITEM_CREATED_V1, ItemCreatedV1, ItemCreatedV1Payload, DomainEvent } from './events.js';
+export { AttentionQuery, AttentionItemDto, AttentionGroupDto, Workload, AttentionDto } from './attention.js';
+export {
+    ITEM_CREATED_V1,
+    ItemCreatedV1,
+    ItemCreatedV1Payload,
+    MEMBERSHIP_CREATED_V1,
+    MembershipCreatedV1,
+    MembershipCreatedV1Payload,
+    DomainEvent,
+} from './events.js';
 export { ProblemDetails } from './problem-details.js';
+export { ServiceUnavailable } from './service-unavailable.js';
+export type { Unavailability } from './service-unavailable.js';
 export type { Logger } from './logger.js';
 export type { Measurement, Metrics, StateReading, StateValue } from './metrics.js';

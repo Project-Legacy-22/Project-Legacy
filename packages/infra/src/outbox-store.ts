@@ -5,7 +5,7 @@ import type { DomainEvent as Event } from '@legacy/contracts';
 
 import type { Database } from './database.types.js';
 import type { SupabaseSettings } from './supabase-item-repository.js';
-import { adapterFailure, serviceRoleClient } from './adapter.js';
+import { adapterFailure, asInstant, serviceRoleClient } from './adapter.js';
 import type { AdapterFailure } from './adapter.js';
 
 // The relay's view of the outbox: read what has not been published, and record
@@ -19,19 +19,6 @@ export interface OutboxStore {
 }
 
 const fail: AdapterFailure = adapterFailure('outbox');
-
-// PostgreSQL renders a timestamptz with a numeric offset (`+00:00`), while the
-// catalogue's canonical form ends in `Z`. Both denote the same instant.
-//
-// The conversion returns the raw value when it cannot parse, instead of letting
-// toISOString throw a RangeError: a row that cannot be read must be rejected by
-// the schema below, with the event named, not by an exception nobody catches.
-// Thrown here it would abort the whole batch on every pass, blocking the valid
-// events alongside it until someone intervened.
-function asInstant(value: string): string {
-    const parsed = new Date(value);
-    return Number.isNaN(parsed.getTime()) ? value : parsed.toISOString();
-}
 
 export function createSupabaseOutboxStore(settings: SupabaseSettings): OutboxStore {
     const client: SupabaseClient<Database> = serviceRoleClient(settings);

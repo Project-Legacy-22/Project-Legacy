@@ -17,6 +17,7 @@ import {
     waitFor,
 } from './test/react-root';
 import type { ReactTestRoot } from './test/react-root';
+import { createAttentionApi } from './test/app-fixture';
 
 const ACCOUNT = {
     id: '5b1f0f4a-9d3f-4d0e-9e2a-6c0f5a3b1d77',
@@ -34,6 +35,7 @@ const ITEM: ItemDto = {
     name: 'Original task',
     status: 'todo',
     version: 1,
+    position: '8f80ec8b-8cbf-4d0f-92b5-6297404875f1',
     priority: 'normal',
     dueDate: null,
 };
@@ -65,6 +67,7 @@ function itemsApi(overrides: Partial<ItemsApi> = {}): ItemsApi {
         createItem: vi.fn(),
         updateItem: vi.fn(),
         moveItem: vi.fn(),
+        reorderItem: vi.fn(),
         deleteItem: vi.fn(),
         ...overrides,
     };
@@ -85,7 +88,9 @@ function hasAnnouncement(message: string): boolean {
 }
 
 async function render(api: ItemsApi): Promise<void> {
-    await root.render(<App api={api} auth={auth} account={account} projects={projects} />);
+    await root.render(
+        <App api={api} auth={auth} account={account} projects={projects} attention={createAttentionApi()} />,
+    );
     await flushTimers();
 }
 

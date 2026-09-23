@@ -12,8 +12,8 @@ creating or editing it. Normal is the default. A past date is accepted because i
 task's actual situation rather than making the form unusable once work is late.
 
 Tasks are ordered by priority from high to low, then by the nearest due date. Undated tasks
-follow dated tasks at the same priority, and the identifier is the final key so equivalent
-tasks keep the same order across loads and page boundaries.
+follow dated tasks at the same priority. Within an equal priority and due-date group, the
+persisted position then the identifier keep the order stable across loads and page boundaries.
 
 ## Surface
 
@@ -40,10 +40,15 @@ A due date is a calendar fact, so no time or offset is persisted and no UTC conv
 shift it to the previous day. The API carries the canonical ISO date. The browser reconstructs
 that calendar day in its own time zone and formats it with its locale.
 
-Index `items_project_id_priority_due_date_id_idx` serves both project isolation and the public
-order: project, descending priority, ascending due date with nulls last, then identifier. The
-opaque cursor contains those three sort values. It is validated before any value reaches a
+Index `items_project_id_priority_due_date_position_id_idx` serves both project isolation and the public
+order: project, descending priority, ascending due date with nulls last, then position and
+identifier. The opaque cursor contains those sort values. It is validated before any value reaches a
 PostgREST filter.
+
+The position was added by #50. See `docs/features/50-reorder-task.md` for the reorder contract.
+
+Since US-32, the cursor also carries a fingerprint of the request's search and filter criteria;
+see `docs/features/33-search-and-filter-tasks.md` for the extended contract.
 
 The item and its `item.created.v1` event are still written through one database function and
 one transaction. The event payload remains limited to item and owner identifiers: priority,

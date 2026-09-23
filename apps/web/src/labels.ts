@@ -1,13 +1,10 @@
-import type { ItemStatus } from '@legacy/contracts';
-
 import { credentialsLabels } from './credentials-labels';
+import { failureLabels } from './failure-labels';
+import { homeLabels } from './home-labels';
 import { itemPlanningLabels } from './item-planning-labels';
-
-const ITEM_STATUS_LABELS: Record<ItemStatus, string> = {
-    todo: 'Todo',
-    doing: 'In progress',
-    done: 'Done',
-};
+import { itemReorderLabels } from './item-reorder-labels';
+import { itemsFilterLabels } from './items-filter-labels';
+import { itemStatusLabels } from './item-status-labels';
 
 export const labels = {
     // Authentication (US-11b)
@@ -29,7 +26,7 @@ export const labels = {
     // sharper message here would hand back the list of addresses that exist on
     // the one screen where it shows.
     signInRejected: 'We could not sign you in. Check the address and the password, or reset your password.',
-    signInUnavailable: 'Signing in is unavailable right now. Try again in a moment.',
+    signInFailed: 'Unable to sign in.',
     registerFailed: 'Unable to create the account.',
     // Same reason: a registration answers the same way whether the address was
     // free or already taken, so the confirmation cannot claim an account exists.
@@ -105,7 +102,7 @@ export const labels = {
     // Neutral on purpose: the API answers the same way whether or not the
     // address has an account, and this screen must not undo that.
     resetRequestAccepted: 'If that address has an account, a reset link is on its way.',
-    resetRequestFailed: 'Unable to send a reset link. Try again in a moment.',
+    resetRequestFailed: 'Unable to send a reset link.',
     backToSignIn: 'Back to sign in',
     resetPasswordTitle: 'Choose a new password',
     resetPasswordIntro: 'This link is valid once. After this, every other session is signed out.',
@@ -117,6 +114,8 @@ export const labels = {
     requestNewResetLink: 'Request a new link',
 
     ...credentialsLabels,
+    ...homeLabels,
+    ...failureLabels,
 
     notificationsFailed: 'Unable to read your notifications.',
     unreadNotifications(count: number): string {
@@ -250,13 +249,14 @@ export const labels = {
     allItemsLoaded: 'All items loaded',
     retry: 'Try again',
     emptyItems: 'No item in this project yet.',
-    kanbanInstructions: 'Drag tasks between columns, or use each task’s Move button for a keyboard-accessible choice.',
+    kanbanInstructions: 'Drag tasks between columns, or use each task’s Move button. Use Move up and Move down to order tasks with the same priority and due date.',
     move: 'Move',
     movingItem: 'Moving…',
     confirmMove: 'Confirm move',
     moveDestinationLabel: 'Destination column',
     itemMoveConflict: 'This task changed elsewhere. The latest board has been loaded. Choose a destination and try again.',
     itemMoveConflictRefreshFailed: 'This task changed elsewhere, but the latest board could not be loaded. Try loading the tasks again.',
+    ...itemReorderLabels,
     unnamedItem: 'Unnamed item',
     unnamedItemRemediation: 'This legacy item has no name. Remove it and create it again.',
     edit: 'Edit',
@@ -288,12 +288,7 @@ export const labels = {
     columnItemCount(count: number): string {
         return `${count} ${count === 1 ? 'task' : 'tasks'}`;
     },
-    emptyColumn(status: ItemStatus): string {
-        return `No tasks in ${ITEM_STATUS_LABELS[status]}.`;
-    },
-    itemStatus(status: ItemStatus): string {
-        return ITEM_STATUS_LABELS[status];
-    },
+    ...itemStatusLabels,
     moveItem(name: string): string {
         return `Move: ${name}`;
     },
@@ -309,6 +304,7 @@ export const labels = {
     itemsLoaded(count: number): string {
         return `${count} more ${count === 1 ? 'item' : 'items'} loaded.`;
     },
+    ...itemsFilterLabels,
     editItem(name: string): string {
         return `Edit: ${name}`;
     },

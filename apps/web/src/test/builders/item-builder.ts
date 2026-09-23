@@ -10,6 +10,7 @@ export function anItem(overrides: Partial<ItemDto> = {}): ItemDto {
         name: 'A test item',
         status: 'todo',
         version: 1,
+        position: overrides.position ?? overrides.id ?? DEFAULT_ITEM_ID,
         priority: 'normal',
         dueDate: null,
         ...overrides,

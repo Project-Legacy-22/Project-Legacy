@@ -4,6 +4,7 @@ import {
     CreateItemBody,
     UpdateItemBody,
     MoveItemBody,
+    ReorderItemBody,
     ProjectIdParams,
     ProjectItemIdParams,
     ListItemsQuery,
@@ -17,13 +18,14 @@ import { accountOf } from '../session.js';
 // The response shape clients depend on. The entity carries an ownerId since
 // EN-09; it is an internal fact and never crosses the HTTP boundary, so every
 // response is mapped through here rather than sent raw.
-function toItemDto(item: Item): ItemDto {
+export function toItemDto(item: Item): ItemDto {
     return {
         id: item.id,
         projectId: item.projectId,
         name: item.name,
         status: item.status,
         version: item.version,
+        position: item.position,
         priority: item.priority,
         dueDate: item.dueDate,
     };
@@ -49,6 +51,10 @@ function listItems(useCases: ItemUseCases): RequestHandler {
             .listItems(params.data.projectId, accountOf(res).id, {
                 limit: query.data.limit,
                 cursor: query.data.cursor,
+                search: query.data.search,
+                status: query.data.status,
+                priority: query.data.priority,
+                dueDate: query.data.dueDate === undefined ? undefined : query.data.dueDate === 'none' ? null : query.data.dueDate,
             })
             .then((page) => res.send(toItemPageDto(page)))
             .catch(next);
@@ -73,6 +79,23 @@ function moveItem(useCases: ItemUseCases): RequestHandler {
             })
             .then((item) => res.send(toItemDto(item)))
             .catch(next);
+    };
+}
+
+function reorderItem(useCases: ItemUseCases): RequestHandler {
+    return (req, res, next) => {
+        const params = ProjectItemIdParams.safeParse(req.params);
+        if (!params.success) return next(params.error);
+        const body = ReorderItemBody.safeParse(req.body);
+        if (!body.success) return next(body.error);
+
+        useCases.reorderItem({
+            id: params.data.id,
+            projectId: params.data.projectId,
+            memberId: accountOf(res).id,
+            position: body.data.position,
+            expectedVersion: body.data.version,
+        }).then((item) => res.send(toItemDto(item))).catch(next);
     };
 }
 
@@ -140,6 +163,7 @@ export function itemsRouter(useCases: ItemUseCases): Router {
     router.post('/projects/:projectId/items', add);
     router.put('/projects/:projectId/items/:id', change);
     router.patch('/projects/:projectId/items/:id/status', moveItem(useCases));
+    router.patch('/projects/:projectId/items/:id/position', reorderItem(useCases));
     router.delete('/projects/:projectId/items/:id', remove);
 
     return router;

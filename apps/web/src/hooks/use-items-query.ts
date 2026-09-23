@@ -4,6 +4,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import { ApiError } from '../api/items-api';
 import type { ItemDto, ItemsApi } from '../api/items-api';
 import { labels } from '../labels';
+import type { ListItemsFilters } from './use-items-filters';
 import type { ItemsLoadState, ItemsPaginationState } from './items-state';
 
 export type SetItems = Dispatch<SetStateAction<readonly ItemDto[]>>;
@@ -11,10 +12,12 @@ export type SetItems = Dispatch<SetStateAction<readonly ItemDto[]>>;
 interface LoadItemsContext {
     api: ItemsApi;
     projectId: string;
+    filters: ListItemsFilters;
     signal: AbortSignal;
     setItems: SetItems;
     setLoadState: Dispatch<SetStateAction<ItemsLoadState>>;
     setNextCursor: Dispatch<SetStateAction<string | null>>;
+    announceResults: (count: number) => void;
 }
 
 function isAbortError(error: unknown): boolean {
@@ -26,11 +29,15 @@ async function loadItems(context: LoadItemsContext): Promise<boolean> {
     setLoadState({ status: 'loading' });
 
     try {
-        const page = await api.listItems(context.projectId, { signal });
+        const page = await api.listItems(context.projectId, { signal, ...context.filters });
         if (signal.aborted) return false;
         setItems(page.items);
         context.setNextCursor(page.nextCursor);
         setLoadState({ status: 'ready' });
+        // Announced here rather than only on "load more": a search or filter
+        // change replaces the whole list, and that is exactly the moment
+        // someone using a screen reader needs to be told how many matched.
+        context.announceResults(page.items.length);
         return true;
     } catch (error) {
         if (signal.aborted || isAbortError(error)) return false;
@@ -48,6 +55,7 @@ function appendUniqueItems(current: readonly ItemDto[], nextPage: readonly ItemD
 interface AppendPageContext {
     api: ItemsApi;
     projectId: string;
+    filters: ListItemsFilters;
     cursor: string;
     controller: AbortController;
     setItems: SetItems;
@@ -61,6 +69,7 @@ async function appendNextPage(context: AppendPageContext): Promise<void> {
         const page = await api.listItems(projectId, {
             signal: controller.signal,
             cursor,
+            ...context.filters,
         });
         if (controller.signal.aborted) return;
         context.setItems((current) => appendUniqueItems(current, page.items));
@@ -76,7 +85,14 @@ async function appendNextPage(context: AppendPageContext): Promise<void> {
     }
 }
 
-function useItemPagination(api: ItemsApi, projectId: string | null, setItems: SetItems) {
+interface UseItemPaginationOptions {
+    api: ItemsApi;
+    projectId: string | null;
+    filters: ListItemsFilters;
+    setItems: SetItems;
+}
+
+function useItemPagination({ api, projectId, filters, setItems }: UseItemPaginationOptions) {
     const [nextCursor, setNextCursor] = useState<string | null>(null);
     const [paginationState, setPaginationState] = useState<ItemsPaginationState>({
         status: 'idle',
@@ -95,6 +111,7 @@ function useItemPagination(api: ItemsApi, projectId: string | null, setItems: Se
             await appendNextPage({
                 api,
                 projectId,
+                filters,
                 cursor: nextCursor,
                 controller,
                 setItems,
@@ -104,7 +121,7 @@ function useItemPagination(api: ItemsApi, projectId: string | null, setItems: Se
         } finally {
             if (requestController.current === controller) requestController.current = null;
         }
-    }, [api, nextCursor, projectId, setItems]);
+    }, [api, filters, nextCursor, projectId, setItems]);
 
     const reset = useCallback(() => {
         requestController.current?.abort();
@@ -113,10 +130,18 @@ function useItemPagination(api: ItemsApi, projectId: string | null, setItems: Se
         setPaginationState({ status: 'idle', announcement: '' });
     }, []);
 
+    // A separate setter, not the full setPaginationState, so a caller outside
+    // this hook can announce a result count without also being able to fake a
+    // loading or error state.
+    const announceResults = useCallback((count: number) => {
+        setPaginationState({ status: 'idle', announcement: labels.itemsFound(count) });
+    }, []);
+
     return {
         setNextCursor,
         hasNextPage: nextCursor !== null,
         paginationState,
+        announceResults,
         loadMore,
         reset,
     };
@@ -125,6 +150,7 @@ function useItemPagination(api: ItemsApi, projectId: string | null, setItems: Se
 interface RefreshItemsOptions {
     api: ItemsApi;
     projectId: string | null;
+    filters: ListItemsFilters;
     setItems: SetItems;
     setLoadState: Dispatch<SetStateAction<ItemsLoadState>>;
     pagination: ReturnType<typeof useItemPagination>;
@@ -145,10 +171,12 @@ function useRefreshItems(options: RefreshItemsOptions): () => Promise<boolean> {
             return await loadItems({
                 api: options.api,
                 projectId: options.projectId,
+                filters: options.filters,
                 signal: controller.signal,
                 setItems: options.setItems,
                 setLoadState: options.setLoadState,
                 setNextCursor: options.pagination.setNextCursor,
+                announceResults: options.pagination.announceResults,
             });
         } finally {
             if (controllerRef.current === controller) controllerRef.current = null;
@@ -156,14 +184,20 @@ function useRefreshItems(options: RefreshItemsOptions): () => Promise<boolean> {
     }, [options]);
 }
 
-export function useItemsQuery(api: ItemsApi, projectId: string | null) {
+const NO_FILTERS: ListItemsFilters = {};
+
+export function useItemsQuery(api: ItemsApi, projectId: string | null, filters: ListItemsFilters = NO_FILTERS) {
     const [items, setItems] = useState<readonly ItemDto[]>([]);
     const [loadState, setLoadState] = useState<ItemsLoadState>({
         status: 'loading',
     });
     const [loadAttempt, setLoadAttempt] = useState(0);
-    const pagination = useItemPagination(api, projectId, setItems);
-    const refresh = useRefreshItems({ api, projectId, setItems, setLoadState, pagination });
+    const pagination = useItemPagination({ api, projectId, filters, setItems });
+    const refresh = useRefreshItems({ api, projectId, filters, setItems, setLoadState, pagination });
+    // Individual fields, not the filters object: a fresh object is built on
+    // every render (see use-items-filters.ts), and an effect keyed on that
+    // reference would reload on every render rather than on every change.
+    const { search, status, priority, dueDate } = filters;
 
     useEffect(() => {
         const controller = new AbortController();
@@ -176,13 +210,15 @@ export function useItemsQuery(api: ItemsApi, projectId: string | null) {
         void loadItems({
             api,
             projectId,
+            filters: { search, status, priority, dueDate },
             signal: controller.signal,
             setItems,
             setLoadState,
             setNextCursor: pagination.setNextCursor,
+            announceResults: pagination.announceResults,
         });
         return () => controller.abort();
-    }, [api, loadAttempt, pagination.reset, pagination.setNextCursor, projectId]);
+    }, [api, loadAttempt, pagination.reset, pagination.setNextCursor, pagination.announceResults, projectId, search, status, priority, dueDate]);
 
     const retry = useCallback(() => setLoadAttempt((attempt) => attempt + 1), []);
     return {

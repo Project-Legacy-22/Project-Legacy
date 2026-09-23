@@ -65,6 +65,8 @@ everything else.
 | Body declared as JSON but not parseable | `400 malformed_body` | Was a `500` with an "unhandled failure" log before this issue |
 | Cross-origin call from an origin other than `WEB_ORIGIN` | no `Access-Control-Allow-Origin` header | The browser blocks the response; the server does not need to |
 | Any failure the code did not model | `500 internal_error`, body `The request could not be processed.` | No stack, no SQL, no table name; the cause is in the log under the request's trace id and nowhere else |
+| A rate limit of ours was exceeded | `429 too_many_attempts`, header `Retry-After` | The header gives the seconds left in the window, so the interface can say how long to wait |
+| A dependency throttled us, timed out or could not be reached | `503 service_unavailable`, header `Retry-After` | Supabase Auth, PostgREST and Redis alike (#383). The body names no dependency; the log carries `dependency unavailable` with the reason, the operation and the cause |
 
 The `413` and `400` above are produced by the single error middleware
 (`apps/api/src/http/error-middleware.ts`), like every other error: a body-parser rejection is

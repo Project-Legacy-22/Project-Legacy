@@ -1,0 +1,95 @@
+# Applique les migrations mergees a la base Supabase hebergee.
+#
+# La production et les previsualisations partagent un seul projet heberge. Le
+# 23 septembre 2026, six migrations mergees sur dev n y avaient jamais ete
+# appliquees : le code de #382 lisait une colonne absente et les
+# previsualisations repondaient 500 (#385). Personne n avait a le faire, donc
+# personne ne l avait fait.
+#
+# Declenche apres une execution verte de ci sur dev, et seulement celle-la : ci
+# rejoue deja toutes les migrations sur une base vide, une migration qui arrive
+# ici s est donc deja appliquee une fois ailleurs. Rejoue sans effet quand la
+# base est a jour : le dry-run ne liste alors rien et l application ne fait rien.
+#
+# La base etant partagee, une migration atteint la production avant le code qui
+# s en sert : elle doit rester additive et compatible avec le code deja livre.
+# La regle et sa raison sont dans docs/ci.md.
+
+name: migrations
+
+on:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+    branches: [dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # Deux applications concurrentes se disputeraient la table d historique des
+  # migrations. On attend la precedente, on ne l annule jamais.
+  group: migrations-hebergees
+  cancel-in-progress: false
+
+jobs:
+  appliquer:
+    name: Appliquer les migrations a la base hebergee
+    # Une execution de ci rouge ne pousse rien ; un declenchement manuel part de
+    # dev, qui a deja passe ci pour y entrer.
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - name: Verifier que la cible est configuree
+        run: |
+          set -euo pipefail
+          manquants=()
+          [ -n "$SUPABASE_ACCESS_TOKEN" ] || manquants+=("secret SUPABASE_ACCESS_TOKEN")
+          [ -n "$SUPABASE_PROJECT_REF" ] || manquants+=("variable SUPABASE_PROJECT_REF")
+          if [ ${#manquants[@]} -gt 0 ]; then
+            echo "::error::Configuration absente : ${manquants[*]}. Voir docs/ci.md, section Migrations de la base hebergee."
+            exit 1
+          fi
+
+      # Le commit que ci a verifie, pas la tete de dev au moment ou ce workflow
+      # demarre : un merge arrive entre les deux n a pas encore ete verifie.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Installer les dependances
+        run: npm ci
+
+      # La CLI lit SUPABASE_ACCESS_TOKEN et, s il est pose, SUPABASE_DB_PASSWORD
+      # dans l environnement : rien ne passe en argument, ou ce serait visible
+      # de tout processus du runner. Sans mot de passe, le jeton suffit : la CLI
+      # ouvre un role de connexion temporaire le temps de la commande (#392).
+      - name: Lier le projet heberge
+        run: npx supabase link --project-ref "$SUPABASE_PROJECT_REF"
+
+      - name: Lister ce qui va partir
+        run: |
+          set -euo pipefail
+          {
+            echo "## Migrations de la base hebergee"
+            echo
+            echo '```'
+            npx supabase db push --dry-run 2>&1
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # --yes : sans terminal, la confirmation de la CLI n a personne a qui
+      # parler. Ce qui part a ete liste a l etape precedente.
+      - name: Appliquer
+        run: npx supabase db push --yes

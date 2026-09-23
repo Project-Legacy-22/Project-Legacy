@@ -101,8 +101,10 @@ function header(target: ImportTarget, report: ImportReport): string {
 -- Rows refused    ${report.refused.length}, named in the report next to this file
 --
 -- Replayable: every identifier comes from the export and the project one is
--- supplied, so a second application inserts nothing. Priority, due date and
--- version are left to the schema defaults; the legacy carried none of them.
+-- supplied, so a second application inserts nothing. Each item keeps its
+-- identifier as its position, as the migration that introduced the column did
+-- for existing rows: the legacy order is kept. Priority, due date and version
+-- are left to the schema defaults; the legacy carried none of them.
 --
 -- Transactional: an address no account carries raises, and the transaction
 -- rolls back rather than leaving a project nobody owns.`;
@@ -115,13 +117,13 @@ function itemsInsert(rows: PreparedRow[], target: ImportTarget): string {
         .map(
             row =>
                 `    (${literal(row.id)}, v_owner, ${literal(target.projectId)},` +
-                ` ${literal(row.name)}, ${literal(row.status)}, ${literal(target.at)},` +
-                ` ${literal(target.at)})`,
+                ` ${literal(row.name)}, ${literal(row.status)}, ${literal(row.id)},` +
+                ` ${literal(target.at)}, ${literal(target.at)})`,
         )
         .join(',\n');
 
     return `  insert into public.items
-    (id, user_id, project_id, name, status, created_at, updated_at)
+    (id, user_id, project_id, name, status, position, created_at, updated_at)
   values
 ${values}
   on conflict (id) do nothing;`;

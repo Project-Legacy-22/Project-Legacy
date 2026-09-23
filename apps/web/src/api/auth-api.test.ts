@@ -83,7 +83,7 @@ describe('authApi.signIn', () => {
         );
 
         await expect(authApi.signIn(CREDENTIALS)).rejects.toEqual(
-            new ApiError(500, labels.signInUnavailable),
+            new ApiError(500, `${labels.signInFailed} ${labels.serverError('a-test-trace-id')}`),
         );
     });
 
@@ -136,7 +136,7 @@ describe('authApi.register', () => {
         stubFetch(new Response('pas du json', { status: 500 }));
 
         await expect(authApi.register(REGISTRATION)).rejects.toEqual(
-            new ApiError(500, labels.registerFailed),
+            new ApiError(500, `${labels.registerFailed} ${labels.serverError(undefined)}`),
         );
     });
 });
@@ -166,7 +166,7 @@ describe('authApi.requestPasswordReset', () => {
         );
 
         await expect(authApi.requestPasswordReset({ email: 'ada@example.com' })).rejects.toEqual(
-            new ApiError(429, labels.resetRequestFailed),
+            new ApiError(429, `${labels.resetRequestFailed} ${labels.tooManyRequests(undefined)}`),
         );
     });
 
@@ -217,7 +217,7 @@ describe('authApi.resetPassword', () => {
         stubFetch(new Response('pas du json', { status: 500 }));
 
         await expect(authApi.resetPassword(BODY)).rejects.toEqual(
-            new ApiError(500, labels.resetPasswordFailed),
+            new ApiError(500, `${labels.resetPasswordFailed} ${labels.serverError(undefined)}`),
         );
     });
 
@@ -279,7 +279,7 @@ describe('authApi.currentAccount', () => {
         stubFetch(new Response(null, { status: 503 }));
 
         await expect(authApi.currentAccount(new AbortController().signal)).rejects.toEqual(
-            new ApiError(503, labels.sessionCheckFailed),
+            new ApiError(503, `${labels.sessionCheckFailed} ${labels.serviceUnavailable(undefined)}`),
         );
     });
 });

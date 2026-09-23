@@ -8,7 +8,7 @@ import {
     makeSignIn,
 } from '@legacy/core-auth';
 import type { IdentityProvider } from '@legacy/core-auth';
-import { makeAddItem, makeChangeItem, makeListItems, makeMoveItem, makeRemoveItem } from '@legacy/core-items';
+import { makeAddItem, makeChangeItem, makeListItems, makeMoveItem, makeRemoveItem, makeReorderItem } from '@legacy/core-items';
 import type { ItemRepository } from '@legacy/core-items';
 import { makeAddProject, makeListProjects, makeRemoveProject } from '@legacy/core-projects';
 
@@ -43,6 +43,7 @@ export function makeItemRouteUseCases(options: ItemRouteUseCasesOptions): AppUse
             }),
             changeItem: makeChangeItem(repository),
             moveItem: makeMoveItem(repository),
+            reorderItem: makeReorderItem(repository),
             removeItem: makeRemoveItem(repository),
         },
         auth: {

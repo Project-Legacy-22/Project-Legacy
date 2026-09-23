@@ -84,7 +84,7 @@ describe('adaptateur Supabase Auth, changement d identifiants', () => {
 
             await expect(
                 provider.changePassword(jwtDeTest(), REFRESH, 'NouveauMotDePasse2'),
-            ).rejects.toThrow(/changePassword/);
+            ).rejects.toMatchObject({ name: 'ServiceUnavailable', operation: 'identity provider: changePassword' });
         });
 
         it('n interpole jamais le mot de passe dans le message d une panne', async () => {
@@ -149,7 +149,7 @@ describe('adaptateur Supabase Auth, changement d identifiants', () => {
 
             await expect(
                 provider.changeEmail(jwtDeTest(), REFRESH, 'alice.neuf@example.test'),
-            ).rejects.toThrow(/changeEmail/);
+            ).rejects.toMatchObject({ name: 'ServiceUnavailable', operation: 'identity provider: changeEmail' });
         });
     });
 

@@ -12,6 +12,10 @@ project, existing items are migrated into one project per account, and a member 
 project to work on its shared item list. Creating invitations and changing memberships are
 deliberately left to US-33 (#34); this issue establishes the model those features will use.
 
+The member-removal API is now described in
+[#354: Remove a project member](354-remove-project-member.md). It preserves tasks and
+accounts, unlike deleting a project or erasing an account.
+
 Any member can create, read, edit and delete items in that project, including items created
 by another member. The creator identifies whose personal data an item belongs to; it does
 not limit editing rights within the project.
@@ -143,5 +147,6 @@ verify nothing changes; confirm again and verify the named project and its item 
 
 ## Known limits
 
-- Membership invitations and role changes are not exposed yet. US-33 (#34) owns that work.
+- Member addition and the members screen are tracked by #353 and #351 under US-33 (#34).
+  The removal API is documented in [#354](354-remove-project-member.md); role changes remain outside it.
 - Project renaming and archiving are outside this issue.

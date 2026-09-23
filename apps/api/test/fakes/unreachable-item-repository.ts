@@ -15,6 +15,7 @@ export function unreachableItemRepository(): ItemRepository {
         save: unreachable,
         update: unreachable,
         moveStatus: unreachable,
+        swapPosition: unreachable,
         remove: unreachable,
     };
 }

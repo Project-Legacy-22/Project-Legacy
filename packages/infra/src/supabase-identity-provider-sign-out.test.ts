@@ -55,6 +55,6 @@ describe('adaptateur Supabase Auth, signOut', () => {
             body: { code: 500, error_code: 'unexpected_failure', msg: 'panne' },
         });
 
-        await expect(provider.signOut('jeton-acces')).rejects.toThrow(/signOut/);
+        await expect(provider.signOut('jeton-acces')).rejects.toMatchObject({ name: 'ServiceUnavailable', operation: 'identity provider: signOut' });
     });
 });

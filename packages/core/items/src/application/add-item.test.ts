@@ -34,6 +34,7 @@ describe('addItem', () => {
 
         expect(item).toEqual({
             id: 'item-id',
+            position: 'item-id',
             name: 'Buy milk',
             status: 'todo',
             version: 1,

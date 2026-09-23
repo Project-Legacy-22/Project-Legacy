@@ -3,6 +3,7 @@ import { AuthError } from '@legacy/core-auth';
 import { DomainError } from '@legacy/core-items';
 import { NotificationError } from '@legacy/core-notifications';
 import { ProjectError } from '@legacy/core-projects';
+import { ServiceUnavailable } from '@legacy/contracts';
 import type { Logger, ProblemDetails } from '@legacy/contracts';
 import type { ErrorRequestHandler } from 'express';
 
@@ -21,7 +22,7 @@ function describe(error: ZodError): string {
 // Each domain names its own errors -- a core package may not import another --
 // so the middleware knows all of them. They agree on three fields, which is
 // what makes one translation enough.
-type Reported = AuthError | DomainError | NotificationError | ProjectError | TooManyAttempts;
+type Reported = AuthError | DomainError | NotificationError | ProjectError | ServiceUnavailable | TooManyAttempts;
 
 function isReported(error: unknown): error is Reported {
     return (
@@ -29,6 +30,7 @@ function isReported(error: unknown): error is Reported {
         error instanceof DomainError ||
         error instanceof NotificationError ||
         error instanceof ProjectError ||
+        error instanceof ServiceUnavailable ||
         error instanceof TooManyAttempts
     );
 }
@@ -102,9 +104,23 @@ export function translateErrors(logger: Logger): ErrorRequestHandler {
             traceId: traceIdOf(res),
         };
 
-        // An expected refusal is not an incident: only a failure we did not
-        // model is worth waking someone up for, and only it carries the cause.
-        if (problem.status >= 500) {
+        // A throttle or an outage tells the client when asking again is worth
+        // it; without the header it can only guess, and guessing too early is
+        // what keeps a throttle closed.
+        if (error instanceof ServiceUnavailable || error instanceof TooManyAttempts) {
+            res.setHeader('Retry-After', String(error.retryAfterSeconds));
+        }
+
+        // An expected refusal is not an incident: only a failure on our side is
+        // worth waking someone up for, and only it carries the cause. A
+        // dependency that is down is named as such, so the log says where to
+        // look before anyone opens the stack.
+        if (error instanceof ServiceUnavailable) {
+            logger.error(
+                { err: error, reason: error.reason, operation: error.operation, traceId: problem.traceId },
+                'dependency unavailable',
+            );
+        } else if (problem.status >= 500) {
             logger.error({ err: error, traceId: problem.traceId }, 'unhandled failure');
         } else {
             logger.warn({

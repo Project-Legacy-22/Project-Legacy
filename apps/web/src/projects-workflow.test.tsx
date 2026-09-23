@@ -52,6 +52,7 @@ function itemsApi(overrides: Partial<ItemsApi> = {}): ItemsApi {
         createItem: vi.fn(),
         updateItem: vi.fn(),
         moveItem: vi.fn(),
+        reorderItem: vi.fn(),
         deleteItem: vi.fn(),
         ...overrides,
     };

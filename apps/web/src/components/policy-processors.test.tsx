@@ -30,6 +30,13 @@ const DECLARED_BY: Record<string, string> = {
     'supabase-item-repository.ts': 'Supabase',
     'supabase-personal-data-store.ts': 'Supabase',
     'supabase-project-repository.ts': 'Supabase',
+    // Meme base, meme sous-traitant : les appartenances ont leur propre port
+    // parce que project_memberships n a pas de politique de lecture des autres
+    // membres, pas parce qu elles sortent ailleurs.
+    'supabase-membership-repository.ts': 'Supabase',
+    // Same database again: a read of items across the caller's projects
+    // (US-20), behind its own port. No new data leaves for anywhere.
+    'supabase-attention-reader.ts': 'Supabase',
     'redis-event-bus.ts': 'Event queue',
     'hibp-password-registry.ts': 'Have I Been Pwned',
     'prometheus-metrics.ts': 'Grafana Cloud',

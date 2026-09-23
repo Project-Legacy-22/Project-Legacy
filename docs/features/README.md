@@ -28,6 +28,7 @@ the acceptance criteria: it describes the feature as it now behaves, in the pres
 | [#17](17-projects.md) | Group my items by project | Projects |
 | [#19](19-notifications.md) | Notifications | Notifications |
 | [#20](20-priority-due-date.md) | Prioritize and schedule tasks | Tasks |
+| [#21](21-home-screen.md) | Home screen: what needs my attention | Tasks |
 | [#28](28-session-lifetime.md) | Stay signed in between visits, and be signed out cleanly | Auth |
 | [#29](29-password-reset.md) | Password reset | Auth |
 | [#30](30-api-hardening.md) | API security hardening | Quality |
@@ -35,3 +36,6 @@ the acceptance criteria: it describes the feature as it now behaves, in the pres
 | [#37](37-account-credentials.md) | Change my email address and my password | Auth |
 | [#48](48-logout.md) | Sign out | Auth |
 | [#49](49-view-states.md) | Coherent loading, empty and error states | A11y |
+| [#50](50-reorder-task.md) | Reorder tasks within a Kanban column | Tasks |
+| [#354](354-remove-project-member.md) | Remove a project member without deleting their tasks | Projects |
+| [#384](384-failure-messages.md) | What a failed request says, by cause | Quality |

@@ -1,10 +1,12 @@
 import { v7 as uuid } from 'uuid';
 import {
     createHibpPasswordRegistry,
+    createSupabaseAttentionReader,
     createLogger,
     createRedisEventBus,
     createSupabaseIdentityProvider,
     createSupabaseItemStore,
+    createSupabaseMembershipRepository,
     createSupabaseNotificationStore,
     createSupabaseOutboxStore,
     createSupabasePersonalDataStore,
@@ -39,14 +41,28 @@ import {
     makeSignIn,
     makeSignOut,
 } from '@legacy/core-auth';
-import { makeListItems, makeAddItem, makeChangeItem, makeMoveItem, makeRemoveItem } from '@legacy/core-items';
+import {
+    makeListItems,
+    makeAddItem,
+    makeChangeItem,
+    makeMoveItem,
+    makeReorderItem,
+    makeRemoveItem,
+    makeListAttention,
+} from '@legacy/core-items';
 import type { ItemRepository } from '@legacy/core-items';
 import {
     makeCountUnreadNotifications,
     makeListNotifications,
     makeMarkNotificationRead,
 } from '@legacy/core-notifications';
-import { makeAddProject, makeListProjects, makeRemoveProject } from '@legacy/core-projects';
+import {
+    makeAddProject,
+    makeListProjectMembers,
+    makeListProjects,
+    makeRemoveProject,
+    makeRemoveProjectMember,
+} from '@legacy/core-projects';
 
 import { afterWrite } from './after-write.js';
 import type { Config } from './config.js';
@@ -56,6 +72,7 @@ export interface ItemUseCases {
     addItem: ReturnType<typeof makeAddItem>;
     changeItem: ReturnType<typeof makeChangeItem>;
     moveItem: ReturnType<typeof makeMoveItem>;
+    reorderItem: ReturnType<typeof makeReorderItem>;
     removeItem: ReturnType<typeof makeRemoveItem>;
 }
 
@@ -84,6 +101,8 @@ export interface ProjectUseCases {
     listProjects: ReturnType<typeof makeListProjects>;
     addProject: ReturnType<typeof makeAddProject>;
     removeProject: ReturnType<typeof makeRemoveProject>;
+    listProjectMembers: ReturnType<typeof makeListProjectMembers>;
+    removeProjectMember: ReturnType<typeof makeRemoveProjectMember>;
 }
 
 export interface NotificationUseCases {
@@ -96,8 +115,15 @@ export interface NotificationUseCases {
     deliverPending: () => Promise<DeliveryPassResult>;
 }
 
+// Its own group: it reads items across projects through its own port, and
+// none of the item use cases above shares that adapter.
+export interface AttentionUseCases {
+    listAttention: ReturnType<typeof makeListAttention>;
+}
+
 export interface AppUseCases {
     items: ItemUseCases;
+    attention: AttentionUseCases;
     auth: AuthUseCases;
     account: AccountUseCases;
     projects: ProjectUseCases;
@@ -120,9 +146,14 @@ export interface Application {
 
 interface Adapters {
     store: ItemStore;
+    attention: ReturnType<typeof createSupabaseAttentionReader>;
     identity: ReturnType<typeof createSupabaseIdentityProvider>;
     personalData: ReturnType<typeof createSupabasePersonalDataStore>;
     projects: ReturnType<typeof createSupabaseProjectRepository>;
+    // Les appartenances ont leur propre port : project_memberships n a pas de
+    // politique de lecture des autres membres, donc c est le cas d usage qui
+    // decide qui peut lire la liste.
+    memberships: ReturnType<typeof createSupabaseMembershipRepository>;
     outbox: OutboxStore;
     notifications: NotificationStore;
     // Absent when no broker is configured. Serving HTTP does not need one; the
@@ -148,6 +179,7 @@ function createAdapters(config: Config): Adapters {
 
     return {
         store: createSupabaseItemStore(supabase),
+        attention: createSupabaseAttentionReader(supabase),
         // A second client, with the public key: sign-up and sign-in are the
         // endpoints that apply the project's password policy, and the
         // service-role key would bypass it.
@@ -161,6 +193,7 @@ function createAdapters(config: Config): Adapters {
         // (US-13), which no single domain's repository is allowed to know about.
         personalData: createSupabasePersonalDataStore(supabase),
         projects: createSupabaseProjectRepository(supabase),
+        memberships: createSupabaseMembershipRepository(supabase),
         outbox: createSupabaseOutboxStore(supabase),
         notifications: createSupabaseNotificationStore(supabase),
         bus,
@@ -253,13 +286,15 @@ export function itemUseCases(
         ),
         changeItem: makeChangeItem(store),
         moveItem: makeMoveItem(store),
+        reorderItem: makeReorderItem(store),
         removeItem: makeRemoveItem(store),
     };
 }
 
 export function compose(config: Config): Application {
-    const { store, identity, personalData, projects, outbox, notifications, bus, stateReadings } =
-        createAdapters(config);
+    const adapters = createAdapters(config);
+    const { store, attention, identity, personalData, projects, memberships, outbox, notifications, bus } = adapters;
+    const { stateReadings } = adapters;
     const logger = createLogger(config.logLevel);
     const deliver = makeDeliverPending({ outbox, bus, notifications, logger });
     const metrics = createPrometheusMetrics({ readings: stateReadings, logger });
@@ -276,6 +311,7 @@ export function compose(config: Config): Application {
         metrics,
         useCases: {
             items: itemUseCases(store, deliver, logger),
+            attention: { listAttention: makeListAttention(attention) },
             auth: authUseCases(identity, compromisedPasswords),
             account: {
                 exportPersonalData: makeExportPersonalData({
@@ -288,6 +324,8 @@ export function compose(config: Config): Application {
                 listProjects: makeListProjects(projects),
                 addProject: makeAddProject({ repository: projects, newId: uuid }),
                 removeProject: makeRemoveProject(projects),
+                listProjectMembers: makeListProjectMembers(memberships),
+                removeProjectMember: makeRemoveProjectMember(memberships),
             },
             notifications: {
                 listNotifications: makeListNotifications(notifications),

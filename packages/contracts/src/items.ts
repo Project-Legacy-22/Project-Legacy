@@ -37,6 +37,13 @@ export const MoveItemBody = z.object({
     version: z.number().int().positive(),
 });
 
+// A position is the opaque key of an adjacent task, not a client-provided
+// array index that could shift while another page is being loaded.
+export const ReorderItemBody = z.object({
+    position: z.uuid(),
+    version: z.number().int().positive(),
+});
+
 // The legacy database can still contain null names. Responses acknowledge
 // that historical state while every new write remains subject to itemNameSchema.
 export const ItemDto = z.object({
@@ -45,6 +52,7 @@ export const ItemDto = z.object({
     name: z.string().nullable(),
     status: ItemStatus,
     version: z.number().int().positive(),
+    position: z.uuid(),
     priority: ItemPriority,
     dueDate: ItemDueDate.nullable(),
 });
@@ -64,9 +72,16 @@ const CURSOR_MAX_LENGTH = 256;
 
 const pageSize = z.coerce.number().int().min(1).max(MAX_ITEM_PAGE_SIZE);
 
+// A query string carries no null, only present/absent/a string, so the
+// due-date filter uses the literal 'none' as a sentinel for "no due date"
+// where the JSON request bodies elsewhere in this file use null directly.
 export const ListItemsQuery = z.object({
     limit: pageSize.default(DEFAULT_ITEM_PAGE_SIZE),
     cursor: z.string().min(1).max(CURSOR_MAX_LENGTH).optional(),
+    search: z.string().trim().min(1).max(MAX_ITEM_NAME_LENGTH).optional(),
+    status: ItemStatus.optional(),
+    priority: ItemPriority.optional(),
+    dueDate: z.union([ItemDueDate, z.literal('none')]).optional(),
 });
 
 export const ItemPageDto = z.object({
@@ -80,6 +95,7 @@ export type ItemIdParams = z.infer<typeof ItemIdParams>;
 export type CreateItemBody = z.infer<typeof CreateItemBody>;
 export type UpdateItemBody = z.infer<typeof UpdateItemBody>;
 export type MoveItemBody = z.infer<typeof MoveItemBody>;
+export type ReorderItemBody = z.infer<typeof ReorderItemBody>;
 export type ItemStatus = z.infer<typeof ItemStatus>;
 export type ItemPriority = z.infer<typeof ItemPriority>;
 export type ItemDto = z.infer<typeof ItemDto>;

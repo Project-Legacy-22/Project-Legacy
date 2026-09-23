@@ -1,7 +1,9 @@
-import type { ItemDto, ItemStatus } from '../api/items-api';
+import type { ItemPriority, ItemStatus } from '@legacy/contracts';
+import type { ItemDto } from '../api/items-api';
 import type { UpdateItemBody } from '@legacy/contracts';
 import { labels } from '../labels';
-import type { ItemsLoadState, ItemsPaginationState } from '../hooks/use-items';
+import type { ItemsFilterValues, ItemsLoadState, ItemsPaginationState } from '../hooks/use-items';
+import { ItemsFilters } from './items-filters';
 import { KanbanBoard } from './kanban-board';
 import { ItemsPagination } from './items-pagination';
 import { ViewState } from './view-state';
@@ -12,11 +14,20 @@ export interface ItemsContentProps {
     pendingItemIds: ReadonlySet<string>;
     hasNextPage: boolean;
     paginationState: ItemsPaginationState;
+    filterValues: ItemsFilterValues;
+    hasActiveFilters: boolean;
     onMove: (item: ItemDto, status: ItemStatus) => Promise<boolean>;
+    onReorder: (item: ItemDto, target: ItemDto, direction: 'up' | 'down') => Promise<boolean>;
     onUpdate: (item: ItemDto, changes: UpdateItemBody) => Promise<boolean>;
     onRemove: (item: ItemDto) => Promise<boolean>;
     onLoadMore: () => void;
     onRetry: () => void;
+    onSearchChange: (search: string) => void;
+    onStatusChange: (status: ItemStatus | '') => void;
+    onPriorityChange: (priority: ItemPriority | '') => void;
+    onDueDateChange: (dueDate: string) => void;
+    onNoDueDateChange: (noDueDate: boolean) => void;
+    onClearFilters: () => void;
 }
 
 function retryItems(onRetry: () => void): void {
@@ -34,43 +45,102 @@ function focusItemName(): void {
     document.querySelector<HTMLInputElement>('#item-name')?.focus();
 }
 
-export function ItemsContent({
-    items,
-    loadState,
-    pendingItemIds,
-    hasNextPage,
-    paginationState,
-    onMove,
-    onUpdate,
-    onRemove,
-    onLoadMore,
-    onRetry,
-}: ItemsContentProps) {
+// An empty page means something different depending on whether a filter
+// narrowed it: the API answers both the same way (see items-search.test.ts),
+// so the distinction and its message are made here, where it is known
+// whether a criterion is active.
+function emptyState(itemsLength: number, hasActiveFilters: boolean, onClearFilters: () => void) {
+    return hasActiveFilters
+        ? {
+            isEmpty: itemsLength === 0,
+            message: labels.noSearchResults,
+            action: { label: labels.clearFilters, onAction: onClearFilters },
+        }
+        : {
+            isEmpty: itemsLength === 0,
+            message: labels.emptyItems,
+            action: { label: labels.addItem, onAction: focusItemName },
+        };
+}
+
+interface ItemsListSectionProps {
+    items: readonly ItemDto[];
+    loadState: ItemsLoadState;
+    pendingItemIds: ReadonlySet<string>;
+    hasNextPage: boolean;
+    paginationState: ItemsPaginationState;
+    hasActiveFilters: boolean;
+    isDisabled: boolean;
+    onMove: (item: ItemDto, status: ItemStatus) => Promise<boolean>;
+    onReorder: (item: ItemDto, target: ItemDto, direction: 'up' | 'down') => Promise<boolean>;
+    onUpdate: (item: ItemDto, changes: UpdateItemBody) => Promise<boolean>;
+    onRemove: (item: ItemDto) => Promise<boolean>;
+    onLoadMore: () => void;
+    onRetry: () => void;
+    onClearFilters: () => void;
+}
+
+function ItemsListSection(props: ItemsListSectionProps) {
+    const empty = emptyState(props.items.length, props.hasActiveFilters, props.onClearFilters);
+
     return (
         <ViewState
-            state={loadState}
+            state={props.loadState}
             loadingMessage={labels.loadingItems}
-            empty={{
-                isEmpty: items.length === 0,
-                message: labels.emptyItems,
-                action: { label: labels.addItem, onAction: focusItemName },
-            }}
-            onRetry={() => retryItems(onRetry)}
+            empty={empty}
+            onRetry={() => retryItems(props.onRetry)}
             keepsChildrenWhenEmpty
         >
             <KanbanBoard
-                items={items}
-                isDisabled={loadState.status !== 'ready'}
-                pendingItemIds={pendingItemIds}
-                onMove={onMove}
-                onUpdate={onUpdate}
-                onRemove={onRemove}
+                items={props.items}
+                isDisabled={props.isDisabled}
+                pendingItemIds={props.pendingItemIds}
+                onMove={props.onMove}
+                onReorder={props.onReorder}
+                onUpdate={props.onUpdate}
+                onRemove={props.onRemove}
             />
             <ItemsPagination
-                hasNextPage={hasNextPage}
-                state={paginationState}
-                onLoadMore={onLoadMore}
+                hasNextPage={props.hasNextPage}
+                state={props.paginationState}
+                onLoadMore={props.onLoadMore}
             />
         </ViewState>
+    );
+}
+
+export function ItemsContent(props: ItemsContentProps) {
+    const isDisabled = props.loadState.status !== 'ready';
+
+    return (
+        <>
+            <ItemsFilters
+                values={props.filterValues}
+                hasActiveFilters={props.hasActiveFilters}
+                isDisabled={isDisabled}
+                onSearchChange={props.onSearchChange}
+                onStatusChange={props.onStatusChange}
+                onPriorityChange={props.onPriorityChange}
+                onDueDateChange={props.onDueDateChange}
+                onNoDueDateChange={props.onNoDueDateChange}
+                onClear={props.onClearFilters}
+            />
+            <ItemsListSection
+                items={props.items}
+                loadState={props.loadState}
+                pendingItemIds={props.pendingItemIds}
+                hasNextPage={props.hasNextPage}
+                paginationState={props.paginationState}
+                hasActiveFilters={props.hasActiveFilters}
+                isDisabled={isDisabled}
+                onMove={props.onMove}
+                onReorder={props.onReorder}
+                onUpdate={props.onUpdate}
+                onRemove={props.onRemove}
+                onLoadMore={props.onLoadMore}
+                onRetry={props.onRetry}
+                onClearFilters={props.onClearFilters}
+            />
+        </>
     );
 }

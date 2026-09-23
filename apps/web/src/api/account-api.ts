@@ -1,6 +1,7 @@
 import type { DeleteAccountBody } from '@legacy/contracts';
 
 import { labels } from '../labels';
+import { send } from './failure';
 import { ApiError, errorMessage } from './items-api';
 
 // The two rights of US-13, seen from the browser.
@@ -16,7 +17,7 @@ export interface AccountApi {
 
 export const accountApi: AccountApi = {
     async exportPersonalData() {
-        const response = await fetch('/auth/me/export', {
+        const response = await send('/auth/me/export', {
             headers: { Accept: 'application/json' },
         });
 
@@ -28,7 +29,7 @@ export const accountApi: AccountApi = {
     },
 
     async deleteAccount(body) {
-        const response = await fetch('/auth/me', {
+        const response = await send('/auth/me', {
             method: 'DELETE',
             headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
             body: JSON.stringify(body),

@@ -1,4 +1,4 @@
-import { ITEM_CREATED_V1 } from '@legacy/contracts';
+import { ITEM_CREATED_V1, MEMBERSHIP_CREATED_V1 } from '@legacy/contracts';
 import type { DomainEvent, Logger } from '@legacy/contracts';
 
 import type { NotificationStore } from './notification-store.js';
@@ -31,6 +31,24 @@ export async function consume(
             logger.info(
                 { eventId: event.id, applied },
                 applied ? 'notification created' : 'event already handled, nothing to do',
+            );
+
+            return applied ? 'applied' : 'alreadyHandled';
+        }
+
+        case MEMBERSHIP_CREATED_V1: {
+            // La personne ajoutee, et elle seule : celle qui ajoute sait ce
+            // qu elle vient de faire. `addedBy` voyage quand meme, parce que
+            // c est lui qui permettra de dire « par qui » (#349).
+            const applied = await notifications.notifyMemberAdded(
+                event.id,
+                event.payload.memberId,
+                event.payload.projectId,
+            );
+
+            logger.info(
+                { eventId: event.id, applied },
+                applied ? 'membership notification created' : 'event already handled, nothing to do',
             );
 
             return applied ? 'applied' : 'alreadyHandled';

@@ -1,9 +1,13 @@
 import type { Item, ItemStatus } from '../domain/item.js';
 import type { DomainEvent } from '../domain/event.js';
+import type { ItemSearchCriteria } from '../domain/item-search.js';
 
 // Where a page stops, and where the next one resumes. The cursor is minted and
-// read by the adapter alone; the use cases carry it through untouched.
-export interface ItemPageQuery {
+// read by the adapter alone; the use cases carry it through untouched. Search
+// and filter criteria narrow which rows are paged over; the cursor stays
+// valid only while they are unchanged (US-32), which the adapter enforces by
+// embedding a fingerprint of them in the cursor itself.
+export interface ItemPageQuery extends ItemSearchCriteria {
     limit: number;
     cursor: string | undefined;
 }
@@ -17,6 +21,13 @@ export interface ItemStatusMove {
     id: string;
     projectId: string;
     status: ItemStatus;
+    expectedVersion: number;
+}
+
+export interface ItemPositionMove {
+    id: string;
+    projectId: string;
+    position: string;
     expectedVersion: number;
 }
 
@@ -41,5 +52,6 @@ export interface ItemRepository {
 
     update(item: Item): Promise<void>;
     moveStatus(move: ItemStatusMove): Promise<Item | undefined>;
+    swapPosition(move: ItemPositionMove): Promise<Item | undefined>;
     remove(id: string): Promise<void>;
 }

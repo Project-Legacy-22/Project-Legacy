@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import type { RequestHandler } from 'express';
-import { CreateProjectBody, ListProjectsQuery, ProjectIdParams } from '@legacy/contracts';
-import type { ProjectDto, ProjectPageDto } from '@legacy/contracts';
-import type { Project, ProjectPage } from '@legacy/core-projects';
+import { CreateProjectBody, ListProjectsQuery, ProjectIdParams, ProjectMemberIdParams } from '@legacy/contracts';
+import type { ProjectDto, ProjectMemberListDto, ProjectPageDto } from '@legacy/contracts';
+import type { Membership, Project, ProjectPage } from '@legacy/core-projects';
 
 import type { ProjectUseCases } from '../../composition-root.js';
 import { accountOf } from '../session.js';
@@ -20,6 +20,28 @@ function toProjectPageDto(page: ProjectPage): ProjectPageDto {
     return {
         projects: page.projects.map(toProjectDto),
         nextCursor: page.nextCursor ?? null,
+    };
+}
+
+function toMemberListDto(members: readonly Membership[]): ProjectMemberListDto {
+    return {
+        members: members.map(member => ({
+            userId: member.userId,
+            email: member.email,
+            role: member.role,
+        })),
+    };
+}
+
+function removeMember(useCases: ProjectUseCases): RequestHandler {
+    return async (req, res) => {
+        const { projectId, userId } = ProjectMemberIdParams.parse(req.params);
+        await useCases.removeProjectMember({
+            projectId,
+            memberId: userId,
+            callerId: accountOf(res).id,
+        });
+        res.status(204).end();
     };
 }
 
@@ -59,9 +81,23 @@ export function projectsRouter(useCases: ProjectUseCases): Router {
             .catch(next);
     };
 
+    // Who is in this project. A caller outside it is answered like a project
+    // that does not exist -- the use case decides that, not this route.
+    const members: RequestHandler = (req, res, next) => {
+        const params = ProjectIdParams.safeParse(req.params);
+        if (!params.success) return next(params.error);
+
+        useCases
+            .listProjectMembers(params.data.projectId, accountOf(res).id)
+            .then((found: readonly Membership[]) => res.send(toMemberListDto(found)))
+            .catch(next);
+    };
+
     router.get('/projects', list);
+    router.get('/projects/:projectId/members', members);
     router.post('/projects', add);
     router.delete('/projects/:projectId', remove);
+    router.delete('/projects/:projectId/members/:userId', removeMember(useCases));
 
     return router;
 }

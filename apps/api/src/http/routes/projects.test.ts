@@ -9,18 +9,26 @@ import {
     makeSignIn,
 } from '@legacy/core-auth';
 import { makeAddItem, makeChangeItem, makeListItems, makeRemoveItem } from '@legacy/core-items';
-import { makeAddProject, makeListProjects, makeRemoveProject } from '@legacy/core-projects';
+import {
+    makeAddProject,
+    makeListProjectMembers,
+    makeListProjects,
+    makeRemoveProject,
+} from '@legacy/core-projects';
 import type { Project } from '@legacy/core-projects';
 
 import { inMemoryCompromisedPasswords } from '../../../../../packages/core/auth/test/fakes/in-memory-compromised-passwords.js';
 import { inMemoryIdentityProvider } from '../../../../../packages/core/auth/test/fakes/in-memory-identity-provider.js';
 import { inMemoryPersonalDataStore } from '../../../../../packages/core/auth/test/fakes/in-memory-personal-data-store.js';
 import { inMemoryItemRepository } from '../../../../../packages/core/items/test/fakes/in-memory-item-repository.js';
+import { inMemoryMembershipRepository } from '../../../../../packages/core/projects/test/fakes/in-memory-membership-repository.js';
 import { inMemoryProjectRepository } from '../../../../../packages/core/projects/test/fakes/in-memory-project-repository.js';
 import type {
     InMemoryProjectRepository,
     ProjectMembership,
 } from '../../../../../packages/core/projects/test/fakes/in-memory-project-repository.js';
+import { ProjectMemberListDto } from '@legacy/contracts';
+
 import type { AppUseCases } from '../../composition-root.js';
 import { recordingLogger } from '../../../../../packages/contracts/test/fakes/recording-logger.js';
 import { json, listen, testConfig } from '../../../test/http-harness.js';
@@ -36,6 +44,16 @@ const OTHER_PROJECT_ID = '00000000-0000-7000-8000-000000000020';
 const UNKNOWN_PROJECT_ID = '00000000-0000-7000-8000-000000000099';
 const ADRESSE = 'alice@example.com';
 const MOT_DE_PASSE = 'MotDePasse2026';
+const AUTRE_ADRESSE = 'bob@example.com';
+
+// Le projet partage de ces cas : la titulaire de la session, proprietaire, et
+// un second membre. OTHER_PROJECT_ID n appartient qu a l autre compte, ce qui
+// donne le cas du projet existant dont on n est pas membre.
+const APPARTENANCES = [
+    { projectId: PROJECT_ID, userId: ACCOUNT_ID, email: ADRESSE, role: 'owner' as const },
+    { projectId: PROJECT_ID, userId: OTHER_ACCOUNT_ID, email: AUTRE_ADRESSE, role: 'member' as const },
+    { projectId: OTHER_PROJECT_ID, userId: OTHER_ACCOUNT_ID, email: AUTRE_ADRESSE, role: 'owner' as const },
+];
 
 function useCasesOver(
     projects: InMemoryProjectRepository,
@@ -54,6 +72,9 @@ function useCasesOver(
                 newId: () => PROJECT_ID,
             }),
             removeProject: makeRemoveProject(projects),
+            listProjectMembers: makeListProjectMembers(
+                inMemoryMembershipRepository(APPARTENANCES),
+            ),
         },
         items: {
             listItems: makeListItems(items),
@@ -229,5 +250,49 @@ describe('projects API', () => {
         expect(denied.status).toBe(404);
         expect(unknown.status).toBe(404);
         expect(repository.projects.has(PROJECT_ID)).toBe(true);
+    });
+
+    // La divulgation assumee de US-33 : les membres d un projet voient
+    // l adresse des autres. Il n existe en revanche aucune route qui liste ou
+    // cherche des comptes -- l entree unique est un identifiant de projet.
+    describe('GET /projects/:projectId/members', () => {
+        it('rend la liste, proprietaires en tete', async () => {
+            const response = await harness.request(`/projects/${PROJECT_ID}/members`);
+
+            expect(response.status).toBe(200);
+            const body = await response.json();
+            expect(body).toEqual({
+                members: [
+                    { userId: ACCOUNT_ID, email: ADRESSE, role: 'owner' },
+                    { userId: OTHER_ACCOUNT_ID, email: AUTRE_ADRESSE, role: 'member' },
+                ],
+            });
+        });
+
+        // La lecon de #344 : la route construisait son DTO par affectation, et
+        // seul le navigateur validait la reponse. On la valide ici.
+        it('rend une reponse que le contrat accepte', async () => {
+            const body = await (await harness.request(`/projects/${PROJECT_ID}/members`)).json();
+
+            const lu = ProjectMemberListDto.safeParse(body);
+
+            expect(
+                lu.success ? [] : lu.error.issues.map(i => `${i.path.join('.')}: ${i.message}`),
+            ).toEqual([]);
+        });
+
+        // 404 et non 403 : un 403 confirmerait que le projet existe a qui
+        // devine des identifiants.
+        it('repond comme un projet inexistant quand on n en est pas membre', async () => {
+            const response = await harness.request(`/projects/${OTHER_PROJECT_ID}/members`);
+
+            expect(response.status).toBe(404);
+        });
+
+        it('repond de meme pour un projet que personne ne possede', async () => {
+            const response = await harness.request(`/projects/${UNKNOWN_PROJECT_ID}/members`);
+
+            expect(response.status).toBe(404);
+        });
     });
 });

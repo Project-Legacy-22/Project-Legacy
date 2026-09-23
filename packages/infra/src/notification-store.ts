@@ -12,7 +12,7 @@ import type {
 
 import type { Database } from './database.types.js';
 import type { SupabaseSettings } from './supabase-item-repository.js';
-import { adapterFailure, serviceRoleClient } from './adapter.js';
+import { adapterFailure, asInstant, serviceRoleClient } from './adapter.js';
 import type { AdapterFailure } from './adapter.js';
 
 type NotificationRow = Database['public']['Tables']['notifications']['Row'];
@@ -24,17 +24,23 @@ export interface NotificationStore extends NotificationRepository {
     // processed_events, not by reading first and writing after: two workers
     // racing would both pass that read.
     notifyItemCreated(eventId: string, userId: string, itemId: string): Promise<boolean>;
+    // Meme contrat, meme idempotence : la cle est l identifiant de
+    // l evenement, et processed_events n en porte qu une ligne quel que
+    // soit le genre de la notification.
+    notifyMemberAdded(eventId: string, userId: string, projectId: string): Promise<boolean>;
 }
 
 const fail: AdapterFailure = adapterFailure('notifications');
 
+// Both dates go through asInstant: this is the only DTO of the application
+// that carries a timestamptz out to a client, and the client validates it.
 function toNotification(row: NotificationRow): Notification {
     return {
         id: row.id,
         itemId: row.item_id,
         userId: row.user_id,
-        readAt: row.read_at,
-        createdAt: row.created_at,
+        readAt: row.read_at === null ? null : asInstant(row.read_at),
+        createdAt: asInstant(row.created_at),
     };
 }
 
@@ -104,6 +110,19 @@ export function createSupabaseNotificationStore(settings: SupabaseSettings): Not
 
             // false when the event had already been handled, which is the
             // expected outcome of a redelivery.
+            return data === true;
+        },
+
+        async notifyMemberAdded(eventId, userId, projectId) {
+            // Une seule requete, pour la meme raison que ci-dessus.
+            const { data, error } = await client.rpc('record_member_added_notification', {
+                p_event_id: eventId,
+                p_user_id: userId,
+                p_project_id: projectId,
+            });
+
+            if (error) fail('notifyMemberAdded', error);
+
             return data === true;
         },
 
