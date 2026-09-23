@@ -128,12 +128,13 @@ begin
     ('0000de00-0000-7000-8000-000000000302')
   on conflict (event_id) do nothing;
 
-  insert into public.notifications (event_id, user_id, item_id, read_at, created_at)
+  insert into public.notifications (event_id, user_id, item_id, kind, read_at, created_at)
   values
     ('0000de00-0000-7000-8000-000000000301', camille,
-     '0000de00-0000-7000-8000-000000000202', null, now()),
+     '0000de00-0000-7000-8000-000000000202', 'item.created', null, now()),
     ('0000de00-0000-7000-8000-000000000302', camille,
-     '0000de00-0000-7000-8000-000000000205', now() - interval '1 day', now() - interval '2 days')
+     '0000de00-0000-7000-8000-000000000205', 'item.created', now() - interval '1 day',
+     now() - interval '2 days')
   on conflict (event_id) do nothing;
 end
 $$;
