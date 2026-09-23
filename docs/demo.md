@@ -89,19 +89,23 @@ La pile locale ne dépend que de Docker : elle est le socle de repli de toutes l
 
 ## Qui présente quoi
 
-Proposition tirée des items que chacun a livrés sur le board, **à valider en réunion d'équipe** :
-la répartition finale se reporte ici, nommément, avant la répétition.
+Proposition fondée sur ce que chacun a porté, d'après les revues de sprint : deux interventions par
+membre, **à valider en réunion d'équipe**. La répartition finale se reporte ici, nommément, avant
+la répétition.
 
 | Étape | Présente | Répond aux questions sur |
 |---|---|---|
-| 1, 9 | arthurepitech | architecture, ADR, fondation |
-| 2 (auth, accueil) | Victorbriez | authentification, écran d'accueil |
-| 2 (Kanban, membres) | GUYETAND | tâches, Kanban, réordonnancement, membres |
-| 3 | vlinka | flux événementiel, idempotence |
-| 4 | ArthurGasmi | RGPD, comptes |
-| 5 | aurelienpochart | tests, accessibilité, quality gate |
-| 6, 7 | arthurepitech | CI/CD, protections, livraison |
-| 8 | le Scrum Master du sprint 3 | board, rétrospective |
+| 1 | Arthur Dos Santos | l'audit de l'existant, la fondation |
+| 2, connexion et session | Arthur Gasmi | comptes, session persistante et expiration |
+| 2, accueil et recherche | Victor Briez | écran d'accueil, recherche et filtres |
+| 2, Kanban et membres | Arthur Guyetand | tâches, Kanban, réordonnancement, membres |
+| 3 | Seïf Soltane | flux événementiel, idempotence |
+| 4 | Arthur Gasmi | export et suppression des données, RGPD |
+| 5 | Aurélien Pochart | tests, accessibilité |
+| 6 | Aurélien Pochart | quality gate, protections d'une pull request |
+| 7 | Arthur Dos Santos | intégration continue, livraison |
+| 8 | Victor Briez et Arthur Guyetand | backlog et priorisation ; board et rétrospective |
+| 9 | Seïf Soltane | architecture, ADR, hébergement des données |
 
 ## Répétition
 

@@ -7,6 +7,12 @@ passe pas avant un besoin classé Must ».
 Ce document croise le classement du backlog avec l'état réel des issues. Mesure du 15 septembre
 2026, reproductible : le classement vient de `backlog-v2.md`, l'état de `gh issue list`.
 
+**Mise à jour du 24 septembre 2026 : les 25 Must sont livrés.** Les trois Enablers de fin de
+projet que la mesure ci-dessous laissait ouverts ont été fermés ce jour-là : la documentation
+d'API (#45, PR #389), le README (#46, PR #390) et le scénario de démonstration (#47, PR #391). Le
+déploiement continu complet, classé Could, n'a toujours pas été commencé. Le reste du document
+garde la mesure du 15 septembre.
+
 ## Le classement, en chiffres
 
 48 éléments classés : **25 Must**, 16 Should, 7 Could.
@@ -68,7 +74,8 @@ complet » est classé **Could**, vaut 8 points, et n'a pas été commencé : il
 devant quoi que ce soit.
 
 Aucun élément Should ou Could n'a été livré au détriment d'un Must, et c'est vérifiable autrement
-que par une affirmation : tous les Must sauf les trois Enablers terminaux sont fermés.
+que par une affirmation : tous les Must sauf les trois Enablers terminaux étaient fermés le
+15 septembre, et ces trois-là le sont depuis le 24.
 
 ### Une exception à assumer, et elle ne va pas dans le sens redouté
 
