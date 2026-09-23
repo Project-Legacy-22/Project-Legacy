@@ -24,6 +24,19 @@ function row(over: Partial<LegacyItem> = {}): LegacyItem {
 }
 
 describe('buildImportScript', () => {
+    // #399: items.position became NOT NULL with #382, and the script left it
+    // to a default the rebuilt schema does not carry. Each taken row keeps its
+    // legacy identifier as its position, as the #382 migration does for rows
+    // that existed before it: the legacy order is kept, and a replay inserts
+    // the same values.
+    it('gives each taken item its own identifier as its position', () => {
+        const { sql } = buildImportScript([row(), row({ id: '0191f3c2-2222-7000-8000-bbbbbbbbbbbb', name: 'Payer la facture', line: 13 })], TARGET);
+
+        expect(sql).toContain('(id, user_id, project_id, name, status, position, created_at, updated_at)');
+        expect(sql).toMatch(/\('0191f3c2-1111-7000-8000-aaaaaaaaaaaa', v_owner, [^\n]*'0191f3c2-1111-7000-8000-aaaaaaaaaaaa', /u);
+        expect(sql).toMatch(/\('0191f3c2-2222-7000-8000-bbbbbbbbbbbb', v_owner, [^\n]*'0191f3c2-2222-7000-8000-bbbbbbbbbbbb', /u);
+    });
+
     it('wraps the whole import in one transaction', () => {
         const { sql } = buildImportScript([row()], TARGET);
 
@@ -109,7 +122,7 @@ describe('buildImportScript', () => {
     it('leaves the priority, the due date and the version to the schema', () => {
         const { sql } = buildImportScript([row()], TARGET);
 
-        expect(sql).toContain('(id, user_id, project_id, name, status, created_at, updated_at)');
+        expect(sql).toContain('(id, user_id, project_id, name, status, position, created_at, updated_at)');
     });
 });
 
