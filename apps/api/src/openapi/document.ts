@@ -70,7 +70,7 @@ function successOf(success: Operation['success']): Json {
 }
 
 function responsesOf(operation: Operation): Json {
-    const statuses = [...new Set([...COMMON_ERRORS[operation.access], ...(operation.errors ?? [])])].sort();
+    const statuses = [...new Set([...COMMON_ERRORS[operation.access], ...(operation.errors ?? [])])].sort((left, right) => left - right);
     const responses: Json = { [String(operation.success.status)]: successOf(operation.success) };
     for (const status of statuses) {
         responses[String(status)] = { $ref: `#/components/responses/Error${String(status)}` };
