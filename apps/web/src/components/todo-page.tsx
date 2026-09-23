@@ -46,6 +46,9 @@ export interface TodoPageProps {
     // outside every landmark and out of reach of a screen reader navigating by
     // region.
     children?: ReactNode;
+    // What needs attention across every project (US-20). First in the main
+    // landmark, so it precedes the choice of a project in reading order.
+    home?: ReactNode;
     projects: ProjectsSectionProps;
     selectedProject: ProjectDto | null;
 }
@@ -60,6 +63,7 @@ export function TodoPage(props: TodoPageProps) {
             </a>
             <PageHeader />
             <main id="main-content" className="main-content" tabIndex={-1}>
+                {props.home}
                 <ProjectsSection {...props.projects} />
                 {props.selectedProject === null ? (
                     <section className="panel" aria-labelledby="no-project-heading">

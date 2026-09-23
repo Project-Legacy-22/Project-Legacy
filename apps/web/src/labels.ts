@@ -1,4 +1,5 @@
 import { credentialsLabels } from './credentials-labels';
+import { homeLabels } from './home-labels';
 import { itemPlanningLabels } from './item-planning-labels';
 import { itemReorderLabels } from './item-reorder-labels';
 import { itemsFilterLabels } from './items-filter-labels';
@@ -112,6 +113,7 @@ export const labels = {
     requestNewResetLink: 'Request a new link',
 
     ...credentialsLabels,
+    ...homeLabels,
 
     notificationsFailed: 'Unable to read your notifications.',
     unreadNotifications(count: number): string {

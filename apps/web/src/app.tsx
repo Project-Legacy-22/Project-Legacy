@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 
 import { guardSession } from './api/guard-session';
 import { accountApi } from './api/account-api';
+import { attentionApi } from './api/attention-api';
+import type { AttentionApi } from './api/attention-api';
 import type { AccountApi } from './api/account-api';
 import { authApi } from './api/auth-api';
 import type { AuthApi } from './api/auth-api';
@@ -16,6 +18,7 @@ import type { NotificationsApi } from './api/notifications-api';
 import { AccountSections } from './components/account-sections';
 import type { CredentialsControls } from './components/account-sections';
 import { AuthPage } from './components/auth-page';
+import { HomeSection } from './components/home-section';
 import { DeepLinkPages, useDeepLinkToken } from './components/deep-link-pages';
 import { NotificationsPanel } from './components/notifications-panel';
 import { PrivacyPolicyPage } from './components/privacy-policy-page';
@@ -23,9 +26,11 @@ import { SiteFooter } from './components/site-footer';
 import { SessionBanner } from './components/session-banner';
 import { TodoPage } from './components/todo-page';
 import { SessionCheckScreen } from './components/session-check-screen';
+import { useAttention } from './hooks/use-attention';
 import { useCredentials } from './hooks/use-credentials';
 import { useItems } from './hooks/use-items';
 import { useNotifications } from './hooks/use-notifications';
+import { useOpenFromHome } from './hooks/use-open-from-home';
 import { useProjects } from './hooks/use-projects';
 import { usePersonalData } from './hooks/use-personal-data';
 import { useSession } from './hooks/use-session';
@@ -49,6 +54,7 @@ export interface AppProps {
     // without a jsdom that implements object URLs.
     save?: SaveFile;
     projects?: ProjectsApi;
+    attention?: AttentionApi;
 }
 
 interface SignedInApis {
@@ -57,6 +63,7 @@ interface SignedInApis {
     credentials: CredentialsApi;
     notifications: NotificationsApi;
     projects: ProjectsApi;
+    attention: AttentionApi;
 }
 
 // The three clients the signed-in screen uses, each wrapped so that a 401 ends
@@ -67,7 +74,7 @@ interface SignedInApis {
 // identity of the client they are given, so rebuilding these on every render
 // would refetch on every render.
 function useGuardedApis(apis: SignedInApis, onExpired: () => void): SignedInApis {
-    const { api, account, credentials, notifications, projects } = apis;
+    const { api, account, credentials, notifications, projects, attention } = apis;
 
     return useMemo(
         () => ({
@@ -76,8 +83,9 @@ function useGuardedApis(apis: SignedInApis, onExpired: () => void): SignedInApis
             credentials: guardSession(credentials, onExpired),
             notifications: guardSession(notifications, onExpired),
             projects: guardSession(projects, onExpired),
+            attention: guardSession(attention, onExpired),
         }),
-        [api, account, credentials, notifications, projects, onExpired],
+        [api, account, credentials, notifications, projects, attention, onExpired],
     );
 }
 
@@ -91,13 +99,17 @@ interface SignedInAppProps {
     onSignOut: () => Promise<SubmitResult>;
 }
 
-function useProjectItems(api: ItemsApi, projects: ReturnType<typeof useProjects>) {
+// Every change to a task reported back to onChange: the home screen above
+// lists tasks by due date and priority, and must not keep showing one that was
+// just completed or rescheduled below.
+function useProjectItems(api: ItemsApi, projects: ReturnType<typeof useProjects>, onChange: () => void) {
     const items = useItems(api, projects.selectedProjectId);
 
     const addItem: typeof items.addItem = async (body) => {
         const result = await items.addItem(body);
         if (result.status === 'success') {
             projects.adjustSelectedItemCount(1);
+            onChange();
         }
         return result;
     };
@@ -106,11 +118,20 @@ function useProjectItems(api: ItemsApi, projects: ReturnType<typeof useProjects>
         const removed = await items.removeItem(item);
         if (removed) {
             projects.adjustSelectedItemCount(-1);
+            onChange();
         }
         return removed;
     };
 
-    return { ...items, addItem, removeItem };
+    const reporting =
+        <A extends unknown[]>(change: (...args: A) => Promise<boolean>) =>
+        async (...args: A) => {
+            const changed = await change(...args);
+            if (changed) onChange();
+            return changed;
+        };
+
+    return { ...items, addItem, removeItem, moveItem: reporting(items.moveItem), updateItem: reporting(items.updateItem) };
 }
 
 function itemsSectionProps(state: ReturnType<typeof useProjectItems>) {
@@ -171,7 +192,9 @@ function SignedInApp({
     onSignOut,
 }: SignedInAppProps) {
     const projects = useProjects(apis.projects);
-    const state = useProjectItems(apis.api, projects);
+    const attention = useAttention(apis.attention);
+    const state = useProjectItems(apis.api, projects, attention.reload);
+    const openFromHome = useOpenFromHome(projects, state);
     const personalData = usePersonalData({ api: apis.account, save, onDeleted });
     const unread = useNotifications(apis.notifications, true);
 
@@ -188,6 +211,7 @@ function SignedInApp({
                 {...itemsSectionProps(state)}
                 selectedProject={projects.selectedProject}
                 projects={projectSectionProps(projects)}
+                home={<HomeSection {...attention} onOpen={openFromHome} />}
             >
                 <AccountSections
                     email={email}
@@ -256,14 +280,15 @@ const REAL: Required<AppProps> = {
     notifications: notificationsApi,
     save: saveFile,
     projects: projectsApi,
+    attention: attentionApi,
 };
 
 export function App(props: AppProps) {
-    const { api, auth, account, credentials, notifications, save, projects } = { ...REAL, ...props };
+    const { api, auth, account, credentials, notifications, save, projects, attention } = { ...REAL, ...props };
     const session = useSession(auth);
     const recoveryToken = useDeepLinkToken('recovery');
     const emailChangeToken = useDeepLinkToken('email_change');
-    const guarded = useGuardedApis({ api, account, credentials, notifications, projects }, session.expire);
+    const guarded = useGuardedApis({ api, account, credentials, notifications, projects, attention }, session.expire);
     const credentialActions = useCredentials(guarded.credentials);
     // The policy is a screen, not a route: this application chooses what to
     // show by state, and it must be readable before an account exists.

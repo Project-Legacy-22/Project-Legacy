@@ -1,7 +1,9 @@
+import type { AttentionApi } from '../api/attention-api';
 import type { AccountDto, AuthApi } from '../api/auth-api';
 import type { CredentialsApi } from '../api/credentials-api';
 import type { ItemDto, ItemPageDto, ItemsApi } from '../api/items-api';
 import type { ProjectsApi } from '../api/projects-api';
+import { anAttention } from './builders/attention-builder';
 import { anItem } from './builders/item-builder';
 
 export const firstItem = anItem({
@@ -77,6 +79,17 @@ export function createProjectsApi(overrides: Partial<ProjectsApi> = {}): Project
         }),
         createProject: async () => PROJECT,
         deleteProject: async () => undefined,
+        ...overrides,
+    };
+}
+
+// Nothing needs attention by default. Provided so App does not fall back to
+// the real client in a suite that is not about the home screen: the failed
+// fetch would put a second alert on the page, and a suite reading "the" alert
+// would read the wrong one.
+export function createAttentionApi(overrides: Partial<AttentionApi> = {}): AttentionApi {
+    return {
+        listAttention: async () => anAttention(),
         ...overrides,
     };
 }

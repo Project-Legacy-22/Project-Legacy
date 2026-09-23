@@ -12,6 +12,7 @@ import { labels } from '../labels';
 import type { SaveFile } from '../save-file';
 import { click, createReactTestRoot, getElement, setInputValue, submitForm } from '../test/react-root';
 import type { ReactTestRoot } from '../test/react-root';
+import { createAttentionApi } from '../test/app-fixture';
 
 const ACCOUNT: AccountDto = {
     id: '5b1f0f4a-9d3f-4d0e-9e2a-6c0f5a3b1d77',
@@ -95,6 +96,7 @@ async function afficher(account: AccountApi, save: SaveFile = vi.fn()): Promise<
             account={account}
             credentials={createCredentials()}
             projects={createProjects()}
+            attention={createAttentionApi()}
             save={save}
         />,
     );
