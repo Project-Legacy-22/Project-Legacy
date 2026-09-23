@@ -39,16 +39,17 @@ planning du 7 septembre).
 |---|---|---|---|
 | Planning | [sprint-1](plannings/sprint-1.md) | [sprint-2](plannings/sprint-2.md) | [sprint-3](plannings/sprint-3.md) |
 | Dailies | [sprint-1](dailies/sprint-1.md) | [sprint-2](dailies/sprint-2.md) | [sprint-3](dailies/sprint-3.md) |
-| Revue | [sprint-1](reviews/sprint-1.md) | [sprint-2](reviews/sprint-2.md) | à venir, le 25 septembre |
-| Rétrospective | non consignée | non consignée | à venir |
+| Revue | [sprint-1](reviews/sprint-1.md) | [sprint-2](reviews/sprint-2.md) | [sprint-3](reviews/sprint-3.md), préparée pour le 25 septembre |
+| Rétrospective | [sprint-1](retros/sprint-1.md), rédigée a posteriori | [sprint-2](retros/sprint-2.md), rédigée a posteriori | [sprint-3](retros/sprint-3.md), préparée pour le 25 septembre |
 
 Autres réunions :
 
 - [Réunion de lancement du 2 septembre](decisions/2026-09-02-reunion-de-lancement.md) : les
   décisions structurantes, reprises depuis dans les ADR ;
-- [Soutenance intermédiaire](reviews/soutenance-intermediaire.md) : les retours de l'enseignant et
-  les actions qui en découlent.
+- [Soutenance intermédiaire](reviews/soutenance-intermediaire.md) : les retours de l'enseignant, les
+  actions qui en découlent et les suites données à chacune.
 
-Ce tableau ne contient que ce qui a été noté en séance. Les dailies non consignés et les
-rétrospectives des sprints 1 et 2 n'ont pas de compte rendu : ils ne sont pas reconstitués après
-coup.
+Les plannings, dailies et revues des sprints 1 et 2 reprennent les notes prises en séance ; les
+dailies non consignés ne sont pas reconstitués. Les rétrospectives des sprints 1 et 2, qui n'avaient
+pas été consignées, ont été rédigées le 24 septembre à partir de ces traces et le disent en tête ;
+elles sont à valider en équipe.
