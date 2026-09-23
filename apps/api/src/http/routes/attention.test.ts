@@ -56,6 +56,7 @@ describe('GET /projects/attention', () => {
                         name: 'A sample item',
                         status: 'todo',
                         version: 1,
+                        position: ITEM_ID,
                         priority: 'normal',
                         dueDate: '2026-09-20',
                         projectName: 'Maison',
