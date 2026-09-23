@@ -62,7 +62,7 @@ revokes its tokens, and the next request lands on the sign-in screen.
 | No cookie at all | `401 session_required` | The ordinary first visit. Says nothing about an expiry |
 | Access token refused, refresh cookie present and exchangeable | the route's own answer | Plus `Set-Cookie` for both cookies. The caller cannot tell a renewal happened |
 | Access token refused, nothing left to renew | `401 session_expired`, both cookies cleared | The interface shows the sign-in screen and says why |
-| The identity provider is unreachable | `500 internal_error` | Deliberately not an expiry: an outage must not sign everybody out |
+| The identity provider is unreachable, too slow or throttling | `503 service_unavailable`, header `Retry-After` | Deliberately not an expiry: an outage must not sign everybody out (#383) |
 
 The last line is the distinction the adapter exists to make. Of the answers GoTrue gives to a
 refused exchange, only those that mean the token is spent, revoked, expired or unknown end the
