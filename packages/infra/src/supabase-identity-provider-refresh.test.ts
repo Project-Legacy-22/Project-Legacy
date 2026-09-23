@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import { ServiceUnavailable } from '@legacy/contracts';
 
 import { createSupabaseIdentityProvider } from './supabase-identity-provider.js';
 import { SESSION, TOKEN, UTILISATEUR, fauxFournisseur } from '../test/fakes/gotrue-server.js';
@@ -80,21 +81,35 @@ describe('adaptateur Supabase Auth, renouvellement de session', () => {
 
     it('propage une erreur inattendue du fournisseur', async () => {
         const { provider, faux: serveur } = await adaptateur();
-        // 429 et non 500. Depuis @supabase/supabase-js 2.115, _refreshAccessToken
-        // reessaie une reponse 5xx avec un delai exponentiel tant que le prochain
-        // tient dans sa fenetre de trente secondes : mesure, huit tentatives sur
-        // vingt-cinq secondes. Un test unitaire ne peut pas attendre ca, et
-        // allonger son delai deguiserait le probleme en lenteur de suite.
-        //
-        // Un 429 emprunte la meme branche -- l adaptateur ne traite specialement
-        // que 400 et 401, qu il lit comme une session expiree -- sans etre
-        // reessaye. La latence d echec sur 5xx a son issue.
+        // 422 et non 500. Le SDK classe tout 5xx de GoTrue comme une panne
+        // d infrastructure qu il reessaie pendant vingt-cinq secondes, et que
+        // l adaptateur rend en indisponibilite (#383). Un 422 porte un code que
+        // l adaptateur ne connait pas, sans etre reessaye.
         serveur.quand(TOKEN, {
-            status: 429,
-            body: { code: 429, error_code: 'over_request_rate_limit', msg: 'trop de demandes' },
+            status: 422,
+            body: { code: 422, error_code: 'unexpected_failure', msg: 'refus inconnu' },
         });
 
-        await expect(provider.refresh('a-refresh-token')).rejects.toThrow(/refresh/);
+        const echec: unknown = await provider.refresh('a-refresh-token').catch((error: unknown) => error);
+
+        expect(echec).not.toBeInstanceOf(ServiceUnavailable);
+        expect(String(echec)).toMatch(/refresh failed/);
+    });
+
+    // #383 : la limite de debit de GoTrue relevee en production le 23 septembre
+    // repondait 500. C est une indisponibilite passagere, que la couche HTTP
+    // rend en 503 avec un delai.
+    it('reports a provider rate limit as a passing unavailability', async () => {
+        const { provider, faux: serveur } = await adaptateur();
+        serveur.quand(TOKEN, {
+            status: 429,
+            body: { code: 429, error_code: 'over_request_rate_limit', msg: 'Request rate limit reached' },
+        });
+
+        const echec: unknown = await provider.refresh('a-refresh-token').catch((error: unknown) => error);
+
+        expect(echec).toBeInstanceOf(ServiceUnavailable);
+        expect(echec).toMatchObject({ reason: 'rate_limited', retryAfterSeconds: 30 });
     });
 
     // Le message d une erreur d adaptateur part au journal. Il nomme

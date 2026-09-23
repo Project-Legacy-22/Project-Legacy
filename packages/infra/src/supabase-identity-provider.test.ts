@@ -71,9 +71,7 @@ describe('adaptateur Supabase Auth', () => {
                 body: { code: 503, error_code: 'service_unavailable', msg: 'indisponible' },
             });
 
-            await expect(provider.register('alice@example.test', 'MotDePasse2026', PRIVACY_POLICY_VERSION)).rejects.toThrow(
-                /register/,
-            );
+            await expect(provider.register('alice@example.test', 'MotDePasse2026', PRIVACY_POLICY_VERSION)).rejects.toMatchObject({ name: 'ServiceUnavailable', operation: 'identity provider: register' });
         });
     });
 
@@ -125,7 +123,7 @@ describe('adaptateur Supabase Auth', () => {
 
             await expect(
                 provider.authenticate('alice@example.test', 'MotDePasse2026'),
-            ).rejects.toThrow(/authenticate/);
+            ).rejects.toMatchObject({ name: 'ServiceUnavailable', operation: 'identity provider: authenticate' });
         });
     });
 
@@ -157,7 +155,7 @@ describe('adaptateur Supabase Auth', () => {
                 body: { code: 500, error_code: 'unexpected_failure', msg: 'panne' },
             });
 
-            await expect(provider.identify('jeton-acces')).rejects.toThrow(/identify/);
+            await expect(provider.identify('jeton-acces')).rejects.toMatchObject({ name: 'ServiceUnavailable', operation: 'identity provider: identify' });
         });
     });
 
@@ -189,7 +187,7 @@ describe('adaptateur Supabase Auth', () => {
                 body: { code: 503, error_code: 'unexpected_failure', msg: 'panne' },
             });
 
-            await expect(provider.remove(UTILISATEUR.id)).rejects.toThrow(/remove/);
+            await expect(provider.remove(UTILISATEUR.id)).rejects.toMatchObject({ name: 'ServiceUnavailable', operation: 'identity provider: remove' });
         });
     });
 
@@ -227,9 +225,7 @@ describe('adaptateur Supabase Auth', () => {
                 body: { code: 500, error_code: 'unexpected_failure', msg: 'panne' },
             });
 
-            await expect(provider.requestPasswordReset('alice@example.test')).rejects.toThrow(
-                /requestPasswordReset/,
-            );
+            await expect(provider.requestPasswordReset('alice@example.test')).rejects.toMatchObject({ name: 'ServiceUnavailable', operation: 'identity provider: requestPasswordReset' });
         });
     });
 
@@ -299,9 +295,7 @@ describe('adaptateur Supabase Auth', () => {
                 body: { code: 500, error_code: 'unexpected_failure', msg: 'panne' },
             });
 
-            await expect(provider.resetPassword('jeton', 'NouveauMotDePasse2')).rejects.toThrow(
-                /resetPassword/,
-            );
+            await expect(provider.resetPassword('jeton', 'NouveauMotDePasse2')).rejects.toMatchObject({ name: 'ServiceUnavailable', operation: 'identity provider: resetPassword' });
         });
 
         it('n interpole jamais le jeton dans le message d une panne', async () => {

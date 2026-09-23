@@ -65,5 +65,7 @@ export {
     DomainEvent,
 } from './events.js';
 export { ProblemDetails } from './problem-details.js';
+export { ServiceUnavailable } from './service-unavailable.js';
+export type { Unavailability } from './service-unavailable.js';
 export type { Logger } from './logger.js';
 export type { Measurement, Metrics, StateReading, StateValue } from './metrics.js';
