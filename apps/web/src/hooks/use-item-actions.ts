@@ -129,6 +129,48 @@ async function moveItem(context: ActionContext, item: ItemDto, status: ItemStatu
     }
 }
 
+interface ReorderAction {
+    item: ItemDto;
+    target: ItemDto;
+    direction: 'up' | 'down';
+}
+
+async function reorderItem(context: ActionContext, action: ReorderAction): Promise<boolean> {
+    const { item, target, direction } = action;
+    if (context.projectId === null) return false;
+    updatePending(context, item.id, 'add');
+    updatePending(context, target.id, 'add');
+    context.setFeedback({ status: 'idle' });
+
+    try {
+        const moved = await context.api.reorderItem(context.projectId, item.id, {
+            position: target.position,
+            version: item.version,
+        });
+        context.setItems((current) => orderItems(current.map((candidate) => {
+            if (candidate.id === moved.id) return moved;
+            if (candidate.id === target.id) {
+                return { ...candidate, position: item.position, version: candidate.version + 1 };
+            }
+            return candidate;
+        })));
+        context.setFeedback({ status: 'success', message: labels.itemReordered(itemName(moved), direction) });
+        return true;
+    } catch (error) {
+        const refreshed = await context.refreshItems();
+        context.setFeedback({
+            status: 'error',
+            message: refreshed
+                ? error instanceof ApiError && error.status === 409 ? labels.itemReorderConflict : labels.itemReorderFailed
+                : labels.itemMoveConflictRefreshFailed,
+        });
+        return false;
+    } finally {
+        updatePending(context, item.id, 'remove');
+        updatePending(context, target.id, 'remove');
+    }
+}
+
 async function removeItem(context: ActionContext, item: ItemDto): Promise<boolean> {
     if (context.projectId === null) return false;
     updatePending(context, item.id, 'add');
@@ -183,6 +225,10 @@ export function useItemActions(options: UseItemActionsOptions) {
     const add = useCallback((body: CreateItemBody) => addItem(context, body), [context]);
     const update = useCallback((item: ItemDto, changes: UpdateItemBody) => updateItem(context, item, changes), [context]);
     const move = useCallback((item: ItemDto, status: ItemStatus) => moveItem(context, item, status), [context]);
+    const reorder = useCallback(
+        (item: ItemDto, target: ItemDto, direction: 'up' | 'down') => reorderItem(context, { item, target, direction }),
+        [context],
+    );
     const remove = useCallback((item: ItemDto) => removeItem(context, item), [context]);
 
     return {
@@ -192,6 +238,7 @@ export function useItemActions(options: UseItemActionsOptions) {
         addItem: add,
         updateItem: update,
         moveItem: move,
+        reorderItem: reorder,
         removeItem: remove,
     };
 }

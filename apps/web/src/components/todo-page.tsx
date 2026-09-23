@@ -30,6 +30,7 @@ export interface TodoPageProps {
     hasActiveFilters: boolean;
     onAdd: (body: CreateItemBody) => Promise<AddItemResult>;
     onMove: (item: ItemDto, status: ItemStatus) => Promise<boolean>;
+    onReorder: (item: ItemDto, target: ItemDto, direction: 'up' | 'down') => Promise<boolean>;
     onUpdate: (item: ItemDto, changes: UpdateItemBody) => Promise<boolean>;
     onRemove: (item: ItemDto) => Promise<boolean>;
     onLoadMore: () => void;
@@ -78,6 +79,7 @@ export function TodoPage(props: TodoPageProps) {
                             filterValues={props.filterValues}
                             hasActiveFilters={props.hasActiveFilters}
                             onMove={props.onMove}
+                            onReorder={props.onReorder}
                             onUpdate={props.onUpdate}
                             onRemove={props.onRemove}
                             onLoadMore={props.onLoadMore}

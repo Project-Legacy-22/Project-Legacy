@@ -114,6 +114,18 @@ describe('the Kanban board against WCAG 2.1 AA', () => {
         expect(named(await violations())).toEqual([]);
     });
 
+    it('passes with enabled keyboard reordering controls', async () => {
+        const neighbor = anItem({
+            id: '3e2b7d0e-9a0a-4c1a-8e0a-8f3a0e6a2b31',
+            name: 'Review the demo',
+            status: 'todo',
+        });
+        await renderWith([TODO, neighbor]);
+
+        expect(getElement<HTMLButtonElement>(`button[aria-label="${labels.reorderItem('Review the demo', labels.reorderUp)}"]`).disabled).toBe(false);
+        expect(named(await violations())).toEqual([]);
+    });
+
     // An empty column is not the filled one with fewer rows: it replaces the
     // list with a sentence, so the tree it produces is a different one.
     it('passes with two columns left empty', async () => {

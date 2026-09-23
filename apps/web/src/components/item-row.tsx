@@ -12,6 +12,9 @@ export interface ItemRowProps {
     item: ItemDto;
     isPending: boolean;
     onMove: (status: ItemStatus) => Promise<boolean>;
+    upTarget: ItemDto | null;
+    downTarget: ItemDto | null;
+    onReorder: (target: ItemDto, direction: 'up' | 'down') => Promise<boolean>;
     onUpdate: (item: ItemDto, changes: UpdateItemBody) => Promise<boolean>;
     onRemove: (item: ItemDto) => Promise<boolean>;
     onDragStart: (item: ItemDto, event: DragEvent<HTMLLIElement>) => void;
@@ -27,21 +30,51 @@ interface ItemActionsProps {
     removeButtonRef: RefObject<HTMLButtonElement | null>;
     onEdit: () => void;
     onMove: () => void;
+    canMoveUp: boolean;
+    canMoveDown: boolean;
+    onReorderUp: () => void;
+    onReorderDown: () => void;
     onRemove: () => void;
 }
 
 function focusTargetAfterRemoval(button: HTMLButtonElement | null): HTMLElement | null {
     const row = button?.closest('li');
     return (
-        row?.nextElementSibling?.querySelector<HTMLButtonElement>('button') ??
-        row?.previousElementSibling?.querySelector<HTMLButtonElement>('button') ??
+        row?.nextElementSibling?.querySelector<HTMLButtonElement>('.item-move:not(:disabled)') ??
+        row?.previousElementSibling?.querySelector<HTMLButtonElement>('.item-move:not(:disabled)') ??
         document.querySelector<HTMLInputElement>('#item-name')
+    );
+}
+
+function ReorderButtons(props: ItemActionsProps) {
+    return (
+        <>
+            <button
+                className="button button-secondary"
+                type="button"
+                aria-label={labels.reorderItem(props.name, labels.reorderUp)}
+                disabled={props.isPending || !props.canMoveUp}
+                onClick={props.onReorderUp}
+            >
+                {labels.reorderUp}
+            </button>
+            <button
+                className="button button-secondary"
+                type="button"
+                aria-label={labels.reorderItem(props.name, labels.reorderDown)}
+                disabled={props.isPending || !props.canMoveDown}
+                onClick={props.onReorderDown}
+            >
+                {labels.reorderDown}
+            </button>
+        </>
     );
 }
 
 function ItemActions(props: ItemActionsProps) {
     return (
         <div className="item-actions">
+            <ReorderButtons {...props} />
             <button
                 ref={props.moveButtonRef}
                 className="button button-secondary item-move"
@@ -89,6 +122,9 @@ interface ItemRowBodyProps {
     onCancelMove: () => void;
     onEdit: () => void;
     onMove: (status: ItemStatus) => Promise<boolean>;
+    upTarget: ItemDto | null;
+    downTarget: ItemDto | null;
+    onReorder: (target: ItemDto, direction: 'up' | 'down') => Promise<boolean>;
     onOpenMove: () => void;
     onRemove: () => void;
     onUpdate: (changes: UpdateItemBody) => Promise<boolean>;
@@ -130,6 +166,19 @@ function ItemPlanningSummary({ item }: { item: ItemDto }) {
     );
 }
 
+function ItemCopy({ item, name }: { item: ItemDto; name: string }) {
+    return (
+        <div className="item-copy">
+            <p className="item-name">{name}</p>
+            <p className="item-state">{labels.itemStatus(item.status)}</p>
+            <ItemPlanningSummary item={item} />
+            {item.name === null && (
+                <p className="item-remediation">{labels.unnamedItemRemediation}</p>
+            )}
+        </div>
+    );
+}
+
 function ItemRowBody(props: ItemRowBodyProps) {
     if (props.mode === 'edit') {
         return (
@@ -159,14 +208,7 @@ function ItemRowBody(props: ItemRowBodyProps) {
 
     return (
         <>
-            <div className="item-copy">
-                <p className="item-name">{props.name}</p>
-                <p className="item-state">{labels.itemStatus(props.item.status)}</p>
-                <ItemPlanningSummary item={props.item} />
-                {props.item.name === null && (
-                    <p className="item-remediation">{labels.unnamedItemRemediation}</p>
-                )}
-            </div>
+            <ItemCopy item={props.item} name={props.name} />
             <ItemActions
                 item={props.item}
                 name={props.name}
@@ -176,6 +218,14 @@ function ItemRowBody(props: ItemRowBodyProps) {
                 removeButtonRef={props.removeButtonRef}
                 onEdit={props.onEdit}
                 onMove={props.onOpenMove}
+                canMoveUp={props.upTarget !== null}
+                canMoveDown={props.downTarget !== null}
+                onReorderUp={() => {
+                    if (props.upTarget !== null) void props.onReorder(props.upTarget, 'up');
+                }}
+                onReorderDown={() => {
+                    if (props.downTarget !== null) void props.onReorder(props.downTarget, 'down');
+                }}
                 onRemove={props.onRemove}
             />
         </>
@@ -225,6 +275,9 @@ export function ItemRow(props: ItemRowProps) {
                 onCancelMove={() => close('move')}
                 onEdit={() => setMode('edit')}
                 onMove={props.onMove}
+                upTarget={props.upTarget}
+                downTarget={props.downTarget}
+                onReorder={props.onReorder}
                 onOpenMove={() => setMode('move')}
                 onRemove={() => void handleRemove()}
                 onUpdate={handleUpdate}

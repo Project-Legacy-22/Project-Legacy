@@ -34,6 +34,7 @@ const ITEM: ItemDto = {
     name: 'Original task',
     status: 'todo',
     version: 1,
+    position: '8f80ec8b-8cbf-4d0f-92b5-6297404875f1',
     priority: 'normal',
     dueDate: null,
 };
@@ -65,6 +66,7 @@ function itemsApi(overrides: Partial<ItemsApi> = {}): ItemsApi {
         createItem: vi.fn(),
         updateItem: vi.fn(),
         moveItem: vi.fn(),
+        reorderItem: vi.fn(),
         deleteItem: vi.fn(),
         ...overrides,
     };

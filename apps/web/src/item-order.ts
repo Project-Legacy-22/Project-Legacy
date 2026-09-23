@@ -8,7 +8,9 @@ export function compareItems(left: ItemDto, right: ItemDto): number {
     if (left.dueDate === null && right.dueDate !== null) return 1;
     if (left.dueDate !== null && right.dueDate === null) return -1;
     const dueDate = (left.dueDate ?? '').localeCompare(right.dueDate ?? '');
-    return dueDate !== 0 ? dueDate : left.id.localeCompare(right.id);
+    if (dueDate !== 0) return dueDate;
+    const position = left.position.localeCompare(right.position);
+    return position !== 0 ? position : left.id.localeCompare(right.id);
 }
 
 export function orderItems(items: readonly ItemDto[]): readonly ItemDto[] {

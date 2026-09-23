@@ -1,5 +1,6 @@
 import { credentialsLabels } from './credentials-labels';
 import { itemPlanningLabels } from './item-planning-labels';
+import { itemReorderLabels } from './item-reorder-labels';
 import { itemsFilterLabels } from './items-filter-labels';
 import { itemStatusLabels } from './item-status-labels';
 
@@ -244,13 +245,14 @@ export const labels = {
     allItemsLoaded: 'All items loaded',
     retry: 'Try again',
     emptyItems: 'No item in this project yet.',
-    kanbanInstructions: 'Drag tasks between columns, or use each task’s Move button for a keyboard-accessible choice.',
+    kanbanInstructions: 'Drag tasks between columns, or use each task’s Move button. Use Move up and Move down to order tasks with the same priority and due date.',
     move: 'Move',
     movingItem: 'Moving…',
     confirmMove: 'Confirm move',
     moveDestinationLabel: 'Destination column',
     itemMoveConflict: 'This task changed elsewhere. The latest board has been loaded. Choose a destination and try again.',
     itemMoveConflictRefreshFailed: 'This task changed elsewhere, but the latest board could not be loaded. Try loading the tasks again.',
+    ...itemReorderLabels,
     unnamedItem: 'Unnamed item',
     unnamedItemRemediation: 'This legacy item has no name. Remove it and create it again.',
     edit: 'Edit',

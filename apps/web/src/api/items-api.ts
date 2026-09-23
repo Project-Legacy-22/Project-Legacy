@@ -1,5 +1,5 @@
 import { DEFAULT_ITEM_PAGE_SIZE, ItemDto, ItemPageDto, ProblemDetails } from '@legacy/contracts';
-import type { CreateItemBody, ItemPriority, ItemStatus, MoveItemBody, UpdateItemBody } from '@legacy/contracts';
+import type { CreateItemBody, ItemPriority, ItemStatus, MoveItemBody, ReorderItemBody, UpdateItemBody } from '@legacy/contracts';
 
 import { labels } from '../labels';
 
@@ -21,6 +21,7 @@ export interface ItemsApi {
     createItem: (projectId: string, body: CreateItemBody) => Promise<ItemDto>;
     updateItem: (projectId: string, id: string, body: UpdateItemBody) => Promise<ItemDto>;
     moveItem: (projectId: string, id: string, body: MoveItemBody) => Promise<ItemDto>;
+    reorderItem: (projectId: string, id: string, body: ReorderItemBody) => Promise<ItemDto>;
     deleteItem: (projectId: string, id: string) => Promise<void>;
 }
 
@@ -123,6 +124,18 @@ export const itemsApi: ItemsApi = {
     moveItem(projectId, id, body) {
         return requestJson(
             `/projects/${encodeURIComponent(projectId)}/items/${encodeURIComponent(id)}/status`,
+            { method: 'PATCH', headers: jsonHeaders, body: JSON.stringify(body) },
+            (value) => {
+                const result = ItemDto.safeParse(value);
+                if (!result.success) throw new ApiError(502, labels.invalidItem);
+                return result.data;
+            },
+        );
+    },
+
+    reorderItem(projectId, id, body) {
+        return requestJson(
+            `/projects/${encodeURIComponent(projectId)}/items/${encodeURIComponent(id)}/position`,
             { method: 'PATCH', headers: jsonHeaders, body: JSON.stringify(body) },
             (value) => {
                 const result = ItemDto.safeParse(value);

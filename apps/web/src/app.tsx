@@ -126,6 +126,7 @@ function itemsSectionProps(state: ReturnType<typeof useProjectItems>) {
         hasActiveFilters: state.hasActiveFilters,
         onAdd: state.addItem,
         onMove: state.moveItem,
+        onReorder: state.reorderItem,
         onUpdate: state.updateItem,
         onRemove: state.removeItem,
         onLoadMore: state.loadMore,

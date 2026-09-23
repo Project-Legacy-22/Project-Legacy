@@ -17,6 +17,7 @@ export interface ItemsContentProps {
     filterValues: ItemsFilterValues;
     hasActiveFilters: boolean;
     onMove: (item: ItemDto, status: ItemStatus) => Promise<boolean>;
+    onReorder: (item: ItemDto, target: ItemDto, direction: 'up' | 'down') => Promise<boolean>;
     onUpdate: (item: ItemDto, changes: UpdateItemBody) => Promise<boolean>;
     onRemove: (item: ItemDto) => Promise<boolean>;
     onLoadMore: () => void;
@@ -71,6 +72,7 @@ interface ItemsListSectionProps {
     hasActiveFilters: boolean;
     isDisabled: boolean;
     onMove: (item: ItemDto, status: ItemStatus) => Promise<boolean>;
+    onReorder: (item: ItemDto, target: ItemDto, direction: 'up' | 'down') => Promise<boolean>;
     onUpdate: (item: ItemDto, changes: UpdateItemBody) => Promise<boolean>;
     onRemove: (item: ItemDto) => Promise<boolean>;
     onLoadMore: () => void;
@@ -94,6 +96,7 @@ function ItemsListSection(props: ItemsListSectionProps) {
                 isDisabled={props.isDisabled}
                 pendingItemIds={props.pendingItemIds}
                 onMove={props.onMove}
+                onReorder={props.onReorder}
                 onUpdate={props.onUpdate}
                 onRemove={props.onRemove}
             />
@@ -131,6 +134,7 @@ export function ItemsContent(props: ItemsContentProps) {
                 hasActiveFilters={props.hasActiveFilters}
                 isDisabled={isDisabled}
                 onMove={props.onMove}
+                onReorder={props.onReorder}
                 onUpdate={props.onUpdate}
                 onRemove={props.onRemove}
                 onLoadMore={props.onLoadMore}

@@ -13,6 +13,7 @@ export interface KanbanBoardProps {
     isDisabled: boolean;
     pendingItemIds: ReadonlySet<string>;
     onMove: (item: ItemDto, status: ItemStatus) => Promise<boolean>;
+    onReorder: (item: ItemDto, target: ItemDto, direction: 'up' | 'down') => Promise<boolean>;
     onUpdate: (item: ItemDto, changes: UpdateItemBody) => Promise<boolean>;
     onRemove: (item: ItemDto) => Promise<boolean>;
 }
@@ -24,6 +25,10 @@ interface KanbanColumnProps extends KanbanBoardProps {
     onDragEnd: () => void;
     onDragStart: (item: ItemDto, event: DragEvent<HTMLLIElement>) => void;
     onDrop: (status: ItemStatus, event: DragEvent<HTMLElement>) => void;
+}
+
+function sharesOrderingGroup(item: ItemDto, neighbor: ItemDto | undefined): neighbor is ItemDto {
+    return neighbor !== undefined && item.priority === neighbor.priority && item.dueDate === neighbor.dueDate;
 }
 
 function KanbanColumn(props: KanbanColumnProps) {
@@ -51,12 +56,15 @@ function KanbanColumn(props: KanbanColumnProps) {
                 <p className="kanban-empty">{labels.emptyColumn(props.status)}</p>
             ) : (
                 <ul className="todo-list">
-                    {items.map((item) => (
+                    {items.map((item, index) => (
                         <ItemRow
                             key={item.id}
                             item={item}
                             isPending={props.isDisabled || props.pendingItemIds.has(item.id)}
                             onMove={(destination) => props.onMove(item, destination)}
+                            upTarget={sharesOrderingGroup(item, items[index - 1]) ? items[index - 1] ?? null : null}
+                            downTarget={sharesOrderingGroup(item, items[index + 1]) ? items[index + 1] ?? null : null}
+                            onReorder={(target, direction) => props.onReorder(item, target, direction)}
                             onUpdate={props.onUpdate}
                             onRemove={props.onRemove}
                             onDragStart={props.onDragStart}
