@@ -1,7 +1,8 @@
-import { DEFAULT_ITEM_PAGE_SIZE, ItemDto, ItemPageDto, ProblemDetails } from '@legacy/contracts';
+import { DEFAULT_ITEM_PAGE_SIZE, ItemDto, ItemPageDto } from '@legacy/contracts';
 import type { CreateItemBody, ItemPriority, ItemStatus, MoveItemBody, ReorderItemBody, UpdateItemBody } from '@legacy/contracts';
 
 import { labels } from '../labels';
+import { ApiError, failureMessage, send } from './failure';
 
 export type { ItemDto, ItemPageDto, ItemPriority, ItemStatus } from '@legacy/contracts';
 
@@ -25,29 +26,14 @@ export interface ItemsApi {
     deleteItem: (projectId: string, id: string) => Promise<void>;
 }
 
-export class ApiError extends Error {
-    constructor(
-        readonly status: number,
-        message: string,
-    ) {
-        super(message);
-        this.name = 'ApiError';
-    }
-}
+export { ApiError } from './failure';
 
 // Exported for the other API modules: every endpoint answers a failure with the
 // same problem document, so reading one is not the item client's own business.
 // The fallback is a parameter because a caller usually has a better sentence
 // than "the request failed" for the one operation it was attempting.
-export async function errorMessage(response: Response, fallback?: string): Promise<string> {
-    const generic = fallback ?? labels.requestFailed(response.status);
-    try {
-        const body: unknown = await response.json();
-        const problem = ProblemDetails.safeParse(body);
-        return problem.success ? problem.data.detail : generic;
-    } catch {
-        return generic;
-    }
+export function errorMessage(response: Response, fallback?: string): Promise<string> {
+    return failureMessage(response, fallback);
 }
 
 export async function requestJson<T>(
@@ -55,7 +41,7 @@ export async function requestJson<T>(
     init: RequestInit,
     parse: (value: unknown) => T,
 ): Promise<T> {
-    const response = await fetch(input, init);
+    const response = await send(input, init);
 
     if (!response.ok) {
         throw new ApiError(response.status, await errorMessage(response));
@@ -146,7 +132,7 @@ export const itemsApi: ItemsApi = {
     },
 
     async deleteItem(projectId, id) {
-        const response = await fetch(`/projects/${encodeURIComponent(projectId)}/items/${encodeURIComponent(id)}`, {
+        const response = await send(`/projects/${encodeURIComponent(projectId)}/items/${encodeURIComponent(id)}`, {
             method: 'DELETE',
             headers: { Accept: 'application/json' },
         });

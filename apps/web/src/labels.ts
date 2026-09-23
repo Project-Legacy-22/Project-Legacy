@@ -1,4 +1,5 @@
 import { credentialsLabels } from './credentials-labels';
+import { failureLabels } from './failure-labels';
 import { homeLabels } from './home-labels';
 import { itemPlanningLabels } from './item-planning-labels';
 import { itemReorderLabels } from './item-reorder-labels';
@@ -25,7 +26,7 @@ export const labels = {
     // sharper message here would hand back the list of addresses that exist on
     // the one screen where it shows.
     signInRejected: 'We could not sign you in. Check the address and the password, or reset your password.',
-    signInUnavailable: 'Signing in is unavailable right now. Try again in a moment.',
+    signInFailed: 'Unable to sign in.',
     registerFailed: 'Unable to create the account.',
     // Same reason: a registration answers the same way whether the address was
     // free or already taken, so the confirmation cannot claim an account exists.
@@ -101,7 +102,7 @@ export const labels = {
     // Neutral on purpose: the API answers the same way whether or not the
     // address has an account, and this screen must not undo that.
     resetRequestAccepted: 'If that address has an account, a reset link is on its way.',
-    resetRequestFailed: 'Unable to send a reset link. Try again in a moment.',
+    resetRequestFailed: 'Unable to send a reset link.',
     backToSignIn: 'Back to sign in',
     resetPasswordTitle: 'Choose a new password',
     resetPasswordIntro: 'This link is valid once. After this, every other session is signed out.',
@@ -114,6 +115,7 @@ export const labels = {
 
     ...credentialsLabels,
     ...homeLabels,
+    ...failureLabels,
 
     notificationsFailed: 'Unable to read your notifications.',
     unreadNotifications(count: number): string {
