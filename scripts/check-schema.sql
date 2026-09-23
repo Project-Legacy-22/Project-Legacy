@@ -180,10 +180,21 @@ begin
     select 1
     from pg_indexes
     where schemaname = 'public'
-      and indexname = 'items_project_id_priority_due_date_id_idx'
-      and indexdef ilike '%project_id%priority%due_date%id%'
+      and indexname = 'items_project_id_priority_due_date_position_id_idx'
+      and indexdef ilike '%project_id%priority%due_date%position%id%'
   ) then
-    raise exception 'the stable item planning order must be indexed';
+    raise exception 'the stable item planning and position order must be indexed';
+  end if;
+
+  if (
+    select is_nullable
+    from information_schema.columns
+    where table_schema = 'public' and table_name = 'items' and column_name = 'position'
+  ) <> 'NO' or not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.items'::regclass and conname = 'items_position_unique'
+  ) then
+    raise exception 'items.position must be mandatory and unique';
   end if;
 
   -- 6. users.email is unique.

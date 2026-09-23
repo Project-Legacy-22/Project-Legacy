@@ -32,6 +32,7 @@ describe('changeItem', () => {
             id: 'item-1',
             name: 'New name',
             status: 'doing',
+            position: 'item-1',
             version: 2,
             priority: 'normal',
             dueDate: null,

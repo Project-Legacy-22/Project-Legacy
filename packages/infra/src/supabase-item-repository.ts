@@ -1,8 +1,8 @@
 import { Buffer } from 'node:buffer';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { criteriaFingerprint, InvalidItemCursor, ITEM_PRIORITIES, normalizeSearchTerm, rehydrateItem } from '@legacy/core-items';
-import type { DomainEvent, Item, ItemPage, ItemPageQuery, ItemPriority, ItemSearchCriteria, ItemStatusMove } from '@legacy/core-items';
+import { criteriaFingerprint, InvalidItemCursor, InvalidItemPosition, ItemNotFound, ItemPositionConflict, ITEM_PRIORITIES, normalizeSearchTerm, rehydrateItem } from '@legacy/core-items';
+import type { DomainEvent, Item, ItemPage, ItemPageQuery, ItemPositionMove, ItemPriority, ItemSearchCriteria, ItemStatusMove } from '@legacy/core-items';
 
 import type { Database } from './database.types.js';
 import type { ItemStore } from './item-store.js';
@@ -28,6 +28,7 @@ function toItem(row: ItemRow): Item {
         name: row.name,
         status: row.status,
         version: row.version,
+        position: row.position,
         priority: row.priority,
         dueDate: row.due_date,
         projectId: row.project_id,
@@ -38,6 +39,7 @@ function toItem(row: ItemRow): Item {
 interface ItemPosition {
     priority: ItemPriority;
     dueDate: string | null;
+    position: string;
     id: string;
     // A fingerprint of the search/filter criteria the cursor was minted
     // under (US-32). Changing what is being asked for changes the order, so
@@ -75,9 +77,10 @@ function isValidFingerprint(value: unknown): value is string {
 function isPosition(value: unknown): value is ItemPosition {
     if (typeof value !== 'object' || value === null) return false;
     const candidate = value as Record<string, unknown>;
-    return Object.keys(candidate).length === 4
+    return Object.keys(candidate).length === 5
         && isValidPriority(candidate.priority)
         && isValidDueDate(candidate.dueDate)
+        && isValidId(candidate.position)
         && isValidId(candidate.id)
         && isValidFingerprint(candidate.criteria);
 }
@@ -90,6 +93,7 @@ function encodeCursor(row: ItemRow, criteria: ItemSearchCriteria): string {
     return Buffer.from(JSON.stringify({
         priority: row.priority,
         dueDate: row.due_date,
+        position: row.position,
         id: row.id,
         criteria: criteriaFingerprint(criteria),
     }), 'utf8').toString('base64url');
@@ -119,11 +123,11 @@ function escapeLikePattern(term: string): string {
 // then UUID. Each interpolated value has been validated above before it reaches
 // PostgREST filter syntax.
 function afterCursor(cursor: string, criteria: ItemSearchCriteria): string {
-    const { priority, dueDate, id } = decodeCursor(cursor, criteria);
+    const { priority, dueDate, position } = decodeCursor(cursor, criteria);
     if (dueDate === null) {
-        return `priority.lt.${priority},and(priority.eq.${priority},due_date.is.null,id.gt.${id})`;
+        return `priority.lt.${priority},and(priority.eq.${priority},due_date.is.null,position.gt.${position})`;
     }
-    return `priority.lt.${priority},and(priority.eq.${priority},or(due_date.gt.${dueDate},and(due_date.eq.${dueDate},id.gt.${id}),due_date.is.null))`;
+    return `priority.lt.${priority},and(priority.eq.${priority},or(due_date.gt.${dueDate},and(due_date.eq.${dueDate},position.gt.${position}),due_date.is.null))`;
 }
 
 // The reads sit outside the factory: they need nothing from it but the client.
@@ -167,6 +171,7 @@ async function findPage(request: PageRequest): Promise<ItemPage | undefined> {
     const { data, error } = await positioned
         .order('priority', { ascending: false })
         .order('due_date', { ascending: true, nullsFirst: false })
+        .order('position', { ascending: true })
         .order('id', { ascending: true })
         .limit(limit + 1);
     if (error) fail('findPageForMember', error);
@@ -274,6 +279,20 @@ async function moveStatus(client: ItemClient, move: ItemStatusMove): Promise<Ite
     return data ? toItem(data) : undefined;
 }
 
+async function swapPosition(client: ItemClient, move: ItemPositionMove): Promise<Item | undefined> {
+    const { data, error } = await client.rpc('swap_item_position', {
+        p_item_id: move.id,
+        p_project_id: move.projectId,
+        p_position: move.position,
+        p_expected_version: move.expectedVersion,
+    });
+    if (error?.code === 'P5001') throw new InvalidItemPosition();
+    if (error?.code === 'P5002') throw new ItemPositionConflict(move.id);
+    if (error?.code === 'P5003') throw new ItemNotFound(move.id);
+    if (error) fail('swapPosition', error);
+    return data ? toItem(data) : undefined;
+}
+
 async function remove(client: ItemClient, id: string): Promise<void> {
     const { error } = await client.from('items').delete().eq('id', id);
     if (error) fail('remove', error);
@@ -299,6 +318,7 @@ export function createSupabaseItemStore(settings: SupabaseSettings): ItemStore {
         save: (item, event) => save(client, item, event),
         update: (item) => update(client, item),
         moveStatus: (move) => moveStatus(client, move),
+        swapPosition: (move) => swapPosition(client, move),
         remove: (id) => remove(client, id),
     };
 }

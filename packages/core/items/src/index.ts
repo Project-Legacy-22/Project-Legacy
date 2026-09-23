@@ -9,6 +9,8 @@ export {
     InvalidItemCursor,
     ItemNotFound,
     ItemStatusConflict,
+    ItemPositionConflict,
+    InvalidItemPosition,
     ItemProjectNotFound,
     ITEM_STATUSES,
     ITEM_PRIORITIES,
@@ -22,12 +24,13 @@ export type { ItemSearchCriteria } from './domain/item-search.js';
 export { ITEM_CREATED_V1, itemCreated } from './domain/event.js';
 export type { DomainEvent, ItemCreatedV1 } from './domain/event.js';
 
-export type { ItemRepository, ItemPage, ItemPageQuery, ItemStatusMove } from './ports/item-repository.js';
+export type { ItemRepository, ItemPage, ItemPageQuery, ItemStatusMove, ItemPositionMove } from './ports/item-repository.js';
 
 export { makeListItems } from './application/list-items.js';
 export { makeAddItem } from './application/add-item.js';
 export { makeChangeItem } from './application/change-item.js';
 export { makeMoveItem } from './application/move-item.js';
+export { makeReorderItem } from './application/reorder-item.js';
 export { makeRemoveItem } from './application/remove-item.js';
 export type { AddItemDependencies } from './application/add-item.js';
 export type { ItemChanges } from './application/change-item.js';

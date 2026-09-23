@@ -24,6 +24,13 @@ export interface ItemStatusMove {
     expectedVersion: number;
 }
 
+export interface ItemPositionMove {
+    id: string;
+    projectId: string;
+    position: string;
+    expectedVersion: number;
+}
+
 // What the use cases require of the outside world, named after the need and not
 // after the technology. packages/infra provides the implementations.
 //
@@ -45,5 +52,6 @@ export interface ItemRepository {
 
     update(item: Item): Promise<void>;
     moveStatus(move: ItemStatusMove): Promise<Item | undefined>;
+    swapPosition(move: ItemPositionMove): Promise<Item | undefined>;
     remove(id: string): Promise<void>;
 }

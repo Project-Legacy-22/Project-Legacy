@@ -29,7 +29,7 @@ export interface Enumeration {
 
 // `now` is the only default that is not a literal, and the three engines
 // spell it differently. The identifier generators the database carries --
-// `uuid_generate_v7()` on four tables -- are deliberately absent: they are a
+// `uuid_generate_v7()` on four IDs and items.position -- are deliberately absent: they are a
 // function of ours, and a target supplies its own identifiers or receives
 // them with the data, which is what our exports do.
 export type Default = 'now' | { literal: string | number };
@@ -140,13 +140,16 @@ export const TABLES: readonly Table[] = [
                 default: { literal: 'normal' },
             },
             { name: 'due_date', kind: 'date', nullable: true },
+            // Exported and imported as data. The source generates this UUID
+            // when a direct insert omits it; target engines receive the value.
+            uuid('position'),
         ],
         primaryKey: ['id'],
         references: [
             { column: 'user_id', table: 'users', target: 'id' },
             { column: 'project_id', table: 'projects', target: 'id' },
         ],
-        unique: [],
+        unique: [['position']],
     },
     {
         name: 'outbox',
