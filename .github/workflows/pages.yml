@@ -3,7 +3,7 @@
 #
 # Le rapport existe deja en artefact, mais un artefact se telecharge et se
 # dezippe. Publie, il s ouvre d un clic et se cite en revue. La documentation
-# d API de EN-44 rejoindra le meme site quand elle existera.
+# d API d EN-44 (#45) est publiee sur le meme site, sous /api/.
 
 name: pages
 
@@ -55,9 +55,30 @@ jobs:
           <p>Rapports produits à chaque intégration sur <code>dev</code>.</p>
           <ul>
             <li><a href="./index.html">Rapport de couverture</a></li>
+            <li><a href="./api/">Documentation de l'API</a> (<a href="./api/openapi.json">OpenAPI 3.1</a>)</li>
           </ul>
           HTML
           mv coverage/index-site.html coverage/accueil.html
+
+      # Le document versionne, pas une generation faite ici : les tests viennent
+      # de verifier qu il est exactement celui que le code produit. Redoc est
+      # epingle et son empreinte verifiee par le navigateur, un changement
+      # silencieux sur le CDN ne s executerait pas.
+      - name: Ajouter la documentation d API
+        run: |
+          set -euo pipefail
+          mkdir -p coverage/api
+          cp docs/api/openapi.json coverage/api/openapi.json
+          cat > coverage/api/index.html <<'HTML'
+          <!doctype html>
+          <meta charset="utf-8">
+          <title>Legacy 22 — API</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <redoc spec-url="./openapi.json"></redoc>
+          <script src="https://cdn.jsdelivr.net/npm/redoc@2.5.4/bundles/redoc.standalone.js"
+                  integrity="sha384-w447zOpYfw/1Tv/5AK9NfHTlQIqE3RVR6KY62jCyy9zNDgO64cMwGGP1Fj0zJVf5"
+                  crossorigin="anonymous"></script>
+          HTML
 
       - uses: actions/upload-pages-artifact@v5
         with:
