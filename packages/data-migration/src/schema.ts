@@ -174,16 +174,29 @@ export const TABLES: readonly Table[] = [
         columns: [
             uuid('id'),
             uuid('user_id'),
-            uuid('item_id'),
+            // Nullable depuis que les notifications peuvent nommer un projet.
+            uuid('item_id', true),
             uuid('event_id'),
             timestamp('read_at', true),
             stamped('created_at'),
             stamped('updated_at'),
+            // En dernier, et pas par gout : PostgreSQL ajoute une colonne a la
+            // fin de la table, et le test de modele compare l ordre autant que
+            // les noms. Les placer au milieu, la ou ils se lisent le mieux,
+            // fait echouer la comparaison contre information_schema.
+            //
+            // `kind` et `project_id` sont lies : le genre decide si la ligne
+            // nomme une tache ou un projet, et un `check` refuse une ligne qui
+            // ne nommerait ni l une ni l autre. Cette verification de valeur
+            // reste en PostgreSQL, comme les autres.
+            text('kind'),
+            uuid('project_id', true),
         ],
         primaryKey: ['id'],
         references: [
             { column: 'user_id', table: 'users', target: 'id' },
             { column: 'item_id', table: 'items', target: 'id' },
+            { column: 'project_id', table: 'projects', target: 'id' },
             { column: 'event_id', table: 'processed_events', target: 'event_id' },
         ],
         // One notification per event, not per delivery: the rule that makes a

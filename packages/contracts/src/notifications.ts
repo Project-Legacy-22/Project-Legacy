@@ -10,7 +10,10 @@ export const NotificationIdParams = z.object({
 
 export const NotificationDto = z.object({
     id: z.uuid(),
-    itemId: z.uuid(),
+    // Nullable since notifications may name a project instead of a task. What
+    // a row names is decided by its kind, and the check constraint in the
+    // database refuses a row naming neither.
+    itemId: z.uuid().nullable(),
     readAt: z.iso.datetime().nullable(),
     createdAt: z.iso.datetime(),
 });

@@ -100,7 +100,9 @@ export type Database = {
           created_at: string
           event_id: string
           id: string
-          item_id: string
+          item_id: string | null
+          kind: string
+          project_id: string | null
           read_at: string | null
           updated_at: string
           user_id: string
@@ -109,7 +111,9 @@ export type Database = {
           created_at?: string
           event_id: string
           id?: string
-          item_id: string
+          item_id?: string | null
+          kind: string
+          project_id?: string | null
           read_at?: string | null
           updated_at?: string
           user_id: string
@@ -118,7 +122,9 @@ export type Database = {
           created_at?: string
           event_id?: string
           id?: string
-          item_id?: string
+          item_id?: string | null
+          kind?: string
+          project_id?: string | null
           read_at?: string | null
           updated_at?: string
           user_id?: string
@@ -136,6 +142,13 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
@@ -278,6 +291,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_member_with_event: {
+        Args: {
+          p_event_id: string
+          p_event_name: string
+          p_occurred_at: string
+          p_payload: Json
+          p_project_id: string
+          p_user_id: string
+        }
+        Returns: boolean
+      }
       create_item_with_event: {
         Args: {
           p_due_date: string
