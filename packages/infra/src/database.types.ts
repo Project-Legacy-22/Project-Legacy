@@ -331,6 +331,10 @@ export type Database = {
         Args: { p_event_id: string; p_item_id: string; p_user_id: string }
         Returns: boolean
       }
+      record_member_added_notification: {
+        Args: { p_event_id: string; p_project_id: string; p_user_id: string }
+        Returns: boolean
+      }
       unaccent: { Args: { "": string }; Returns: string }
       uuid_generate_v7: { Args: never; Returns: string }
     }
