@@ -7,7 +7,9 @@ export class TooManyAttempts extends Error {
     readonly code = 'too_many_attempts';
     readonly httpStatus = 429;
 
-    constructor() {
+    // Whole seconds until the window reopens, sent as Retry-After so the
+    // interface can say how long to wait instead of "later".
+    constructor(readonly retryAfterSeconds: number) {
         super('Too many attempts. Try again later.');
         this.name = 'TooManyAttempts';
     }
@@ -59,6 +61,9 @@ export function rateLimit(options: RateLimitOptions): RequestHandler {
         }
 
         current.attempts += 1;
-        next(current.attempts > maxAttempts ? new TooManyAttempts() : undefined);
+        if (current.attempts <= maxAttempts) return next();
+
+        const remainingMs = windowMs - (at - current.startedAt);
+        next(new TooManyAttempts(Math.max(1, Math.ceil(remainingMs / 1000))));
     };
 }

@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
+import { ServiceUnavailable } from '@legacy/contracts';
+
 import {
     adapterFailure,
     asInstant,
+    DeadlineExceeded,
     retryingOnOutage,
     serviceRoleClient,
     withDeadline,
@@ -45,6 +48,81 @@ describe('adapterFailure', () => {
         expect(() => identity('signOut', undefined)).toThrow('identity provider: signOut failed');
     });
 });
+
+// #383: a dependency that throttled us or was down became a 500. Each shape
+// below is the one the real client produces, not an invented one.
+describe('adapterFailure, when the dependency is the problem', () => {
+    class ConnectionTimeoutError extends Error {}
+
+    const causes = [
+        {
+            shape: 'a GoTrue rate limit',
+            cause: { name: 'AuthApiError', status: 429, code: 'over_request_rate_limit' },
+            reason: 'rate_limited',
+            retryAfter: 30,
+        },
+        { shape: 'a call past its deadline', cause: new DeadlineExceeded('refresh', 5000), reason: 'timed_out', retryAfter: 5 },
+        { shape: 'a database statement timeout', cause: { code: '57014', message: 'canceling statement' }, reason: 'timed_out', retryAfter: 5 },
+        { shape: 'a gateway answering 503', cause: { status: 503 }, reason: 'unreachable', retryAfter: 5 },
+        {
+            shape: 'a GoTrue host that did not answer',
+            cause: { name: 'AuthRetryableFetchError', status: 0, message: 'fetch failed' },
+            reason: 'unreachable',
+            retryAfter: 5,
+        },
+        {
+            shape: 'a PostgREST fetch that failed',
+            cause: { message: 'TypeError: fetch failed', details: '', hint: '', code: '' },
+            reason: 'unreachable',
+            retryAfter: 5,
+        },
+        { shape: 'PostgREST unable to reach its database', cause: { code: 'PGRST001' }, reason: 'unreachable', retryAfter: 5 },
+        { shape: 'a Redis connection timeout', cause: new ConnectionTimeoutError('Connection timeout'), reason: 'unreachable', retryAfter: 5 },
+    ] as const;
+
+    it.each(causes)('reports $shape as a passing unavailability', ({ cause, reason, retryAfter }) => {
+        const fail = adapterFailure('identity provider');
+
+        const thrown = catchError(() => fail('refresh', cause));
+
+        expect(thrown).toBeInstanceOf(ServiceUnavailable);
+        expect(thrown).toMatchObject({
+            reason,
+            retryAfterSeconds: retryAfter,
+            operation: 'identity provider: refresh',
+            httpStatus: 503,
+        });
+        expect((thrown as Error).cause).toBe(cause);
+    });
+
+    // Dressing an unknown error up as an outage would hide a bug of ours
+    // behind a retry: it has to stay a plain failure, reported as 500.
+    it('keeps an error nobody modelled as a plain failure', () => {
+        const fail = adapterFailure('items repository');
+
+        const thrown = catchError(() => fail('save', { code: '23505', message: 'duplicate key' }));
+
+        expect(thrown).not.toBeInstanceOf(ServiceUnavailable);
+        expect(thrown).toHaveProperty('message', 'items repository: save failed');
+    });
+
+    it('never puts the dependency or the operation in the client-facing message', () => {
+        const fail = adapterFailure('identity provider');
+
+        const thrown = catchError(() => fail('refresh', { status: 429 }));
+
+        expect((thrown as Error).message).toBe('The service is temporarily unavailable. Try again shortly.');
+    });
+});
+
+function catchError(run: () => never): unknown {
+    try {
+        run();
+    } catch (error) {
+        return error;
+    }
+    return undefined;
+}
 
 describe('serviceRoleClient', () => {
     // No request is made: building the client is what this covers. Reaching a
