@@ -16,6 +16,9 @@ export {
 } from './domain/item.js';
 export type { Item, ItemPriority, ItemStatus } from './domain/item.js';
 
+export { criteriaFingerprint, matchesCriteria, normalizeSearchTerm } from './domain/item-search.js';
+export type { ItemSearchCriteria } from './domain/item-search.js';
+
 export { ITEM_CREATED_V1, itemCreated } from './domain/event.js';
 export type { DomainEvent, ItemCreatedV1 } from './domain/event.js';
 

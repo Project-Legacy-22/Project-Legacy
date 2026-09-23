@@ -52,10 +52,14 @@ function container(): string {
 }
 
 function observed(): Observed[] {
+    // A generated column (US-32's items.name_search) is excluded: it carries
+    // no data of its own, only a PostgreSQL-specific derivation of another
+    // column, which schema.ts already leaves out for the same reason it
+    // leaves out triggers and functions (see that file's header).
     const query = `select table_name, column_name, udt_name, is_nullable,
             case when column_default is null then 'no' else 'yes' end
         from information_schema.columns
-        where table_schema = 'public'
+        where table_schema = 'public' and is_generated = 'NEVER'
         order by table_name, ordinal_position`;
 
     const output = execFileSync(

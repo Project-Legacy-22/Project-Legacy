@@ -45,6 +45,9 @@ order: project, descending priority, ascending due date with nulls last, then id
 opaque cursor contains those three sort values. It is validated before any value reaches a
 PostgREST filter.
 
+Since US-32, the cursor also carries a fingerprint of the request's search and filter criteria;
+see `docs/features/33-search-and-filter-tasks.md` for the extended contract.
+
 The item and its `item.created.v1` event are still written through one database function and
 one transaction. The event payload remains limited to item and owner identifiers: priority,
 due date and task name do not enter the broker.

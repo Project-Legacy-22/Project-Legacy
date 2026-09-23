@@ -99,4 +99,77 @@ describe('listItems', () => {
             httpStatus: 404,
         });
     });
+
+    describe('recherche et filtres (US-32)', () => {
+        function seeded() {
+            return inMemoryItemRepository([
+                anItem({ id: 'item-1', name: 'Acheter du pain', status: 'todo', priority: 'high', dueDate: '2026-09-20', projectId: PROJECT_ID, ownerId: OWNER_ID }),
+                anItem({ id: 'item-2', name: 'Ecrire le rapport', status: 'doing', priority: 'high', dueDate: null, projectId: PROJECT_ID, ownerId: OWNER_ID }),
+                anItem({ id: 'item-3', name: 'Relire le café des sponsors', status: 'todo', priority: 'normal', dueDate: '2026-09-20', projectId: PROJECT_ID, ownerId: OWNER_ID }),
+                anItem({ id: 'item-4', name: 'Deployer', status: 'done', priority: 'low', dueDate: null, projectId: PROJECT_ID, ownerId: OWNER_ID }),
+            ]);
+        }
+
+        it.each([
+            { search: 'cafe' },
+            { search: 'CAFE' },
+            { search: 'Café' },
+            { search: 'CAFÉ' },
+        ])('trouve un nom accentue sans distinction de casse ni d accent avec %j', async ({ search }) => {
+            const listItems = makeListItems(seeded());
+
+            const page = await listItems(PROJECT_ID, OWNER_ID, { ...FIRST_PAGE, search });
+
+            expect(page.items.map((item) => item.id)).toEqual(['item-3']);
+        });
+
+        it.each([
+            [{ status: 'todo' as const }, ['item-1', 'item-3']],
+            [{ priority: 'high' as const }, ['item-1', 'item-2']],
+            [{ dueDate: '2026-09-20' }, ['item-1', 'item-3']],
+            [{ dueDate: null }, ['item-2', 'item-4']],
+            [{ status: 'todo' as const, priority: 'high' as const }, ['item-1']],
+            [{ search: 'e', status: 'doing' as const }, ['item-2']],
+        ])('combine les filtres et la recherche avec %j', async (criteria, expected) => {
+            const listItems = makeListItems(seeded());
+
+            const page = await listItems(PROJECT_ID, OWNER_ID, { ...FIRST_PAGE, ...criteria });
+
+            expect(page.items.map((item) => item.id)).toEqual(expected);
+        });
+
+        it('distingue absence de resultat et absence de donnee', async () => {
+            const noData = await makeListItems(inMemoryItemRepository([], [{ projectId: PROJECT_ID, userId: OWNER_ID }]))(
+                PROJECT_ID,
+                OWNER_ID,
+                FIRST_PAGE,
+            );
+            const noMatch = await makeListItems(seeded())(PROJECT_ID, OWNER_ID, { ...FIRST_PAGE, search: 'inexistant' });
+
+            expect(noData).toEqual({ items: [], nextCursor: undefined });
+            expect(noMatch).toEqual({ items: [], nextCursor: undefined });
+        });
+
+        it('pagine sans repeter ni sauter un item quand un filtre reste actif', async () => {
+            const listItems = makeListItems(seeded());
+            const criteria = { status: 'todo' as const };
+
+            const first = await listItems(PROJECT_ID, OWNER_ID, { limit: 1, cursor: undefined, ...criteria });
+            const second = await listItems(PROJECT_ID, OWNER_ID, { limit: 1, cursor: first.nextCursor, ...criteria });
+
+            expect(first.items.map((item) => item.id)).toEqual(['item-1']);
+            expect(second.items.map((item) => item.id)).toEqual(['item-3']);
+            expect(second.nextCursor).toBeUndefined();
+        });
+
+        it('refuse un curseur emis sous d autres criteres, comme un curseur non emis par l API', async () => {
+            const listItems = makeListItems(seeded());
+
+            const first = await listItems(PROJECT_ID, OWNER_ID, { limit: 1, cursor: undefined, status: 'todo' });
+
+            await expect(
+                listItems(PROJECT_ID, OWNER_ID, { limit: 1, cursor: first.nextCursor, status: 'doing' }),
+            ).rejects.toMatchObject({ code: 'invalid_item_cursor', httpStatus: 400 });
+        });
+    });
 });

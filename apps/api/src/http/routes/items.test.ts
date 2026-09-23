@@ -133,6 +133,10 @@ describe('items API', () => {
             expect((await harness.request(`${ITEMS_PATH}?limit=1000`)).status).toBe(400);
             expect((await harness.request(`${ITEMS_PATH}?cursor=invente`)).status).toBe(400);
         });
+
+        // Search and filter query params (US-32) are covered separately in
+        // items-search.test.ts, which keeps this file under the file-length
+        // ceiling in standards/02-code-style.md.
     });
 
     describe('POST /projects/:projectId/items', () => {

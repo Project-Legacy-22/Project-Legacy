@@ -49,6 +49,10 @@ function listItems(useCases: ItemUseCases): RequestHandler {
             .listItems(params.data.projectId, accountOf(res).id, {
                 limit: query.data.limit,
                 cursor: query.data.cursor,
+                search: query.data.search,
+                status: query.data.status,
+                priority: query.data.priority,
+                dueDate: query.data.dueDate === undefined ? undefined : query.data.dueDate === 'none' ? null : query.data.dueDate,
             })
             .then((page) => res.send(toItemPageDto(page)))
             .catch(next);

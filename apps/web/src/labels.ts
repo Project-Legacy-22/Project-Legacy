@@ -1,13 +1,7 @@
-import type { ItemStatus } from '@legacy/contracts';
-
 import { credentialsLabels } from './credentials-labels';
 import { itemPlanningLabels } from './item-planning-labels';
-
-const ITEM_STATUS_LABELS: Record<ItemStatus, string> = {
-    todo: 'Todo',
-    doing: 'In progress',
-    done: 'Done',
-};
+import { itemsFilterLabels } from './items-filter-labels';
+import { itemStatusLabels } from './item-status-labels';
 
 export const labels = {
     // Authentication (US-11b)
@@ -288,12 +282,7 @@ export const labels = {
     columnItemCount(count: number): string {
         return `${count} ${count === 1 ? 'task' : 'tasks'}`;
     },
-    emptyColumn(status: ItemStatus): string {
-        return `No tasks in ${ITEM_STATUS_LABELS[status]}.`;
-    },
-    itemStatus(status: ItemStatus): string {
-        return ITEM_STATUS_LABELS[status];
-    },
+    ...itemStatusLabels,
     moveItem(name: string): string {
         return `Move: ${name}`;
     },
@@ -309,6 +298,7 @@ export const labels = {
     itemsLoaded(count: number): string {
         return `${count} more ${count === 1 ? 'item' : 'items'} loaded.`;
     },
+    ...itemsFilterLabels,
     editItem(name: string): string {
         return `Edit: ${name}`;
     },
