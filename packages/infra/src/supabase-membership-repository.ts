@@ -1,9 +1,15 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import {
+    LastProjectOwner,
+    ProjectMemberNotFound,
+    ProjectNotFound,
+    ProjectOwnerRequired,
+} from '@legacy/core-projects';
 import type {
     DomainEvent,
     Membership,
-    MembershipRepository,
+    MemberRemovalRepository,
     ProjectRole,
 } from '@legacy/core-projects';
 
@@ -47,9 +53,20 @@ function toMembership(row: MembershipRow): Membership {
     return { userId: row.user_id, email: row.users.email, role: asRole(row.role) };
 }
 
+function checkRemovalResult(result: unknown, projectId: string): void {
+    switch (result) {
+        case 'removed': return;
+        case 'project_not_found': throw new ProjectNotFound(projectId);
+        case 'owner_required': throw new ProjectOwnerRequired();
+        case 'member_not_found': throw new ProjectMemberNotFound();
+        case 'last_owner': throw new LastProjectOwner();
+        default: fail('removeMember', new Error('Invalid member removal result'));
+    }
+}
+
 export function createSupabaseMembershipRepository(
     settings: SupabaseSettings,
-): MembershipRepository {
+): MemberRemovalRepository {
     const client: SupabaseClient<Database> = serviceRoleClient(settings);
 
     return {
@@ -93,6 +110,16 @@ export function createSupabaseMembershipRepository(
             // `?? false` couvre le cas ou PostgREST rendrait null : mieux vaut
             // annoncer « rien ajoute » que de laisser passer un undefined.
             return data ?? false;
+        },
+
+        async removeMember({ projectId, callerId, memberId }) {
+            const { data, error } = await client.rpc('remove_project_member', {
+                p_project_id: projectId,
+                p_caller_id: callerId,
+                p_member_id: memberId,
+            });
+            if (error) fail('removeMember', error);
+            checkRemovalResult(data, projectId);
         },
     };
 }

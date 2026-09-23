@@ -1,4 +1,5 @@
-import type { DomainEvent, Membership, MembershipRepository } from '../../src/index.js';
+import { assertCanRemoveMember } from '../../src/index.js';
+import type { DomainEvent, Membership, MemberRemovalRepository } from '../../src/index.js';
 
 // Seeded flat, one row per membership, because that is the shape the table has:
 // a composite key of project and account. Grouping by project in the fixture
@@ -11,7 +12,7 @@ export interface SeededMembership extends Membership {
 // The events are kept rather than dropped: the rule worth asserting is not
 // only that a membership appears, but that adding someone twice announces it
 // once. A fake that forgot the events could not show that.
-export interface InMemoryMembershipRepository extends MembershipRepository {
+export interface InMemoryMembershipRepository extends MemberRemovalRepository {
     rows: SeededMembership[];
     events: DomainEvent[];
 }
@@ -25,7 +26,7 @@ function addressOf(memberId: string): string {
 export function inMemoryMembershipRepository(
     seed: readonly SeededMembership[] = [],
 ): InMemoryMembershipRepository {
-    const rows = [...seed];
+    const rows = seed.map(row => ({ ...row }));
     const events: DomainEvent[] = [];
 
     return {
@@ -57,6 +58,16 @@ export function inMemoryMembershipRepository(
             events.push(event);
 
             return Promise.resolve(true);
+        },
+
+        removeMember(removal) {
+            const members = rows.filter(row => row.projectId === removal.projectId);
+            assertCanRemoveMember(members, removal);
+            const index = rows.findIndex(
+                row => row.projectId === removal.projectId && row.userId === removal.memberId,
+            );
+            if (index !== -1) rows.splice(index, 1);
+            return Promise.resolve();
         },
     };
 }

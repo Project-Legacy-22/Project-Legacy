@@ -624,6 +624,9 @@ end $$;
 
 rollback;
 
+-- #354: member removal, task preservation, rollback and RPC privileges.
+\ir check-project-member-removal.sql
+
 -- Behavioural checks for the two authorization cases ADR-0001 requires. All
 -- fixtures live in a rolled-back transaction, so the script is repeatable.
 begin;

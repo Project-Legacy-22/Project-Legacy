@@ -52,6 +52,7 @@ import {
     makeListProjectMembers,
     makeListProjects,
     makeRemoveProject,
+    makeRemoveProjectMember,
 } from '@legacy/core-projects';
 
 import { afterWrite } from './after-write.js';
@@ -91,6 +92,7 @@ export interface ProjectUseCases {
     addProject: ReturnType<typeof makeAddProject>;
     removeProject: ReturnType<typeof makeRemoveProject>;
     listProjectMembers: ReturnType<typeof makeListProjectMembers>;
+    removeProjectMember: ReturnType<typeof makeRemoveProjectMember>;
 }
 
 export interface NotificationUseCases {
@@ -301,6 +303,7 @@ export function compose(config: Config): Application {
                 addProject: makeAddProject({ repository: projects, newId: uuid }),
                 removeProject: makeRemoveProject(projects),
                 listProjectMembers: makeListProjectMembers(memberships),
+                removeProjectMember: makeRemoveProjectMember(memberships),
             },
             notifications: {
                 listNotifications: makeListNotifications(notifications),

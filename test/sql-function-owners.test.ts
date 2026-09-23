@@ -34,6 +34,7 @@ const OWNERS: Readonly<Record<string, string>> = {
     'public.mirror_auth_user': '20260910120000_mirror_auth_user_keeps_consent_and_default_project',
     'public.record_item_created_notification': '20260915140000_notification_beyond_an_item',
     'public.record_member_added_notification': '20260915180000_record_member_added_notification',
+    'public.remove_project_member': '20260918074845_remove_project_member',
     'public.set_updated_at': '20260903120000_initial_schema',
     'public.uuid_generate_v7': '20260903120000_initial_schema',
 };

@@ -16,6 +16,10 @@ export const ProjectItemIdParams = ProjectIdParams.extend({
     id: z.uuid(),
 });
 
+export const ProjectMemberIdParams = ProjectIdParams.extend({
+    userId: z.uuid(),
+});
+
 export const CreateProjectBody = z.object({
     name: projectName,
 });
@@ -55,6 +59,7 @@ export const ProjectPageDto = z.object({
 
 export type ProjectIdParams = z.infer<typeof ProjectIdParams>;
 export type ProjectItemIdParams = z.infer<typeof ProjectItemIdParams>;
+export type ProjectMemberIdParams = z.infer<typeof ProjectMemberIdParams>;
 export type CreateProjectBody = z.infer<typeof CreateProjectBody>;
 export type ListProjectsQuery = z.infer<typeof ListProjectsQuery>;
 export type ProjectMemberDto = z.infer<typeof ProjectMemberDto>;
