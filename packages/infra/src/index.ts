@@ -1,5 +1,6 @@
 export { createSupabaseItemStore } from './supabase-item-repository.js';
 export type { SupabaseSettings } from './supabase-item-repository.js';
+export { createSupabaseAttentionReader } from './supabase-attention-reader.js';
 export { createSupabaseIdentityProvider } from './supabase-identity-provider.js';
 export type { SupabaseAuthSettings } from './supabase-identity-provider.js';
 export { createSupabasePersonalDataStore } from './supabase-personal-data-store.js';

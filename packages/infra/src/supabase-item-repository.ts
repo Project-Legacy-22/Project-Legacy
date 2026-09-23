@@ -22,7 +22,7 @@ export interface SupabaseSettings {
 // generic 500, never be swallowed or turned into an empty result.
 const fail: AdapterFailure = adapterFailure('items repository');
 
-function toItem(row: ItemRow): Item {
+export function toItem(row: ItemRow): Item {
     return rehydrateItem({
         id: row.id,
         name: row.name,

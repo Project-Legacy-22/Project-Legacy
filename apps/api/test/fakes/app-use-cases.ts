@@ -25,6 +25,9 @@ function unexercised(): AppUseCases {
             reorderItem: refusing('reorderItem'),
             removeItem: refusing('removeItem'),
         },
+        attention: {
+            listAttention: refusing('listAttention'),
+        },
         auth: {
             registerAccount: refusing('registerAccount'),
             signIn: refusing('signIn'),
@@ -62,6 +65,7 @@ function unexercised(): AppUseCases {
 
 export interface AppUseCasesOverrides {
     items?: Partial<AppUseCases['items']>;
+    attention?: Partial<AppUseCases['attention']>;
     auth?: Partial<AppUseCases['auth']>;
     account?: Partial<AppUseCases['account']>;
     projects?: Partial<AppUseCases['projects']>;
@@ -76,6 +80,7 @@ export function makeAppUseCases(overrides: AppUseCasesOverrides = {}): AppUseCas
 
     return {
         items: { ...base.items, ...overrides.items },
+        attention: { ...base.attention, ...overrides.attention },
         auth: { ...base.auth, ...overrides.auth },
         account: { ...base.account, ...overrides.account },
         projects: { ...base.projects, ...overrides.projects },

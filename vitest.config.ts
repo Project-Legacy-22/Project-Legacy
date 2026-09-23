@@ -126,6 +126,7 @@ export default defineConfig({
                 // scripts/check-schema.sql, which CI runs on every pull
                 // request.
                 'packages/infra/src/supabase-item-repository.ts',
+                'packages/infra/src/supabase-attention-reader.ts',
                 'packages/infra/src/supabase-project-repository.ts',
                 'packages/infra/src/supabase-membership-repository.ts',
                 'packages/infra/src/supabase-personal-data-store.ts',
