@@ -105,13 +105,20 @@ export function itemName(candidate: string): string {
 
 const ITEM_DUE_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
-export function itemDueDate(candidate: string | null | undefined): string | null {
-    if (candidate === null || candidate === undefined) return null;
-    if (!ITEM_DUE_DATE_PATTERN.test(candidate)) throw new InvalidItemDueDate();
+// A real day of the calendar written YYYY-MM-DD: the pattern alone would let
+// 2026-02-30 through. Shared with the attention window (US-20), whose "today"
+// is the same kind of value.
+export function isCalendarDate(candidate: string): boolean {
+    if (!ITEM_DUE_DATE_PATTERN.test(candidate)) return false;
 
     const [year, month, day] = candidate.split('-').map(Number);
     const parsed = new Date(Date.UTC(year ?? 0, (month ?? 0) - 1, day));
-    if (parsed.toISOString().slice(0, 10) !== candidate) throw new InvalidItemDueDate();
+    return parsed.toISOString().slice(0, 10) === candidate;
+}
+
+export function itemDueDate(candidate: string | null | undefined): string | null {
+    if (candidate === null || candidate === undefined) return null;
+    if (!isCalendarDate(candidate)) throw new InvalidItemDueDate();
     return candidate;
 }
 
