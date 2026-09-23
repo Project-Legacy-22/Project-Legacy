@@ -42,7 +42,10 @@ export interface ExportedProjectMembership {
 
 export interface ExportedNotification {
     id: string;
-    itemId: string;
+    // Une notification ne nomme pas forcement une tache : voir le domaine des
+    // notifications. Un export doit rendre la ligne telle qu elle est, y
+    // compris quand elle parle d un projet.
+    itemId: string | null;
     eventId: string;
     readAt: string | null;
     createdAt: string;
