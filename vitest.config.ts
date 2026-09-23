@@ -104,6 +104,7 @@ export default defineConfig({
                 // trois moteurs reels par `npm run test:migration`.
                 'packages/data-migration/src/import-cli.ts',
                 'packages/data-migration/src/export-cli.ts',
+                'apps/api/src/openapi/write.ts',
                 // Generated from the database schema by `npm run db:types`;
                 // excluded per standards/03-testing.md section 7.
                 'packages/infra/src/database.types.ts',
