@@ -3,7 +3,7 @@
 Ce que GitHub Actions exécute, quand, et ce qui empêche une pull request d'être intégrée. État au
 12 septembre 2026 ; chaque affirmation se vérifie dans `.github/workflows/`.
 
-## Les six campagnes
+## Les sept campagnes
 
 | Campagne | Déclenchée par | Ce qu'elle fait |
 |---|---|---|
@@ -11,6 +11,7 @@ Ce que GitHub Actions exécute, quand, et ce qui empêche une pull request d'êt
 | `codeql` | pull request, push, et une fois par semaine | analyse statique de sécurité de GitHub |
 | `guard-branches` | chaque push | refuse un commit qui n'a pas l'origine attendue |
 | `image` | push sur `main` | rejoue `ci`, puis publie l'image sur GHCR et crée la release |
+| `migrations` | chaque exécution verte de `ci` sur `dev`, ou à la main | applique à la base hébergée les migrations qu'elle n'a pas encore |
 | `pages` | push sur `dev` | publie le rapport de couverture sur GitHub Pages |
 | `relais` | toutes les cinq minutes | déclenche une passe de livraison de l'outbox, puis pousse ce qu'elle rend vers Grafana Cloud |
 
@@ -103,6 +104,41 @@ La production, elle, est servie par Vercel.
 
 Les deux artefacts ne sont donc pas au même niveau, et c'est écrit ici plutôt que supposé : un
 document qui laisserait croire que l'image suit la production serait faux.
+
+## Migrations de la base hébergée
+
+La production et les prévisualisations partagent un seul projet Supabase hébergé. Le 23 septembre
+2026, six migrations mergées sur `dev` n'y avaient jamais été appliquées : le code de #382 lisait
+`items.position`, absente, et les prévisualisations répondaient 500 sur la liste des tâches. Elles
+ont été appliquées à la main après sauvegarde ; le workflow `migrations` fait désormais ce travail
+(#385).
+
+**Quand.** Après chaque exécution **verte** de `ci` sur `dev`, sur le commit que `ci` a vérifié, et
+jamais sur un commit arrivé entre-temps. `ci` a déjà rejoué toutes les migrations sur une base
+vide : ce qui arrive ici s'est donc appliqué une fois ailleurs. Sans migration nouvelle, le dry-run
+ne liste rien et l'application ne fait rien. Un déclenchement manuel (`workflow_dispatch`) reste
+possible. Deux exécutions ne se chevauchent jamais : elles se suivent.
+
+**Ce qui part** est listé dans le résumé de l'exécution avant d'être appliqué.
+
+**La règle qui en découle : une migration est additive.** La base étant partagée, une migration
+atteint la production dès son merge sur `dev`, alors que la production tourne encore le code de la
+dernière livraison. Elle doit donc être compatible avec ce code : ajouter une colonne avec une
+valeur par défaut, une table, une fonction, ou redéfinir une fonction sans changer sa signature. Un
+renommage, une suppression ou un changement de signature se fait en deux temps : la migration qui
+ajoute, livrée ; puis, après la livraison du code qui ne lit plus l'ancien, celle qui retire.
+
+**Configuration**, dans les réglages du dépôt :
+
+| Nom | Nature | Contenu |
+|---|---|---|
+| `SUPABASE_ACCESS_TOKEN` | secret | jeton d'accès Supabase d'un compte membre de l'organisation du projet, créé pour cet usage |
+| `SUPABASE_DB_PASSWORD` | secret | mot de passe de la base du projet hébergé |
+| `SUPABASE_PROJECT_REF` | variable | identifiant du projet hébergé, visible dans son URL |
+
+Tant qu'un des trois manque, le workflow échoue à sa première étape en nommant ce qui manque : une
+application qui ne se fait pas doit se voir, pas passer pour une base à jour. La CLI lit le jeton
+et le mot de passe dans l'environnement ; ni l'un ni l'autre ne passe en argument de commande.
 
 ## Références
 
