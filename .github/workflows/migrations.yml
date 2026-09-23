@@ -51,7 +51,6 @@ jobs:
           set -euo pipefail
           manquants=()
           [ -n "$SUPABASE_ACCESS_TOKEN" ] || manquants+=("secret SUPABASE_ACCESS_TOKEN")
-          [ -n "$SUPABASE_DB_PASSWORD" ] || manquants+=("secret SUPABASE_DB_PASSWORD")
           [ -n "$SUPABASE_PROJECT_REF" ] || manquants+=("variable SUPABASE_PROJECT_REF")
           if [ ${#manquants[@]} -gt 0 ]; then
             echo "::error::Configuration absente : ${manquants[*]}. Voir docs/ci.md, section Migrations de la base hebergee."
@@ -72,9 +71,10 @@ jobs:
       - name: Installer les dependances
         run: npm ci
 
-      # La CLI lit SUPABASE_ACCESS_TOKEN et SUPABASE_DB_PASSWORD dans
-      # l environnement : le mot de passe ne passe jamais en argument, ou il
-      # serait visible de tout processus du runner.
+      # La CLI lit SUPABASE_ACCESS_TOKEN et, s il est pose, SUPABASE_DB_PASSWORD
+      # dans l environnement : rien ne passe en argument, ou ce serait visible
+      # de tout processus du runner. Sans mot de passe, le jeton suffit : la CLI
+      # ouvre un role de connexion temporaire le temps de la commande (#392).
       - name: Lier le projet heberge
         run: npx supabase link --project-ref "$SUPABASE_PROJECT_REF"
 

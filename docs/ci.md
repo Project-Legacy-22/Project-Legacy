@@ -133,10 +133,10 @@ ajoute, livrée ; puis, après la livraison du code qui ne lit plus l'ancien, ce
 | Nom | Nature | Contenu |
 |---|---|---|
 | `SUPABASE_ACCESS_TOKEN` | secret | jeton d'accès Supabase d'un compte membre de l'organisation du projet, créé pour cet usage |
-| `SUPABASE_DB_PASSWORD` | secret | mot de passe de la base du projet hébergé |
+| `SUPABASE_DB_PASSWORD` | secret, facultatif | mot de passe de la base du projet hébergé ; sans lui, la CLI ouvre un rôle de connexion temporaire avec le jeton (#392) |
 | `SUPABASE_PROJECT_REF` | variable | identifiant du projet hébergé, visible dans son URL |
 
-Tant qu'un des trois manque, le workflow échoue à sa première étape en nommant ce qui manque : une
+Tant que le jeton ou l'identifiant du projet manque, le workflow échoue à sa première étape en nommant ce qui manque : une
 application qui ne se fait pas doit se voir, pas passer pour une base à jour. La CLI lit le jeton
 et le mot de passe dans l'environnement ; ni l'un ni l'autre ne passe en argument de commande.
 
