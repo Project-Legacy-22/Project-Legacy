@@ -172,6 +172,17 @@ L'API expose trois routes :
 Toutes les routes `/projects` exigent une session valide. Les éléments sont accessibles sous
 le projet auquel ils appartiennent.
 
+## Documentation de l'API
+
+Chaque route, ses paramètres, ses corps, ses réponses et ses codes d'erreur sont décrits au
+format OpenAPI 3.1, générés depuis les schémas de validation de `packages/contracts` :
+
+- consultable à <https://project-legacy-22.github.io/Project-Legacy/api/>, publiée à chaque
+  intégration sur `dev` ;
+- versionnée dans [docs/api/openapi.json](docs/api/openapi.json), régénérée par
+  `npm run docs:api`. Un écart entre ce fichier et le code fait échouer les tests, donc la pull
+  request.
+
 ## Projets et éléments
 
 Chaque compte reçoit un projet par défaut à son inscription. Il peut créer d'autres projets,
