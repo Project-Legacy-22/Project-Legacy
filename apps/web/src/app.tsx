@@ -113,6 +113,32 @@ function useProjectItems(api: ItemsApi, projects: ReturnType<typeof useProjects>
     return { ...items, addItem, removeItem };
 }
 
+function itemsSectionProps(state: ReturnType<typeof useProjectItems>) {
+    return {
+        items: state.items,
+        loadState: state.loadState,
+        feedback: state.feedback,
+        isAdding: state.isAdding,
+        pendingItemIds: state.pendingItemIds,
+        hasNextPage: state.hasNextPage,
+        paginationState: state.paginationState,
+        filterValues: state.filterValues,
+        hasActiveFilters: state.hasActiveFilters,
+        onAdd: state.addItem,
+        onMove: state.moveItem,
+        onUpdate: state.updateItem,
+        onRemove: state.removeItem,
+        onLoadMore: state.loadMore,
+        onRetry: state.retry,
+        onSearchChange: state.onSearchChange,
+        onStatusChange: state.onStatusChange,
+        onPriorityChange: state.onPriorityChange,
+        onDueDateChange: state.onDueDateChange,
+        onNoDueDateChange: state.onNoDueDateChange,
+        onClearFilters: state.onClearFilters,
+    };
+}
+
 function projectSectionProps(projects: ReturnType<typeof useProjects>) {
     return {
         projects: projects.projects,
@@ -158,19 +184,7 @@ function SignedInApp({
             />
             <NotificationsPanel api={apis.notifications} />
             <TodoPage
-                items={state.items}
-                loadState={state.loadState}
-                feedback={state.feedback}
-                isAdding={state.isAdding}
-                pendingItemIds={state.pendingItemIds}
-                hasNextPage={state.hasNextPage}
-                paginationState={state.paginationState}
-                onAdd={state.addItem}
-                onMove={state.moveItem}
-                onUpdate={state.updateItem}
-                onRemove={state.removeItem}
-                onLoadMore={state.loadMore}
-                onRetry={state.retry}
+                {...itemsSectionProps(state)}
                 selectedProject={projects.selectedProject}
                 projects={projectSectionProps(projects)}
             >

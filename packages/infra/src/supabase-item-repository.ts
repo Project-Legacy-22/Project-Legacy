@@ -1,8 +1,8 @@
 import { Buffer } from 'node:buffer';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { InvalidItemCursor, ITEM_PRIORITIES, rehydrateItem } from '@legacy/core-items';
-import type { DomainEvent, Item, ItemPage, ItemPageQuery, ItemPriority, ItemStatusMove } from '@legacy/core-items';
+import { criteriaFingerprint, InvalidItemCursor, ITEM_PRIORITIES, normalizeSearchTerm, rehydrateItem } from '@legacy/core-items';
+import type { DomainEvent, Item, ItemPage, ItemPageQuery, ItemPriority, ItemSearchCriteria, ItemStatusMove } from '@legacy/core-items';
 
 import type { Database } from './database.types.js';
 import type { ItemStore } from './item-store.js';
@@ -39,10 +39,15 @@ interface ItemPosition {
     priority: ItemPriority;
     dueDate: string | null;
     id: string;
+    // A fingerprint of the search/filter criteria the cursor was minted
+    // under (US-32). Changing what is being asked for changes the order, so
+    // a position from a different order is not valid in the new one.
+    criteria: string;
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const FINGERPRINT_PATTERN = /^[0-9a-f]{8}$/;
 
 function isCalendarDate(value: unknown): value is string {
     if (typeof value !== 'string' || !DATE_PATTERN.test(value)) return false;
@@ -51,45 +56,70 @@ function isCalendarDate(value: unknown): value is string {
     return date.toISOString().slice(0, 10) === value;
 }
 
+function isValidPriority(value: unknown): value is ItemPriority {
+    return typeof value === 'string' && ITEM_PRIORITIES.includes(value as ItemPriority);
+}
+
+function isValidDueDate(value: unknown): value is string | null {
+    return value === null || isCalendarDate(value);
+}
+
+function isValidId(value: unknown): value is string {
+    return typeof value === 'string' && UUID_PATTERN.test(value);
+}
+
+function isValidFingerprint(value: unknown): value is string {
+    return typeof value === 'string' && FINGERPRINT_PATTERN.test(value);
+}
+
 function isPosition(value: unknown): value is ItemPosition {
     if (typeof value !== 'object' || value === null) return false;
     const candidate = value as Record<string, unknown>;
-    return Object.keys(candidate).length === 3
-        && typeof candidate.priority === 'string'
-        && ITEM_PRIORITIES.includes(candidate.priority as ItemPriority)
-        && (candidate.dueDate === null || isCalendarDate(candidate.dueDate))
-        && typeof candidate.id === 'string'
-        && UUID_PATTERN.test(candidate.id);
+    return Object.keys(candidate).length === 4
+        && isValidPriority(candidate.priority)
+        && isValidDueDate(candidate.dueDate)
+        && isValidId(candidate.id)
+        && isValidFingerprint(candidate.criteria);
 }
 
 // A page is located by its last row, not by an offset that would shift under a
 // concurrent insert. The cursor carries every sort key and remains opaque to
 // callers. The UUID is the final unique key, so equivalent tasks never change
 // order between requests.
-function encodeCursor(row: ItemRow): string {
+function encodeCursor(row: ItemRow, criteria: ItemSearchCriteria): string {
     return Buffer.from(JSON.stringify({
         priority: row.priority,
         dueDate: row.due_date,
         id: row.id,
+        criteria: criteriaFingerprint(criteria),
     }), 'utf8').toString('base64url');
 }
 
-function decodeCursor(cursor: string): ItemPosition {
+// Refused rather than reinterpreted under the new criteria: a cursor this API
+// never issued and a cursor issued for a different search/filter request are
+// the same failure from the caller's point of view (US-32's own note).
+function decodeCursor(cursor: string, criteria: ItemSearchCriteria): ItemPosition {
     try {
         const value: unknown = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8'));
-        if (isPosition(value)) return value;
+        if (isPosition(value) && value.criteria === criteriaFingerprint(criteria)) return value;
     } catch {
         // The domain error below is the only cursor failure exposed to callers.
     }
     throw new InvalidItemCursor();
 }
 
+// A name literally containing a LIKE wildcard must not act as one: escaping
+// keeps the search an exact substring match regardless of what was typed.
+function escapeLikePattern(term: string): string {
+    return term.replace(/[\\%_]/gu, (char) => `\\${char}`);
+}
+
 // The predicate starts strictly after the supplied position in the public
 // order: high-to-low priority, nearest dated task first, undated tasks last,
 // then UUID. Each interpolated value has been validated above before it reaches
 // PostgREST filter syntax.
-function afterCursor(cursor: string): string {
-    const { priority, dueDate, id } = decodeCursor(cursor);
+function afterCursor(cursor: string, criteria: ItemSearchCriteria): string {
+    const { priority, dueDate, id } = decodeCursor(cursor, criteria);
     if (dueDate === null) {
         return `priority.lt.${priority},and(priority.eq.${priority},due_date.is.null,id.gt.${id})`;
     }
@@ -106,28 +136,48 @@ interface PageRequest {
     page: ItemPageQuery;
 }
 
+function itemsInProject(client: ItemClient, projectId: string) {
+    return client.from('items').select('*').eq('project_id', projectId);
+}
+
+type ItemsQuery = ReturnType<typeof itemsInProject>;
+
+// Only the criteria present narrow the rows; the sort order is applied
+// afterwards by the caller and is never affected by which filters are active.
+function withCriteria(query: ItemsQuery, criteria: ItemSearchCriteria): ItemsQuery {
+    const withStatus = criteria.status === undefined ? query : query.eq('status', criteria.status);
+    const withPriority = criteria.priority === undefined ? withStatus : withStatus.eq('priority', criteria.priority);
+    const withDueDate = criteria.dueDate === undefined
+        ? withPriority
+        : criteria.dueDate === null ? withPriority.is('due_date', null) : withPriority.eq('due_date', criteria.dueDate);
+
+    if (criteria.search === undefined || criteria.search.length === 0) return withDueDate;
+    return withDueDate.ilike('name_search', `%${escapeLikePattern(normalizeSearchTerm(criteria.search))}%`);
+}
+
 async function findPage(request: PageRequest): Promise<ItemPage | undefined> {
     const { client, projectId, memberId, page } = request;
     if (!(await isProjectMember(client, projectId, memberId))) return undefined;
 
-    const inProject = client.from('items').select('*').eq('project_id', projectId);
-    const positioned = page.cursor === undefined ? inProject : inProject.or(afterCursor(page.cursor));
+    const { limit, cursor, ...criteria } = page;
+    const filtered = withCriteria(itemsInProject(client, projectId), criteria);
+    const positioned = cursor === undefined ? filtered : filtered.or(afterCursor(cursor, criteria));
 
     // One row more than asked: its presence is what says there is a next page.
     const { data, error } = await positioned
         .order('priority', { ascending: false })
         .order('due_date', { ascending: true, nullsFirst: false })
         .order('id', { ascending: true })
-        .limit(page.limit + 1);
+        .limit(limit + 1);
     if (error) fail('findPageForMember', error);
 
     const rows = data ?? [];
-    const visible = rows.slice(0, page.limit);
+    const visible = rows.slice(0, limit);
     const last = visible.at(-1);
 
     return {
         items: visible.map(toItem),
-        nextCursor: rows.length > page.limit && last !== undefined ? encodeCursor(last) : undefined,
+        nextCursor: rows.length > limit && last !== undefined ? encodeCursor(last, criteria) : undefined,
     };
 }
 

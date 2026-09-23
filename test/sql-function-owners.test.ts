@@ -25,12 +25,14 @@ import { describe, expect, it } from 'vitest';
 // the definition being replaced and decide what carries over.
 
 const OWNERS: Readonly<Record<string, string>> = {
+    'public.add_member_with_event': '20260915160000_add_member_with_event',
     'public.create_item_with_event': '20260910221142_item_priority_due_date',
     'public.create_project_for_owner': '20260908083028_add_projects_and_memberships',
     'public.erase_account': '20260908144244_extend_account_erasure_for_projects',
+    'public.immutable_unaccent': '20260918130000_item_name_search',
     'public.mark_notification_read': '20260910100000_notification_policies_and_pagination',
     'public.mirror_auth_user': '20260910120000_mirror_auth_user_keeps_consent_and_default_project',
-    'public.record_item_created_notification': '20260911180000_notification_survives_a_deleted_item',
+    'public.record_item_created_notification': '20260915140000_notification_beyond_an_item',
     'public.set_updated_at': '20260903120000_initial_schema',
     'public.uuid_generate_v7': '20260903120000_initial_schema',
 };

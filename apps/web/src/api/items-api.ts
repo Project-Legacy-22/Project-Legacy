@@ -1,5 +1,5 @@
 import { DEFAULT_ITEM_PAGE_SIZE, ItemDto, ItemPageDto, ProblemDetails } from '@legacy/contracts';
-import type { CreateItemBody, MoveItemBody, UpdateItemBody } from '@legacy/contracts';
+import type { CreateItemBody, ItemPriority, ItemStatus, MoveItemBody, UpdateItemBody } from '@legacy/contracts';
 
 import { labels } from '../labels';
 
@@ -8,6 +8,12 @@ export type { ItemDto, ItemPageDto, ItemPriority, ItemStatus } from '@legacy/con
 export interface ListItemsRequest {
     signal: AbortSignal;
     cursor?: string;
+    // Search and filter criteria (US-32). An absent field means no filter;
+    // dueDate additionally accepts the literal 'none' for "no due date".
+    search?: string | undefined;
+    status?: ItemStatus | undefined;
+    priority?: ItemPriority | undefined;
+    dueDate?: string | undefined;
 }
 
 export interface ItemsApi {
@@ -67,16 +73,20 @@ export const jsonHeaders = {
     'Content-Type': 'application/json',
 };
 
-function itemsPath(projectId: string, cursor?: string): string {
+function itemsPath(projectId: string, request: Omit<ListItemsRequest, 'signal'>): string {
     const query = new URLSearchParams({ limit: String(DEFAULT_ITEM_PAGE_SIZE) });
-    if (cursor !== undefined) query.set('cursor', cursor);
+    if (request.cursor !== undefined) query.set('cursor', request.cursor);
+    if (request.search !== undefined) query.set('search', request.search);
+    if (request.status !== undefined) query.set('status', request.status);
+    if (request.priority !== undefined) query.set('priority', request.priority);
+    if (request.dueDate !== undefined) query.set('dueDate', request.dueDate);
     return `/projects/${encodeURIComponent(projectId)}/items?${query.toString()}`;
 }
 
 export const itemsApi: ItemsApi = {
-    listItems(projectId, { signal, cursor }) {
+    listItems(projectId, { signal, ...request }) {
         return requestJson(
-            itemsPath(projectId, cursor),
+            itemsPath(projectId, request),
             { headers: { Accept: 'application/json' }, signal },
             (value) => {
                 const result = ItemPageDto.safeParse(value);

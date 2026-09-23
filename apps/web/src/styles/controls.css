@@ -12,6 +12,27 @@
     gap: 14px;
 }
 
+.items-filters {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+    align-items: end;
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.checkbox-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    font-weight: 500;
+}
+
+.checkbox-field input {
+    width: auto;
+    min-height: 0;
+}
+
 .form-field {
     min-width: 0;
 }
@@ -152,7 +173,8 @@ select:disabled {
 }
 
 @media (max-width: 620px) {
-    .item-planning-fields {
+    .item-planning-fields,
+    .items-filters {
         grid-template-columns: 1fr;
     }
 

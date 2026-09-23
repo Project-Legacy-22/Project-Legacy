@@ -52,7 +52,8 @@ const ExportedProjectMembership = z.object({
 // actually holds, identifiers and dates, not a rendered sentence.
 const ExportedNotification = z.object({
     id: z.uuid(),
-    itemId: z.uuid(),
+    // Voir NotificationDto : une notification ne nomme pas forcement une tache.
+    itemId: z.uuid().nullable(),
     eventId: z.uuid(),
     readAt: z.iso.datetime().nullable(),
     createdAt: z.iso.datetime(),
