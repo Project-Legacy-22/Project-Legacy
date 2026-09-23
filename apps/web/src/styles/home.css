@@ -1,0 +1,60 @@
+.attention-groups {
+    display: grid;
+    gap: 18px;
+}
+
+.attention-group h3 {
+    margin: 0 0 8px;
+    font-size: 1rem;
+}
+
+.attention-list {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.attention-row {
+    display: grid;
+    width: 100%;
+    min-height: 48px;
+    gap: 4px;
+    padding: 10px 14px;
+    border: 2px solid var(--border-input);
+    border-radius: 8px;
+    color: var(--text-body);
+    background: var(--surface-card);
+    text-align: left;
+    cursor: pointer;
+}
+
+.attention-row:hover {
+    border-color: var(--text-brand);
+    background: var(--surface-brand-soft);
+}
+
+.attention-name {
+    overflow-wrap: anywhere;
+    font-weight: 750;
+}
+
+.attention-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    color: var(--text-secondary);
+    font-size: 0.8125rem;
+}
+
+.attention-empty,
+.attention-more {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+.attention-more {
+    margin-top: 8px;
+}
