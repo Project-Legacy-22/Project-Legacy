@@ -1,4 +1,4 @@
-import { AccountDto, ProblemDetails } from '@legacy/contracts';
+import { AccountDto } from '@legacy/contracts';
 import type {
     RegisterAccountBody,
     RequestPasswordResetBody,
@@ -7,7 +7,7 @@ import type {
 } from '@legacy/contracts';
 
 import { labels } from '../labels';
-import { ApiError } from './items-api';
+import { ApiError, failureMessage, send, statusMessage } from './failure';
 
 export type { AccountDto } from '@legacy/contracts';
 
@@ -38,19 +38,9 @@ const jsonHeaders = {
     'Content-Type': 'application/json',
 };
 
-async function problemDetail(response: Response, fallback: string): Promise<string> {
-    try {
-        const body: unknown = await response.json();
-        const problem = ProblemDetails.safeParse(body);
-        return problem.success ? problem.data.detail : fallback;
-    } catch {
-        return fallback;
-    }
-}
-
 export const authApi: AuthApi = {
     async register(body) {
-        const response = await fetch('/auth/register', {
+        const response = await send('/auth/register', {
             method: 'POST',
             headers: jsonHeaders,
             body: JSON.stringify(body),
@@ -59,13 +49,13 @@ export const authApi: AuthApi = {
         if (!response.ok) {
             throw new ApiError(
                 response.status,
-                await problemDetail(response, labels.registerFailed),
+                await failureMessage(response, labels.registerFailed),
             );
         }
     },
 
     async signIn(body) {
-        const response = await fetch('/auth/login', {
+        const response = await send('/auth/login', {
             method: 'POST',
             headers: jsonHeaders,
             body: JSON.stringify(body),
@@ -82,7 +72,7 @@ export const authApi: AuthApi = {
         }
 
         if (!response.ok) {
-            throw new ApiError(response.status, labels.signInUnavailable);
+            throw new ApiError(response.status, await failureMessage(response, labels.signInFailed));
         }
 
         try {
@@ -93,11 +83,11 @@ export const authApi: AuthApi = {
     },
 
     async currentAccount(signal) {
-        const response = await fetch('/auth/me', { headers: { Accept: 'application/json' }, signal });
+        const response = await send('/auth/me', { headers: { Accept: 'application/json' }, signal });
 
         if (response.status === 401) return null;
         if (!response.ok) {
-            throw new ApiError(response.status, labels.sessionCheckFailed);
+            throw new ApiError(response.status, await failureMessage(response, labels.sessionCheckFailed));
         }
 
         try {
@@ -108,21 +98,22 @@ export const authApi: AuthApi = {
     },
 
     async requestPasswordReset(body) {
-        const response = await fetch('/auth/password/forgot', {
+        const response = await send('/auth/password/forgot', {
             method: 'POST',
             headers: jsonHeaders,
             body: JSON.stringify(body),
         });
 
         if (!response.ok) {
-            // One generic message, never the server's detail: the request
-            // screen must not become a way to tell which addresses exist.
-            throw new ApiError(response.status, labels.resetRequestFailed);
+            // Never the server's detail: the request screen must not become a
+            // way to tell which addresses exist. The status may still say that
+            // the service is throttled or down, which discloses nothing.
+            throw new ApiError(response.status, await statusMessage(response, labels.resetRequestFailed));
         }
     },
 
     async resetPassword(body) {
-        const response = await fetch('/auth/password/reset', {
+        const response = await send('/auth/password/reset', {
             method: 'POST',
             headers: jsonHeaders,
             body: JSON.stringify(body),
@@ -133,13 +124,13 @@ export const authApi: AuthApi = {
             // what the person on the reset screen needs to read.
             throw new ApiError(
                 response.status,
-                await problemDetail(response, labels.resetPasswordFailed),
+                await failureMessage(response, labels.resetPasswordFailed),
             );
         }
     },
 
     async signOut() {
-        const response = await fetch('/auth/logout', { method: 'POST' });
+        const response = await send('/auth/logout', { method: 'POST' });
 
         if (!response.ok) {
             throw new ApiError(response.status, labels.signOutFailed);

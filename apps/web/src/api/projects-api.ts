@@ -3,6 +3,7 @@ import type { CreateProjectBody } from '@legacy/contracts';
 
 import { ApiError, errorMessage, jsonHeaders, requestJson } from './items-api';
 import { labels } from '../labels';
+import { send } from './failure';
 
 export type { ProjectDto, ProjectPageDto } from '@legacy/contracts';
 
@@ -47,7 +48,7 @@ export const projectsApi: ProjectsApi = {
     },
 
     async deleteProject(projectId) {
-        const response = await fetch(`/projects/${encodeURIComponent(projectId)}`, {
+        const response = await send(`/projects/${encodeURIComponent(projectId)}`, {
             method: 'DELETE',
             headers: { Accept: 'application/json' },
         });
