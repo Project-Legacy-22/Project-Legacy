@@ -14,6 +14,8 @@ import { SESSION_COOKIE } from '../session.js';
 
 const GENERATED_ID = '33333333-3333-4333-8333-333333333333';
 const OWNER_ID = '00000000-0000-7000-8000-000000000001';
+const MEMBER_ID = '00000000-0000-7000-8000-000000000002';
+const STRANGER_ID = '00000000-0000-7000-8000-000000000003';
 const PROJECT_ID = '00000000-0000-7000-8000-000000000010';
 const EXISTING_ID = '11111111-1111-4111-8111-111111111111';
 const ITEMS_PATH = `/projects/${PROJECT_ID}/items`;
@@ -29,6 +31,7 @@ function anItem(): Item {
         dueDate: null,
         projectId: PROJECT_ID,
         ownerId: OWNER_ID,
+        assigneeId: null,
     };
 }
 
@@ -37,7 +40,10 @@ describe('item planning HTTP boundary', () => {
     let store: InMemoryItemRepository;
 
     async function serve(seed: Item[] = []): Promise<void> {
-        store = inMemoryItemRepository(seed, [{ projectId: PROJECT_ID, userId: OWNER_ID }]);
+        store = inMemoryItemRepository(seed, [
+            { projectId: PROJECT_ID, userId: OWNER_ID },
+            { projectId: PROJECT_ID, userId: MEMBER_ID },
+        ]);
         const provider = inMemoryIdentityProvider([
             { id: OWNER_ID, email: 'alice@example.com', password: 'MotDePasse2026' },
         ]);
@@ -95,5 +101,49 @@ describe('item planning HTTP boundary', () => {
 
         expect([planned.status, cleared.status]).toEqual([200, 200]);
         expect(store.items.get(EXISTING_ID)).toMatchObject({ name: 'No date', priority: 'high', dueDate: null });
+    });
+
+    // US-58: assigning goes through the same PUT as the other editable fields.
+    it('assigns the item to a member, then unassigns it', async () => {
+        await reseed([anItem()]);
+
+        const assigned = await harness.request(
+            `${ITEMS_PATH}/${EXISTING_ID}`,
+            json('PUT', { name: 'Intact', assigneeId: MEMBER_ID }),
+        );
+        await expect(assigned.json()).resolves.toMatchObject({ assigneeId: MEMBER_ID });
+
+        const kept = await harness.request(`${ITEMS_PATH}/${EXISTING_ID}`, json('PUT', { name: 'Renamed' }));
+        await expect(kept.json()).resolves.toMatchObject({ name: 'Renamed', assigneeId: MEMBER_ID });
+
+        const cleared = await harness.request(
+            `${ITEMS_PATH}/${EXISTING_ID}`,
+            json('PUT', { name: 'Renamed', assigneeId: null }),
+        );
+        await expect(cleared.json()).resolves.toMatchObject({ assigneeId: null });
+    });
+
+    it('refuses someone outside the project with 404, and changes nothing', async () => {
+        await reseed([anItem()]);
+
+        const response = await harness.request(
+            `${ITEMS_PATH}/${EXISTING_ID}`,
+            json('PUT', { name: 'Changed', assigneeId: STRANGER_ID }),
+        );
+
+        expect(response.status).toBe(404);
+        await expect(response.json()).resolves.toMatchObject({ type: 'assignee_not_found' });
+        expect(store.items.get(EXISTING_ID)).toMatchObject({ name: 'Intact', assigneeId: null });
+    });
+
+    it('refuses an assignee that is not an identifier with 400', async () => {
+        await reseed([anItem()]);
+
+        const response = await harness.request(
+            `${ITEMS_PATH}/${EXISTING_ID}`,
+            json('PUT', { name: 'Intact', assigneeId: 'alice@example.com' }),
+        );
+
+        expect(response.status).toBe(400);
     });
 });

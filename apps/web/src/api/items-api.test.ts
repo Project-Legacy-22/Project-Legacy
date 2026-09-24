@@ -13,6 +13,7 @@ const ITEM = {
     version: 1,
     priority: 'normal' as const,
     dueDate: null,
+    assigneeId: null,
 };
 
 function response(body: unknown, status = 200): Response {

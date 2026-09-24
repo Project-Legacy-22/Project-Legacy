@@ -32,6 +32,10 @@ export interface Item {
     // model change later. A plain string, like `id`: branded id types are a
     // separate cleanup, not this change.
     ownerId: string;
+    // Who the task is for (US-58), a member of its project, or nobody. Never
+    // the creator by default: ownerId says who created it, and the two are
+    // different facts.
+    assigneeId: string | null;
 }
 
 export class DomainError extends Error {
@@ -142,6 +146,7 @@ export function createItem(candidate: NewItem): Item {
         dueDate: itemDueDate(candidate.dueDate),
         projectId: candidate.projectId,
         ownerId: candidate.ownerId,
+        assigneeId: null,
     };
 }
 
@@ -159,6 +164,7 @@ export function rehydrateItem(row: {
     dueDate: string | null;
     projectId: string;
     ownerId: string;
+    assigneeId: string | null;
 }): Item {
     return {
         id: row.id,
@@ -170,7 +176,16 @@ export function rehydrateItem(row: {
         dueDate: row.dueDate,
         projectId: row.projectId,
         ownerId: row.ownerId,
+        assigneeId: row.assigneeId,
     };
+}
+
+// Someone who is not a member of the task's project. 404 like a missing task:
+// the answer must not tell a caller whether an account exists (US-58).
+export class AssigneeNotMember extends DomainError {
+    constructor() {
+        super('assignee_not_found', 404, 'This person is not a member of the project.');
+    }
 }
 
 export class ItemProjectNotFound extends DomainError {

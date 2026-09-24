@@ -1,7 +1,7 @@
 import { Buffer } from 'node:buffer';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { criteriaFingerprint, InvalidItemCursor, InvalidItemPosition, ItemNotFound, ItemPositionConflict, ITEM_PRIORITIES, normalizeSearchTerm, rehydrateItem } from '@legacy/core-items';
+import { AssigneeNotMember, criteriaFingerprint, InvalidItemCursor, InvalidItemPosition, ItemNotFound, ItemPositionConflict, ITEM_PRIORITIES, normalizeSearchTerm, rehydrateItem } from '@legacy/core-items';
 import type { DomainEvent, Item, ItemPage, ItemPageQuery, ItemPositionMove, ItemPriority, ItemSearchCriteria, ItemStatusMove } from '@legacy/core-items';
 
 import type { Database } from './database.types.js';
@@ -21,6 +21,7 @@ export interface SupabaseSettings {
 // a technical error, it must bubble to the single error middleware and become a
 // generic 500, never be swallowed or turned into an empty result.
 const fail: AdapterFailure = adapterFailure('items repository');
+const FOREIGN_KEY_VIOLATION = '23503';
 
 export function toItem(row: ItemRow): Item {
     return rehydrateItem({
@@ -33,6 +34,7 @@ export function toItem(row: ItemRow): Item {
         dueDate: row.due_date,
         projectId: row.project_id,
         ownerId: row.user_id,
+        assigneeId: row.assignee_id,
     });
 }
 
@@ -261,8 +263,12 @@ async function update(client: ItemClient, item: Item): Promise<void> {
             version: item.version,
             priority: item.priority,
             due_date: item.dueDate,
+            assignee_id: item.assigneeId,
         })
         .eq('id', item.id);
+    // The membership key refused the assignee: removed between the use case's
+    // check and this write.
+    if (error?.code === FOREIGN_KEY_VIOLATION) throw new AssigneeNotMember();
     if (error) fail('update', error);
 }
 

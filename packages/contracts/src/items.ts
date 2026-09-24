@@ -28,6 +28,9 @@ export const UpdateItemBody = z.object({
     name: itemNameSchema,
     priority: ItemPriority.optional(),
     dueDate: ItemDueDate.nullable().optional(),
+    // A member of the task's project, or null for nobody (US-58). Absent
+    // leaves the assignee as it is, so an older client cannot clear it.
+    assigneeId: z.uuid().nullable().optional(),
 });
 
 export const ItemStatus = z.enum(['todo', 'doing', 'done']);
@@ -55,6 +58,9 @@ export const ItemDto = z.object({
     position: z.uuid(),
     priority: ItemPriority,
     dueDate: ItemDueDate.nullable(),
+    // An identifier only: the interface names the person from the project's
+    // member list, which it reads anyway to offer the choice.
+    assigneeId: z.uuid().nullable(),
 });
 
 export const ItemListDto = z.array(ItemDto);
