@@ -44,6 +44,7 @@ describe('adaptateur Supabase Auth, changement d identifiants', () => {
                 url: faux.url,
                 anonKey: 'cle-publique',
                 serviceRoleKey: 'cle-de-service',
+                linkOrigin: 'https://app.example.test',
             }),
             faux,
         };
@@ -110,6 +111,17 @@ describe('adaptateur Supabase Auth, changement d identifiants', () => {
             await expect(
                 provider.changeEmail(jwtDeTest(), REFRESH, 'alice.neuf@example.test'),
             ).resolves.toBe('confirmation-requested');
+        });
+
+        it('demande des liens qui pointent vers le deploiement configure', async () => {
+            const { provider, faux: serveur } = await adaptateur();
+            serveur.quand(UPDATE_USER, { status: 200, body: UTILISATEUR });
+
+            await provider.changeEmail(jwtDeTest(), REFRESH, 'alice.neuf@example.test');
+
+            expect(serveur.requete(UPDATE_USER)?.get('redirect_to')).toBe(
+                'https://app.example.test',
+            );
         });
 
         it('signale une adresse deja enregistree sans la distinguer autrement', async () => {

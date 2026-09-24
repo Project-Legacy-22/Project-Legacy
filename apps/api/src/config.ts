@@ -64,6 +64,9 @@ const EnvSchema = z.object({
     VERCEL_GIT_COMMIT_SHA: z.string().optional(),
     VERCEL_GIT_COMMIT_REF: z.string().optional(),
     VERCEL_ENV: z.enum(['production', 'preview', 'development']).optional(),
+    // Le domaine stable d une branche sur Vercel, sans schema. Sert d origine
+    // aux liens des e-mails d authentification d un deploiement de preview.
+    VERCEL_BRANCH_URL: z.string().min(1).optional(),
 });
 
 // Douze caracteres : de quoi retrouver le commit, pas de quoi allonger une
@@ -80,6 +83,19 @@ function named(value: string | undefined, length = 0): string {
     if (clean === '') return ABSENT;
 
     return length === 0 ? clean : clean.slice(0, length);
+}
+
+// L origine que portent les liens des e-mails d authentification (reset,
+// changement d adresse). Jamais tiree de l en-tete Host d une requete : un
+// appelant qui le choisit recevrait le jeton d un autre dans son lien. Une
+// preview Vercel n a pas d origine connue a l avance, d ou son domaine de
+// branche ; partout ailleurs, c est l origine du front.
+function authLinkOriginOf(env: z.infer<typeof EnvSchema>): string {
+    if (env.VERCEL_ENV === 'preview' && env.VERCEL_BRANCH_URL !== undefined) {
+        return new URL(`https://${env.VERCEL_BRANCH_URL}`).origin;
+    }
+
+    return new URL(env.WEB_ORIGIN).origin;
 }
 
 export type LogLevel = (typeof LOG_LEVELS)[number];
@@ -103,6 +119,7 @@ export interface Config {
     secureCookies: boolean;
     redisUrl: string | undefined;
     webOrigin: string;
+    authLinkOrigin: string;
     trustProxy: number;
     relaySecret: string | undefined;
     deployment: Deployment;
@@ -131,6 +148,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
         redisUrl: parsed.data.REDIS_URL,
         secureCookies: parsed.data.NODE_ENV === 'production',
         webOrigin: parsed.data.WEB_ORIGIN,
+        authLinkOrigin: authLinkOriginOf(parsed.data),
         trustProxy: parsed.data.TRUST_PROXY,
         relaySecret: parsed.data.RELAY_SECRET,
         deployment: {

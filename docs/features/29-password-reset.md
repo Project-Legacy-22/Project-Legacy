@@ -72,6 +72,16 @@ email link carries it in the query string for the few moments before the app wip
 the address bar, and `<meta name="referrer" content="no-referrer">` keeps it out of any
 Referer header in the meantime. It is never logged.
 
+## Link origin
+
+The recovery link, like the email-change link of US-36, points to the deployment that sent
+it, not to the single site URL of the Supabase project. The API passes its own origin to
+GoTrue with each request and the templates build the link from `{{ .RedirectTo }}`. That
+origin comes from configuration, never from the request's `Host` header, which a caller
+could set to receive someone else's token: `WEB_ORIGIN` everywhere, except on a Vercel
+preview, where it is `https://$VERCEL_BRANCH_URL`. GoTrue replaces an origin missing from the
+project's redirect allow list with the site URL, so every deployment has to be listed there.
+
 ## How to verify
 
 ```

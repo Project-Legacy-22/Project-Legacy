@@ -22,6 +22,12 @@ export interface SupabaseAuthSettings {
     // held in a second client below rather than raising the privilege of the
     // one that signs people in.
     serviceRoleKey: string;
+    // The origin the recovery and email-change links point to. Handed to GoTrue
+    // with each request, so one Supabase project serves production, previews
+    // and development alike; the templates read it as {{ .RedirectTo }}.
+    // GoTrue replaces a value missing from its redirect allow list with the
+    // site URL, which is what the links used before.
+    linkOrigin: string;
 }
 
 // GoTrue answers a well-formed request in one of a few known ways. These three
@@ -137,10 +143,10 @@ async function signOut(settings: SupabaseAuthSettings, accessToken: string): Pro
 
 async function requestPasswordReset(settings: SupabaseAuthSettings, email: string): Promise<void> {
     // GoTrue answers a syntactically valid address the same way whether or not
-    // it has an account, so this call does not disclose which. The recovery
-    // link is built from the site URL configured in supabase/config.toml, so
-    // nothing about routing enters this code.
-    const { error } = await stateless(settings).auth.resetPasswordForEmail(email);
+    // it has an account, so this call does not disclose which.
+    const { error } = await stateless(settings).auth.resetPasswordForEmail(email, {
+        redirectTo: settings.linkOrigin,
+    });
 
     if (error === null) return;
     if (error.code === EMAIL_RATE_LIMITED) return;
@@ -275,7 +281,10 @@ async function changeEmail(
     // GoTrue emails a confirmation link (to both addresses, with
     // double_confirm_changes on); the address of record is untouched until it is
     // followed.
-    const updated = await scoped.auth.updateUser({ email: newEmail });
+    const updated = await scoped.auth.updateUser(
+        { email: newEmail },
+        { emailRedirectTo: settings.linkOrigin },
+    );
     if (updated.error !== null) {
         const { code } = updated.error;
         if (code !== undefined && EMAIL_ALREADY_TAKEN.has(code)) return 'address-unavailable';

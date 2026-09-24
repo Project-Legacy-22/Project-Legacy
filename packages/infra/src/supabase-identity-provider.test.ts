@@ -30,6 +30,7 @@ describe('adaptateur Supabase Auth', () => {
                 url: faux.url,
                 anonKey: 'cle-publique',
                 serviceRoleKey: 'cle-de-service',
+                linkOrigin: 'https://app.example.test',
             }),
             faux,
         };
@@ -197,6 +198,15 @@ describe('adaptateur Supabase Auth', () => {
             serveur.quand(RECOVER, { status: 200, body: {} });
 
             await expect(provider.requestPasswordReset('alice@example.test')).resolves.toBeUndefined();
+        });
+
+        it('demande un lien qui pointe vers le deploiement configure', async () => {
+            const { provider, faux: serveur } = await adaptateur();
+            serveur.quand(RECOVER, { status: 200, body: {} });
+
+            await provider.requestPasswordReset('alice@example.test');
+
+            expect(serveur.requete(RECOVER)?.get('redirect_to')).toBe('https://app.example.test');
         });
 
         // GoTrue repond 200 pour une adresse inconnue afin de ne pas divulguer

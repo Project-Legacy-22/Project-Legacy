@@ -195,6 +195,7 @@ function createAdapters(config: Config): Adapters {
             url: config.supabaseUrl,
             anonKey: config.supabaseAnonKey,
             serviceRoleKey: config.supabaseServiceRoleKey,
+            linkOrigin: config.authLinkOrigin,
         }),
         // A third adapter on the same database as the item store, behind its
         // own port: it reads and clears the tables of every domain at once

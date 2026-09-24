@@ -27,6 +27,7 @@ describe('adaptateur Supabase Auth, renouvellement de session', () => {
                 url: faux.url,
                 anonKey: 'cle-publique',
                 serviceRoleKey: 'cle-de-service',
+                linkOrigin: 'https://app.example.test',
             }),
             faux,
         };

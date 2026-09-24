@@ -19,6 +19,9 @@ export interface Reponse {
 export interface FauxFournisseur {
     url: string;
     quand: (route: string, reponse: Reponse) => void;
+    // La chaine de requete du dernier appel a une route : c est la que le SDK
+    // place redirect_to.
+    requete: (route: string) => URLSearchParams | undefined;
     close: () => Promise<void>;
 }
 
@@ -55,10 +58,12 @@ export const LOGOUT = 'POST /auth/v1/logout';
 
 export async function fauxFournisseur(): Promise<FauxFournisseur> {
     const reponses = new Map<string, Reponse>();
+    const requetes = new Map<string, URLSearchParams>();
 
     const server = createServer((req, res) => {
         req.resume();
-        const chemin = (req.url ?? '').split('?')[0] ?? '';
+        const [chemin = '', chaine = ''] = (req.url ?? '').split('?');
+        requetes.set(`${req.method ?? ''} ${chemin}`, new URLSearchParams(chaine));
         const reponse = reponses.get(`${req.method ?? ''} ${chemin}`) ?? {
             status: 404,
             body: { code: 404, error_code: 'not_configured', msg: 'route non configuree' },
@@ -74,6 +79,7 @@ export async function fauxFournisseur(): Promise<FauxFournisseur> {
     return {
         url: `http://127.0.0.1:${String(port)}`,
         quand: (route, reponse) => reponses.set(route, reponse),
+        requete: route => requetes.get(route),
         close: () =>
             new Promise<void>((resolve, reject) => {
                 server.close(error => {

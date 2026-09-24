@@ -23,6 +23,7 @@ describe('adaptateur Supabase Auth, signOut', () => {
                 url: faux.url,
                 anonKey: 'cle-publique',
                 serviceRoleKey: 'cle-de-service',
+                linkOrigin: 'https://app.example.test',
             }),
             faux,
         };

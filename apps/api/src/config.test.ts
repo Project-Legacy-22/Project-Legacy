@@ -107,6 +107,36 @@ describe('loadConfig', () => {
         expect(() => loadConfig({ ...VALID_ENV, WEB_ORIGIN: 'todo.example' })).toThrow(/WEB_ORIGIN/);
     });
 
+    // #415 : les liens des e-mails d authentification pointent vers le
+    // deploiement qui les a envoyes, pas vers une Site URL unique.
+    it('envoie les liens d e-mail vers l origine du front', () => {
+        expect(
+            loadConfig({ ...VALID_ENV, WEB_ORIGIN: 'https://todo.example/' }).authLinkOrigin,
+        ).toBe('https://todo.example');
+    });
+
+    it('envoie les liens d e-mail d une preview vers le domaine de sa branche', () => {
+        const config = loadConfig({
+            ...VALID_ENV,
+            WEB_ORIGIN: 'https://todo.example',
+            VERCEL_ENV: 'preview',
+            VERCEL_BRANCH_URL: 'app-git-fix-415-team.vercel.app',
+        });
+
+        expect(config.authLinkOrigin).toBe('https://app-git-fix-415-team.vercel.app');
+    });
+
+    it('ignore le domaine de branche hors d une preview', () => {
+        const config = loadConfig({
+            ...VALID_ENV,
+            WEB_ORIGIN: 'https://todo.example',
+            VERCEL_ENV: 'production',
+            VERCEL_BRANCH_URL: 'app-git-dev-team.vercel.app',
+        });
+
+        expect(config.authLinkOrigin).toBe('https://todo.example');
+    });
+
     it('ne fait confiance a aucun proxy quand TRUST_PROXY est absente', () => {
         expect(loadConfig(VALID_ENV).trustProxy).toBe(0);
     });
