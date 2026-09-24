@@ -130,6 +130,7 @@ export default defineConfig({
                 'packages/infra/src/supabase-attention-reader.ts',
                 'packages/infra/src/supabase-project-repository.ts',
                 'packages/infra/src/supabase-membership-repository.ts',
+                'packages/infra/src/supabase-invitation-repository.ts',
                 'packages/infra/src/supabase-personal-data-store.ts',
                 'packages/infra/src/outbox-store.ts',
                 'packages/infra/src/notification-store.ts',

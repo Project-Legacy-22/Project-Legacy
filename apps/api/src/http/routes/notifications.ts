@@ -14,7 +14,12 @@ import { accountOf } from '../session.js';
 function toNotificationDto(notification: Notification): NotificationDto {
     return {
         id: notification.id,
+        kind: notification.kind,
         itemId: notification.itemId,
+        projectId: notification.projectId,
+        projectName: notification.projectName,
+        invitationId: notification.invitationId,
+        invitationStatus: notification.invitationStatus,
         readAt: notification.readAt,
         createdAt: notification.createdAt,
     };

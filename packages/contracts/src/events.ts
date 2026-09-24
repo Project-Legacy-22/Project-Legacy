@@ -63,12 +63,33 @@ export const MembershipCreatedV1 = z.strictObject({
     payload: MembershipCreatedV1Payload,
 });
 
+export const INVITATION_CREATED_V1 = 'invitation.created.v1';
+
+// Identifiers only, for the reason given above: the address the owner typed is
+// content. The invitation identifier is what the notification points at, so
+// that the person invited can answer from it (#401).
+export const InvitationCreatedV1Payload = z.strictObject({
+    invitationId: z.uuid(),
+    projectId: z.uuid(),
+    inviteeId: z.uuid(),
+    invitedBy: z.uuid(),
+});
+
+export const InvitationCreatedV1 = z.strictObject({
+    id: z.uuid(),
+    name: z.literal(INVITATION_CREATED_V1),
+    occurredAt: z.iso.datetime(),
+    payload: InvitationCreatedV1Payload,
+});
+
 // Discriminated on the name so a second event type is added here without
 // touching the consumers of the first.
-export const DomainEvent = z.discriminatedUnion('name', [ItemCreatedV1, MembershipCreatedV1]);
+export const DomainEvent = z.discriminatedUnion('name', [ItemCreatedV1, MembershipCreatedV1, InvitationCreatedV1]);
 
 export type ItemCreatedV1Payload = z.infer<typeof ItemCreatedV1Payload>;
 export type ItemCreatedV1 = z.infer<typeof ItemCreatedV1>;
 export type MembershipCreatedV1Payload = z.infer<typeof MembershipCreatedV1Payload>;
 export type MembershipCreatedV1 = z.infer<typeof MembershipCreatedV1>;
+export type InvitationCreatedV1Payload = z.infer<typeof InvitationCreatedV1Payload>;
+export type InvitationCreatedV1 = z.infer<typeof InvitationCreatedV1>;
 export type DomainEvent = z.infer<typeof DomainEvent>;

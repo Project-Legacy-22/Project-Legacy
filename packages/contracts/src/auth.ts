@@ -28,7 +28,12 @@ export const PRIVACY_POLICY_VERSION = '2026-09-12';
 
 // One canonical form for an address, so that Foo@Example.com and
 // foo@example.com cannot become two accounts.
-const emailSchema = z.string().trim().toLowerCase().pipe(z.email().max(254));
+// Exported because inviting someone resolves an address against the accounts
+// this schema created: without the same form, Ada@Example.com would not find
+// ada@example.com, and the owner would read « no account » for someone who is
+// registered.
+export const EmailAddress = z.string().trim().toLowerCase().pipe(z.email().max(254));
+const emailSchema = EmailAddress;
 
 export const RegisterAccountBody = z.object({
     email: emailSchema,

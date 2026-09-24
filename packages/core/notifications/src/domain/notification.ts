@@ -5,13 +5,21 @@
 // Carries no message text: the wording belongs to the interface, and storing
 // it would freeze today's phrasing into every row (see the outbox migration).
 //
-// The task is optional, and that is what the notifications table now says: an
-// invitation to a project names no task. What a notification does name is
-// decided by its kind, which arrives with the membership flow -- until then
-// every row here has a task, and the type no longer promises it.
+// What a notification names is decided by its kind: a task for a created
+// task, a project for an addition to one, a project and an invitation for an
+// invitation (#401). The project name is read when the list is read, never
+// stored in the row, so a renamed project shows its current name.
+export type NotificationKind = 'item.created' | 'membership.created' | 'invitation.created';
+export type InvitationStatus = 'pending' | 'accepted' | 'declined';
+
 export interface Notification {
     id: string;
+    kind: NotificationKind;
     itemId: string | null;
+    projectId: string | null;
+    projectName: string | null;
+    invitationId: string | null;
+    invitationStatus: InvitationStatus | null;
     userId: string;
     readAt: string | null;
     createdAt: string;
