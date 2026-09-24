@@ -13,7 +13,7 @@ export interface ItemAssigneesFieldProps {
 // people (#419) and each choice is reached with Tab and toggled with Space.
 // Nobody checked means nobody assigned. Rendered only for a project with more
 // than one member: alone, there is nobody else to assign to (US-58).
-export function ItemAssigneesField({ idPrefix, members, selected, isDisabled, onChange }: ItemAssigneesFieldProps) {
+export function ItemAssigneesField({ idPrefix, members, selected, isDisabled, onChange }: Readonly<ItemAssigneesFieldProps>) {
     const toggle = (userId: string, checked: boolean) =>
         onChange(checked ? [...selected, userId] : selected.filter(id => id !== userId));
 

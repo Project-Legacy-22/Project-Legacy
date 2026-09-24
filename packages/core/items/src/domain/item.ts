@@ -139,7 +139,9 @@ export interface NewItem {
 // One entry per person, in a stable order: a list typed with a duplicate, or
 // in another order, is the same assignment.
 export function itemAssignees(candidate: readonly string[] | undefined): readonly string[] {
-    return [...new Set(candidate ?? [])].sort();
+    // Code-unit order, not the locale's: identifiers are ASCII, and the order
+    // must not depend on the machine that sorts them.
+    return [...new Set(candidate ?? [])].sort((left, right) => (left < right ? -1 : Number(left > right)));
 }
 
 export function createItem(candidate: NewItem): Item {

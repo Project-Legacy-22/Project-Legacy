@@ -15,7 +15,7 @@ function sameMembers(left: readonly string[], right: readonly string[]): boolean
 
 // Who the task is for, named from the project's members. An assignee missing
 // from a list that failed to load is still said to exist.
-export function ItemAssignees({ assigneeIds }: { assigneeIds: readonly string[] }) {
+export function ItemAssignees({ assigneeIds }: Readonly<{ assigneeIds: readonly string[] }>) {
     const members = useProjectMemberList();
     if (assigneeIds.length === 0) return null;
 

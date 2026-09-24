@@ -16,7 +16,7 @@ export interface AddItemFormProps {
 
 type AddItemFormState = ReturnType<typeof useAddItemForm>;
 
-function AddItemNameField({ form, isDisabled }: { form: AddItemFormState; isDisabled: boolean }) {
+function AddItemNameField({ form, isDisabled }: Readonly<{ form: AddItemFormState; isDisabled: boolean }>) {
     return (
         <div className="form-field add-form-name">
             <label htmlFor="item-name">{labels.itemNameLabel}</label>
