@@ -127,9 +127,9 @@ communication à un tiers : il figure ici pour cette raison.
 | **Finalité** | Créer, consulter, modifier et supprimer ses propres tâches |
 | **Base légale** | Exécution du contrat : c'est le service lui-même |
 | **Personnes concernées** | Utilisateurs inscrits |
-| **Catégories de données** | Intitulé saisi par l'utilisateur ; colonne de progression du Kanban ; priorité ; échéance facultative ; propriétaire et projet de rattachement ; membre du projet à qui la tâche est attribuée, facultatif (US-58) ; horodatages de création et de modification |
-| **Localisation** | `public.items` |
-| **Conservation** | Aucune : une suppression demandée par l'utilisateur efface la ligne immédiatement. Effacement immédiat également à la suppression du compte, et à celle d'un projet dont il était le dernier membre. L'attribution disparaît avec l'appartenance de la personne attribuée : la retirer du projet ou effacer son compte laisse la tâche sans attributaire |
+| **Catégories de données** | Intitulé saisi par l'utilisateur ; colonne de progression du Kanban ; priorité ; échéance facultative ; propriétaire et projet de rattachement ; membres du projet à qui la tâche est attribuée, aucun ou plusieurs (US-58, #419) ; horodatages de création et de modification |
+| **Localisation** | `public.items`, et `public.item_assignees` pour les attributions |
+| **Conservation** | Aucune : une suppression demandée par l'utilisateur efface la ligne immédiatement. Effacement immédiat également à la suppression du compte, et à celle d'un projet dont il était le dernier membre. L'attribution disparaît avec l'appartenance de la personne attribuée : la retirer du projet ou effacer son compte la retire des attributaires, et la tâche reste |
 | **Destinataires** | Vercel (sous-traitant, hébergement applicatif : l'API Express tourne en fonction Vercel, `vercel.json` y redirige `/auth` et `/items`, donc le corps des requêtes et des réponses y transite en clair) ; Supabase (sous-traitant, persistance) |
 | **Mesures de sécurité** | Politiques RLS par propriétaire ; toute lecture nomme un propriétaire ; l'intitulé ne sort jamais dans un journal ni dans un événement |
 

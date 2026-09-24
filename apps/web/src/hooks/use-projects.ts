@@ -1,21 +1,23 @@
 import { useCallback, useMemo } from 'react';
 
+import type { MembersApi } from '../api/members-api';
 import type { ProjectsApi } from '../api/projects-api';
 import { useProjectActions } from './use-project-actions';
 import { useProjectsQuery } from './use-projects-query';
 
 export type { AddProjectResult, ProjectFeedback, ProjectsLoadState, ProjectsPaginationState } from './projects-state';
 
-export function useProjects(api: ProjectsApi) {
+export function useProjects(api: ProjectsApi, members: MembersApi) {
     const query = useProjectsQuery(api);
     const dependencies = useMemo(
         () => ({
             api,
+            members,
             selectedProjectId: query.selectedProjectId,
             setProjects: query.setProjects,
             setSelectedProjectId: query.setSelectedProjectId,
         }),
-        [api, query.selectedProjectId, query.setProjects, query.setSelectedProjectId],
+        [api, members, query.selectedProjectId, query.setProjects, query.setSelectedProjectId],
     );
     const actions = useProjectActions(dependencies);
     const { setSelectedProjectId, retry } = query;

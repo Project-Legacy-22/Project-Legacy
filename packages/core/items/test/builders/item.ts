@@ -10,7 +10,7 @@ const DEFAULTS: Item = {
     dueDate: null,
     projectId: '00000000-0000-7000-8000-000000000010',
     ownerId: '00000000-0000-7000-8000-000000000001',
-    assigneeId: null,
+    assigneeIds: [],
 };
 
 export function anItem(overrides: Partial<Item> = {}): Item {

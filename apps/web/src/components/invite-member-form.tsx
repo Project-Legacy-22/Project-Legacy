@@ -1,17 +1,25 @@
 import { useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
-import { InviteMemberBody } from '@legacy/contracts';
-
-import type { ActionResult } from '../hooks/view-state';
+import { MAX_INVITATIONS_AT_ONCE, parseEmailList } from '../email-list';
+import type { InviteResult } from '../hooks/use-project-members';
 import { labels } from '../labels';
 
 export interface InviteMemberFormProps {
     isInviting: boolean;
-    onInvite: (email: string) => Promise<ActionResult>;
+    onInvite: (addresses: readonly string[]) => Promise<InviteResult>;
 }
 
-// Checked with the contract the API applies, so an address the server would
-// refuse is refused here first, without a round trip.
+// One or more addresses (#420), checked with the contract the API applies, so
+// an address the server would refuse is refused here first, without a round
+// trip.
+export function listRefusal(text: string): string | null {
+    const list = parseEmailList(text);
+    if (list.invalid.length > 0) return labels.notEmailAddresses(list.invalid);
+    if (list.addresses.length === 0) return labels.inviteEmailInvalid;
+    if (list.addresses.length > MAX_INVITATIONS_AT_ONCE) return labels.tooManyInvitations(MAX_INVITATIONS_AT_ONCE);
+    return null;
+}
+
 function useInviteForm(onInvite: InviteMemberFormProps['onInvite']) {
     const inputRef = useRef<HTMLInputElement>(null);
     const [email, setEmail] = useState('');
@@ -24,16 +32,17 @@ function useInviteForm(onInvite: InviteMemberFormProps['onInvite']) {
 
     const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        const candidate = InviteMemberBody.safeParse({ email });
-        if (!candidate.success) {
-            setError(labels.inviteEmailInvalid);
+        const refusal = listRefusal(email);
+        if (refusal !== null) {
+            setError(refusal);
             inputRef.current?.focus();
             return;
         }
 
-        void onInvite(candidate.data.email).then(result => {
-            if (result.status === 'error') setError(result.message);
-            else setEmail('');
+        void onInvite(parseEmailList(email).addresses).then(result => {
+            if (result.status === 'success') setEmail('');
+            if (result.status === 'partial') setEmail(result.remaining.join(', '));
+            setError(result.status === 'success' ? null : result.message);
             inputRef.current?.focus();
         });
     };
@@ -48,15 +57,16 @@ export function InviteMemberForm({ isInviting, onInvite }: InviteMemberFormProps
     return (
         <form className="project-form" onSubmit={form.handleSubmit} noValidate>
             <div className="form-field">
-                <label htmlFor="invite-email">{labels.inviteEmailLabel}</label>
+                <label htmlFor="invite-email">{labels.inviteEmailsLabel}</label>
                 <p id="invite-email-help" className="field-help">
-                    {labels.inviteEmailHelp}
+                    {labels.inviteEmailsHelp}
                 </p>
                 <input
                     ref={form.inputRef}
                     id="invite-email"
                     name="inviteEmail"
                     type="email"
+                    multiple
                     autoComplete="off"
                     value={form.email}
                     onChange={form.handleChange}

@@ -11,11 +11,13 @@ interface AddItemFormState {
     name: string;
     priority: ItemPriority;
     dueDate: string;
+    assigneeIds: readonly string[];
     validationError: string | null;
     describedBy: string;
     handleChange: (event: ChangeEvent<HTMLInputElement>) => void;
     handlePriorityChange: (priority: ItemPriority) => void;
     handleDueDateChange: (dueDate: string) => void;
+    handleAssigneesChange: (assigneeIds: readonly string[]) => void;
     // Le DOM ignore la valeur renvoyee par un gestionnaire de soumission :
     // la declarer void plutot que Promise<void> dit la verite a l appelant.
     handleSubmit: (event: FormEvent<HTMLFormElement>) => void;
@@ -25,18 +27,22 @@ function useAddItemFields() {
     const [name, setName] = useState('');
     const [priority, setPriority] = useState<ItemPriority>('normal');
     const [dueDate, setDueDate] = useState('');
+    const [assigneeIds, setAssigneeIds] = useState<readonly string[]>([]);
 
     return {
         name,
         priority,
         dueDate,
+        assigneeIds,
         setName,
         handlePriorityChange: setPriority,
         handleDueDateChange: setDueDate,
+        handleAssigneesChange: setAssigneeIds,
         reset: () => {
             setName('');
             setPriority('normal');
             setDueDate('');
+            setAssigneeIds([]);
         },
     };
 }
@@ -47,8 +53,20 @@ function invalidNameMessage(name: string): string {
         : labels.itemNameTooLong(MAX_ITEM_NAME_LENGTH);
 }
 
+function bodyOf(fields: ReturnType<typeof useAddItemFields>, canAssign: boolean) {
+    return {
+        name: fields.name,
+        priority: fields.priority,
+        dueDate: fields.dueDate === '' ? null : fields.dueDate,
+        ...(canAssign && fields.assigneeIds.length > 0 ? { assigneeIds: fields.assigneeIds } : {}),
+    };
+}
+
+// canAssign: whether the form offers the assignees (#419). When it does not,
+// the body leaves them out rather than sending an empty list.
 export function useAddItemForm(
     onAdd: (body: CreateItemInput) => Promise<AddItemResult>,
+    canAssign: boolean,
 ): AddItemFormState {
     const inputRef = useRef<HTMLInputElement>(null);
     const fields = useAddItemFields();
@@ -61,11 +79,7 @@ export function useAddItemForm(
 
     const submit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        const candidate = CreateItemBody.safeParse({
-            name: fields.name,
-            priority: fields.priority,
-            dueDate: fields.dueDate === '' ? null : fields.dueDate,
-        });
+        const candidate = CreateItemBody.safeParse(bodyOf(fields, canAssign));
 
         if (!candidate.success) {
             setValidationError(invalidNameMessage(fields.name));
@@ -92,11 +106,13 @@ export function useAddItemForm(
         name: fields.name,
         priority: fields.priority,
         dueDate: fields.dueDate,
+        assigneeIds: fields.assigneeIds,
         validationError,
         describedBy,
         handleChange,
         handlePriorityChange: fields.handlePriorityChange,
         handleDueDateChange: fields.handleDueDateChange,
+        handleAssigneesChange: fields.handleAssigneesChange,
         handleSubmit: (event) => void submit(event),
     };
 }

@@ -44,7 +44,7 @@ function anItemOf(candidate: { id: string; ownerId: string; name?: string; proje
         dueDate: null,
         projectId: candidate.projectId ?? PROJECT_ID,
         ownerId: candidate.ownerId,
-        assigneeId: null,
+        assigneeIds: [],
     };
 }
 
@@ -155,7 +155,7 @@ describe('items API', () => {
                 version: 1,
                 priority: 'normal',
                 dueDate: null,
-                assigneeId: null,
+                assigneeIds: [],
             });
             expect(store.items.get(GENERATED_ID)).toMatchObject({
                 projectId: PROJECT_ID,

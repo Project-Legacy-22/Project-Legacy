@@ -644,6 +644,9 @@ rollback;
 -- #348: assigning a task to a member of its project.
 \ir check-item-assignee.sql
 
+-- #419: several assignees per task, from its creation.
+\ir check-item-assignees.sql
+
 -- Behavioural checks for the two authorization cases ADR-0001 requires. All
 -- fixtures live in a rolled-back transaction, so the script is repeatable.
 begin;

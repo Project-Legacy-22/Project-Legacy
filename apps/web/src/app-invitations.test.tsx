@@ -202,7 +202,7 @@ describe('the members of a project', () => {
         await submitForm(getElement<HTMLFormElement>('.members-panel form'));
 
         expect(invite).not.toHaveBeenCalled();
-        expect(getElement('#invite-email-error').textContent).toBe(labels.inviteEmailInvalid);
+        expect(getElement('#invite-email-error').textContent).toBe(labels.notEmailAddresses(['not', 'an', 'address']));
         expect(getElement('#invite-email').getAttribute('aria-invalid')).toBe('true');
     });
 
@@ -232,7 +232,7 @@ describe('the members of a project', () => {
         await submitForm(getElement<HTMLFormElement>('.members-panel form'));
         await flushTimers();
 
-        expect(getElement('#invite-email-error').textContent).toBe(detail);
+        expect(getElement('#invite-email-error').textContent).toBe(`nobody@example.com was not invited: ${detail}`);
         expect(getElement<HTMLInputElement>('#invite-email').value).toBe('nobody@example.com');
     });
 
@@ -306,7 +306,7 @@ describe('the members of a project', () => {
         await submitForm(getElement<HTMLFormElement>('.members-panel form'));
         await flushTimers();
 
-        expect(getElement('#invite-email-error').textContent).toBe(labels.inviteFailed);
+        expect(getElement('#invite-email-error').textContent).toBe(`guest@example.com was not invited: ${labels.inviteFailed}`);
     });
 
     it('shows a member the list, with neither invitation nor removal', async () => {

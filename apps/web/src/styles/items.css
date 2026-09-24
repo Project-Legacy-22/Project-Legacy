@@ -150,6 +150,24 @@
     font-weight: 700;
 }
 
+.item-assignees-field {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.item-assignees-field legend {
+    margin-bottom: 6px;
+    padding: 0;
+    color: #172033;
+    font-weight: 750;
+}
+
+.item-assignees-field .checkbox-field {
+    overflow-wrap: anywhere;
+}
+
 .item-assignee {
     margin: 6px 0 0;
     overflow-wrap: anywhere;

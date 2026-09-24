@@ -38,7 +38,7 @@ describe('changeItem', () => {
             dueDate: null,
             projectId: PROJECT_ID,
             ownerId: OWNER_ID,
-            assigneeId: null,
+            assigneeIds: [],
         });
         expect(await repository.findByIdForMember('item-1', PROJECT_ID, OWNER_ID)).toEqual(updated);
     });

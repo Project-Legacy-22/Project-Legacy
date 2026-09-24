@@ -10,7 +10,7 @@ import type {
 
 import type { Database } from './database.types.js';
 import type { SupabaseSettings } from './supabase-item-repository.js';
-import { toItem } from './supabase-item-repository.js';
+import { ITEM_WITH_ASSIGNEES, toItem } from './supabase-item-repository.js';
 import { adapterFailure, serviceRoleClient } from './adapter.js';
 import type { AdapterFailure } from './adapter.js';
 
@@ -22,7 +22,7 @@ const fail: AdapterFailure = adapterFailure('attention reader');
 // Both embeddings are inner joins: an item whose project has no membership row
 // for the caller is not returned at all, rather than returned with an empty
 // membership list. That join is the whole authorization of this read.
-const ITEM_IN_MEMBER_PROJECT = '*, projects!inner(name, project_memberships!inner(user_id))';
+const ITEM_IN_MEMBER_PROJECT = `${ITEM_WITH_ASSIGNEES}, projects!inner(name, project_memberships!inner(user_id))`;
 const MEMBER_FILTER = 'projects.project_memberships.user_id';
 
 function itemsOfMember(client: AttentionClient, memberId: string) {
