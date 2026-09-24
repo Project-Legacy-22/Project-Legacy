@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import type { ProjectsApi } from '../api/projects-api';
 import { useProjectActions } from './use-project-actions';
@@ -18,6 +18,16 @@ export function useProjects(api: ProjectsApi) {
         [api, query.selectedProjectId, query.setProjects, query.setSelectedProjectId],
     );
     const actions = useProjectActions(dependencies);
+    const { setSelectedProjectId, retry } = query;
+    // A project the person just joined: selected before the list reloads,
+    // which keeps a selection it finds on the first page.
+    const showJoined = useCallback(
+        (projectId: string) => {
+            setSelectedProjectId(projectId);
+            retry();
+        },
+        [setSelectedProjectId, retry],
+    );
 
     return {
         projects: query.projects,
@@ -35,5 +45,6 @@ export function useProjects(api: ProjectsApi) {
         adjustSelectedItemCount: actions.adjustItemCount,
         loadMore: query.loadMore,
         retry: query.retry,
+        showJoined,
     };
 }
