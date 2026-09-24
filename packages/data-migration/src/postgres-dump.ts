@@ -61,7 +61,7 @@ function readColumnList(input: Reader, table: Table): readonly string[] {
     return names;
 }
 
-function readRow(input: Reader, columns: readonly string[]): ReadonlyMap<string, Cell> {
+export function readRow(input: Reader, columns: readonly string[]): ReadonlyMap<string, Cell> {
     expect(input, '(');
     const row = new Map<string, Cell>();
 
