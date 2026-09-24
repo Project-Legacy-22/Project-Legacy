@@ -34,6 +34,7 @@ the acceptance criteria: it describes the feature as it now behaves, in the pres
 | [#30](30-api-hardening.md) | API security hardening | Quality |
 | [#32](32-edit-complete-delete-task.md) | Edit, complete and delete an item | Tasks |
 | [#37](37-account-credentials.md) | Change my email address and my password | Auth |
+| [#42](42-small-screens.md) | Usable on a small screen | A11y |
 | [#48](48-logout.md) | Sign out | Auth |
 | [#49](49-view-states.md) | Coherent loading, empty and error states | A11y |
 | [#50](50-reorder-task.md) | Reorder tasks within a Kanban column | Tasks |
