@@ -1,15 +1,15 @@
-# ADR-0020 — Application automatique des migrations à la base hébergée
+# ADR-0019 — Application automatique des migrations à la base hébergée
 
 - **Statut** : Accepté
-- **Date** : 2026-09-24, enregistre une décision appliquée depuis le 23 septembre
+- **Date** : 2026-09-23
 - **Décideurs** : équipe
-- **Issue liée** : #413 ; décision livrée par #385, prolonge l'ADR-0005
+- **Issue liée** : #385, prolonge l'ADR-0005
 
 ## Contexte
 
 L'ADR-0005 versionne le schéma en migrations SQL. Il ne dit pas qui les applique à la base
-hébergée. Personne n'en avait la charge : le 23 septembre, six migrations fusionnées sur `dev`
-n'avaient jamais atteint la base, le code de #382 lisait une colonne absente, et les
+hébergée. Personne n'en a la charge : le 23 septembre, six migrations fusionnées sur `dev`
+n'ont jamais atteint la base, le code de #382 lisait une colonne absente, et les
 prévisualisations répondaient 500 (#385).
 
 Une contrainte pèse sur le choix : la production et les prévisualisations partagent un seul

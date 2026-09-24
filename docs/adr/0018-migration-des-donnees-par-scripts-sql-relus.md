@@ -1,9 +1,9 @@
-# ADR-0019 — Migration des données dans les deux sens par scripts SQL générés et relus
+# ADR-0018 — Migration des données dans les deux sens par scripts SQL générés et relus
 
 - **Statut** : Accepté
-- **Date** : 2026-09-24, enregistre une décision appliquée depuis le 12 septembre
+- **Date** : 2026-09-12
 - **Décideurs** : équipe, après la défense intermédiaire
-- **Issue liée** : #413 ; décision livrée par #275 (reprise) et #282 (sortie), prolonge l'ADR-0017
+- **Issue liée** : #275 (reprise), #282 (sortie), prolonge l'ADR-0017
 
 ## Contexte
 
@@ -12,10 +12,9 @@ reproductible et aussi transparente que possible pour reprendre les données du 
 qui les stockait dans un MySQL ou un SQLite selon le déploiement, vers notre PostgreSQL. Ensuite de
 pouvoir quitter Supabase sans abandonner les données des utilisateurs.
 
-L'ADR-0017 a posé l'exigence : la dépendance à Supabase est assumée parce qu'elle est réversible,
-et les deux chemins doivent être éprouvés avant d'en avoir besoin. Il ne dit pas comment. Ce
-document enregistre ce choix, qui était jusqu'ici décrit seulement par la procédure
-(`docs/data-migration.md`).
+L'ADR-0017 pose l'exigence : la dépendance à Supabase est assumée parce qu'elle est réversible,
+et les deux chemins doivent être éprouvés avant d'en avoir besoin. Il ne dit pas comment ; ce
+document le tranche.
 
 Les deux sens ne sont pas symétriques. Le legacy a une table de trois colonnes (`todo_items`) ;
 notre schéma en a dix pour les tâches, plus les comptes, les projets, les appartenances et les
@@ -84,8 +83,8 @@ Les règles de chaque sens font partie de la décision :
 
 **Négatives / dette acceptée**
 - Chaque migration de schéma doit mettre à jour le modèle ; le test d'intégration le rappelle.
-  C'est arrivé pour les invitations (#401), où MySQL a imposé de retirer une valeur par défaut
-  sur une colonne texte.
+  Le modèle suit aussi les limites de la cible la plus pauvre : MySQL refuse par exemple une
+  valeur par défaut sur une colonne `text`.
 - Ne traversent pas : les comptes et les mots de passe (Supabase Auth), les politiques de sécurité
   au niveau ligne, les déclencheurs et les contrôles de valeur. Ils sont nommés dans
   `docs/data-migration.md` comme le coût réel d'un départ.
@@ -106,5 +105,4 @@ un autre fournisseur exige une connexion directe que le principe « aucune conne
 ## Références
 
 - `docs/data-migration.md` : les commandes des deux sens et ce que chacun décide
-- `docs/backup-and-exit.md` : sauvegarde, restauration, et coût d'un départ de Supabase
 - ADR-0005 (schéma en migrations versionnées), ADR-0017 (hébergement et réversibilité)
