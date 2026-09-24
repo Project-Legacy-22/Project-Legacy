@@ -246,6 +246,63 @@ describe('the members of a project', () => {
         expect(politeText()).toContain(labels.memberRemoved(GUEST.email));
     });
 
+    it('says why the list failed, and loads it again on retry', async () => {
+        let attempts = 0;
+        const listMembers = vi.fn(async () => {
+            attempts += 1;
+            if (attempts === 1) throw new ApiError(503, 'The service is temporarily unavailable. Try again in a moment.');
+            return [ME];
+        });
+        await renderApp({ members: createMembersApi({ listMembers }) });
+        await openMembers();
+
+        expect(getElement('.members-panel [role="alert"]').textContent).toContain('temporarily unavailable');
+        await click(buttonNamed(labels.retry));
+        await flushTimers();
+
+        expect(document.querySelectorAll('#members-list li')).toHaveLength(1);
+    });
+
+    it('keeps a member whose removal was refused, and says why', async () => {
+        const removeMember = vi.fn(async () => {
+            throw new TypeError('offline');
+        });
+        vi.stubGlobal('confirm', vi.fn(() => true));
+        await renderApp({ members: createMembersApi({ listMembers: async () => [ME, GUEST], removeMember }) });
+        await openMembers();
+
+        await click(buttonNamed(labels.removeMember(GUEST.email)));
+        await flushTimers();
+
+        expect(document.querySelectorAll('#members-list li')).toHaveLength(2);
+        expect(getElement('.members-panel .action-error').textContent).toBe(labels.removeMemberFailed);
+    });
+
+    it('removes nobody when the confirmation is dismissed', async () => {
+        const removeMember = vi.fn(async () => undefined);
+        vi.stubGlobal('confirm', vi.fn(() => false));
+        await renderApp({ members: createMembersApi({ listMembers: async () => [ME, GUEST], removeMember }) });
+        await openMembers();
+
+        await click(buttonNamed(labels.removeMember(GUEST.email)));
+
+        expect(removeMember).not.toHaveBeenCalled();
+    });
+
+    it('falls back to its own sentence when the invitation fails without an answer', async () => {
+        const invite = vi.fn(async () => {
+            throw new TypeError('offline');
+        });
+        await renderApp({ members: createMembersApi({ invite }) });
+        await openMembers();
+
+        await setInputValue(getElement<HTMLInputElement>('#invite-email'), 'guest@example.com');
+        await submitForm(getElement<HTMLFormElement>('.members-panel form'));
+        await flushTimers();
+
+        expect(getElement('#invite-email-error').textContent).toBe(labels.inviteFailed);
+    });
+
     it('shows a member the list, with neither invitation nor removal', async () => {
         await renderApp({
             projects: createProjectsApi({ listProjects: async () => ({ projects: [JOINED], nextCursor: null }) }),

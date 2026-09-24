@@ -14,14 +14,14 @@ function messageFor(error: unknown, fallback: string): string {
 
 // Fetched only while the panel is open, like the notification list: most
 // visits never look at who is in a project.
-function useMemberList(api: MembersApi, projectId: string | null, isEnabled: boolean) {
+function useMemberList(api: MembersApi, projectId: string, isEnabled: boolean) {
     const [members, setMembers] = useState<readonly ProjectMemberDto[]>([]);
     const [loadState, setLoadState] = useState<LoadState>({ status: 'loading' });
     const [attempt, setAttempt] = useState(0);
     const retry = useCallback(() => setAttempt(previous => previous + 1), []);
 
     useEffect(() => {
-        if (projectId === null || !isEnabled) return;
+        if (!isEnabled) return;
         const controller = new AbortController();
         setMembers([]);
         setLoadState({ status: 'loading' });
@@ -45,13 +45,12 @@ function useMemberList(api: MembersApi, projectId: string | null, isEnabled: boo
 
 interface ActionContext {
     api: MembersApi;
-    projectId: string | null;
+    projectId: string;
     setMembers: SetMembers;
     setFeedback: Dispatch<SetStateAction<Feedback>>;
 }
 
 async function inviteMember(context: ActionContext, email: string): Promise<ActionResult> {
-    if (context.projectId === null) return { status: 'error', message: labels.inviteFailed };
     context.setFeedback({ status: 'idle' });
     try {
         const outcome = await context.api.invite(context.projectId, email);
@@ -63,7 +62,6 @@ async function inviteMember(context: ActionContext, email: string): Promise<Acti
 }
 
 async function removeMember(context: ActionContext, member: ProjectMemberDto): Promise<boolean> {
-    if (context.projectId === null) return false;
     context.setFeedback({ status: 'idle' });
     try {
         await context.api.removeMember(context.projectId, member.userId);
@@ -76,7 +74,7 @@ async function removeMember(context: ActionContext, member: ProjectMemberDto): P
     }
 }
 
-function useMemberActions(api: MembersApi, projectId: string | null, setMembers: SetMembers) {
+function useMemberActions(api: MembersApi, projectId: string, setMembers: SetMembers) {
     const [feedback, setFeedback] = useState<Feedback>({ status: 'idle' });
     const [isInviting, setIsInviting] = useState(false);
     const [pendingUserId, setPendingUserId] = useState<string | null>(null);
@@ -106,7 +104,7 @@ function useMemberActions(api: MembersApi, projectId: string | null, setMembers:
     return { feedback, isInviting, pendingUserId, invite, remove };
 }
 
-export function useProjectMembers(api: MembersApi, projectId: string | null, isEnabled: boolean) {
+export function useProjectMembers(api: MembersApi, projectId: string, isEnabled: boolean) {
     const list = useMemberList(api, projectId, isEnabled);
     const actions = useMemberActions(api, projectId, list.setMembers);
 
