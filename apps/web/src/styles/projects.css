@@ -6,6 +6,12 @@
     margin-bottom: 22px;
 }
 
+/* The creation form holds a name and its invitations (#420): both fields and
+   the button share the row, like the one-field forms. */
+.projects-panel > .project-form {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+}
+
 .projects-list {
     display: grid;
     gap: 10px;
@@ -94,6 +100,7 @@
 
 @media (max-width: 620px) {
     .project-form,
+    .projects-panel > .project-form,
     .project-row,
     .member-row {
         grid-template-columns: 1fr;

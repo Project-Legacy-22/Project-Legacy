@@ -3,6 +3,7 @@ import type { Dispatch, SetStateAction } from 'react';
 
 import { ApiError } from '../api/items-api';
 import type { MembersApi, ProjectMemberDto } from '../api/members-api';
+import { failedAddresses, inviteAll } from '../invite-all';
 import { labels } from '../labels';
 import type { ActionResult, Feedback, LoadState } from './view-state';
 
@@ -50,15 +51,23 @@ interface ActionContext {
     setFeedback: Dispatch<SetStateAction<Feedback>>;
 }
 
-async function inviteMember(context: ActionContext, email: string): Promise<ActionResult> {
+// What an invitation of several addresses answers to its form: the ones that
+// were not invited stay in the field, with the reason, so they can be fixed.
+export type InviteResult = ActionResult | { status: 'partial'; message: string; remaining: string[] };
+
+async function inviteMembers(context: ActionContext, addresses: readonly string[]): Promise<InviteResult> {
     context.setFeedback({ status: 'idle' });
-    try {
-        const outcome = await context.api.invite(context.projectId, email);
-        context.setFeedback({ status: 'success', message: labels.invitationOutcome(outcome, email) });
+    const results = await inviteAll(context.api, context.projectId, addresses);
+    const remaining = failedAddresses(results);
+    const summary = labels.invitationSummary(results);
+
+    if (remaining.length === 0) {
+        context.setFeedback({ status: 'success', message: summary });
         return { status: 'success' };
-    } catch (error) {
-        return { status: 'error', message: messageFor(error, labels.inviteFailed) };
     }
+    if (remaining.length === results.length) return { status: 'error', message: summary };
+    context.setFeedback({ status: 'success', message: labels.invitationSummary(results.filter(result => result.outcome !== undefined)) });
+    return { status: 'partial', message: labels.invitationSummary(results.filter(result => result.outcome === undefined)), remaining };
 }
 
 async function removeMember(context: ActionContext, member: ProjectMemberDto): Promise<boolean> {
@@ -83,10 +92,10 @@ function useMemberActions(api: MembersApi, projectId: string, setMembers: SetMem
     // A message about one project must not stay under the next one.
     useEffect(() => setFeedback({ status: 'idle' }), [projectId]);
 
-    const invite = async (email: string) => {
+    const invite = async (addresses: readonly string[]) => {
         setIsInviting(true);
         try {
-            return await inviteMember(context, email);
+            return await inviteMembers(context, addresses);
         } finally {
             setIsInviting(false);
         }

@@ -4,6 +4,12 @@ import type { InvitationOutcome, NotificationKind, ProjectRole } from '@legacy/c
 // Kept apart from labels.ts, which is at its line ceiling, and spread into it
 // like the other label modules.
 
+export interface InvitationSummaryEntry {
+    email: string;
+    outcome?: InvitationOutcome;
+    reason?: string;
+}
+
 const ROLES: Record<ProjectRole, string> = { owner: 'Owner', member: 'Member' };
 
 export const membersLabels = {
@@ -31,12 +37,33 @@ export const membersLabels = {
         return `${email} was removed from the project.`;
     },
     removeMemberFailed: 'Unable to remove this member.',
-    inviteEmailLabel: 'Invite by email address',
-    inviteEmailHelp: 'The person needs an account. They join once they accept from their notifications.',
     inviteEmailInvalid: 'Enter a valid email address.',
     invite: 'Send invitation',
     inviting: 'Sending…',
     inviteFailed: 'Unable to send the invitation.',
+    inviteEmailsLabel: 'Invite by email address',
+    projectInviteesLabel: 'Invite people (optional)',
+    projectInviteesHelp: 'One or more email addresses, separated by commas. They join once they accept from their notifications.',
+    inviteEmailsHelp: 'One or more addresses, separated by commas. Each person needs an account and joins once they accept from their notifications.',
+    notEmailAddresses(invalid: readonly string[]): string {
+        return `Not an email address: ${invalid.join(', ')}.`;
+    },
+    tooManyInvitations(max: number): string {
+        return `At most ${max} addresses at once.`;
+    },
+    // What several invitations came to, in one message (#420).
+    invitationSummary(results: readonly InvitationSummaryEntry[]): string {
+        const sent = results.filter(result => result.outcome === 'invited').map(result => result.email);
+        const parts = [
+            sent.length > 0 ? `Invitation sent to ${sent.join(', ')}.` : '',
+            ...results.map(result => {
+                if (result.outcome === 'invited') return '';
+                if (result.outcome !== undefined) return membersLabels.invitationOutcome(result.outcome, result.email);
+                return `${result.email} was not invited: ${result.reason ?? membersLabels.inviteFailed}`;
+            }),
+        ];
+        return parts.filter(part => part !== '').join(' ');
+    },
     invitationOutcome(outcome: InvitationOutcome, email: string): string {
         if (outcome === 'already_member') return `${email} is already a member of this project.`;
         if (outcome === 'already_invited') return `${email} is already invited and has not answered yet.`;
