@@ -5,6 +5,7 @@ import { itemPlanningLabels } from './item-planning-labels';
 import { itemReorderLabels } from './item-reorder-labels';
 import { itemsFilterLabels } from './items-filter-labels';
 import { itemStatusLabels } from './item-status-labels';
+import { membersLabels } from './members-labels';
 
 export const labels = {
     // Authentication (US-11b)
@@ -116,6 +117,7 @@ export const labels = {
     ...credentialsLabels,
     ...homeLabels,
     ...failureLabels,
+    ...membersLabels,
 
     notificationsFailed: 'Unable to read your notifications.',
     unreadNotifications(count: number): string {
@@ -126,7 +128,6 @@ export const labels = {
     hideNotifications: 'Hide notifications',
     notificationsTitle: 'Notifications',
     emptyNotifications: 'No notifications yet.',
-    notificationItemCreated: 'A new item was created.',
     notificationRead: 'Read',
     notificationUnread: 'Unread',
     markNotificationRead: 'Mark as read',

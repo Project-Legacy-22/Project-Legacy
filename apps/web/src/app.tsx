@@ -1,6 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 
-import { guardSession } from './api/guard-session';
 import { accountApi } from './api/account-api';
 import { attentionApi } from './api/attention-api';
 import type { AttentionApi } from './api/attention-api';
@@ -11,6 +10,8 @@ import { credentialsApi } from './api/credentials-api';
 import type { CredentialsApi } from './api/credentials-api';
 import { itemsApi } from './api/items-api';
 import type { ItemsApi } from './api/items-api';
+import { membersApi } from './api/members-api';
+import type { MembersApi } from './api/members-api';
 import { notificationsApi } from './api/notifications-api';
 import { projectsApi } from './api/projects-api';
 import type { ProjectsApi } from './api/projects-api';
@@ -19,6 +20,7 @@ import { AccountSections } from './components/account-sections';
 import type { CredentialsControls } from './components/account-sections';
 import { AuthPage } from './components/auth-page';
 import { HomeSection } from './components/home-section';
+import { MembersSection } from './components/members-section';
 import { DeepLinkPages, useDeepLinkToken } from './components/deep-link-pages';
 import { NotificationsPanel } from './components/notifications-panel';
 import { PrivacyPolicyPage } from './components/privacy-policy-page';
@@ -31,6 +33,8 @@ import { useCredentials } from './hooks/use-credentials';
 import { useItems } from './hooks/use-items';
 import { useNotifications } from './hooks/use-notifications';
 import { useOpenFromHome } from './hooks/use-open-from-home';
+import { useGuardedApis } from './hooks/use-guarded-apis';
+import type { SignedInApis } from './hooks/use-guarded-apis';
 import { useProjects } from './hooks/use-projects';
 import { usePersonalData } from './hooks/use-personal-data';
 import { useSession } from './hooks/use-session';
@@ -55,38 +59,7 @@ export interface AppProps {
     save?: SaveFile;
     projects?: ProjectsApi;
     attention?: AttentionApi;
-}
-
-interface SignedInApis {
-    api: ItemsApi;
-    account: AccountApi;
-    credentials: CredentialsApi;
-    notifications: NotificationsApi;
-    projects: ProjectsApi;
-    attention: AttentionApi;
-}
-
-// The three clients the signed-in screen uses, each wrapped so that a 401 ends
-// the session in the interface instead of being reported as one more failed
-// request (US-27).
-//
-// Wrapped once and kept: useItems and useNotifications key their effects on the
-// identity of the client they are given, so rebuilding these on every render
-// would refetch on every render.
-function useGuardedApis(apis: SignedInApis, onExpired: () => void): SignedInApis {
-    const { api, account, credentials, notifications, projects, attention } = apis;
-
-    return useMemo(
-        () => ({
-            api: guardSession(api, onExpired),
-            account: guardSession(account, onExpired),
-            credentials: guardSession(credentials, onExpired),
-            notifications: guardSession(notifications, onExpired),
-            projects: guardSession(projects, onExpired),
-            attention: guardSession(attention, onExpired),
-        }),
-        [api, account, credentials, notifications, projects, attention, onExpired],
-    );
+    members?: MembersApi;
 }
 
 interface SignedInAppProps {
@@ -206,12 +179,17 @@ function SignedInApp({
                 isSigningOut={isSigningOut}
                 onSignOut={onSignOut}
             />
-            <NotificationsPanel api={apis.notifications} />
+            <NotificationsPanel api={apis.notifications} members={apis.members} onJoined={projects.showJoined} />
             <TodoPage
                 {...itemsSectionProps(state)}
                 selectedProject={projects.selectedProject}
                 projects={projectSectionProps(projects)}
                 home={<HomeSection {...attention} onOpen={openFromHome} />}
+                members={
+                    projects.selectedProject !== null && (
+                        <MembersSection api={apis.members} project={projects.selectedProject} currentEmail={email} />
+                    )
+                }
             >
                 <AccountSections
                     email={email}
@@ -281,14 +259,15 @@ const REAL: Required<AppProps> = {
     save: saveFile,
     projects: projectsApi,
     attention: attentionApi,
+    members: membersApi,
 };
 
 export function App(props: AppProps) {
-    const { api, auth, account, credentials, notifications, save, projects, attention } = { ...REAL, ...props };
+    const { api, auth, account, credentials, notifications, save, projects, attention, members } = { ...REAL, ...props };
     const session = useSession(auth);
     const recoveryToken = useDeepLinkToken('recovery');
     const emailChangeToken = useDeepLinkToken('email_change');
-    const guarded = useGuardedApis({ api, account, credentials, notifications, projects, attention }, session.expire);
+    const guarded = useGuardedApis({ api, account, credentials, notifications, projects, attention, members }, session.expire);
     const credentialActions = useCredentials(guarded.credentials);
     // The policy is a screen, not a route: this application chooses what to
     // show by state, and it must be readable before an account exists.

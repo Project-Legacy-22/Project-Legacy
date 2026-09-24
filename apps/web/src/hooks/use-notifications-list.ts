@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
+import type { InvitationStatus } from '@legacy/contracts';
 
 import { ApiError } from '../api/items-api';
 import type { NotificationDto, NotificationsApi } from '../api/notifications-api';
@@ -137,9 +138,17 @@ export function useNotificationsList(api: NotificationsApi, isEnabled: boolean) 
         return () => controller.abort();
     }, [api, isEnabled, attempt, pagination.reset, pagination.setNextCursor]);
 
+    // An answered invitation keeps its row, which now says the answer.
+    const recordAnswer = useCallback(
+        (id: string, status: InvitationStatus) =>
+            setNotifications(current => current.map(n => (n.id === id ? { ...n, invitationStatus: status } : n))),
+        [],
+    );
+
     return {
         notifications,
         loadState,
+        recordAnswer,
         hasNextPage: pagination.hasNextPage,
         paginationState: pagination.paginationState,
         loadMore: pagination.loadMore,
