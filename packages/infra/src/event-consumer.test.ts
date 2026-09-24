@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { ITEM_CREATED_V1, MEMBERSHIP_CREATED_V1 } from '@legacy/contracts';
+import { INVITATION_CREATED_V1, ITEM_CREATED_V1, MEMBERSHIP_CREATED_V1 } from '@legacy/contracts';
 import type { DomainEvent } from '@legacy/contracts';
 
 import { consume } from './event-consumer.js';
@@ -24,6 +24,7 @@ interface Notification {
     // refuse une ligne qui nommerait une tache et un projet.
     itemId?: string;
     projectId?: string;
+    invitationId?: string;
 }
 
 // Un vrai magasin en memoire, avec la meme regle d unicite que la base : la
@@ -49,6 +50,12 @@ function fakeNotifications(): NotificationStore & { created: Notification[] } {
             if (handled.has(eventId)) return Promise.resolve(false);
             handled.add(eventId);
             created.push({ eventId, userId, projectId });
+            return Promise.resolve(true);
+        },
+        notifyInvited: ({ eventId, userId, projectId, invitationId }) => {
+            if (handled.has(eventId)) return Promise.resolve(false);
+            handled.add(eventId);
+            created.push({ eventId, userId, projectId, invitationId });
             return Promise.resolve(true);
         },
         countUnread: userId =>
@@ -180,6 +187,7 @@ describe('consume, atomicite de l effet', () => {
         const notifications: NotificationStore = {
             notifyItemCreated: () => Promise.reject(new Error('notifications: notify failed')),
             notifyMemberAdded: () => Promise.reject(new Error('notifications: notify failed')),
+            notifyInvited: () => Promise.reject(new Error('notifications: notify failed')),
             countUnread: () => Promise.resolve(0),
             findPageForAccount: () => Promise.reject(new Error('not exercised by this suite')),
             markAsRead: () => Promise.reject(new Error('not exercised by this suite')),
@@ -206,6 +214,7 @@ describe('consume, atomicite de l effet', () => {
             },
             notifyMemberAdded: (eventId, userId, projectId) =>
                 store.notifyMemberAdded(eventId, userId, projectId),
+            notifyInvited: invitation => store.notifyInvited(invitation),
             countUnread: userId => store.countUnread(userId),
             findPageForAccount: () => Promise.reject(new Error('not exercised by this suite')),
             markAsRead: () => Promise.reject(new Error('not exercised by this suite')),
@@ -216,5 +225,46 @@ describe('consume, atomicite de l effet', () => {
 
         expect(retry).toBe('applied');
         expect(store.created).toHaveLength(1);
+    });
+});
+
+// #401: the person invited answers from the notification, so it names the
+// invitation, and only that person receives it.
+describe('consume, invitation.created.v1', () => {
+    const INVITATION: DomainEvent = {
+        id: '01931f3a-0000-7000-8000-00000000000a',
+        name: INVITATION_CREATED_V1,
+        occurredAt: '2026-09-24T10:00:00.000Z',
+        payload: {
+            invitationId: '01931f3a-0000-7000-8000-00000000000b',
+            projectId: '01931f3a-0000-7000-8000-00000000000c',
+            inviteeId: '01931f3a-0000-7000-8000-00000000000d',
+            invitedBy: OWNER_ID,
+        },
+    };
+
+    it('notifies the person invited, and names the invitation', async () => {
+        const notifications = fakeNotifications();
+
+        await expect(consume(INVITATION, { notifications, logger: recordingLogger() })).resolves.toBe('applied');
+
+        expect(notifications.created).toEqual([
+            {
+                eventId: INVITATION.id,
+                userId: '01931f3a-0000-7000-8000-00000000000d',
+                projectId: '01931f3a-0000-7000-8000-00000000000c',
+                invitationId: '01931f3a-0000-7000-8000-00000000000b',
+            },
+        ]);
+    });
+
+    it('does not notify twice on redelivery', async () => {
+        const notifications = fakeNotifications();
+        const dependencies = { notifications, logger: recordingLogger() };
+
+        await consume(INVITATION, dependencies);
+        await expect(consume(INVITATION, dependencies)).resolves.toBe('alreadyHandled');
+
+        expect(notifications.created).toHaveLength(1);
     });
 });

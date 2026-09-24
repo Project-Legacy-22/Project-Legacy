@@ -103,6 +103,7 @@ export type Database = {
           created_at: string
           event_id: string
           id: string
+          invitation_id: string | null
           item_id: string | null
           kind: string
           project_id: string | null
@@ -114,6 +115,7 @@ export type Database = {
           created_at?: string
           event_id: string
           id?: string
+          invitation_id?: string | null
           item_id?: string | null
           kind: string
           project_id?: string | null
@@ -125,6 +127,7 @@ export type Database = {
           created_at?: string
           event_id?: string
           id?: string
+          invitation_id?: string | null
           item_id?: string | null
           kind?: string
           project_id?: string | null
@@ -139,6 +142,13 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "processed_events"
             referencedColumns: ["event_id"]
+          },
+          {
+            foreignKeyName: "notifications_invitation_id_fkey"
+            columns: ["invitation_id"]
+            isOneToOne: false
+            referencedRelation: "project_invitations"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "notifications_item_id_fkey"
@@ -204,6 +214,58 @@ export type Database = {
           processed_at?: string
         }
         Relationships: []
+      }
+      project_invitations: {
+        Row: {
+          answered_at: string | null
+          created_at: string
+          id: string
+          invited_by: string
+          invitee_id: string
+          project_id: string
+          status: string
+        }
+        Insert: {
+          answered_at?: string | null
+          created_at?: string
+          id: string
+          invited_by: string
+          invitee_id: string
+          project_id: string
+          status: string
+        }
+        Update: {
+          answered_at?: string | null
+          created_at?: string
+          id?: string
+          invited_by?: string
+          invitee_id?: string
+          project_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_invitations_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_invitations_invitee_id_fkey"
+            columns: ["invitee_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_invitations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       project_memberships: {
         Row: {
@@ -326,8 +388,30 @@ export type Database = {
       }
       erase_account: { Args: { p_user_id: string }; Returns: undefined }
       immutable_unaccent: { Args: { "": string }; Returns: string }
+      invite_member_with_event: {
+        Args: {
+          p_event_id: string
+          p_event_name: string
+          p_invitation_id: string
+          p_invited_by: string
+          p_invitee_id: string
+          p_occurred_at: string
+          p_payload: Json
+          p_project_id: string
+        }
+        Returns: string
+      }
       mark_notification_read: {
         Args: { p_account_id: string; p_id: string }
+        Returns: boolean
+      }
+      record_invitation_notification: {
+        Args: {
+          p_event_id: string
+          p_invitation_id: string
+          p_project_id: string
+          p_user_id: string
+        }
         Returns: boolean
       }
       record_item_created_notification: {
@@ -340,6 +424,14 @@ export type Database = {
       }
       remove_project_member: {
         Args: { p_caller_id: string; p_member_id: string; p_project_id: string }
+        Returns: string
+      }
+      respond_to_invitation: {
+        Args: {
+          p_accept: boolean
+          p_invitation_id: string
+          p_invitee_id: string
+        }
         Returns: string
       }
       swap_item_position: {
@@ -511,3 +603,4 @@ export const Constants = {
     },
   },
 } as const
+

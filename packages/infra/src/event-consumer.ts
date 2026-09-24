@@ -1,4 +1,4 @@
-import { ITEM_CREATED_V1, MEMBERSHIP_CREATED_V1 } from '@legacy/contracts';
+import { INVITATION_CREATED_V1, ITEM_CREATED_V1, MEMBERSHIP_CREATED_V1 } from '@legacy/contracts';
 import type { DomainEvent, Logger } from '@legacy/contracts';
 
 import type { NotificationStore } from './notification-store.js';
@@ -49,6 +49,25 @@ export async function consume(
             logger.info(
                 { eventId: event.id, applied },
                 applied ? 'membership notification created' : 'event already handled, nothing to do',
+            );
+
+            return applied ? 'applied' : 'alreadyHandled';
+        }
+
+        case INVITATION_CREATED_V1: {
+            // La personne invitee, et elle seule : c est elle qui repond. La
+            // notification designe l invitation pour qu elle puisse accepter ou
+            // refuser depuis la notification meme (#401).
+            const applied = await notifications.notifyInvited({
+                eventId: event.id,
+                userId: event.payload.inviteeId,
+                projectId: event.payload.projectId,
+                invitationId: event.payload.invitationId,
+            });
+
+            logger.info(
+                { eventId: event.id, applied },
+                applied ? 'invitation notification created' : 'event already handled, nothing to do',
             );
 
             return applied ? 'applied' : 'alreadyHandled';

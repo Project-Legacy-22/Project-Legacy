@@ -243,18 +243,36 @@ devra revenir ici.
 
 | | |
 |---|---|
-| **Finalité** | Refuser une attaque par force brute sur l'inscription, la connexion et la demande de réinitialisation |
+| **Finalité** | Refuser une attaque par force brute sur l'inscription, la connexion et la demande de réinitialisation, et borner le sondage des adresses inscrites par l'invitation (`T-10`) |
 | **Base légale** | Intérêt légitime : protéger les comptes contre l'essai systématique d'identifiants |
 | **Personnes concernées** | Toute personne émettant une requête, inscrite ou non |
-| **Catégories de données** | Adresse IP de l'appelant, seule clé du compteur |
+| **Catégories de données** | Adresse IP de l'appelant, seule clé du compteur des routes publiques ; identifiant du compte pour l'invitation, qui exige une session |
 | **Localisation** | Mémoire du processus, dans une table effacée au redémarrage |
-| **Conservation** | La durée de la fenêtre, cinq minutes, puis la clé est retirée |
+| **Conservation** | La durée de la fenêtre, de cinq minutes à une heure selon la route, puis la clé est retirée |
 | **Destinataires** | Aucun. La valeur ne quitte pas le processus |
 | **Mesures de sécurité** | Jamais journalisée — `request-log.ts` ne consigne aucune adresse, ce qu'un test vérifie — jamais persistée, jamais transmise. `TRUST_PROXY` détermine combien de sauts de proxy sont crus pour la dériver, et une valeur fausse ferait partager un même compteur à tous les visiteurs |
 
+### T-10 — Invitations dans un projet
+
+| | |
+|---|---|
+| **Finalité** | Proposer à une personne de rejoindre un projet, et la laisser accepter ou refuser |
+| **Base légale** | Exécution du contrat : le partage d'un projet est la fonction demandée, et l'entrée dépend de l'accord de la personne invitée |
+| **Personnes concernées** | Utilisateurs inscrits : la personne qui invite et la personne invitée |
+| **Catégories de données** | Identifiants du projet, de la personne invitée et de la personne qui invite ; état de l'invitation (`pending`, `accepted`, `declined`) ; dates de création et de réponse. L'adresse de la personne qui invite est montrée à la personne invitée, lue à la demande et jamais copiée |
+| **Localisation** | `public.project_invitations`, et la colonne `invitation_id` de `public.notifications` |
+| **Conservation** | Toute la vie du projet. Une invitation traitée reste pour que l'historique dise qui a refusé ; elle part avec le projet, ou avec le compte de l'une ou l'autre des deux personnes (clés étrangères en cascade) |
+| **Destinataires** | Vercel (sous-traitant, hébergement applicatif) ; Supabase (sous-traitant, persistance) |
+| **Mesures de sécurité** | Seul un propriétaire du projet invite ; seule la personne invitée lit et répond à son invitation, les autres comptes reçoivent la même absence qu'une invitation inexistante ; l'adresse saisie n'est ni journalisée ni placée dans l'événement ; vingt invitations par compte et par quart d'heure bornent l'usage de la route pour tester quelles adresses ont un compte |
+
+Inviter répond « aucun compte ne porte cette adresse » quand c'est le cas, pour que la
+personne qui invite corrige une faute de frappe. La route révèle donc qu'une adresse est
+inscrite, à un compte authentifié et dans la limite de son budget. Ce choix est assumé : le
+refus silencieux laisserait une invitation partir vers personne sans que l'auteur le sache.
+
 ## Ce que le registre ne couvre pas encore
 
-Rien. Les neuf traitements ci-dessus couvrent chaque table du schéma, chaque appel sortant et
+Rien. Les dix traitements ci-dessus couvrent chaque table du schéma, chaque appel sortant et
 chaque donnée tenue en mémoire par le processus.
 
 ## Champs sans finalité identifiée

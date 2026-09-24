@@ -47,7 +47,12 @@ function createAuth(): AuthApi {
 
 const NOTIFICATION: NotificationDto = {
     id: '11111111-1111-4111-8111-111111111111',
+    kind: 'item.created',
     itemId: '22222222-2222-4222-8222-222222222222',
+    projectId: null,
+    projectName: null,
+    invitationId: null,
+    invitationStatus: null,
     readAt: null,
     createdAt: '2026-09-10T10:00:00.000Z',
 };

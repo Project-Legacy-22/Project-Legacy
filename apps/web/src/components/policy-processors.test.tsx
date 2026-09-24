@@ -34,6 +34,7 @@ const DECLARED_BY: Record<string, string> = {
     // parce que project_memberships n a pas de politique de lecture des autres
     // membres, pas parce qu elles sortent ailleurs.
     'supabase-membership-repository.ts': 'Supabase',
+    'supabase-invitation-repository.ts': 'Supabase',
     // Same database again: a read of items across the caller's projects
     // (US-20), behind its own port. No new data leaves for anywhere.
     'supabase-attention-reader.ts': 'Supabase',

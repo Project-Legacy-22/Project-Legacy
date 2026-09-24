@@ -50,6 +50,9 @@ function unexercised(): AppUseCases {
             removeProject: refusing('removeProject'),
             listProjectMembers: refusing('listProjectMembers'),
             removeProjectMember: refusing('removeProjectMember'),
+            inviteProjectMember: refusing('inviteProjectMember'),
+            listInvitations: refusing('listInvitations'),
+            respondToInvitation: refusing('respondToInvitation'),
         },
         notifications: {
             countUnread: refusing('countUnread'),

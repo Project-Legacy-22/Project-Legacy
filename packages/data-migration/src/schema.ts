@@ -113,6 +113,30 @@ export const TABLES: readonly Table[] = [
         unique: [],
     },
     {
+        // #401. Before notifications, which reference it. The single pending
+        // invitation per person and project is a partial index, and the status
+        // values are a check: both stay in PostgreSQL, like the other checks.
+        name: 'project_invitations',
+        columns: [
+            uuid('id'),
+            uuid('project_id'),
+            uuid('invitee_id'),
+            uuid('invited_by'),
+            // No default, in the database either: MySQL refuses one on a TEXT
+            // column, and the function that invites writes `pending` itself.
+            text('status'),
+            stamped('created_at'),
+            timestamp('answered_at', true),
+        ],
+        primaryKey: ['id'],
+        references: [
+            { column: 'project_id', table: 'projects', target: 'id' },
+            { column: 'invitee_id', table: 'users', target: 'id' },
+            { column: 'invited_by', table: 'users', target: 'id' },
+        ],
+        unique: [],
+    },
+    {
         name: 'items',
         // In the order the database declares them, which a test compares with
         // information_schema: the model is a copy, and a copy that drifts in
@@ -194,12 +218,16 @@ export const TABLES: readonly Table[] = [
             // reste en PostgreSQL, comme les autres.
             text('kind'),
             uuid('project_id', true),
+            // #401 : une notification d invitation designe l invitation, pour
+            // que la personne reponde depuis la notification.
+            uuid('invitation_id', true),
         ],
         primaryKey: ['id'],
         references: [
             { column: 'user_id', table: 'users', target: 'id' },
             { column: 'item_id', table: 'items', target: 'id' },
             { column: 'project_id', table: 'projects', target: 'id' },
+            { column: 'invitation_id', table: 'project_invitations', target: 'id' },
             { column: 'event_id', table: 'processed_events', target: 'event_id' },
         ],
         // One notification per event, not per delivery: the rule that makes a

@@ -26,7 +26,21 @@ export interface MembershipCreatedV1 {
     };
 }
 
-export type DomainEvent = MembershipCreatedV1;
+export const INVITATION_CREATED_V1 = 'invitation.created.v1';
+
+export interface InvitationCreatedV1 {
+    id: string;
+    name: typeof INVITATION_CREATED_V1;
+    occurredAt: string;
+    payload: {
+        invitationId: string;
+        projectId: string;
+        inviteeId: string;
+        invitedBy: string;
+    };
+}
+
+export type DomainEvent = MembershipCreatedV1 | InvitationCreatedV1;
 
 // Builds the event announcing a member joining a project.
 //
@@ -52,6 +66,26 @@ export function membershipCreated(
             projectId: addition.projectId,
             memberId: addition.memberId,
             addedBy: addition.addedBy,
+        },
+    };
+}
+
+// Builds the event announcing an invitation (#401). Identifiers only, for the
+// reason given above: the address the owner typed is content.
+export function invitationCreated(
+    eventId: string,
+    occurredAt: Date,
+    invitation: { invitationId: string; projectId: string; inviteeId: string; invitedBy: string },
+): InvitationCreatedV1 {
+    return {
+        id: eventId,
+        name: INVITATION_CREATED_V1,
+        occurredAt: occurredAt.toISOString(),
+        payload: {
+            invitationId: invitation.invitationId,
+            projectId: invitation.projectId,
+            inviteeId: invitation.inviteeId,
+            invitedBy: invitation.invitedBy,
         },
     };
 }

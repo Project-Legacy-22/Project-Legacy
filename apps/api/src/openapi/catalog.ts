@@ -9,6 +9,9 @@ import {
     CreateItemBody,
     CreateProjectBody,
     DeleteAccountBody,
+    InvitationIdParams,
+    InvitationOutcomeDto,
+    InviteMemberBody,
     ItemDto,
     ItemPageDto,
     ListItemsQuery,
@@ -18,6 +21,7 @@ import {
     NotificationIdParams,
     NotificationPageDto,
     NotificationSummaryDto,
+    PendingInvitationListDto,
     PersonalDataExportDto,
     ProjectDto,
     ProjectIdParams,
@@ -81,6 +85,10 @@ const PROJECTS: readonly Operation[] = [
     { method: 'get', path: '/projects/:projectId/members', tag: 'Projects', summary: 'Who is in a project, and with which role', access: 'session', params: ProjectIdParams, success: json(ProjectMemberListDto), errors: [404] },
     { method: 'delete', path: '/projects/:projectId/members/:userId', tag: 'Projects', summary: 'Remove a member; their tasks stay in the project', access: 'session', params: ProjectMemberIdParams, success: noContent('Removed'), errors: [403, 404, 409] },
     { method: 'get', path: '/projects/attention', tag: 'Projects', summary: 'What needs attention across the caller\'s projects', access: 'session', query: AttentionQuery, success: json(AttentionDto) },
+    { method: 'post', path: '/projects/:projectId/invitations', tag: 'Projects', summary: 'Invite a person into a project by their address; the owner only', access: 'session', params: ProjectIdParams, body: InviteMemberBody, success: json(InvitationOutcomeDto, 'Invited (201), or already a member or already invited (200): nothing is created twice', 201), errors: [403, 404, 429] },
+    { method: 'get', path: '/projects/invitations', tag: 'Projects', summary: 'The invitations waiting for the caller\'s answer', access: 'session', success: json(PendingInvitationListDto) },
+    { method: 'post', path: '/projects/invitations/:invitationId/accept', tag: 'Projects', summary: 'Accept an invitation; the caller joins the project as a member', access: 'session', params: InvitationIdParams, success: noContent('Accepted'), errors: [404, 409] },
+    { method: 'post', path: '/projects/invitations/:invitationId/decline', tag: 'Projects', summary: 'Decline an invitation', access: 'session', params: InvitationIdParams, success: noContent('Declined'), errors: [404, 409] },
 ];
 
 const ITEMS: readonly Operation[] = [

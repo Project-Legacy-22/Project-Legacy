@@ -90,6 +90,30 @@ assume et qu'EN-35 fermera avec une file de rebut. Publier ce nom avant que le c
 sache l'écrire en notification perdrait donc les invitations émises entre les deux. Rien ne
 l'émet pour l'instant.
 
+### `invitation.created.v1`
+
+Une personne a été invitée dans un projet et n'a pas encore répondu (#401).
+
+| | |
+|---|---|
+| **Producteur** | `apps/api`, cas d'usage `inviteProjectMember` de `packages/core/projects`, par la fonction `invite_member_with_event` qui écrit l'invitation et l'événement dans la même transaction |
+| **Consommateurs** | `apps/worker`, et la passe de livraison de l'API en déploiement sans serveur |
+| **Effet attendu** | une notification non lue pour la personne invitée, qui porte l'invitation et depuis laquelle elle accepte ou refuse |
+| **Statut** | en service |
+
+Payload :
+
+| Champ | Type | Pourquoi il est là |
+|---|---|---|
+| `invitationId` | uuid | Désigne l'invitation à laquelle la notification permet de répondre. Son état est relu, jamais transporté. |
+| `projectId` | uuid | Désigne le projet proposé. Son nom est relu à l'affichage. |
+| `inviteeId` | uuid | Désigne le destinataire de l'effet, sans transporter son identité réelle. |
+| `invitedBy` | uuid | Permet de dire qui invite sans transporter son adresse. |
+
+L'adresse saisie par la personne qui invite est absente pour la même raison que dans
+`membership.created.v1`. Une invitation déjà présente, ou adressée à un membre, n'émet rien :
+seule une invitation réellement créée produit l'événement.
+
 ## Ajouter un événement
 
 1. Décrire le schéma dans `packages/contracts/src/events.ts` et l'ajouter à l'union

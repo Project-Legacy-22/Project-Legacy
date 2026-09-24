@@ -39,3 +39,4 @@ the acceptance criteria: it describes the feature as it now behaves, in the pres
 | [#50](50-reorder-task.md) | Reorder tasks within a Kanban column | Tasks |
 | [#354](354-remove-project-member.md) | Remove a project member without deleting their tasks | Projects |
 | [#384](384-failure-messages.md) | What a failed request says, by cause | Quality |
+| [#401](401-project-invitations.md) | Invite someone into a project, who accepts or declines | Projects |
