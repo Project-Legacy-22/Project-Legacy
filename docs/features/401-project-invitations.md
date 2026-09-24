@@ -68,6 +68,21 @@ writes the notification of the person invited. Its payload carries identifiers o
 Refusing an unknown address explicitly makes the route an oracle for which addresses
 are registered. It requires a session, and the per-account budget bounds it.
 
+## Screens
+
+- **Members of a project**, below the project list, collapsed behind *Show members* and
+  fetched only once opened. It lists each member with their role and marks the reader.
+  An owner sees an invitation field and a *Remove* button on the other members; a member
+  sees the list only. The address is checked against the same contract as the API
+  before anything is sent, and the outcome (sent, already a member, already invited) is
+  announced in a polite live region. A refusal stays next to the field, which keeps the
+  address for correction.
+- **Notifications** are worded by kind: a created task, being added to a project, being
+  invited to one. A pending invitation offers *Accept* and *Decline*, native buttons
+  whose accessible name includes the project. Answering marks the notification read,
+  replaces the buttons with the answer and announces it; accepting selects the project
+  in the list.
+
 ## Personal data
 
 The invitation links two accounts and a project, by identifier. The address typed by the
@@ -83,6 +98,7 @@ Against a disposable local Supabase stack with all migrations applied:
 npm run test:unit -- packages/core/projects packages/infra/src/event-consumer.test.ts
 npm run test:http -- invitations.test.ts
 npm run test:integration -- invitations.integration.test.ts
+npm run test:dom -- app-invitations.test.tsx members-api.test.ts
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/check-schema.sql
 ```
 
@@ -98,4 +114,7 @@ see the project.
   `invitation.created.v1` rows still in the outbox, because erasure finds outbox rows by
   `ownerId` only. `membership.created.v1` has the same gap. The outbox purge removes them
   after publication.
-- An owner cannot withdraw a pending invitation. It stays until the person answers.
+- An owner cannot withdraw a pending invitation, nor see the pending ones in the members
+  panel. It stays until the person answers.
+- The interface does not let an owner remove themselves: it creates no second owner, so
+  that removal would always be refused as the last owner's.
