@@ -21,6 +21,7 @@ import type { CredentialsControls } from './components/account-sections';
 import { AuthPage } from './components/auth-page';
 import { HomeSection } from './components/home-section';
 import { MembersSection } from './components/members-section';
+import { ProjectMembersContext } from './components/project-members-context';
 import { DeepLinkPages, useDeepLinkToken } from './components/deep-link-pages';
 import { NotificationsPanel } from './components/notifications-panel';
 import { PrivacyPolicyPage } from './components/privacy-policy-page';
@@ -35,6 +36,7 @@ import { useNotifications } from './hooks/use-notifications';
 import { useOpenFromHome } from './hooks/use-open-from-home';
 import { useGuardedApis } from './hooks/use-guarded-apis';
 import type { SignedInApis } from './hooks/use-guarded-apis';
+import { useProjectAssignees } from './hooks/use-project-assignees';
 import { useProjects } from './hooks/use-projects';
 import { usePersonalData } from './hooks/use-personal-data';
 import { useSession } from './hooks/use-session';
@@ -170,9 +172,16 @@ function SignedInApp({
     const openFromHome = useOpenFromHome(projects, state);
     const personalData = usePersonalData({ api: apis.account, save, onDeleted });
     const unread = useNotifications(apis.notifications, true);
+    const assignees = useProjectAssignees(apis.members, projects.selectedProjectId);
+    // A removed member's tasks were unassigned by the database: both lists are
+    // read again rather than patched here.
+    const onMemberRemoved = () => {
+        assignees.reload();
+        state.retry();
+    };
 
     return (
-        <>
+        <ProjectMembersContext.Provider value={assignees.members}>
             <SessionBanner
                 email={email}
                 unread={unread}
@@ -185,11 +194,9 @@ function SignedInApp({
                 selectedProject={projects.selectedProject}
                 projects={projectSectionProps(projects)}
                 home={<HomeSection {...attention} onOpen={openFromHome} />}
-                members={
-                    projects.selectedProject !== null && (
-                        <MembersSection api={apis.members} project={projects.selectedProject} currentEmail={email} />
-                    )
-                }
+                members={projects.selectedProject !== null && (
+                    <MembersSection api={apis.members} project={projects.selectedProject} currentEmail={email} onRemoved={onMemberRemoved} />
+                )}
             >
                 <AccountSections
                     email={email}
@@ -197,7 +204,7 @@ function SignedInApp({
                     personalData={personalData}
                 />
             </TodoPage>
-        </>
+        </ProjectMembersContext.Provider>
     );
 }
 

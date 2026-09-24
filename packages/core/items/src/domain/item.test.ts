@@ -70,6 +70,7 @@ describe('createItem', () => {
             dueDate: null,
             projectId: 'project-1',
             ownerId: 'owner-1',
+            assigneeId: null,
         });
     });
 
@@ -100,7 +101,7 @@ describe('createItem', () => {
 });
 
 describe('rehydrateItem', () => {
-    it('accepte un nom nul venant du stockage et conserve le proprietaire', () => {
+    it('accepte un nom nul venant du stockage et conserve le proprietaire et l attributaire', () => {
         const item = rehydrateItem({
             id: 'item-1',
             name: null,
@@ -111,6 +112,7 @@ describe('rehydrateItem', () => {
             dueDate: '2026-09-12',
             projectId: 'project-1',
             ownerId: 'owner-1',
+            assigneeId: 'member-2',
         });
 
         expect(item).toEqual({
@@ -123,6 +125,7 @@ describe('rehydrateItem', () => {
             dueDate: '2026-09-12',
             projectId: 'project-1',
             ownerId: 'owner-1',
+            assigneeId: 'member-2',
         });
     });
 });

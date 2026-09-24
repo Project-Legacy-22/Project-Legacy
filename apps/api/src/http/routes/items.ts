@@ -28,6 +28,7 @@ export function toItemDto(item: Item): ItemDto {
         position: item.position,
         priority: item.priority,
         dueDate: item.dueDate,
+        assigneeId: item.assigneeId,
     };
 }
 

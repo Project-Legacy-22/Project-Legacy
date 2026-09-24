@@ -278,8 +278,8 @@ function makeDeliverPending(dependencies: {
     return () => deliverPending({ ...dependencies, bus });
 }
 
-// La creation est le seul producteur d evenement : le declencheur de livraison
-// vit donc au plus pres du fait ecrit. Voir after-write.ts.
+// La creation d une tache et l invitation sont les producteurs d evenement : le
+// declencheur de livraison vit au plus pres du fait ecrit. Voir after-write.ts.
 export function itemUseCases(
     // Un depot, pas un store : ces cas d usage n ouvrent ni ne ferment rien.
     store: ItemRepository,
@@ -301,19 +301,25 @@ export function itemUseCases(
 }
 
 // Projects, their members and invitations, assembled apart so that compose
-// stays a list of groups rather than the detail of each (#401).
-export function projectUseCases({
-    projects,
-    memberships,
-    invitations,
-}: Pick<Adapters, 'projects' | 'memberships' | 'invitations'>): ProjectUseCases {
+// stays a list of groups rather than the detail of each (#401). Inviting
+// delivers after its write, like adding a task: without it the invitation
+// waited for the scheduled sweep (#410).
+export function projectUseCases(
+    { projects, memberships, invitations }: Pick<Adapters, 'projects' | 'memberships' | 'invitations'>,
+    deliver: () => Promise<unknown>,
+    logger: Logger,
+): ProjectUseCases {
     return {
         listProjects: makeListProjects(projects),
         addProject: makeAddProject({ repository: projects, newId: uuid }),
         removeProject: makeRemoveProject(projects),
         listProjectMembers: makeListProjectMembers(memberships),
         removeProjectMember: makeRemoveProjectMember(memberships),
-        inviteProjectMember: makeInviteProjectMember({ repository: invitations, newId: uuid, now: () => new Date() }),
+        inviteProjectMember: afterWrite(
+            makeInviteProjectMember({ repository: invitations, newId: uuid, now: () => new Date() }),
+            deliver,
+            logger,
+        ),
         listInvitations: makeListInvitations(invitations),
         respondToInvitation: makeRespondToInvitation(invitations),
     };
@@ -348,7 +354,7 @@ export function compose(config: Config): Application {
                 }),
                 eraseAccount: makeEraseAccount({ store: personalData, identity }),
             },
-            projects: projectUseCases(adapters),
+            projects: projectUseCases(adapters, deliver, logger),
             notifications: {
                 listNotifications: makeListNotifications(notifications),
                 markNotificationRead: makeMarkNotificationRead(notifications),

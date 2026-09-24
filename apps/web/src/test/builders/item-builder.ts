@@ -13,6 +13,7 @@ export function anItem(overrides: Partial<ItemDto> = {}): ItemDto {
         position: overrides.position ?? overrides.id ?? DEFAULT_ITEM_ID,
         priority: 'normal',
         dueDate: null,
+        assigneeId: null,
         ...overrides,
     };
 }

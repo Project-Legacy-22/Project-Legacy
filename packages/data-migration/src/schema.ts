@@ -49,6 +49,9 @@ export interface Reference {
     column: string;
     table: string;
     target: string;
+    // Cascade unless said otherwise. An assignee (US-58) is set null instead:
+    // the task outlives the person it was assigned to.
+    onDelete?: 'set null';
 }
 
 export interface Table {
@@ -167,11 +170,18 @@ export const TABLES: readonly Table[] = [
             // Exported and imported as data. The source generates this UUID
             // when a direct insert omits it; target engines receive the value.
             uuid('position'),
+            uuid('assignee_id', true),
         ],
         primaryKey: ['id'],
+        // Our key on the assignee points at the membership, (project_id,
+        // assignee_id), so that only a member can be assigned. MySQL cannot set
+        // one column of a composite key to null, so the targets get the
+        // account instead: the rule "a member of the project" stays ours, like
+        // the policies and checks that do not cross either.
         references: [
             { column: 'user_id', table: 'users', target: 'id' },
             { column: 'project_id', table: 'projects', target: 'id' },
+            { column: 'assignee_id', table: 'users', target: 'id', onDelete: 'set null' },
         ],
         unique: [['position']],
     },

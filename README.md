@@ -21,8 +21,8 @@ improvisés.
 | Poste de développement | <http://localhost:5173> | après `npm run up`, avec une base et un broker locaux |
 
 La production ne sert pas le worker : sur Vercel, la passe de livraison des événements est
-déclenchée par l'écriture elle-même et par un appel planifié toutes les cinq minutes
-(`docs/ci.md`). Elle ne contient aucun compte de démonstration : ceux-ci n'existent que sur la
+déclenchée par l'écriture elle-même et par un appel toutes les trente secondes
+(`docs/ci.md`, ADR-0020). Elle ne contient aucun compte de démonstration : ceux-ci n'existent que sur la
 pile locale.
 
 ## Documentation
@@ -418,7 +418,7 @@ ne tient aucune connexion à ouvrir.
 
 **Ce que cela n'héberge pas** : aucun processus long ne survit en sans-serveur, donc ni le
 worker ni l'intervalle du relais. La passe de livraison y est appelée par l'écriture elle-même
-et par le workflow `relais`, toutes les cinq minutes, sur `POST /internal/relay` ; la même
+et par le workflow `relais`, toutes les trente secondes, sur `POST /internal/relay` ; la même
 passe publie puis consomme ([docs/architecture.md](docs/architecture.md), section « Le flux
 événementiel »). L'image publiée sur GHCR reste le livrable de l'exécution en conteneur.
 

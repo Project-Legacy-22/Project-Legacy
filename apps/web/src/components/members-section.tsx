@@ -12,6 +12,8 @@ export interface MembersSectionProps {
     api: MembersApi;
     project: ProjectDto;
     currentEmail: string;
+    // Their tasks were unassigned by the removal (US-58).
+    onRemoved?: () => void;
 }
 
 interface MemberListProps {
@@ -86,9 +88,17 @@ function MembersContent({ project, currentEmail, members }: Omit<MembersSectionP
 
 // Collapsed by default, and fetched only once opened: who is in a project is
 // looked at when inviting or tidying up, not on every visit.
-export function MembersSection({ api, project, currentEmail }: MembersSectionProps) {
+export function MembersSection({ api, project, currentEmail, onRemoved }: MembersSectionProps) {
     const [isOpen, setIsOpen] = useState(false);
-    const members = useProjectMembers(api, project.id, isOpen);
+    const state = useProjectMembers(api, project.id, isOpen);
+    const members: MembersState = {
+        ...state,
+        remove: async member => {
+            const removed = await state.remove(member);
+            if (removed) onRemoved?.();
+            return removed;
+        },
+    };
 
     return (
         <section
