@@ -6,13 +6,16 @@ import { UpdateItemBody } from '@legacy/contracts';
 import type { ItemPriority, UpdateItemBody as UpdateItemInput } from '@legacy/contracts';
 
 import { labels } from '../labels';
+import { ItemAssigneeField } from './item-assignee-field';
 import { ItemPlanningFields } from './item-planning-fields';
+import { useProjectMemberList } from './project-members-context';
 
 export interface EditItemFormProps {
     itemId: string;
     initialName: string;
     initialPriority: ItemPriority;
     initialDueDate: string | null;
+    initialAssigneeId: string | null;
     isPending: boolean;
     onCancel: () => void;
     onSave: (changes: UpdateItemInput) => Promise<boolean>;
@@ -65,7 +68,10 @@ function EditItemField({ inputId, name, validationError, isPending, onChange }: 
     );
 }
 
-function useEditItemForm({ initialName, initialPriority, initialDueDate, onSave }: EditItemFormProps) {
+function useEditItemForm({ initialName, initialPriority, initialDueDate, initialAssigneeId, onSave }: EditItemFormProps) {
+    const members = useProjectMemberList();
+    const canAssign = members.length > 1;
+    const [assigneeId, setAssigneeId] = useState(initialAssigneeId ?? '');
     const [name, setName] = useState(initialName);
     const [priority, setPriority] = useState(initialPriority);
     const [dueDate, setDueDate] = useState(initialDueDate ?? '');
@@ -82,6 +88,9 @@ function useEditItemForm({ initialName, initialPriority, initialDueDate, onSave 
             name,
             priority,
             dueDate: dueDate === '' ? null : dueDate,
+            // Sent only when the choice was offered: a list that failed to load
+            // must not unassign the task behind the person's back.
+            ...(canAssign ? { assigneeId: assigneeId === '' ? null : assigneeId } : {}),
         });
         const error = validateName(name);
         setValidationError(error);
@@ -91,6 +100,10 @@ function useEditItemForm({ initialName, initialPriority, initialDueDate, onSave 
     };
 
     return {
+        members,
+        canAssign,
+        assigneeId,
+        setAssigneeId,
         name,
         priority,
         dueDate,
@@ -123,6 +136,15 @@ export function EditItemForm(props: EditItemFormProps) {
                 onPriorityChange={form.setPriority}
                 onDueDateChange={form.setDueDate}
             />
+            {form.canAssign && (
+                <ItemAssigneeField
+                    inputId={`edit-item-${props.itemId}-assignee`}
+                    members={form.members}
+                    value={form.assigneeId}
+                    isDisabled={props.isPending}
+                    onChange={form.setAssigneeId}
+                />
+            )}
             <div className="item-edit-actions">
                 <button className="button button-primary" type="submit" disabled={props.isPending}>
                     {props.isPending ? labels.savingItem : labels.saveItem}

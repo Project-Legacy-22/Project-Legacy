@@ -173,14 +173,18 @@ describe('answering an invitation from its notification', () => {
 });
 
 describe('the members of a project', () => {
-    it('are fetched only once the panel is opened, then listed with their role', async () => {
+    it('are listed with their role once the panel is opened', async () => {
         const listMembers = vi.fn(async () => [ME, GUEST]);
         await renderApp({ members: createMembersApi({ listMembers }) });
 
-        expect(listMembers).not.toHaveBeenCalled();
+        // Read once already, for the assignment choice of the tasks (US-58),
+        // but the panel shows nothing until it is opened.
+        expect(document.querySelector('#members-list')).toBeNull();
+        const readsBefore = listMembers.mock.calls.length;
         await openMembers();
 
-        expect(listMembers).toHaveBeenCalledWith(OWN_PROJECT.id, expect.any(AbortSignal));
+        expect(listMembers).toHaveBeenCalledTimes(readsBefore + 1);
+        expect(listMembers).toHaveBeenLastCalledWith(OWN_PROJECT.id, expect.any(AbortSignal));
         const rows = [...document.querySelectorAll('#members-list li')].map(row => row.textContent);
         expect(rows[0]).toContain(`${ACCOUNT.email} ${labels.you}`);
         expect(rows[1]).toContain(labels.memberRole('member'));
@@ -250,7 +254,9 @@ describe('the members of a project', () => {
         let attempts = 0;
         const listMembers = vi.fn(async () => {
             attempts += 1;
-            if (attempts === 1) throw new ApiError(503, 'The service is temporarily unavailable. Try again in a moment.');
+            // The first read is the assignment choice's (US-58); the second
+            // is the panel's, and it is the one that fails.
+            if (attempts === 2) throw new ApiError(503, 'The service is temporarily unavailable. Try again in a moment.');
             return [ME];
         });
         await renderApp({ members: createMembersApi({ listMembers }) });
