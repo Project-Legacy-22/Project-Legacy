@@ -19,10 +19,11 @@ Supabase — c'est `docs/backup-and-exit.md`.
 
 Avant les procédures, ce qu'aucune des deux ne transporte, parce que ce n'est pas du SQL :
 
-- **les comptes et les mots de passe**, tenus par GoTrue dans le schéma `auth`. Notre table
-  `public.users` est un miroir alimenté par un déclencheur : elle porte l'identifiant, l'adresse
-  et le consentement, jamais un secret d'authentification. Changer de fournisseur veut donc dire
-  réinscrire les comptes, ou écrire un adaptateur d'authentification.
+- **le service d'authentification**. Les comptes traversent depuis #426, empreintes comprises
+  (voir « Les comptes » plus bas), mais pas GoTrue : l'inscription, la connexion, les jetons et
+  les courriels sont à fournir par la cible, avec une bibliothèque bcrypt pour relire les
+  empreintes. Les sessions et les jetons de rafraîchissement ne traversent pas : chacun se
+  reconnecte une fois.
 - **les politiques de sécurité au niveau ligne**, qui sont du PostgreSQL et n'ont pas d'équivalent
   en MySQL ni en SQLite. Sur un autre moteur, l'autorisation redevient entièrement du code
   applicatif.
@@ -119,11 +120,16 @@ Une distinction d'abord, parce qu'elle doit être écrite plutôt que découvert
 ### 1. Produire l'export
 
 ```bash
-npx supabase db dump --local --data-only -s public -f dump.sql
+mkdir -p data-out   # le CLI ne cree pas le dossier
+npx supabase db dump --local --data-only -s public,auth -f data-out/dump.sql
 ```
 
 Sur le projet hébergé, remplacer `--local` par `--linked`. La commande écrit des `insert`, sauf
 si on lui demande `--use-copy` : c'est cette forme que l'outil lit.
+
+Avec `auth`, le vidage porte les empreintes des mots de passe, les sessions et les jetons de
+rafraîchissement : c'est un secret. Il est écrit dans `data-out/`, que `.gitignore` exclut, et
+se supprime une fois l'export fait. Sans `auth`, l'export se fait quand même, sans aucun compte.
 
 L'export doit être produit **en UTC**. Un horodatage portant un autre décalage est refusé plutôt
 que converti : ni `datetime(6)` ni le texte de SQLite ne porte de fuseau, et décaler toutes les
@@ -132,11 +138,34 @@ dates au jugé est précisément le genre de silence que ces outils existent pou
 ### 2. Écrire le schéma et les données pour les trois cibles
 
 ```bash
-npm run data:export -- --from dump.sql --out data-out
+npm run data:export -- --from data-out/dump.sql --out data-out
 ```
 
-Six fichiers dans `data-out/` : `<cible>-schema.sql` et `<cible>-data.sql` pour `postgres`,
-`mysql` et `sqlite`. On applique le schéma, puis les données.
+Neuf fichiers dans `data-out/` : `<cible>-schema.sql`, `<cible>-data.sql` et
+`<cible>-accounts.sql` pour `postgres`, `mysql` et `sqlite`. On applique le schéma, puis les
+données, puis les comptes.
+
+### Les comptes
+
+`<cible>-accounts.sql` crée une table `accounts` et y écrit chaque ligne de `auth.users` :
+
+| Colonne | Vient de | Note |
+|---|---|---|
+| `id` | `auth.users.id` | égal à `users.id`, clé étrangère vers lui : le compte retrouve ses tâches |
+| `email` | `auth.users.email` | unique |
+| `password_hash` | `auth.users.encrypted_password` | bcrypt (`$2a$`), tel que GoTrue l'a écrit ; nul si le compte n'a pas de mot de passe |
+| `email_confirmed_at` | idem | nul pour une adresse jamais confirmée |
+| `created_at` | idem | |
+
+Les comptes sont dans un fichier à part parce qu'il porte les empreintes : il se transmet, se
+garde et se supprime comme un secret, et `<cible>-data.sql` reste sans aucun. Une empreinte ne
+se déchiffre pas : une bibliothèque bcrypt, sur n'importe quelle plateforme, compare un mot de
+passe saisi avec elle. Chaque personne se connecte donc sur la cible avec son mot de passe
+d'origine ; celles qui n'en avaient pas, comptées par la commande, passent par une
+réinitialisation.
+
+Toutes les lignes partent en une seule instruction, dans une transaction : si la cible porte
+déjà l'une des adresses, aucun compte n'est écrit.
 
 ### Ce que la traduction du schéma porte, et ce qu'elle laisse
 
@@ -163,7 +192,9 @@ npm run test:migration
 
 La commande démarre trois conteneurs — PostgreSQL 17, MySQL 8.4 et un Alpine qui ne porte que
 `sqlite3` — et rejoue les deux sens : un export `mysqldump` entre dans notre schéma, puis nos
-données ressortent vers les trois cibles, et les valeurs sont comparées de bout en bout.
+données ressortent vers les trois cibles, et les valeurs sont comparées de bout en bout. Les
+comptes sortent aussi, et l'empreinte relue dans chaque cible doit accepter le mot de passe
+d'origine (`accounts.migration.test.ts`).
 
 Aucun port n'est publié et aucun client n'a besoin d'être installé : tout passe par
 `docker compose exec`. Docker suffit, et la chaîne d'intégration exécute exactement la même
@@ -191,6 +222,7 @@ Une procédure qu'on n'a jamais jouée n'est pas une procédure.
 |---|---|---|
 | 2026-09-12 | legacy vers nous | Un MySQL 8.4 chargé de six lignes `todo_items`, exporté par `mysqldump`, repris par `npm run data:import`. Quatre lignes reprises, deux refusées et nommées. Script appliqué sur PostgreSQL 17.6, puis réappliqué : rien de dupliqué. Adresse inconnue : la transaction est annulée. |
 | 2026-09-12 | nous vers ailleurs | Export des quatre tâches vers les trois cibles. Schéma et données appliqués sur PostgreSQL 17.6, MySQL 8.4 et SQLite 3.41. Comptes identiques, et une tâche nommée avec deux contre-obliques et une apostrophe retrouvée caractère pour caractère dans les trois. |
+| 2026-09-24 | nous vers ailleurs, avec les comptes | Vidage `-s public,auth` de la pile locale (les deux comptes du jeu de démonstration, créés par GoTrue). Schéma, données et comptes appliqués sur les trois moteurs des conteneurs. Dans chacun, l'empreinte arrivée accepte le mot de passe d'origine et refuse un autre, vérifié par `crypt()` de pgcrypto. Aucune empreinte dans les fichiers de données. |
 
 Ces deux lignes sont l'exécution qui a servi à écrire la procédure. `npm run test:migration` les
 rejoue, et c'est cette commande qui vaut preuve : elle ne dépend d'aucun état laissé par la

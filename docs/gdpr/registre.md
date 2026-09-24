@@ -104,6 +104,14 @@ où le texte change, et l'effacer reviendrait à perdre la preuve que l'on doit 
 référencer une table du schéma `public` ; l'e-mail y est repris parce que l'export de données
 personnelles le restitue.
 
+Quitter Supabase transfère ces données (#426) : `npm run data:export` écrit, pour chaque moteur
+cible, un fichier `<cible>-accounts.sql` qui porte l'identifiant, l'adresse, l'empreinte bcrypt
+et la date de confirmation de chaque compte. Les jetons de session et le journal d'audit de
+GoTrue ne traversent pas. Ce fichier et le vidage dont il vient sont des données personnelles
+au même titre qu'une sauvegarde : écrits dans `data-out/`, que `.gitignore` exclut, et à
+supprimer une fois appliqués. Le transfert ne change ni la finalité ni la base légale ; le
+nouvel hébergeur devient destinataire et doit être ajouté ci-dessus le jour où il est choisi.
+
 ### T-02 — Vérification des mots de passe compromis
 
 | | |

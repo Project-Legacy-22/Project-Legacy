@@ -63,7 +63,7 @@ function cellFor(cell: Cell, column: Column, dialect: Dialect): string {
     return literal(cell, dialect);
 }
 
-function insertFor(
+export function insertFor(
     table: Table,
     rows: readonly ReadonlyMap<string, Cell>[],
     dialect: Dialect,
@@ -102,8 +102,8 @@ export function renderData(snapshot: Snapshot, dialect: Dialect): string {
             ? '-- Timestamps keep the offset the export carried.'
             : '-- Timestamps are UTC without a zone: neither target carries one.',
         '--',
-        '-- Accounts and passwords are not here. They belong to GoTrue, in the',
-        '-- auth schema, which no data export of ours reaches.',
+        '-- Accounts and passwords are not here: they are in the accounts file,',
+        '-- kept apart because it holds password hashes.',
         '',
     ];
 

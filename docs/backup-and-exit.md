@@ -132,8 +132,10 @@ dans `docs/data-migration.md`.
 | les politiques de sécurité au niveau ligne | de l'autorisation applicative, à écrire et à tester |
 | PostgREST | les routes qui manquent à l'API, s'il en reste qui passent par lui |
 
-Deux précisions sur cette liste. Les empreintes de mot de passe sont dans la sauvegarde, donc les
-comptes ne sont pas perdus — mais le remplaçant de GoTrue doit savoir relire son format. Et les
+Deux précisions sur cette liste. Les comptes ne sont pas perdus : `npm run data:export` les écrit
+pour chaque moteur cible, empreintes bcrypt comprises (#426), et le remplaçant de GoTrue n'a
+besoin que d'une bibliothèque bcrypt pour les relire — `docs/data-migration.md`, « Les comptes ».
+Et les
 politiques de ligne sont la part la plus coûteuse : aujourd'hui la base refuse elle-même ce qu'un
 compte n'a pas le droit de lire, et sans elles c'est à l'application de ne jamais se tromper.
 
