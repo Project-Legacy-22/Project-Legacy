@@ -20,8 +20,11 @@
     margin-bottom: 18px;
 }
 
+/* The label wraps the box, so the label is the touch target: 44 px tall keeps
+   it clear of the field above, which a bare line of text was touching. */
 .checkbox-field {
     display: flex;
+    min-height: 44px;
     align-items: center;
     gap: 8px;
     margin-top: 8px;
@@ -170,6 +173,20 @@ select:disabled {
 
 .action-error {
     margin: 0;
+}
+
+/* This rule sits here and not in layout.css: a media rule loses to a later rule
+   of the same specificity, and layout.css is imported before this file. It
+   used to be declared there, never applied, and the add form overflowed the
+   page by 275 px at 320 px wide.
+
+   The add form stacks earlier than the other grids. Its two minimums, the
+   button and the gaps need about 600 px of panel, which the page only gives
+   from about 710 px wide once its own padding and the panel's are counted. */
+@media (max-width: 760px) {
+    .add-form {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (max-width: 620px) {

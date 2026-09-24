@@ -106,7 +106,10 @@
     flex: none;
 }
 
+/* The box and its label form one touch target. On one line the label was 21 px
+   tall and its target overlapped the policy link just below it. */
 .consent-line label {
+    min-height: 44px;
     margin-bottom: 0;
     font-weight: 600;
 }
