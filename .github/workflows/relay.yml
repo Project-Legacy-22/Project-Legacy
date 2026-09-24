@@ -1,33 +1,82 @@
-# Declenche une passe de livraison sur le deploiement.
+# Fait tourner le relais de l outbox sur le deploiement, toutes les trente
+# secondes.
 #
 # Vercel n a pas de processus qui tourne entre deux requetes, donc personne n y
-# fait tourner le relais de l outbox. Les crons Vercel en offre gratuite sont
-# limites a une fois par jour ; ce workflow prend le relais toutes les cinq
-# minutes, ce qui est le minimum que GitHub accepte.
+# fait tourner le relais. Les crons Vercel en offre gratuite sont limites a une
+# fois par jour, et GitHub refuse un cron sous cinq minutes sans meme tenir
+# celui-la : le 24 septembre, les passes planifiees ont eu lieu a 21:41, 23:58,
+# 03:39 et 08:44 (#410). Un job reste donc actif pres de six heures et declenche
+# une passe toutes les trente secondes (scripts/relay-loop.mjs), puis lance son
+# successeur. Le cron ne sert plus qu a relancer la chaine si elle s arrete.
+#
+# Le depot est public : les minutes des runners heberges ne sont pas comptees.
 
 name: relais
 
 on:
   schedule:
-    # Toutes les cinq minutes. GitHub retarde souvent l execution de quelques
-    # minutes : c est la garantie de fond, pas le chemin de demonstration.
     - cron: '*/5 * * * *'
   workflow_dispatch:
+    inputs:
+      relance:
+        description: Lance par la boucle precedente, qui se termine
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
-concurrency:
-  # Une passe a la fois : deux passes concurrentes liraient les memes lignes non
-  # publiees et les publieraient deux fois.
-  group: relais
-  cancel-in-progress: false
-
 jobs:
-  livrer:
-    name: Passe de livraison
+  garde:
+    name: Boucle deja active
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 2
+    permissions:
+      actions: read
+    outputs:
+      demarrer: ${{ steps.verifier.outputs.demarrer }}
+    steps:
+      # Une boucle qui tourne deja declenche une passe dans les trente
+      # secondes : en demarrer une seconde n apporterait rien. La relance faite
+      # par la boucle sortante passe outre, puisque cette boucle-la est encore
+      # en cours au moment ou elle demande sa successeure.
+      - name: Verifier
+        id: verifier
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELANCE: ${{ inputs.relance }}
+        run: |
+          if [ "$RELANCE" = "true" ]; then
+            echo "demarrer=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          actives=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/relay.yml/runs?per_page=20" \
+            --jq "[.workflow_runs[] | select(.id != $GITHUB_RUN_ID and (.status == \"in_progress\" or .status == \"queued\" or .status == \"pending\" or .status == \"waiting\"))] | length")
+
+          if [ "$actives" -gt 0 ]; then
+            echo "::notice::une boucle de livraison tourne deja"
+            echo "demarrer=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "demarrer=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  boucle:
+    name: Passe de livraison toutes les 30 secondes
+    needs: garde
+    if: needs.garde.outputs.demarrer == 'true'
+    runs-on: ubuntu-latest
+    # La boucle dure 345 minutes ; GitHub arrete un job a 360.
+    timeout-minutes: 355
+    permissions:
+      contents: read
+      actions: write
+    concurrency:
+      # Une boucle a la fois : deux passes concurrentes liraient les memes
+      # lignes non publiees et les publieraient deux fois. La successeure
+      # attend ici que la boucle sortante se termine.
+      group: relais
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v7
 
@@ -35,54 +84,24 @@ jobs:
         with:
           node-version-file: .nvmrc
 
-      - name: Declencher la passe
-        id: passe
-        env:
-          CIBLE: ${{ vars.RELAY_URL }}
-          SECRET: ${{ secrets.RELAY_SECRET }}
-        run: |
-          if [ -z "$CIBLE" ] || [ -z "$SECRET" ]; then
-            echo "::notice::RELAY_URL ou RELAY_SECRET absent, rien a declencher."
-            exit 0
-          fi
-
-          reponse=$(curl --silent --show-error --fail-with-body \
-            --max-time 60 \
-            --header "x-relay-secret: $SECRET" \
-            --request POST "$CIBLE/internal/relay")
-
-          echo "Passe: $reponse"
-          echo "::notice::$reponse"
-          echo "passe=$reponse" >> "$GITHUB_OUTPUT"
-
-      # Les mesures partent d ici et non d une campagne a part, pour une raison
-      # de correction : declencher une passe depuis un second cron ouvrirait la
-      # course que le groupe de concurrence ci-dessus existe pour fermer -- deux
-      # passes concurrentes publieraient deux fois les memes lignes. Un seul
-      # cron declenche une passe, et ce qu elle rend est pousse juste apres.
-      #
-      # Saute proprement quand une valeur manque : une pile pas encore branchee
-      # n est pas une erreur.
-      - name: Pousser les mesures
-        if: always() && steps.passe.outcome == 'success'
+      # Les mesures partent de la boucle, sommees toutes les dix passes, et non
+      # d une campagne a part : un second declencheur de passe rouvrirait la
+      # course que le groupe de concurrence ferme.
+      - name: Livrer
+        id: boucle
         env:
           TARGET: ${{ vars.RELAY_URL }}
           RELAY_SECRET: ${{ secrets.RELAY_SECRET }}
           GRAFANA_PUSH_URL: ${{ vars.GRAFANA_PUSH_URL }}
           GRAFANA_PUSH_USER: ${{ vars.GRAFANA_PUSH_USER }}
           GRAFANA_PUSH_TOKEN: ${{ secrets.GRAFANA_PUSH_TOKEN }}
-          PASSE: ${{ steps.passe.outputs.passe }}
-        run: |
-          manquant=""
-          for nom in TARGET RELAY_SECRET GRAFANA_PUSH_URL GRAFANA_PUSH_USER GRAFANA_PUSH_TOKEN; do
-            if [ -z "${!nom}" ]; then manquant="$manquant $nom"; fi
-          done
+        run: node scripts/relay-loop.mjs
 
-          if [ -n "$manquant" ]; then
-            echo "::notice::rien a pousser, il manque :$manquant"
-            exit 0
-          fi
-
-          sortie=$(node scripts/push-metrics.mjs --pass "$PASSE")
-          echo "$sortie"
-          echo "::notice::$sortie"
+      # Le GITHUB_TOKEN ne declenche aucun workflow, sauf workflow_dispatch.
+      # Seule une boucle allee a son terme relance : une boucle arretee net
+      # (variable absente) se relancerait sinon aussi vite que GitHub file.
+      - name: Relancer la boucle
+        if: steps.boucle.outputs.relancer == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run relay.yml --ref "$GITHUB_REF_NAME" -f relance=true
