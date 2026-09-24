@@ -28,7 +28,7 @@ export function toItemDto(item: Item): ItemDto {
         position: item.position,
         priority: item.priority,
         dueDate: item.dueDate,
-        assigneeId: item.assigneeId,
+        assigneeIds: [...item.assigneeIds],
     };
 }
 
@@ -127,6 +127,7 @@ export function itemsRouter(useCases: ItemUseCases): Router {
                 ownerId: accountOf(res).id,
                 priority: body.data.priority,
                 dueDate: body.data.dueDate,
+                assigneeIds: body.data.assigneeIds,
             })
             .then((item) => res.send(toItemDto(item)))
             .catch(next);

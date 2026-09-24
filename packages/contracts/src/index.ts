@@ -12,6 +12,7 @@ export {
     ItemPageDto,
     ListItemsQuery,
     MAX_ITEM_NAME_LENGTH,
+    MAX_ITEM_ASSIGNEES,
     DEFAULT_ITEM_PAGE_SIZE,
     MAX_ITEM_PAGE_SIZE,
 } from './items.js';

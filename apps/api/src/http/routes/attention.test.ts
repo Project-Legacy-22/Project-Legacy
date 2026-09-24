@@ -59,7 +59,7 @@ describe('GET /projects/attention', () => {
                         position: ITEM_ID,
                         priority: 'normal',
                         dueDate: '2026-09-20',
-                        assigneeId: null,
+                        assigneeIds: [],
                         projectName: 'Maison',
                     },
                 ],

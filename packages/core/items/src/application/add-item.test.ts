@@ -42,7 +42,7 @@ describe('addItem', () => {
             dueDate: null,
             projectId: PROJECT_ID,
             ownerId: OWNER_ID,
-            assigneeId: null,
+            assigneeIds: [],
         });
         expect(await repository.findByIdForMember('item-id', PROJECT_ID, OWNER_ID)).toEqual(item);
     });

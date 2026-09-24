@@ -18,19 +18,27 @@ export const ItemIdParams = z.object({
     id: z.uuid(),
 });
 
+// Bounded like any list a client sends: a project has no reason to assign one
+// task to more people than this, and the bound keeps the check cheap.
+export const MAX_ITEM_ASSIGNEES = 50;
+const assigneeIdsSchema = z.array(z.uuid()).max(MAX_ITEM_ASSIGNEES);
+
 export const CreateItemBody = z.object({
     name: itemNameSchema,
     priority: ItemPriority.optional(),
     dueDate: ItemDueDate.nullable().optional(),
+    // Members of the project, assigned from the start (#419).
+    assigneeIds: assigneeIdsSchema.optional(),
 });
 
 export const UpdateItemBody = z.object({
     name: itemNameSchema,
     priority: ItemPriority.optional(),
     dueDate: ItemDueDate.nullable().optional(),
-    // A member of the task's project, or null for nobody (US-58). Absent
-    // leaves the assignee as it is, so an older client cannot clear it.
-    assigneeId: z.uuid().nullable().optional(),
+    // Members of the task's project, an empty list for nobody (US-58, #419).
+    // Absent leaves them as they are, so a client that does not show the
+    // choice cannot clear it.
+    assigneeIds: assigneeIdsSchema.optional(),
 });
 
 export const ItemStatus = z.enum(['todo', 'doing', 'done']);
@@ -58,9 +66,9 @@ export const ItemDto = z.object({
     position: z.uuid(),
     priority: ItemPriority,
     dueDate: ItemDueDate.nullable(),
-    // An identifier only: the interface names the person from the project's
+    // Identifiers only: the interface names the people from the project's
     // member list, which it reads anyway to offer the choice.
-    assigneeId: z.uuid().nullable(),
+    assigneeIds: z.array(z.uuid()),
 });
 
 export const ItemListDto = z.array(ItemDto);

@@ -38,6 +38,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      item_assignees: {
+        Row: {
+          item_id: string
+          project_id: string
+          user_id: string
+        }
+        Insert: {
+          item_id: string
+          project_id: string
+          user_id: string
+        }
+        Update: {
+          item_id?: string
+          project_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_assignees_item_fkey"
+            columns: ["item_id", "project_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id", "project_id"]
+          },
+          {
+            foreignKeyName: "item_assignees_membership_fkey"
+            columns: ["project_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "project_memberships"
+            referencedColumns: ["project_id", "user_id"]
+          },
+        ]
+      }
       items: {
         Row: {
           assignee_id: string | null
@@ -379,6 +412,7 @@ export type Database = {
       }
       create_item_with_event: {
         Args: {
+          p_assignee_ids?: string[]
           p_due_date: string
           p_event_id: string
           p_event_name: string
@@ -443,6 +477,14 @@ export type Database = {
           p_invitee_id: string
         }
         Returns: string
+      }
+      set_item_assignees: {
+        Args: {
+          p_assignee_ids: string[]
+          p_item_id: string
+          p_project_id: string
+        }
+        Returns: undefined
       }
       swap_item_position: {
         Args: {

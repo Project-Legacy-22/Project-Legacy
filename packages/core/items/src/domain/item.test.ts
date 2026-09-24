@@ -70,7 +70,7 @@ describe('createItem', () => {
             dueDate: null,
             projectId: 'project-1',
             ownerId: 'owner-1',
-            assigneeId: null,
+            assigneeIds: [],
         });
     });
 
@@ -112,7 +112,7 @@ describe('rehydrateItem', () => {
             dueDate: '2026-09-12',
             projectId: 'project-1',
             ownerId: 'owner-1',
-            assigneeId: 'member-2',
+            assigneeIds: ['member-2'],
         });
 
         expect(item).toEqual({
@@ -125,7 +125,7 @@ describe('rehydrateItem', () => {
             dueDate: '2026-09-12',
             projectId: 'project-1',
             ownerId: 'owner-1',
-            assigneeId: 'member-2',
+            assigneeIds: ['member-2'],
         });
     });
 });

@@ -6,6 +6,12 @@ import type { InvitationOutcome, NotificationKind, ProjectRole } from '@legacy/c
 
 const ROLES: Record<ProjectRole, string> = { owner: 'Owner', member: 'Member' };
 
+// A member whose address is unknown -- a list that failed to load -- is still
+// counted, as "a member".
+function names(emails: readonly (string | undefined)[]): string {
+    return emails.map(email => email ?? 'a member').join(', ');
+}
+
 export const membersLabels = {
     membersTitle(projectName: string): string {
         return `Members of ${projectName}`;
@@ -68,14 +74,13 @@ export const membersLabels = {
         return `You declined the invitation to ${projectName}.`;
     },
 
-    // Assigning a task (US-58).
+    // Assigning a task (US-58, #419).
     assigneeLabel: 'Assigned to',
-    nobody: 'Nobody',
-    assignedTo(email: string | undefined): string {
-        return email === undefined ? 'Assigned to a member' : `Assigned to ${email}`;
+    assignedTo(emails: readonly (string | undefined)[]): string {
+        return `Assigned to ${names(emails)}`;
     },
-    itemAssigned(itemName: string, email: string | undefined): string {
-        return `${itemName} is now assigned to ${email ?? 'a member'}.`;
+    itemAssigned(itemName: string, emails: readonly (string | undefined)[]): string {
+        return `${itemName} is now assigned to ${names(emails)}.`;
     },
     itemUnassigned(itemName: string): string {
         return `${itemName} is no longer assigned to anyone.`;
