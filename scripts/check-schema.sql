@@ -641,6 +641,9 @@ rollback;
 -- #401: invitations, their answer and their notification.
 \ir check-project-invitations.sql
 
+-- #348: assigning a task to a member of its project.
+\ir check-item-assignee.sql
+
 -- Behavioural checks for the two authorization cases ADR-0001 requires. All
 -- fixtures live in a rolled-back transaction, so the script is repeatable.
 begin;

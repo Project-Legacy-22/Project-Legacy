@@ -40,6 +40,7 @@ export type Database = {
     Tables: {
       items: {
         Row: {
+          assignee_id: string | null
           created_at: string
           due_date: string | null
           id: string
@@ -54,6 +55,7 @@ export type Database = {
           version: number
         }
         Insert: {
+          assignee_id?: string | null
           created_at?: string
           due_date?: string | null
           id?: string
@@ -68,6 +70,7 @@ export type Database = {
           version?: number
         }
         Update: {
+          assignee_id?: string | null
           created_at?: string
           due_date?: string | null
           id?: string
@@ -82,6 +85,13 @@ export type Database = {
           version?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "items_assignee_membership_fkey"
+            columns: ["project_id", "assignee_id"]
+            isOneToOne: false
+            referencedRelation: "project_memberships"
+            referencedColumns: ["project_id", "user_id"]
+          },
           {
             foreignKeyName: "items_project_id_fkey"
             columns: ["project_id"]
@@ -442,6 +452,7 @@ export type Database = {
           p_project_id: string
         }
         Returns: {
+          assignee_id: string | null
           created_at: string
           due_date: string | null
           id: string

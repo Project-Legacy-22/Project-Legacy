@@ -131,7 +131,7 @@ function keyLines(table: Table, dialect: Dialect): string[] {
             reference =>
                 `  foreign key (${quoteName(reference.column, dialect)}) references ` +
                 `${quoteName(reference.table, dialect)} (${quoteName(reference.target, dialect)}) ` +
-                'on delete cascade',
+                `on delete ${reference.onDelete ?? 'cascade'}`,
         ),
     ];
 }

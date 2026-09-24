@@ -135,7 +135,12 @@ describe('renderSchema', () => {
         const declared = TABLES.flatMap(table => table.references);
 
         expect(sql.match(/foreign key/gu)).toHaveLength(declared.length);
-        expect(sql.match(/on delete cascade/gu)).toHaveLength(declared.length);
+        expect(sql.match(/on delete (?:cascade|set null)/gu)).toHaveLength(declared.length);
+    });
+
+    // US-58: removing the person a task is assigned to must not delete the task.
+    it.each(DIALECTS)('keeps a task whose assignee is deleted for %s', dialect => {
+        expect(renderSchema(dialect)).toMatch(/foreign key \([`"]assignee_id[`"]\) references [`"]users[`"] \([`"]id[`"]\) on delete set null/u);
     });
 
     it('names the composite key of a membership in both its columns', () => {
