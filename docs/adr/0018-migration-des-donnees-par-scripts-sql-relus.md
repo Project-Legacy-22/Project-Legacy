@@ -102,6 +102,18 @@ Une reprise réelle échoue sur une forme d'export que `test:migration` ne couvr
 maintien de `schema.ts` coûte plus de temps que les migrations elles-mêmes ; ou une sortie vers
 un autre fournisseur exige une connexion directe que le principe « aucune connexion » interdit.
 
+## Amendement du 2026-09-24 — les comptes traversent (#426)
+
+La défense intermédiaire 2 a demandé que la sortie emporte aussi l'authentification. La décision
+ne change pas de forme : l'outil lit toujours un vidage texte, `-s public,auth` au lieu de
+`-s public`, et écrit un script relu de plus par cible, `<cible>-accounts.sql`. Il n'ouvre
+toujours aucune connexion, ce qui écartait l'API d'administration de GoTrue.
+
+La dette « ne traversent pas : les comptes et les mots de passe » est levée pour les comptes :
+identifiant, adresse, empreinte bcrypt et confirmation de l'adresse sortent, dans un fichier à
+part parce qu'il porte les empreintes. GoTrue lui-même, ses sessions et ses jetons restent le
+coût de sortie.
+
 ## Références
 
 - `docs/data-migration.md` : les commandes des deux sens et ce que chacun décide

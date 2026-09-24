@@ -8,7 +8,8 @@ de sortie qui dépend de ce qu'on quitte n'est pas un outil de sortie.
 
 Il ne parle à aucune base. Il lit du texte et il en écrit :
 
-- en entrée, un export SQL produit par `mysqldump` ou par `sqlite3 .dump` (#275) ;
+- en entrée, un export SQL produit par `mysqldump` ou par `sqlite3 .dump` (#275), ou notre
+  propre vidage `supabase db dump`, comptes de `auth.users` compris (#282, #426) ;
 - en sortie, un script SQL que quelqu'un relit avant de l'appliquer.
 
 C'est la raison pour laquelle rien ici n'ouvre de connexion : un script qu'on relit avant de
