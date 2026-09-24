@@ -1,4 +1,4 @@
-# ADR-0018 — Relais serverless par une boucle de trente secondes
+# ADR-0020 — Relais serverless par une boucle de trente secondes
 
 - **Statut** : Accepté
 - **Date** : 2026-09-24

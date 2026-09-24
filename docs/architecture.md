@@ -86,7 +86,7 @@ Le relais tourne différemment selon la cible, et c'est la seule différence ent
 | Cible | Ce qui fait tourner le relais |
 |---|---|
 | Processus local, image Docker | un intervalle, ouvert par `start()` |
-| Fonction serverless | l'écriture elle-même (`apps/api/src/after-write.ts`), plus un appel sur `POST /internal/relay` toutes les trente secondes par le workflow `relais` (ADR-0018) |
+| Fonction serverless | l'écriture elle-même (`apps/api/src/after-write.ts`), plus un appel sur `POST /internal/relay` toutes les trente secondes par le workflow `relais` (ADR-0020) |
 
 Le consommateur vit dans `apps/worker` quand un processus long existe. Sur la cible serverless, la
 même fonction de consommation est appelée par la passe de livraison, sans second processus.

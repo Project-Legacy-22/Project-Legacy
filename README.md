@@ -22,7 +22,7 @@ improvisés.
 
 La production ne sert pas le worker : sur Vercel, la passe de livraison des événements est
 déclenchée par l'écriture elle-même et par un appel toutes les trente secondes
-(`docs/ci.md`, ADR-0018). Elle ne contient aucun compte de démonstration : ceux-ci n'existent que sur la
+(`docs/ci.md`, ADR-0020). Elle ne contient aucun compte de démonstration : ceux-ci n'existent que sur la
 pile locale.
 
 ## Documentation
