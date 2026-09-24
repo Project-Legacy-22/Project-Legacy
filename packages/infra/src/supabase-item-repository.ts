@@ -9,7 +9,14 @@ import type { ItemStore } from './item-store.js';
 import { adapterFailure, serviceRoleClient } from './adapter.js';
 import type { AdapterFailure } from './adapter.js';
 
-type ItemRow = Database['public']['Tables']['items']['Row'];
+// A task as the API reads it: the row and who it is assigned to. The key is
+// named because item_assignees also points at project_memberships, which
+// items points at too, and PostgREST would otherwise see two paths.
+export const ITEM_WITH_ASSIGNEES = '*, item_assignees!item_assignees_item_fkey(user_id)';
+
+type ItemRow = Database['public']['Tables']['items']['Row'] & {
+    item_assignees: readonly { user_id: string }[];
+};
 
 export interface SupabaseSettings {
     url: string;
@@ -34,7 +41,7 @@ export function toItem(row: ItemRow): Item {
         dueDate: row.due_date,
         projectId: row.project_id,
         ownerId: row.user_id,
-        assigneeId: row.assignee_id,
+        assigneeIds: row.item_assignees.map(assignee => assignee.user_id),
     });
 }
 
@@ -143,7 +150,7 @@ interface PageRequest {
 }
 
 function itemsInProject(client: ItemClient, projectId: string) {
-    return client.from('items').select('*').eq('project_id', projectId);
+    return client.from('items').select(ITEM_WITH_ASSIGNEES).eq('project_id', projectId);
 }
 
 type ItemsQuery = ReturnType<typeof itemsInProject>;
@@ -201,7 +208,7 @@ async function findForMember(request: MemberItemRequest): Promise<Item | undefin
 
     const { data, error } = await client
         .from('items')
-        .select('*')
+        .select(ITEM_WITH_ASSIGNEES)
         .eq('id', id)
         .eq('project_id', projectId)
         .maybeSingle();
@@ -249,12 +256,25 @@ async function save(client: ItemClient, item: Item, event: DomainEvent): Promise
         p_event_name: event.name,
         p_occurred_at: event.occurredAt,
         p_payload: event.payload,
+        p_assignee_ids: [...item.assigneeIds],
     });
+    // A membership key refused an assignee: removed after the use case's check.
+    if (error?.code === FOREIGN_KEY_VIOLATION) throw new AssigneeNotMember();
     if (error) fail('save', error);
 }
 
 async function update(client: ItemClient, item: Item): Promise<void> {
     if (item.name === null) fail('update', new Error('an item written to storage must have a name'));
+    // The assignees first: they are what can be refused, and a refusal must
+    // leave the rest of the task as it was.
+    const assigned = await client.rpc('set_item_assignees', {
+        p_item_id: item.id,
+        p_project_id: item.projectId,
+        p_assignee_ids: [...item.assigneeIds],
+    });
+    if (assigned.error?.code === FOREIGN_KEY_VIOLATION) throw new AssigneeNotMember();
+    if (assigned.error) fail('update', assigned.error);
+
     const { error } = await client
         .from('items')
         .update({
@@ -263,12 +283,8 @@ async function update(client: ItemClient, item: Item): Promise<void> {
             version: item.version,
             priority: item.priority,
             due_date: item.dueDate,
-            assignee_id: item.assigneeId,
         })
         .eq('id', item.id);
-    // The membership key refused the assignee: removed between the use case's
-    // check and this write.
-    if (error?.code === FOREIGN_KEY_VIOLATION) throw new AssigneeNotMember();
     if (error) fail('update', error);
 }
 
@@ -279,19 +295,23 @@ async function moveStatus(client: ItemClient, move: ItemStatusMove): Promise<Ite
         .eq('id', move.id)
         .eq('project_id', move.projectId)
         .eq('version', move.expectedVersion)
-        .select('*')
+        .select(ITEM_WITH_ASSIGNEES)
         .maybeSingle();
     if (error) fail('moveStatus', error);
     return data ? toItem(data) : undefined;
 }
 
 async function swapPosition(client: ItemClient, move: ItemPositionMove): Promise<Item | undefined> {
-    const { data, error } = await client.rpc('swap_item_position', {
-        p_item_id: move.id,
-        p_project_id: move.projectId,
-        p_position: move.position,
-        p_expected_version: move.expectedVersion,
-    });
+    // The function returns an items row, which PostgREST embeds like a table.
+    const { data, error } = await client
+        .rpc('swap_item_position', {
+            p_item_id: move.id,
+            p_project_id: move.projectId,
+            p_position: move.position,
+            p_expected_version: move.expectedVersion,
+        })
+        .select(ITEM_WITH_ASSIGNEES)
+        .maybeSingle();
     if (error?.code === 'P5001') throw new InvalidItemPosition();
     if (error?.code === 'P5002') throw new ItemPositionConflict(move.id);
     if (error?.code === 'P5003') throw new ItemNotFound(move.id);

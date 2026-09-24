@@ -32,10 +32,10 @@ export interface Item {
     // model change later. A plain string, like `id`: branded id types are a
     // separate cleanup, not this change.
     ownerId: string;
-    // Who the task is for (US-58), a member of its project, or nobody. Never
-    // the creator by default: ownerId says who created it, and the two are
-    // different facts.
-    assigneeId: string | null;
+    // Who the task is for (US-58, #419): members of its project, possibly
+    // none. Never the creator by default: ownerId says who created it, and
+    // the two are different facts.
+    assigneeIds: readonly string[];
 }
 
 export class DomainError extends Error {
@@ -133,6 +133,13 @@ export interface NewItem {
     ownerId: string;
     priority?: ItemPriority | undefined;
     dueDate?: string | null | undefined;
+    assigneeIds?: readonly string[] | undefined;
+}
+
+// One entry per person, in a stable order: a list typed with a duplicate, or
+// in another order, is the same assignment.
+export function itemAssignees(candidate: readonly string[] | undefined): readonly string[] {
+    return [...new Set(candidate ?? [])].sort();
 }
 
 export function createItem(candidate: NewItem): Item {
@@ -146,7 +153,7 @@ export function createItem(candidate: NewItem): Item {
         dueDate: itemDueDate(candidate.dueDate),
         projectId: candidate.projectId,
         ownerId: candidate.ownerId,
-        assigneeId: null,
+        assigneeIds: itemAssignees(candidate.assigneeIds),
     };
 }
 
@@ -164,7 +171,7 @@ export function rehydrateItem(row: {
     dueDate: string | null;
     projectId: string;
     ownerId: string;
-    assigneeId: string | null;
+    assigneeIds: readonly string[];
 }): Item {
     return {
         id: row.id,
@@ -176,7 +183,7 @@ export function rehydrateItem(row: {
         dueDate: row.dueDate,
         projectId: row.projectId,
         ownerId: row.ownerId,
-        assigneeId: row.assigneeId,
+        assigneeIds: itemAssignees(row.assigneeIds),
     };
 }
 

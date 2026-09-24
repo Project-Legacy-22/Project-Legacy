@@ -3,6 +3,7 @@ export {
     rehydrateItem,
     itemName,
     itemDueDate,
+    itemAssignees,
     DomainError,
     InvalidItemName,
     InvalidItemDueDate,

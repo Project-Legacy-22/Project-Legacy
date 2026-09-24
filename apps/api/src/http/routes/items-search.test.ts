@@ -41,7 +41,7 @@ function anItemOf(candidate: { id: string; ownerId: string; name?: string; proje
         dueDate: null,
         projectId: candidate.projectId ?? PROJECT_ID,
         ownerId: candidate.ownerId,
-        assigneeId: null,
+        assigneeIds: [],
     };
 }
 

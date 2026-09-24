@@ -1,4 +1,5 @@
-import { AssigneeNotMember, itemDueDate, itemName, ItemNotFound } from '../domain/item.js';
+import { itemDueDate, itemName, ItemNotFound } from '../domain/item.js';
+import { checkedAssignees } from './assignees.js';
 import type { Item, ItemPriority } from '../domain/item.js';
 import type { ItemRepository } from '../ports/item-repository.js';
 
@@ -6,8 +7,8 @@ export interface ItemChanges {
     name: string;
     priority?: ItemPriority | undefined;
     dueDate?: string | null | undefined;
-    // Absent leaves the assignee as it is; null unassigns.
-    assigneeId?: string | null | undefined;
+    // Absent leaves the assignees as they are; an empty list unassigns.
+    assigneeIds?: readonly string[] | undefined;
 }
 
 export interface ChangeItemRequest {
@@ -15,14 +16,6 @@ export interface ChangeItemRequest {
     projectId: string;
     memberId: string;
     changes: ItemChanges;
-}
-
-async function assigneeOf(repository: ItemRepository, existing: Item, requested: string | null | undefined) {
-    if (requested === undefined) return existing.assigneeId;
-    if (requested !== null && !(await repository.isProjectMember(existing.projectId, requested))) {
-        throw new AssigneeNotMember();
-    }
-    return requested;
 }
 
 export function makeChangeItem(repository: ItemRepository) {
@@ -41,7 +34,9 @@ export function makeChangeItem(repository: ItemRepository) {
             dueDate: request.changes.dueDate === undefined ? existing.dueDate : itemDueDate(request.changes.dueDate),
             // Checked here so the refusal is a clear 404. The database checks
             // it again, against a member removed in between.
-            assigneeId: await assigneeOf(repository, existing, request.changes.assigneeId),
+            assigneeIds: request.changes.assigneeIds === undefined
+                ? existing.assigneeIds
+                : await checkedAssignees(repository, existing.projectId, request.changes.assigneeIds),
             version: existing.version + 1,
         };
 

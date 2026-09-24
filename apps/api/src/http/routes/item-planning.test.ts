@@ -31,7 +31,7 @@ function anItem(): Item {
         dueDate: null,
         projectId: PROJECT_ID,
         ownerId: OWNER_ID,
-        assigneeId: null,
+        assigneeIds: [],
     };
 }
 
@@ -103,45 +103,58 @@ describe('item planning HTTP boundary', () => {
         expect(store.items.get(EXISTING_ID)).toMatchObject({ name: 'No date', priority: 'high', dueDate: null });
     });
 
-    // US-58: assigning goes through the same PUT as the other editable fields.
-    it('assigns the item to a member, then unassigns it', async () => {
+    // US-58, #419: assigning goes through the same PUT as the other editable
+    // fields, and creation can assign from the start.
+    it('creates an item already assigned to members', async () => {
+        const response = await harness.request(
+            ITEMS_PATH,
+            json('POST', { name: 'Shared', assigneeIds: [MEMBER_ID, OWNER_ID, MEMBER_ID] }),
+        );
+
+        expect(response.status).toBe(200);
+        await expect(response.json()).resolves.toMatchObject({ assigneeIds: [OWNER_ID, MEMBER_ID].sort() });
+    });
+
+    it('assigns the item to several members, keeps them, then unassigns it', async () => {
         await reseed([anItem()]);
 
         const assigned = await harness.request(
             `${ITEMS_PATH}/${EXISTING_ID}`,
-            json('PUT', { name: 'Intact', assigneeId: MEMBER_ID }),
+            json('PUT', { name: 'Intact', assigneeIds: [MEMBER_ID, OWNER_ID] }),
         );
-        await expect(assigned.json()).resolves.toMatchObject({ assigneeId: MEMBER_ID });
+        await expect(assigned.json()).resolves.toMatchObject({ assigneeIds: [OWNER_ID, MEMBER_ID].sort() });
 
         const kept = await harness.request(`${ITEMS_PATH}/${EXISTING_ID}`, json('PUT', { name: 'Renamed' }));
-        await expect(kept.json()).resolves.toMatchObject({ name: 'Renamed', assigneeId: MEMBER_ID });
+        await expect(kept.json()).resolves.toMatchObject({ name: 'Renamed', assigneeIds: [OWNER_ID, MEMBER_ID].sort() });
 
         const cleared = await harness.request(
             `${ITEMS_PATH}/${EXISTING_ID}`,
-            json('PUT', { name: 'Renamed', assigneeId: null }),
+            json('PUT', { name: 'Renamed', assigneeIds: [] }),
         );
-        await expect(cleared.json()).resolves.toMatchObject({ assigneeId: null });
+        await expect(cleared.json()).resolves.toMatchObject({ assigneeIds: [] });
     });
 
-    it('refuses someone outside the project with 404, and changes nothing', async () => {
+    it('refuses a list with someone outside the project with 404, and changes nothing', async () => {
+        await reseed([anItem()]);
+
+        const changed = await harness.request(
+            `${ITEMS_PATH}/${EXISTING_ID}`,
+            json('PUT', { name: 'Changed', assigneeIds: [MEMBER_ID, STRANGER_ID] }),
+        );
+        const created = await harness.request(ITEMS_PATH, json('POST', { name: 'New', assigneeIds: [STRANGER_ID] }));
+
+        expect([changed.status, created.status]).toEqual([404, 404]);
+        await expect(changed.json()).resolves.toMatchObject({ type: 'assignee_not_found' });
+        expect(store.items.get(EXISTING_ID)).toMatchObject({ name: 'Intact', assigneeIds: [] });
+        expect(store.items.has(GENERATED_ID)).toBe(false);
+    });
+
+    it('refuses assignees that are not identifiers with 400', async () => {
         await reseed([anItem()]);
 
         const response = await harness.request(
             `${ITEMS_PATH}/${EXISTING_ID}`,
-            json('PUT', { name: 'Changed', assigneeId: STRANGER_ID }),
-        );
-
-        expect(response.status).toBe(404);
-        await expect(response.json()).resolves.toMatchObject({ type: 'assignee_not_found' });
-        expect(store.items.get(EXISTING_ID)).toMatchObject({ name: 'Intact', assigneeId: null });
-    });
-
-    it('refuses an assignee that is not an identifier with 400', async () => {
-        await reseed([anItem()]);
-
-        const response = await harness.request(
-            `${ITEMS_PATH}/${EXISTING_ID}`,
-            json('PUT', { name: 'Intact', assigneeId: 'alice@example.com' }),
+            json('PUT', { name: 'Intact', assigneeIds: ['alice@example.com'] }),
         );
 
         expect(response.status).toBe(400);
