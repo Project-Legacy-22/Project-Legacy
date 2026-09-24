@@ -13,7 +13,7 @@ Ce que GitHub Actions exécute, quand, et ce qui empêche une pull request d'êt
 | `image` | push sur `main` | rejoue `ci`, puis publie l'image sur GHCR et crée la release |
 | `migrations` | chaque exécution verte de `ci` sur `dev`, ou à la main | applique à la base hébergée les migrations qu'elle n'a pas encore |
 | `pages` | push sur `dev` | publie le rapport de couverture sur GitHub Pages |
-| `relais` | toutes les cinq minutes | déclenche une passe de livraison de l'outbox, puis pousse ce qu'elle rend vers Grafana Cloud |
+| `relais` | en continu, relancé par lui-même ; le cron de cinq minutes ne sert qu'à redémarrer la chaîne | une passe de livraison de l'outbox toutes les trente secondes pendant 345 minutes, les mesures sommées vers Grafana Cloud toutes les dix passes (ADR-0018) |
 
 ## Les neuf vérifications de `ci`
 

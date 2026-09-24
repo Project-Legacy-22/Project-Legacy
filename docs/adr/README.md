@@ -27,6 +27,7 @@ Comment nous écrivons le code, indépendamment des services dont il dépend.
 | [0015](0015-ghcr-comme-registre-d-images.md) | GHCR comme registre d'images | Accepté | la publication d'image et les releases |
 | [0016](0016-supervision-prometheus-et-grafana-cloud.md) | Prometheus comme format, Grafana Cloud en Allemagne comme plateforme | Accepté | toute métrique ajoutée, la démonstration du flux |
 | [0017](0017-supabase-heberge-dependance-assumee.md) | Supabase hébergé, dépendance assumée et réversible | Accepté | toute évolution du schéma, la procédure de sortie |
+| [0018](0018-relais-par-boucle-de-trente-secondes.md) | Relais serverless par une boucle de trente secondes | Accepté | tout producteur d'événement sur la cible serverless |
 
 L'ADR-0001 a été tranché **contre** la recommandation du backlog, qui proposait le
 mono-utilisateur. Il porte la raison qui a emporté la décision et le coût accepté en échange.
