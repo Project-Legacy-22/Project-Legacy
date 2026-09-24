@@ -50,6 +50,8 @@ export interface TodoPageProps {
     // landmark, so it precedes the choice of a project in reading order.
     home?: ReactNode;
     projects: ProjectsSectionProps;
+    // Who is in the selected project (#401), owned by the caller like home.
+    members?: ReactNode;
     selectedProject: ProjectDto | null;
 }
 
@@ -65,6 +67,7 @@ export function TodoPage(props: TodoPageProps) {
             <main id="main-content" className="main-content" tabIndex={-1}>
                 {props.home}
                 <ProjectsSection {...props.projects} />
+                {props.members}
                 {props.selectedProject === null ? (
                     <section className="panel" aria-labelledby="no-project-heading">
                         <h2 id="no-project-heading">{labels.itemsTitle}</h2>

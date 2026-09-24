@@ -2,6 +2,7 @@ import type { AttentionApi } from '../api/attention-api';
 import type { AccountDto, AuthApi } from '../api/auth-api';
 import type { CredentialsApi } from '../api/credentials-api';
 import type { ItemDto, ItemPageDto, ItemsApi } from '../api/items-api';
+import type { MembersApi } from '../api/members-api';
 import type { ProjectsApi } from '../api/projects-api';
 import { anAttention } from './builders/attention-builder';
 import { anItem } from './builders/item-builder';
@@ -90,6 +91,18 @@ export function createProjectsApi(overrides: Partial<ProjectsApi> = {}): Project
 export function createAttentionApi(overrides: Partial<AttentionApi> = {}): AttentionApi {
     return {
         listAttention: async () => anAttention(),
+        ...overrides,
+    };
+}
+
+// The caller alone, as owner. Provided for the same reason as the attention
+// double: a suite not about members must not reach the real client.
+export function createMembersApi(overrides: Partial<MembersApi> = {}): MembersApi {
+    return {
+        listMembers: async () => [{ userId: ACCOUNT.id, email: ACCOUNT.email, role: 'owner' }],
+        invite: async () => 'invited',
+        removeMember: async () => undefined,
+        answerInvitation: async () => undefined,
         ...overrides,
     };
 }
