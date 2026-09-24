@@ -20,7 +20,7 @@ and audit log. Moving from one Supabase project to another is already covered by
 
 | Command or file | Purpose |
 |---|---|
-| `npx supabase db dump --local --data-only -s public,auth -f data-out/dump.sql` | The dump, now with the `auth` schema. Use `--linked` for the hosted project |
+| `npx supabase db dump --local --data-only -s public,auth -f data-out/dump.sql` | The dump, now with the `auth` schema. Use `--linked` for the hosted project. Create `data-out/` first: the CLI does not |
 | `npm run data:export -- --from data-out/dump.sql --out data-out` | Writes `<target>-accounts.sql` next to the schema and data files, and says how many accounts have no password |
 | `data-out/<target>-accounts.sql` | Creates `accounts` if missing, then inserts every account in one statement, in a transaction. Applied after `<target>-data.sql` |
 

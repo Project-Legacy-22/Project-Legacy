@@ -17,6 +17,7 @@ const USAGE = `npm run data:export -- --from <dump.sql> [--out <directory>]
 Turns a PostgreSQL data dump of ours into a schema, a data and an accounts
 file for each of postgres, mysql and sqlite. Produce the dump with:
 
+  mkdir -p data-out
   npx supabase db dump --local --data-only -s public,auth -f data-out/dump.sql
 
 Without the auth schema, no accounts file is written. Applies nothing, and

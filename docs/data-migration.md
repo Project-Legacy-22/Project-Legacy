@@ -120,6 +120,7 @@ Une distinction d'abord, parce qu'elle doit être écrite plutôt que découvert
 ### 1. Produire l'export
 
 ```bash
+mkdir -p data-out   # le CLI ne cree pas le dossier
 npx supabase db dump --local --data-only -s public,auth -f data-out/dump.sql
 ```
 
