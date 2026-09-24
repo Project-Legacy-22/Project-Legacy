@@ -18,6 +18,8 @@ export {
 export {
     NotificationIdParams,
     NotificationDto,
+    NotificationKind,
+    InvitationStatus,
     NotificationListDto,
     NotificationPageDto,
     ListNotificationsQuery,
@@ -37,6 +39,7 @@ export {
     AccountDto,
     PASSWORD_POLICY,
     PRIVACY_POLICY_VERSION,
+    EmailAddress,
 } from './auth.js';
 export { PersonalDataExportDto } from './personal-data.js';
 export {
@@ -62,8 +65,19 @@ export {
     MEMBERSHIP_CREATED_V1,
     MembershipCreatedV1,
     MembershipCreatedV1Payload,
+    INVITATION_CREATED_V1,
+    InvitationCreatedV1,
+    InvitationCreatedV1Payload,
     DomainEvent,
 } from './events.js';
+export {
+    InviteMemberBody,
+    InvitationOutcome,
+    InvitationOutcomeDto,
+    InvitationIdParams,
+    PendingInvitationDto,
+    PendingInvitationListDto,
+} from './invitations.js';
 export { ProblemDetails } from './problem-details.js';
 export { ServiceUnavailable } from './service-unavailable.js';
 export type { Unavailability } from './service-unavailable.js';

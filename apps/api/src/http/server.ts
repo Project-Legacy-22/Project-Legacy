@@ -9,6 +9,7 @@ import type { Config } from '../config.js';
 import type { AppUseCases } from '../composition-root.js';
 import { accountRouter } from './routes/account.js';
 import { attentionRouter } from './routes/attention.js';
+import { invitationsRouter } from './routes/invitations.js';
 import { authRouter } from './routes/auth.js';
 import { credentialsRouter } from './routes/credentials.js';
 import { itemsRouter } from './routes/items.js';
@@ -197,7 +198,7 @@ export function createServer(
         app.use(relayRouter(useCases.notifications, config.relaySecret));
     }
 
-    app.use(session, attentionRouter(useCases.attention), projectsRouter(useCases.projects), itemsRouter(useCases.items));
+    app.use(session, attentionRouter(useCases.attention), invitationsRouter(useCases.projects), projectsRouter(useCases.projects), itemsRouter(useCases.items));
     app.use(session, notificationsRouter(useCases.notifications));
 
 

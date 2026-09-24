@@ -7,6 +7,7 @@ import {
     createSupabaseIdentityProvider,
     createSupabaseItemStore,
     createSupabaseMembershipRepository,
+    createSupabaseInvitationRepository,
     createSupabaseNotificationStore,
     createSupabaseOutboxStore,
     createSupabasePersonalDataStore,
@@ -62,6 +63,9 @@ import {
     makeListProjects,
     makeRemoveProject,
     makeRemoveProjectMember,
+    makeInviteProjectMember,
+    makeListInvitations,
+    makeRespondToInvitation,
 } from '@legacy/core-projects';
 
 import { afterWrite } from './after-write.js';
@@ -103,6 +107,9 @@ export interface ProjectUseCases {
     removeProject: ReturnType<typeof makeRemoveProject>;
     listProjectMembers: ReturnType<typeof makeListProjectMembers>;
     removeProjectMember: ReturnType<typeof makeRemoveProjectMember>;
+    inviteProjectMember: ReturnType<typeof makeInviteProjectMember>;
+    listInvitations: ReturnType<typeof makeListInvitations>;
+    respondToInvitation: ReturnType<typeof makeRespondToInvitation>;
 }
 
 export interface NotificationUseCases {
@@ -154,6 +161,7 @@ interface Adapters {
     // politique de lecture des autres membres, donc c est le cas d usage qui
     // decide qui peut lire la liste.
     memberships: ReturnType<typeof createSupabaseMembershipRepository>;
+    invitations: ReturnType<typeof createSupabaseInvitationRepository>;
     outbox: OutboxStore;
     notifications: NotificationStore;
     // Absent when no broker is configured. Serving HTTP does not need one; the
@@ -194,6 +202,7 @@ function createAdapters(config: Config): Adapters {
         personalData: createSupabasePersonalDataStore(supabase),
         projects: createSupabaseProjectRepository(supabase),
         memberships: createSupabaseMembershipRepository(supabase),
+        invitations: createSupabaseInvitationRepository(supabase),
         outbox: createSupabaseOutboxStore(supabase),
         notifications: createSupabaseNotificationStore(supabase),
         bus,
@@ -291,9 +300,28 @@ export function itemUseCases(
     };
 }
 
+// Projects, their members and invitations, assembled apart so that compose
+// stays a list of groups rather than the detail of each (#401).
+export function projectUseCases({
+    projects,
+    memberships,
+    invitations,
+}: Pick<Adapters, 'projects' | 'memberships' | 'invitations'>): ProjectUseCases {
+    return {
+        listProjects: makeListProjects(projects),
+        addProject: makeAddProject({ repository: projects, newId: uuid }),
+        removeProject: makeRemoveProject(projects),
+        listProjectMembers: makeListProjectMembers(memberships),
+        removeProjectMember: makeRemoveProjectMember(memberships),
+        inviteProjectMember: makeInviteProjectMember({ repository: invitations, newId: uuid, now: () => new Date() }),
+        listInvitations: makeListInvitations(invitations),
+        respondToInvitation: makeRespondToInvitation(invitations),
+    };
+}
+
 export function compose(config: Config): Application {
     const adapters = createAdapters(config);
-    const { store, attention, identity, personalData, projects, memberships, outbox, notifications, bus } = adapters;
+    const { store, attention, identity, personalData, outbox, notifications, bus } = adapters;
     const { stateReadings } = adapters;
     const logger = createLogger(config.logLevel);
     const deliver = makeDeliverPending({ outbox, bus, notifications, logger });
@@ -320,13 +348,7 @@ export function compose(config: Config): Application {
                 }),
                 eraseAccount: makeEraseAccount({ store: personalData, identity }),
             },
-            projects: {
-                listProjects: makeListProjects(projects),
-                addProject: makeAddProject({ repository: projects, newId: uuid }),
-                removeProject: makeRemoveProject(projects),
-                listProjectMembers: makeListProjectMembers(memberships),
-                removeProjectMember: makeRemoveProjectMember(memberships),
-            },
+            projects: projectUseCases(adapters),
             notifications: {
                 listNotifications: makeListNotifications(notifications),
                 markNotificationRead: makeMarkNotificationRead(notifications),
