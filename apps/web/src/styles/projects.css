@@ -6,7 +6,7 @@
     margin-bottom: 22px;
 }
 
-/* The creation form holds a name and its invitations (#420): both fields and
+/* The creation form holds a name and its invitations (issue 420): both fields and
    the button share the row, like the one-field forms. */
 .projects-panel > .project-form {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
