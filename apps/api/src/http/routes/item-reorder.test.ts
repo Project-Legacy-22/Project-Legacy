@@ -20,7 +20,7 @@ const PATH = `/projects/${PROJECT_ID}/items/${SECOND_ID}/position`;
 
 function anItem(id: string): Item {
     return {
-        id, position: id, projectId: PROJECT_ID, ownerId: OWNER_ID,
+        id, position: id, projectId: PROJECT_ID, ownerId: OWNER_ID, assigneeId: null,
         name: 'An item', status: 'todo', version: 1, priority: 'normal', dueDate: null,
     };
 }

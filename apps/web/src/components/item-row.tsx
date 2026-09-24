@@ -7,6 +7,7 @@ import { labels } from '../labels';
 import { formatDueDate, isOverdue } from '../item-due-date';
 import { EditItemForm } from './edit-item-form';
 import { MoveItemForm } from './move-item-form';
+import { ItemAssignee, PoliteAnnouncement, useAssigneeAnnouncement } from './item-assignee';
 
 export interface ItemRowProps {
     item: ItemDto;
@@ -172,6 +173,7 @@ function ItemCopy({ item, name }: { item: ItemDto; name: string }) {
             <p className="item-name">{name}</p>
             <p className="item-state">{labels.itemStatus(item.status)}</p>
             <ItemPlanningSummary item={item} />
+            <ItemAssignee assigneeId={item.assigneeId} />
             {item.name === null && (
                 <p className="item-remediation">{labels.unnamedItemRemediation}</p>
             )}
@@ -179,20 +181,23 @@ function ItemCopy({ item, name }: { item: ItemDto; name: string }) {
     );
 }
 
+function ItemEditMode(props: ItemRowBodyProps) {
+    return (
+        <EditItemForm
+            itemId={props.item.id}
+            initialName={props.item.name ?? ''}
+            initialPriority={props.item.priority}
+            initialDueDate={props.item.dueDate}
+            initialAssigneeId={props.item.assigneeId}
+            isPending={props.isPending}
+            onCancel={props.onCancelEdit}
+            onSave={props.onUpdate}
+        />
+    );
+}
+
 function ItemRowBody(props: ItemRowBodyProps) {
-    if (props.mode === 'edit') {
-        return (
-            <EditItemForm
-                itemId={props.item.id}
-                initialName={props.item.name ?? ''}
-                initialPriority={props.item.priority}
-                initialDueDate={props.item.dueDate}
-                isPending={props.isPending}
-                onCancel={props.onCancelEdit}
-                onSave={props.onUpdate}
-            />
-        );
-    }
+    if (props.mode === 'edit') return <ItemEditMode {...props} />;
 
     if (props.mode === 'move') {
         return (
@@ -232,17 +237,24 @@ function ItemRowBody(props: ItemRowBodyProps) {
     );
 }
 
-export function ItemRow(props: ItemRowProps) {
-    const [mode, setMode] = useState<'idle' | 'edit' | 'move'>('idle');
-    const { editButtonRef, moveButtonRef, pendingAction } = useActionFocus(mode);
+function useItemRemoval(props: ItemRowProps, name: string) {
     const removeButtonRef = useRef<HTMLButtonElement>(null);
-    const name = props.item.name ?? labels.unnamedItem;
 
     const handleRemove = async () => {
         if (!globalThis.confirm(labels.confirmItemRemoval(name))) return;
         const focusTarget = focusTargetAfterRemoval(removeButtonRef.current);
         if (await props.onRemove(props.item)) globalThis.setTimeout(() => focusTarget?.focus(), 0);
     };
+
+    return { removeButtonRef, handleRemove };
+}
+
+export function ItemRow(props: ItemRowProps) {
+    const [mode, setMode] = useState<'idle' | 'edit' | 'move'>('idle');
+    const assignee = useAssigneeAnnouncement(props.item);
+    const { editButtonRef, moveButtonRef, pendingAction } = useActionFocus(mode);
+    const name = props.item.name ?? labels.unnamedItem;
+    const { removeButtonRef, handleRemove } = useItemRemoval(props, name);
 
     const close = (target: RestoredAction) => {
         pendingAction.current = target;
@@ -251,7 +263,10 @@ export function ItemRow(props: ItemRowProps) {
 
     const handleUpdate = async (changes: UpdateItemBody) => {
         const saved = await props.onUpdate(props.item, changes);
-        if (saved) close('edit');
+        if (saved) {
+            assignee.announce(changes.assigneeId);
+            close('edit');
+        }
         return saved;
     };
 
@@ -282,6 +297,7 @@ export function ItemRow(props: ItemRowProps) {
                 onRemove={() => void handleRemove()}
                 onUpdate={handleUpdate}
             />
+            <PoliteAnnouncement text={assignee.announcement} />
         </li>
     );
 }

@@ -67,4 +67,17 @@ export const membersLabels = {
     declinedProject(projectName: string): string {
         return `You declined the invitation to ${projectName}.`;
     },
+
+    // Assigning a task (US-58).
+    assigneeLabel: 'Assigned to',
+    nobody: 'Nobody',
+    assignedTo(email: string | undefined): string {
+        return email === undefined ? 'Assigned to a member' : `Assigned to ${email}`;
+    },
+    itemAssigned(itemName: string, email: string | undefined): string {
+        return `${itemName} is now assigned to ${email ?? 'a member'}.`;
+    },
+    itemUnassigned(itemName: string): string {
+        return `${itemName} is no longer assigned to anyone.`;
+    },
 } as const;

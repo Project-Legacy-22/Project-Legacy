@@ -12,6 +12,7 @@ export {
     ItemPositionConflict,
     InvalidItemPosition,
     ItemProjectNotFound,
+    AssigneeNotMember,
     ITEM_STATUSES,
     ITEM_PRIORITIES,
     MAX_ITEM_NAME_LENGTH,

@@ -38,6 +38,7 @@ const ITEM: ItemDto = {
     position: '8f80ec8b-8cbf-4d0f-92b5-6297404875f1',
     priority: 'normal',
     dueDate: null,
+    assigneeId: null,
 };
 
 const auth: AuthApi = {

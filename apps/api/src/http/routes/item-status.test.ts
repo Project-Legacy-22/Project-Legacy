@@ -28,6 +28,7 @@ function anItem(ownerId = OWNER_ID): Item {
         position: EXISTING_ID,
         projectId: PROJECT_ID,
         ownerId,
+        assigneeId: null,
         name: 'Prepare the review',
         status: 'todo',
         version: 1,
