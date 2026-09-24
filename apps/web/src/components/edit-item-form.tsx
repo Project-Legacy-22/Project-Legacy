@@ -6,7 +6,7 @@ import { UpdateItemBody } from '@legacy/contracts';
 import type { ItemPriority, UpdateItemBody as UpdateItemInput } from '@legacy/contracts';
 
 import { labels } from '../labels';
-import { ItemAssigneeField } from './item-assignee-field';
+import { ItemAssigneesField } from './item-assignees-field';
 import { ItemPlanningFields } from './item-planning-fields';
 import { useProjectMemberList } from './project-members-context';
 
@@ -15,7 +15,7 @@ export interface EditItemFormProps {
     initialName: string;
     initialPriority: ItemPriority;
     initialDueDate: string | null;
-    initialAssigneeId: string | null;
+    initialAssigneeIds: readonly string[];
     isPending: boolean;
     onCancel: () => void;
     onSave: (changes: UpdateItemInput) => Promise<boolean>;
@@ -68,10 +68,10 @@ function EditItemField({ inputId, name, validationError, isPending, onChange }: 
     );
 }
 
-function useEditItemForm({ initialName, initialPriority, initialDueDate, initialAssigneeId, onSave }: EditItemFormProps) {
+function useEditItemForm({ initialName, initialPriority, initialDueDate, initialAssigneeIds, onSave }: EditItemFormProps) {
     const members = useProjectMemberList();
     const canAssign = members.length > 1;
-    const [assigneeId, setAssigneeId] = useState(initialAssigneeId ?? '');
+    const [assigneeIds, setAssigneeIds] = useState(initialAssigneeIds);
     const [name, setName] = useState(initialName);
     const [priority, setPriority] = useState(initialPriority);
     const [dueDate, setDueDate] = useState(initialDueDate ?? '');
@@ -90,7 +90,7 @@ function useEditItemForm({ initialName, initialPriority, initialDueDate, initial
             dueDate: dueDate === '' ? null : dueDate,
             // Sent only when the choice was offered: a list that failed to load
             // must not unassign the task behind the person's back.
-            ...(canAssign ? { assigneeId: assigneeId === '' ? null : assigneeId } : {}),
+            ...(canAssign ? { assigneeIds } : {}),
         });
         const error = validateName(name);
         setValidationError(error);
@@ -102,8 +102,8 @@ function useEditItemForm({ initialName, initialPriority, initialDueDate, initial
     return {
         members,
         canAssign,
-        assigneeId,
-        setAssigneeId,
+        assigneeIds,
+        setAssigneeIds,
         name,
         priority,
         dueDate,
@@ -137,12 +137,12 @@ export function EditItemForm(props: EditItemFormProps) {
                 onDueDateChange={form.setDueDate}
             />
             {form.canAssign && (
-                <ItemAssigneeField
-                    inputId={`edit-item-${props.itemId}-assignee`}
+                <ItemAssigneesField
+                    idPrefix={`edit-item-${props.itemId}`}
                     members={form.members}
-                    value={form.assigneeId}
+                    selected={form.assigneeIds}
                     isDisabled={props.isPending}
-                    onChange={form.setAssigneeId}
+                    onChange={form.setAssigneeIds}
                 />
             )}
             <div className="item-edit-actions">

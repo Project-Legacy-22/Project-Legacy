@@ -7,7 +7,7 @@ import { labels } from '../labels';
 import { formatDueDate, isOverdue } from '../item-due-date';
 import { EditItemForm } from './edit-item-form';
 import { MoveItemForm } from './move-item-form';
-import { ItemAssignee, PoliteAnnouncement, useAssigneeAnnouncement } from './item-assignee';
+import { ItemAssignees, PoliteAnnouncement, useAssigneeAnnouncement } from './item-assignee';
 
 export interface ItemRowProps {
     item: ItemDto;
@@ -173,7 +173,7 @@ function ItemCopy({ item, name }: { item: ItemDto; name: string }) {
             <p className="item-name">{name}</p>
             <p className="item-state">{labels.itemStatus(item.status)}</p>
             <ItemPlanningSummary item={item} />
-            <ItemAssignee assigneeId={item.assigneeId} />
+            <ItemAssignees assigneeIds={item.assigneeIds} />
             {item.name === null && (
                 <p className="item-remediation">{labels.unnamedItemRemediation}</p>
             )}
@@ -188,7 +188,7 @@ function ItemEditMode(props: ItemRowBodyProps) {
             initialName={props.item.name ?? ''}
             initialPriority={props.item.priority}
             initialDueDate={props.item.dueDate}
-            initialAssigneeId={props.item.assigneeId}
+            initialAssigneeIds={props.item.assigneeIds}
             isPending={props.isPending}
             onCancel={props.onCancelEdit}
             onSave={props.onUpdate}
@@ -264,7 +264,7 @@ export function ItemRow(props: ItemRowProps) {
     const handleUpdate = async (changes: UpdateItemBody) => {
         const saved = await props.onUpdate(props.item, changes);
         if (saved) {
-            assignee.announce(changes.assigneeId);
+            assignee.announce(changes.assigneeIds);
             close('edit');
         }
         return saved;
