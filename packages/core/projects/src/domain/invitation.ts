@@ -32,7 +32,7 @@ export interface InvitationResponse {
 // the refusal unreadable.
 export class NotProjectOwner extends ProjectError {
     constructor(readonly projectId: string) {
-        super('not_project_owner', 403, `Only an owner may invite into ${projectId}`);
+        super('not_project_owner', 403, 'Only an owner of this project can invite someone into it.');
     }
 }
 
@@ -48,7 +48,7 @@ export class NotProjectOwner extends ProjectError {
 // One types an address; one does not browse who is registered.
 export class AccountNotFound extends ProjectError {
     constructor() {
-        super('account_not_found', 404, 'No account carries that address');
+        super('account_not_found', 404, 'No account uses this email address. Check it for a typo.');
     }
 }
 
@@ -56,12 +56,12 @@ export class AccountNotFound extends ProjectError {
 // the same posture as a project they are not in.
 export class InvitationNotFound extends ProjectError {
     constructor(readonly invitationId: string) {
-        super('invitation_not_found', 404, `Invitation ${invitationId} not found`);
+        super('invitation_not_found', 404, 'This invitation does not exist or is not addressed to you.');
     }
 }
 
 export class InvitationAlreadyAnswered extends ProjectError {
     constructor(readonly invitationId: string) {
-        super('invitation_already_answered', 409, 'This invitation has already been answered');
+        super('invitation_already_answered', 409, 'This invitation has already been answered.');
     }
 }

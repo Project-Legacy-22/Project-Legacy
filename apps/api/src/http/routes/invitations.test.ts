@@ -96,7 +96,11 @@ describe('POST /projects/:projectId/invitations', () => {
         const response = await invite(api, 'nobody@example.com');
 
         expect(response.status).toBe(404);
-        expect(ProblemDetails.parse(await response.json()).type).toBe('account_not_found');
+        // Shown as is by the interface, so it is written for the owner.
+        expect(ProblemDetails.parse(await response.json())).toMatchObject({
+            type: 'account_not_found',
+            detail: 'No account uses this email address. Check it for a typo.',
+        });
     });
 
     it('refuses a body that is not an address, with 400', async () => {
