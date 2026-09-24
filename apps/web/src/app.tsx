@@ -166,7 +166,7 @@ function SignedInApp({
     onDeleted,
     onSignOut,
 }: SignedInAppProps) {
-    const projects = useProjects(apis.projects);
+    const projects = useProjects(apis.projects, apis.members);
     const attention = useAttention(apis.attention);
     const state = useProjectItems(apis.api, projects, attention.reload);
     const openFromHome = useOpenFromHome(projects, state);

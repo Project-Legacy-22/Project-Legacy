@@ -1,7 +1,8 @@
 # Invite someone into a project
 
 - **Issue**: #401, delivered by #402 (data, use cases and routes), #403 (event and
-  notifications by kind) and #404 (members screen and answer from the notification)
+  notifications by kind) and #404 (members screen and answer from the notification);
+  #420 invites one or several people at once, including when creating a project
 - **Epic**: Projects
 - **Delivered**: 2026-09-24
 - **Decisions that apply**: ADR-0001, ADR-0003, ADR-0005, ADR-0007, ADR-0013
@@ -70,13 +71,20 @@ are registered. It requires a session, and the per-account budget bounds it.
 
 ## Screens
 
+- **Project creation** has an optional *Invite people* field. Once the project exists,
+  each address is invited in turn, and one message says who was invited, who already
+  was, and who could not be and why. A failed invitation does not undo the project; it
+  can be sent again from the members panel.
 - **Members of a project**, below the project list, collapsed behind *Show members* and
   fetched only once opened. It lists each member with their role and marks the reader.
   An owner sees an invitation field and a *Remove* button on the other members; a member
-  sees the list only. The address is checked against the same contract as the API
-  before anything is sent, and the outcome (sent, already a member, already invited) is
-  announced in a polite live region. A refusal stays next to the field, which keeps the
-  address for correction.
+  sees the list only.
+- Both invitation fields take one or several addresses separated by commas, semicolons
+  or spaces, at most 20 at once, the API's budget per account. Every address is checked
+  against the same contract as the API before anything is sent; what is not an address
+  is named and nothing is sent. The outcome of each address is announced in a polite
+  live region; in the members panel, the addresses that were not invited stay in the
+  field with their reason, for correction.
 - **Notifications** are worded by kind: a created task, being added to a project, being
   invited to one. A pending invitation offers *Accept* and *Decline*, native buttons
   whose accessible name includes the project. Answering marks the notification read,
@@ -98,7 +106,7 @@ Against a disposable local Supabase stack with all migrations applied:
 npm run test:unit -- packages/core/projects packages/infra/src/event-consumer.test.ts
 npm run test:http -- invitations.test.ts
 npm run test:integration -- invitations.integration.test.ts
-npm run test:dom -- app-invitations.test.tsx members-api.test.ts
+npm run test:dom -- app-invitations.test.tsx app-project-invitations.test.tsx email-list.test.ts members-api.test.ts
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/check-schema.sql
 ```
 

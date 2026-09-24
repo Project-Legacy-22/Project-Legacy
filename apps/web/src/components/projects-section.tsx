@@ -19,7 +19,8 @@ export interface ProjectsSectionProps {
     hasNextPage: boolean;
     paginationState: ProjectsPaginationState;
     onSelect: (projectId: string) => void;
-    onAdd: (name: string) => Promise<AddProjectResult>;
+    // The addresses of the form's invitation field, possibly none (#420).
+    onAdd: (name: string, invitees: readonly string[]) => Promise<AddProjectResult>;
     onRemove: (project: ProjectDto) => Promise<boolean>;
     onLoadMore: () => void;
     onRetry: () => void;
