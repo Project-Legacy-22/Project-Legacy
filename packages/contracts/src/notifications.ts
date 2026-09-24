@@ -8,12 +8,29 @@ export const NotificationIdParams = z.object({
     id: z.uuid(),
 });
 
+// Named after the event that produces it, without its version (see the
+// notifications migration of 15 September).
+export const NotificationKind = z.enum(['item.created', 'membership.created', 'invitation.created']);
+
+export const InvitationStatus = z.enum(['pending', 'accepted', 'declined']);
+
 export const NotificationDto = z.object({
     id: z.uuid(),
+    // What the row is about. The interface words each kind, and until #401 it
+    // could not tell them apart: every notification read as a created task.
+    kind: NotificationKind,
     // Nullable since notifications may name a project instead of a task. What
     // a row names is decided by its kind, and the check constraint in the
     // database refuses a row naming neither.
     itemId: z.uuid().nullable(),
+    projectId: z.uuid().nullable(),
+    // Read at display time from the project, never stored in the row: a
+    // renamed project is shown under its current name.
+    projectName: z.string().nullable(),
+    // For an invitation: which one, and whether it still waits for an answer,
+    // so the screen offers Accept and Decline only while they mean something.
+    invitationId: z.uuid().nullable(),
+    invitationStatus: InvitationStatus.nullable(),
     readAt: z.iso.datetime().nullable(),
     createdAt: z.iso.datetime(),
 });
@@ -40,6 +57,8 @@ export const NotificationPageDto = z.object({
 });
 
 export type NotificationIdParams = z.infer<typeof NotificationIdParams>;
+export type NotificationKind = z.infer<typeof NotificationKind>;
+export type InvitationStatus = z.infer<typeof InvitationStatus>;
 export type NotificationDto = z.infer<typeof NotificationDto>;
 export type NotificationListDto = z.infer<typeof NotificationListDto>;
 export type ListNotificationsQuery = z.infer<typeof ListNotificationsQuery>;

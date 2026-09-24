@@ -4,7 +4,9 @@ import { Buffer } from 'node:buffer';
 
 import { InvalidNotificationCursor } from '@legacy/core-notifications';
 import type {
+    InvitationStatus,
     Notification,
+    NotificationKind,
     NotificationPage,
     NotificationPageQuery,
     NotificationRepository,
@@ -16,6 +18,14 @@ import { adapterFailure, asInstant, serviceRoleClient } from './adapter.js';
 import type { AdapterFailure } from './adapter.js';
 
 type NotificationRow = Database['public']['Tables']['notifications']['Row'];
+// The row, the name of the project it names and the state of the invitation it
+// names, read together: the name and the state are what the screen shows, and
+// both change after the row is written.
+type ListedRow = NotificationRow & {
+    projects: { name: string } | null;
+    project_invitations: { status: string } | null;
+};
+const LISTED = '*, projects(name), project_invitations(status)';
 type NotificationClient = SupabaseClient<Database>;
 
 export interface NotificationStore extends NotificationRepository {
@@ -28,16 +38,45 @@ export interface NotificationStore extends NotificationRepository {
     // l evenement, et processed_events n en porte qu une ligne quel que
     // soit le genre de la notification.
     notifyMemberAdded(eventId: string, userId: string, projectId: string): Promise<boolean>;
+    // La personne invitee (#401), meme contrat et meme idempotence.
+    notifyInvited(invitation: InvitedNotification): Promise<boolean>;
+}
+
+export interface InvitedNotification {
+    eventId: string;
+    userId: string;
+    projectId: string;
+    invitationId: string;
 }
 
 const fail: AdapterFailure = adapterFailure('notifications');
 
 // Both dates go through asInstant: this is the only DTO of the application
 // that carries a timestamptz out to a client, and the client validates it.
-function toNotification(row: NotificationRow): Notification {
+const KINDS = new Set<string>(['item.created', 'membership.created', 'invitation.created']);
+const STATUSES = new Set<string>(['pending', 'accepted', 'declined']);
+
+function kindOf(value: string): NotificationKind {
+    if (KINDS.has(value)) return value as NotificationKind;
+    fail('read kind', new Error(`the notification carries an unknown kind: ${value}`));
+}
+
+function statusOf(row: ListedRow): InvitationStatus | null {
+    const status = row.project_invitations?.status;
+    if (status === undefined) return null;
+    if (STATUSES.has(status)) return status as InvitationStatus;
+    fail('read invitation status', new Error(`the invitation carries an unknown status: ${status}`));
+}
+
+function toNotification(row: ListedRow): Notification {
     return {
         id: row.id,
+        kind: kindOf(row.kind),
         itemId: row.item_id,
+        projectId: row.project_id,
+        projectName: row.projects?.name ?? null,
+        invitationId: row.invitation_id,
+        invitationStatus: statusOf(row),
         userId: row.user_id,
         readAt: row.read_at === null ? null : asInstant(row.read_at),
         createdAt: asInstant(row.created_at),
@@ -69,7 +108,7 @@ async function findPage(
     accountId: string,
     page: NotificationPageQuery,
 ): Promise<NotificationPage> {
-    const owned = client.from('notifications').select('*').eq('user_id', accountId);
+    const owned = client.from('notifications').select(LISTED).eq('user_id', accountId);
     const positioned = page.cursor === undefined ? owned : owned.or(beforeCursor(page.cursor));
 
     // One row more than asked: its presence is what says there is a next page.
@@ -79,7 +118,7 @@ async function findPage(
         .limit(page.limit + 1);
     if (error) fail('findPageForAccount', error);
 
-    const rows = data ?? [];
+    const rows = (data ?? []) as ListedRow[];
     const visible = rows.slice(0, page.limit);
     const last = visible.at(-1);
 
@@ -87,6 +126,20 @@ async function findPage(
         notifications: visible.map(toNotification),
         nextCursor: rows.length > page.limit && last !== undefined ? encodeCursor(last) : undefined,
     };
+}
+
+// Same contract and idempotence as the two notifications above (#401).
+async function notifyInvited(client: NotificationClient, invitation: InvitedNotification): Promise<boolean> {
+    const { data, error } = await client.rpc('record_invitation_notification', {
+        p_event_id: invitation.eventId,
+        p_user_id: invitation.userId,
+        p_project_id: invitation.projectId,
+        p_invitation_id: invitation.invitationId,
+    });
+
+    if (error) fail('notifyInvited', error);
+
+    return data === true;
 }
 
 export function createSupabaseNotificationStore(settings: SupabaseSettings): NotificationStore {
@@ -125,6 +178,8 @@ export function createSupabaseNotificationStore(settings: SupabaseSettings): Not
 
             return data === true;
         },
+
+        notifyInvited: invitation => notifyInvited(client, invitation),
 
         findPageForAccount: (accountId, page) => findPage(client, accountId, page),
 

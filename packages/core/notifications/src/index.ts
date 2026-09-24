@@ -3,7 +3,7 @@ export {
     NotificationNotFound,
     InvalidNotificationCursor,
 } from './domain/notification.js';
-export type { Notification } from './domain/notification.js';
+export type { InvitationStatus, Notification, NotificationKind } from './domain/notification.js';
 
 export type {
     NotificationRepository,
