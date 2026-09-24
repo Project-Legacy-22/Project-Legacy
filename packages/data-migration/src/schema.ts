@@ -186,6 +186,22 @@ export const TABLES: readonly Table[] = [
         unique: [['position']],
     },
     {
+        // Who each task is assigned to (#419). Our keys point at the task in
+        // its project and at the membership, so only a member is assigned and
+        // leaving the project removes the row. The targets get plain keys to
+        // the task, the project and the account: the membership rule stays
+        // ours, like items.assignee_id's above.
+        name: 'item_assignees',
+        columns: [uuid('item_id'), uuid('project_id'), uuid('user_id')],
+        primaryKey: ['item_id', 'user_id'],
+        references: [
+            { column: 'item_id', table: 'items', target: 'id' },
+            { column: 'project_id', table: 'projects', target: 'id' },
+            { column: 'user_id', table: 'users', target: 'id' },
+        ],
+        unique: [],
+    },
+    {
         name: 'outbox',
         columns: [
             uuid('id'),
