@@ -92,9 +92,4 @@ h2 {
     .site-header {
         padding-inline: 16px;
     }
-
-    .add-form,
-    .todo-item {
-        grid-template-columns: 1fr;
-    }
 }
