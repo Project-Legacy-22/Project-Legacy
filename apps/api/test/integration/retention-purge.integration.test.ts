@@ -57,7 +57,7 @@ async function consumedEvent(account: RealAccount, age: number): Promise<string>
     return eventId;
 }
 
-async function outboxRow(account: RealAccount, publishedDaysAgo: number | null, id = randomUUID()): Promise<string> {
+async function outboxRow(account: RealAccount, publishedDaysAgo: number | null, id: string = randomUUID()): Promise<string> {
     await check(
         membershipClient().from('outbox').insert({
             id,
