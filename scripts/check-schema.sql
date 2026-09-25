@@ -28,14 +28,16 @@ begin
     raise exception 'tables without a primary key: %', offending;
   end if;
 
-  -- 2. items.user_id remains mandatory as the creator recorded by the event
-  --    flow. Access control is no longer based on it: project_id is the tenant.
+  -- 2. items.user_id is nullable (US-13, #425): it records the creator for as
+  --    long as that account exists, and is cleared rather than cascaded away
+  --    when the account is erased, so a shared project keeps its items.
+  --    Access control is not based on it: project_id is the tenant.
   if (
     select is_nullable
     from information_schema.columns
     where table_schema = 'public' and table_name = 'items' and column_name = 'user_id'
-  ) <> 'NO' then
-    raise exception 'items.user_id must be NOT NULL';
+  ) <> 'YES' then
+    raise exception 'items.user_id must be nullable';
   end if;
 
   -- 3. items.user_id references users(id).
