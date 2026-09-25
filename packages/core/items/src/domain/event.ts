@@ -21,6 +21,18 @@ export interface ItemCreatedV1 {
 
 export type DomainEvent = ItemCreatedV1;
 
+export interface ItemCreatedContext {
+    eventId: string;
+    occurredAt: Date;
+    item: Item;
+    // Its own field rather than read from `item.ownerId`: the item carries
+    // the persisted, nullable fact (US-13, #425 -- a creator can later be
+    // erased), while an event announces what was true at the moment it
+    // happened, which is always a real caller. Passing it separately means
+    // nothing here ever has to assert that away.
+    ownerId: string;
+}
+
 // Builds the event announcing a created item.
 //
 // The identifier and the instant are passed in rather than produced here, for
@@ -32,14 +44,14 @@ export type DomainEvent = ItemCreatedV1;
 // would end up in the broker and in the consumer's logs, outside the reach of
 // the export and erasure paths. A consumer that needs the name reads it back
 // from the component that owns it.
-export function itemCreated(eventId: string, occurredAt: Date, item: Item): ItemCreatedV1 {
+export function itemCreated({ eventId, occurredAt, item, ownerId }: ItemCreatedContext): ItemCreatedV1 {
     return {
         id: eventId,
         name: ITEM_CREATED_V1,
         occurredAt: occurredAt.toISOString(),
         payload: {
             itemId: item.id,
-            ownerId: item.ownerId,
+            ownerId,
         },
     };
 }

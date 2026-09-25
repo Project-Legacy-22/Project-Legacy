@@ -84,7 +84,7 @@ export type Database = {
           project_id: string
           status: Database["public"]["Enums"]["item_status"]
           updated_at: string
-          user_id: string
+          user_id: string | null
           version: number
         }
         Insert: {
@@ -99,7 +99,7 @@ export type Database = {
           project_id: string
           status?: Database["public"]["Enums"]["item_status"]
           updated_at?: string
-          user_id: string
+          user_id?: string | null
           version?: number
         }
         Update: {
@@ -114,7 +114,7 @@ export type Database = {
           project_id?: string
           status?: Database["public"]["Enums"]["item_status"]
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
           version?: number
         }
         Relationships: [

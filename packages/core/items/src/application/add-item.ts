@@ -36,7 +36,7 @@ export function makeAddItem({ repository, newId, now }: AddItemDependencies) {
 
         const assigneeIds = await checkedAssignees(repository, projectId, input.assigneeIds ?? []);
         const item = createItem({ id: newId(), name, projectId, ownerId, priority, dueDate, assigneeIds });
-        const event = itemCreated(newId(), now(), item);
+        const event = itemCreated({ eventId: newId(), occurredAt: now(), item, ownerId });
 
         // One call, so the item and its event share a transaction. Announcing
         // the creation afterwards would leave a window where a failure publishes

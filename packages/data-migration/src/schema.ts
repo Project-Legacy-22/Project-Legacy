@@ -146,7 +146,10 @@ export const TABLES: readonly Table[] = [
         // any way is a copy one stops trusting.
         columns: [
             uuid('id'),
-            uuid('user_id'),
+            // Nullable since #425: a shared project's tasks outlive their
+            // creator's account, the link to it broken rather than the row
+            // removed.
+            uuid('user_id', true),
             text('name'),
             stamped('created_at'),
             stamped('updated_at'),
@@ -179,7 +182,7 @@ export const TABLES: readonly Table[] = [
         // account instead: the rule "a member of the project" stays ours, like
         // the policies and checks that do not cross either.
         references: [
-            { column: 'user_id', table: 'users', target: 'id' },
+            { column: 'user_id', table: 'users', target: 'id', onDelete: 'set null' },
             { column: 'project_id', table: 'projects', target: 'id' },
             { column: 'assignee_id', table: 'users', target: 'id', onDelete: 'set null' },
         ],

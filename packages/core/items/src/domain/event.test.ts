@@ -15,7 +15,9 @@ describe('itemCreated', () => {
             ownerId: OWNER_ID,
         });
 
-        expect(itemCreated('event-id', OCCURRED_AT, item)).toEqual({
+        const event = itemCreated({ eventId: 'event-id', occurredAt: OCCURRED_AT, item, ownerId: OWNER_ID });
+
+        expect(event).toEqual({
             id: 'event-id',
             name: ITEM_CREATED_V1,
             occurredAt: '2026-09-03T10:00:00.000Z',
@@ -34,7 +36,7 @@ describe('itemCreated', () => {
             ownerId: OWNER_ID,
         });
 
-        const event = itemCreated('event-id', OCCURRED_AT, item);
+        const event = itemCreated({ eventId: 'event-id', occurredAt: OCCURRED_AT, item, ownerId: OWNER_ID });
 
         expect(Object.keys(event.payload)).toEqual(['itemId', 'ownerId']);
         expect(JSON.stringify(event)).not.toContain('Rendez-vous medical');
@@ -48,6 +50,8 @@ describe('itemCreated', () => {
             ownerId: OWNER_ID,
         });
 
-        expect(itemCreated('event-id', OCCURRED_AT, item).name).toBe('item.created.v1');
+        const event = itemCreated({ eventId: 'event-id', occurredAt: OCCURRED_AT, item, ownerId: OWNER_ID });
+
+        expect(event.name).toBe('item.created.v1');
     });
 });

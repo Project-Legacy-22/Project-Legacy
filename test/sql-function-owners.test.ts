@@ -28,7 +28,7 @@ const OWNERS: Readonly<Record<string, string>> = {
     'public.add_member_with_event': '20260915160000_add_member_with_event',
     'public.create_item_with_event': '20260924140000_item_assignees',
     'public.create_project_for_owner': '20260908083028_add_projects_and_memberships',
-    'public.erase_account': '20260908144244_extend_account_erasure_for_projects',
+    'public.erase_account': '20260925090000_preserve_shared_project_items_on_erasure',
     'public.immutable_unaccent': '20260918130000_item_name_search',
     'public.invite_member_with_event': '20260924100000_project_invitations',
     'public.mark_notification_read': '20260910100000_notification_policies_and_pagination',
