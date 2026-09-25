@@ -53,7 +53,7 @@
                   },
                   "policyVersion": {
                     "type": "string",
-                    "const": "2026-09-12"
+                    "const": "2026-09-25"
                   }
                 },
                 "required": [

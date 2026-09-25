@@ -5,7 +5,8 @@ traitement, tenue à jour à chaque migration qui ajoute ou retire un champ.
 
 Le registre est la source : la politique de confidentialité (`US-37`) le reformule pour un
 lecteur non technique, et les durées écrites ici sont celles que la purge automatique
-(`US-39`) implémentera. Une durée qui change se change d'abord ici.
+(`US-39`) applique. Une durée qui change se change d'abord ici, puis dans
+`public.purge_expired_data`, qui la porte en dur.
 
 ## Responsable de traitement
 
@@ -159,7 +160,7 @@ retirée.
 | **Personnes concernées** | Utilisateurs inscrits |
 | **Catégories de données** | Identifiants du destinataire, de la tâche et de l'événement d'origine ; date de lecture ; horodatages |
 | **Localisation** | `public.notifications` |
-| **Conservation** | Quatre-vingt-dix jours après création, puis effacement. Immédiat à la suppression du compte |
+| **Conservation** | Quatre-vingt-dix jours après création, puis effacement par la purge quotidienne (voir « Purge automatique » ci-dessous). Immédiat à la suppression du compte |
 | **Destinataires** | Vercel (sous-traitant, hébergement applicatif : l'API Express tourne en fonction Vercel, `vercel.json` y redirige `/auth` et `/items`, donc le corps des requêtes et des réponses y transite en clair) ; Supabase (sous-traitant, persistance) |
 | **Mesures de sécurité** | Aucun libellé stocké : le texte affiché est construit par l'interface, la table ne contient que des identifiants |
 
@@ -213,7 +214,7 @@ Cette exclusion ne dépend pas de l'argument de minimisation ci-dessus.
 | **Personnes concernées** | Toute personne émettant une requête, inscrite ou non |
 | **Catégories de données** | Méthode, chemin appelé, code de réponse, durée, identifiant de corrélation. Le chemin peut contenir l'identifiant d'une tâche |
 | **Localisation** | Sortie standard des processus, collectée par l'hébergeur |
-| **Conservation** | Trente jours |
+| **Conservation** | Trente jours au plus. Ce ne sont pas des lignes de notre base : l'hébergeur les retient selon l'offre du projet, une heure en offre Hobby, un jour en Pro, trente jours au maximum avec Observability Plus (documentation Vercel, *Runtime Logs*, section *Limits*). Aucune offre ne dépasse la durée annoncée, donc aucune purge de notre côté n'est nécessaire ; un changement d'offre ou un drain de journaux vers un autre outil la ferait revenir ici |
 | **Destinataires** | Vercel (sous-traitant, journaux d'exécution). Ses journaux de bord enregistrent l'adresse IP du client quoi que notre ligne de journal contienne, ce qui est une finalité et une durée distinctes de l'hébergement applicatif ci-dessus |
 | **Mesures de sécurité** | Masquage du corps des requêtes, de l'en-tête d'autorisation, du cookie et de tout champ nommé `password` ; ni adresse e-mail ni intitulé de tâche n'est journalisé, ce qu'un test vérifie |
 
@@ -288,6 +289,21 @@ personne qui invite corrige une faute de frappe. La route révèle donc qu'une a
 inscrite, à un compte authentifié et dans la limite de son budget. Ce choix est assumé : le
 refus silencieux laisserait une invitation partir vers personne sans que l'auteur le sache.
 
+## Purge automatique
+
+`public.purge_expired_data` applique les durées de `T-04` et `T-05`, en une transaction :
+
+| Traitement | Ce qui est supprimé |
+|---|---|
+| `notifications` | les lignes créées il y a plus de quatre-vingt-dix jours |
+| `processed_events` | les lignes traitées il y a plus de quatre-vingt-dix jours |
+| `outbox` | les lignes publiées il y a plus de sept jours ; une ligne jamais publiée n'est jamais supprimée |
+
+Le workflow `purge` l'appelle une fois par jour par `POST /internal/purge` (`docs/ci.md`). Chaque
+passe écrit, dans le résumé de son exécution et dans les journaux de l'API, la date, le traitement
+et le nombre de lignes supprimées, sans aucun identifiant. Une seconde passe juste après la
+première ne supprime rien. `T-06` n'y figure pas : ses journaux ne sont pas dans notre base.
+
 ## Ce que le registre ne couvre pas encore
 
 Rien. Les dix traitements ci-dessus couvrent chaque table du schéma, chaque appel sortant et
@@ -307,10 +323,9 @@ dépendre d'un appel à l'API d'authentification.
 
 Chaque durée ci-dessus a été confrontée au schéma en vigueur, pas à celui du sprint 1 : une
 durée que le code ne pratique pas est pire qu'une durée absente, puisqu'elle affirme une
-rétention qui n'existe pas. Celles qui restent à appliquer engagent `US-39`, qui les
-implémentera au sprint 3, et lui imposent une contrainte écrite en `T-05` :
-la purge de l'outbox ne doit pas casser l'effacement par compte, qui passe aujourd'hui par
-elle. Trois points demandent une confirmation de l'équipe en relecture :
+rétention qui n'existe pas. Depuis `US-39`, chacune est appliquée par la purge automatique ou
+par l'hébergeur, et la contrainte que `T-05` posait à la purge est levée. Trois points demandent
+une confirmation de l'équipe en relecture :
 
 1. **La région d'hébergement Supabase.** Une instance hors Union européenne impose un
    encadrement des transferts qu'il faut alors décrire ici. C'est le seul point qui peut
