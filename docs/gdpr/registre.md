@@ -270,9 +270,9 @@ devra revenir ici.
 | **Finalité** | Proposer à une personne de rejoindre un projet, et la laisser accepter ou refuser |
 | **Base légale** | Exécution du contrat : le partage d'un projet est la fonction demandée, et l'entrée dépend de l'accord de la personne invitée |
 | **Personnes concernées** | Utilisateurs inscrits : la personne qui invite et la personne invitée |
-| **Catégories de données** | Identifiants du projet, de la personne invitée et de la personne qui invite ; état de l'invitation (`pending`, `accepted`, `declined`) ; dates de création et de réponse. L'adresse de la personne qui invite est montrée à la personne invitée, lue à la demande et jamais copiée |
+| **Catégories de données** | Identifiants du projet, de la personne invitée et de la personne qui invite ; état de l'invitation (`pending`, `accepted`, `declined`) ; dates de création et de réponse. L'adresse de la personne qui invite est montrée à la personne invitée, lue à la demande et jamais copiée, ou absente si ce compte a depuis été effacé |
 | **Localisation** | `public.project_invitations`, et la colonne `invitation_id` de `public.notifications` |
-| **Conservation** | Toute la vie du projet. Une invitation traitée reste pour que l'historique dise qui a refusé ; elle part avec le projet, ou avec le compte de l'une ou l'autre des deux personnes (clés étrangères en cascade) |
+| **Conservation** | Toute la vie du projet. Une invitation traitée reste pour que l'historique dise qui a refusé ; elle part avec le projet ou avec le compte de la personne invitée. L'effacement du compte de la personne qui invite ne la retire plus (`#425`, `ADR-0021`) : seul `invited_by` passe à `null`, et la notification produite pour la personne invitée reste lisible |
 | **Destinataires** | Vercel (sous-traitant, hébergement applicatif) ; Supabase (sous-traitant, persistance) |
 | **Mesures de sécurité** | Seul un propriétaire du projet invite ; seule la personne invitée lit et répond à son invitation, les autres comptes reçoivent la même absence qu'une invitation inexistante ; l'adresse saisie n'est ni journalisée ni placée dans l'événement ; vingt invitations par compte et par quart d'heure bornent l'usage de la route pour tester quelles adresses ont un compte |
 
