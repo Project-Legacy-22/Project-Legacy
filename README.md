@@ -304,6 +304,10 @@ serait une route qu'on peut pointer vers quelqu'un d'autre.
 | `GET /auth/me/export` | Sert en JSON le compte, ses projets, appartenances, éléments et notifications |
 | `DELETE /auth/me` | Supprime le compte, sans délai, après confirmation |
 
+Les notifications et les traces du flux d'événements ne sont pas gardées indéfiniment : une purge
+quotidienne applique les durées du registre des traitements (`US-39`). Son déclencheur, sa
+fréquence et l'endroit où lire son résultat sont dans [docs/ci.md](docs/ci.md#purge-de-conservation).
+
 L'export est assemblé à la demande et servi tel quel : rien n'est écrit sur disque, donc
 aucune copie ne subsiste à protéger ni à purger. Une tâche supprimée est effacée physiquement
 et ne figure donc plus dans les données détenues ni dans l'export.
