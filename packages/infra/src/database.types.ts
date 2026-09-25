@@ -263,7 +263,7 @@ export type Database = {
           answered_at: string | null
           created_at: string
           id: string
-          invited_by: string
+          invited_by: string | null
           invitee_id: string
           project_id: string
           status: string
@@ -272,7 +272,7 @@ export type Database = {
           answered_at?: string | null
           created_at?: string
           id: string
-          invited_by: string
+          invited_by?: string | null
           invitee_id: string
           project_id: string
           status: string
@@ -281,7 +281,7 @@ export type Database = {
           answered_at?: string | null
           created_at?: string
           id?: string
-          invited_by?: string
+          invited_by?: string | null
           invitee_id?: string
           project_id?: string
           status?: string

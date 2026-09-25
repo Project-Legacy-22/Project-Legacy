@@ -124,7 +124,9 @@ export const TABLES: readonly Table[] = [
             uuid('id'),
             uuid('project_id'),
             uuid('invitee_id'),
-            uuid('invited_by'),
+            // Nullable since #425: an invitation outlives the account that sent
+            // it, the link to it broken rather than the row removed.
+            uuid('invited_by', true),
             // No default, in the database either: MySQL refuses one on a TEXT
             // column, and the function that invites writes `pending` itself.
             text('status'),
@@ -135,7 +137,7 @@ export const TABLES: readonly Table[] = [
         references: [
             { column: 'project_id', table: 'projects', target: 'id' },
             { column: 'invitee_id', table: 'users', target: 'id' },
-            { column: 'invited_by', table: 'users', target: 'id' },
+            { column: 'invited_by', table: 'users', target: 'id', onDelete: 'set null' },
         ],
         unique: [],
     },

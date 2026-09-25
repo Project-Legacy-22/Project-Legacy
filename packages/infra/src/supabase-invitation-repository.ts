@@ -28,6 +28,8 @@ type PendingRow = {
     // PostgREST embeds a to-one relationship as an object, and types it as
     // possibly null because it cannot know the foreign key is NOT NULL.
     projects: { name: string } | null;
+    // Genuinely nullable (#425), not just a PostgREST typing quirk: invited_by
+    // itself is nullable, so an erased inviter reads back as null here.
     inviter: { email: string } | null;
 };
 
@@ -37,14 +39,18 @@ function asRole(value: string): ProjectRole {
 }
 
 function toPending(row: PendingRow): PendingInvitation {
-    if (row.projects === null || row.inviter === null) {
-        fail('read invitation', new Error(`invitation ${row.id} lost its project or its inviter`));
+    // The project is still `not null` in the schema and cascades with it, so a
+    // missing one is corruption. The inviter is not (#425): a null one means
+    // that account was erased after inviting, a normal state to render rather
+    // than a failure to raise.
+    if (row.projects === null) {
+        fail('read invitation', new Error(`invitation ${row.id} lost its project`));
     }
     return {
         id: row.id,
         projectId: row.project_id,
         projectName: row.projects.name,
-        invitedByEmail: row.inviter.email,
+        invitedByEmail: row.inviter?.email ?? null,
         createdAt: asInstant(row.created_at),
     };
 }
