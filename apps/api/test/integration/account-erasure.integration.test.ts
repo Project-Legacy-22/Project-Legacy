@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { ItemPageDto, NotificationPageDto } from '@legacy/contracts';
+import { ItemPageDto, NotificationPageDto, PendingInvitationListDto } from '@legacy/contracts';
 import type { Application } from '../../src/composition-root.js';
 import { json } from '../http-harness.js';
 import type { Harness } from '../http-harness.js';
@@ -110,12 +110,17 @@ describe('account erasure in a shared project, against the real API and database
 
     it('keeps a notification produced by the erased account for the person it was for', async () => {
         const inviter = await registerAndSignIn(app, 'ErasureTest2026');
+        const remaining = await registerAndSignIn(app, 'ErasureTest2026');
         const guest = await registerAndSignIn(app, 'ErasureTest2026');
         const asInviter = await serveAs(app, inviter.cookie);
         const asGuest = await serveAs(app, guest.cookie);
+        // Owned by the inviter with a real member remaining, so the project
+        // itself survives the erasure: the invitation has to outlive it on its
+        // own merits, not because the project happened to disappear with it.
+        const projectId = await sharedProject(app, { owner: inviter, member: remaining });
 
         const invited = await asInviter.request(
-            `/projects/${inviter.projectId}/invitations`,
+            `/projects/${projectId}/invitations`,
             json('POST', { email: guest.email }),
         );
         expect(invited.status).toBe(201);
@@ -129,6 +134,19 @@ describe('account erasure in a shared project, against the real API and database
 
         const after = NotificationPageDto.parse(await (await asGuest.request('/notifications')).json());
         expect(after.notifications.map(n => n.id)).toContain(notification?.id);
+
+        const pending = PendingInvitationListDto.parse(
+            await (await asGuest.request('/projects/invitations')).json(),
+        );
+        expect(pending.invitations.find(i => i.projectId === projectId)?.invitedByEmail).toBeNull();
+
+        const row = await membershipClient()
+            .from('project_invitations')
+            .select('invited_by')
+            .eq('project_id', projectId)
+            .single();
+        expect(row.error).toBeNull();
+        expect(row.data).toEqual({ invited_by: null });
 
         await Promise.all([asInviter.close(), asGuest.close()]);
     });
