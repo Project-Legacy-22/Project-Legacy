@@ -449,6 +449,13 @@ export type Database = {
         Args: { p_account_id: string; p_id: string }
         Returns: boolean
       }
+      purge_expired_data: {
+        Args: { p_now?: string }
+        Returns: {
+          deleted: number
+          treatment: string
+        }[]
+      }
       record_invitation_notification: {
         Args: {
           p_event_id: string
@@ -505,7 +512,7 @@ export type Database = {
           project_id: string
           status: Database["public"]["Enums"]["item_status"]
           updated_at: string
-          user_id: string
+          user_id: string | null
           version: number
         }
         SetofOptions: {

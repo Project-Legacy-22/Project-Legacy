@@ -32,6 +32,10 @@ pour de vrai.
   suite qui exerce réellement ce que
   les migrations d'authentification et de projets posent : le filet de sécurité
   si le rôle de service fuit ou si un client interroge PostgREST directement.
+- `retention-purge.integration.test.ts` — la purge de conservation (`US-39`) :
+  ce qui a dépassé sa durée part, le reste demeure, un événement jamais publié
+  n'est jamais supprimé, une seconde passe ne fait rien, et l'effacement d'un
+  compte retrouve ses événements traités après la purge de son outbox.
 
 ## Lancer
 
