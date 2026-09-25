@@ -184,12 +184,19 @@ CNIL distingue les deux, et un identifiant pseudonyme demeure une donnée person
 `public.outbox` dont le `payload ->> 'ownerId'` désigne le compte, et les lignes de
 `public.processed_events` correspondantes.
 
-**Ce que ça impose à `US-39`**, qui implémentera la purge : elle retrouve aujourd'hui les
-`processed_events` d'un compte **en passant par l'outbox**. Une purge à J+7 supprime ce chemin,
-et une suppression de compte à J+8 laisserait alors les traces de traitement en place. La purge
-doit donc préserver l'effacement par compte — en supprimant les deux tables ensemble, ou en
-rattachant `processed_events` au compte directement. À trancher avant d'activer la purge, pas
-après.
+**L'arbitrage que la purge imposait est tranché (`US-39`).** L'effacement retrouvait les
+`processed_events` d'un compte **en passant par l'outbox**, chemin qu'une purge à J+7 supprime :
+une suppression de compte à J+8 aurait laissé les traces de traitement en place. Depuis la
+migration `20260925120000_retention_purge`, `erase_account` les retrouve aussi **par la
+notification** qu'ils ont produite : chaque événement traité est écrit dans la même transaction
+que sa notification, pour la personne notifiée (`notifications.user_id`). Ce chemin vaut pour tous
+les événements, quel que soit le nom que leur payload donne au destinataire (`ownerId`,
+`memberId`), et il tient aussi longtemps que la notification. Aucune colonne n'a été ajoutée.
+
+Ce qui reste hors de portée de l'effacement, et pourquoi ce n'est pas une donnée personnelle : un
+événement traité sans notification, une fois son outbox purgée, se réduit à un identifiant
+aléatoire et un instant, que plus rien ne relie à un compte. La purge le retire à quatre-vingt-dix
+jours comme les autres.
 
 **La portabilité, elle, les exclut**, et pour une raison qui lui est propre : le droit porte sur
 les données que la personne a fournies ou qui la concernent, pas sur les traces techniques que
