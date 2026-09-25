@@ -26,6 +26,7 @@ const DECLARED_BY: Record<string, string> = {
     'adapter.ts': 'Supabase',
     'notification-store.ts': 'Supabase',
     'outbox-store.ts': 'Supabase',
+    'retention-store.ts': 'Supabase',
     'supabase-identity-provider.ts': 'Supabase',
     'supabase-item-repository.ts': 'Supabase',
     'supabase-personal-data-store.ts': 'Supabase',

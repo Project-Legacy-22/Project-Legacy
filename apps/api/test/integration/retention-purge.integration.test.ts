@@ -89,11 +89,6 @@ async function notificationsOf(eventIds: string[]): Promise<string[]> {
     return (data ?? []).map(row => row.event_id).sort();
 }
 
-async function purge(): Promise<Record<string, number>> {
-    const { data } = await check(membershipClient().rpc('purge_expired_data', {}));
-    return Object.fromEntries((data ?? []).map(row => [row.treatment, row.deleted]));
-}
-
 describe('retention purge, against the real database', () => {
     it('removes what is older than its period and keeps what is younger', async () => {
         const account = await registerAndSignIn(app, 'RetentionTest2026');
@@ -102,7 +97,7 @@ describe('retention purge, against the real database', () => {
         const oldPublished = await outboxRow(account, 8);
         const recentPublished = await outboxRow(account, 6);
 
-        const result = await purge();
+        const result = await app.useCases.notifications.purgeExpired();
 
         expect(await remaining('processed_events', [oldEvent, recentEvent])).toEqual([recentEvent]);
         expect(await notificationsOf([oldEvent, recentEvent])).toEqual([recentEvent]);
@@ -115,7 +110,7 @@ describe('retention purge, against the real database', () => {
         const account = await registerAndSignIn(app, 'RetentionTest2026');
         const neverPublished = await outboxRow(account, null);
 
-        await purge();
+        await app.useCases.notifications.purgeExpired();
 
         expect(await remaining('outbox', [neverPublished])).toEqual([neverPublished]);
     });
@@ -126,10 +121,10 @@ describe('retention purge, against the real database', () => {
         await consumedEvent(account, 91);
         await outboxRow(account, 8);
 
-        await purge();
-        const second = await purge();
+        await app.useCases.notifications.purgeExpired();
+        const second = await app.useCases.notifications.purgeExpired();
 
-        expect(second).toEqual({ notifications: 0, processed_events: 0, outbox: 0 });
+        expect(second).toEqual({ notifications: 0, processedEvents: 0, outbox: 0 });
         expect(await remaining('processed_events', [kept])).toEqual([kept]);
     });
 
@@ -142,7 +137,7 @@ describe('retention purge, against the real database', () => {
         const eventId = await consumedEvent(account, 8);
         await outboxRow(account, 8, eventId);
 
-        await purge();
+        await app.useCases.notifications.purgeExpired();
         expect(await remaining('outbox', [eventId])).toEqual([]);
 
         const erased = await session.request('/auth/me', json('DELETE', { confirmation: account.email }));

@@ -3124,6 +3124,34 @@
         ]
       }
     },
+    "/internal/purge": {
+      "post": {
+        "tags": [
+          "Operations"
+        ],
+        "summary": "Run one pass of the retention purge",
+        "operationId": "postInternalPurge",
+        "responses": {
+          "200": {
+            "description": "Rows deleted per treatment; no personal data"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error500"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          }
+        },
+        "security": [
+          {
+            "relaySecret": []
+          }
+        ]
+      }
+    },
     "/internal/state": {
       "get": {
         "tags": [
