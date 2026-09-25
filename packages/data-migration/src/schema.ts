@@ -124,7 +124,9 @@ export const TABLES: readonly Table[] = [
             uuid('id'),
             uuid('project_id'),
             uuid('invitee_id'),
-            uuid('invited_by'),
+            // Nullable since #425: an invitation outlives the account that sent
+            // it, the link to it broken rather than the row removed.
+            uuid('invited_by', true),
             // No default, in the database either: MySQL refuses one on a TEXT
             // column, and the function that invites writes `pending` itself.
             text('status'),
@@ -135,7 +137,7 @@ export const TABLES: readonly Table[] = [
         references: [
             { column: 'project_id', table: 'projects', target: 'id' },
             { column: 'invitee_id', table: 'users', target: 'id' },
-            { column: 'invited_by', table: 'users', target: 'id' },
+            { column: 'invited_by', table: 'users', target: 'id', onDelete: 'set null' },
         ],
         unique: [],
     },
@@ -146,7 +148,10 @@ export const TABLES: readonly Table[] = [
         // any way is a copy one stops trusting.
         columns: [
             uuid('id'),
-            uuid('user_id'),
+            // Nullable since #425: a shared project's tasks outlive their
+            // creator's account, the link to it broken rather than the row
+            // removed.
+            uuid('user_id', true),
             text('name'),
             stamped('created_at'),
             stamped('updated_at'),
@@ -179,7 +184,7 @@ export const TABLES: readonly Table[] = [
         // account instead: the rule "a member of the project" stays ours, like
         // the policies and checks that do not cross either.
         references: [
-            { column: 'user_id', table: 'users', target: 'id' },
+            { column: 'user_id', table: 'users', target: 'id', onDelete: 'set null' },
             { column: 'project_id', table: 'projects', target: 'id' },
             { column: 'assignee_id', table: 'users', target: 'id', onDelete: 'set null' },
         ],

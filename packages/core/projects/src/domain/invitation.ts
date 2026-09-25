@@ -13,11 +13,15 @@ export interface NewInvitation {
 }
 
 // What the person invited reads before answering.
+//
+// invitedByEmail is null once the inviter's own account has been erased
+// (US-13, #425): the invitation survives for the person invited, but the
+// address that sent it is gone by construction, not by a rendering choice.
 export interface PendingInvitation {
     id: string;
     projectId: string;
     projectName: string;
-    invitedByEmail: string;
+    invitedByEmail: string | null;
     createdAt: string;
 }
 

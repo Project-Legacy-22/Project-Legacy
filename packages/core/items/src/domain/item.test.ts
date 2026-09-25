@@ -128,4 +128,24 @@ describe('rehydrateItem', () => {
             assigneeIds: ['member-2'],
         });
     });
+
+    // A shared project's tasks outlive their creator's account (US-13, #425):
+    // erasure breaks the link, it does not remove the row, so a null owner
+    // must rehydrate like any other value already on the row.
+    it('accepte un proprietaire nul, la tache ayant survecu a l effacement de son createur', () => {
+        const item = rehydrateItem({
+            id: 'item-1',
+            name: 'Tache partagee',
+            status: 'todo',
+            position: 'item-1',
+            version: 1,
+            priority: 'normal',
+            dueDate: null,
+            projectId: 'project-1',
+            ownerId: null,
+            assigneeIds: [],
+        });
+
+        expect(item.ownerId).toBeNull();
+    });
 });

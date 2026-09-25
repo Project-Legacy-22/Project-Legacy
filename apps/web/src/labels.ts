@@ -80,9 +80,14 @@ export const labels = {
     deleteAccountTitle: 'Delete my account',
     deleteAccountWarning: 'Deleting your account removes, immediately and for good:',
     deleteAccountLosesAccount: 'your account and the address it is registered with',
-    deleteAccountLosesItems: 'every item you created, including removed items and items in shared projects; other members will lose access to them',
+    deleteAccountLosesItems: 'every item you created in a project where you are the only member, including removed items',
     deleteAccountLosesProjects: 'your project memberships and every project where you are the last member',
     deleteAccountLosesNotifications: 'every notification you received',
+    // Not a loss, so not in the list above: an item survives its creator in a
+    // shared project (#425). Said plainly rather than left for a member to
+    // wonder why a task has no creator any more.
+    deleteAccountKeepsShared:
+        'Items you created in projects you share with others stay for those members; nothing about who created them is kept.',
     deleteAccountNoRecovery:
         'There is no waiting period and no way back. Download your data first if you want to keep it.',
     deleteAccountConfirmationLabel: 'Confirm by typing your email address',
@@ -166,8 +171,8 @@ export const labels = {
     policyWhyBody:
         'Your account and your items exist to provide the service you signed up for. The logs exist to diagnose failures and notice abuse. Nothing here is used for advertising, profiling or resale.',
     policyHowLongTitle: 'How long it is kept',
-    policyHowLongAccount: 'Your account, for as long as it exists. Deleting it erases everything immediately.',
-    policyHowLongItems: 'An item you remove is erased for good after thirty days.',
+    policyHowLongAccount: 'Your account, for as long as it exists. Deleting it erases it, your personal items and your project memberships immediately.',
+    policyHowLongItems: 'An item you remove is erased for good after thirty days. An item you created in a project you still share with others survives your account, with nothing left to say you created it.',
     policyHowLongNotifications: 'Notifications are erased after ninety days.',
     policyHowLongLogs: 'Logs are kept thirty days.',
     policyRecipientsTitle: 'Who else sees it',

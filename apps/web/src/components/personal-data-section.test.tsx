@@ -156,14 +156,17 @@ describe('section des donnees personnelles', () => {
         expect(getElement('.delete-account-warning').textContent).toBe(labels.deleteAccountNoRecovery);
     });
 
-    it('warns that deleting the account also removes its items for other project members', async () => {
+    // #425: a shared project's items survive their creator's account, so the
+    // warning must not claim other members lose access to them.
+    it('says that shared items are kept, not lost, before the confirmation field', async () => {
         await afficher(createAccount());
 
         const losses = getElement('.delete-account-losses');
+        const kept = getElement('.delete-account').textContent ?? '';
         const confirmation = getElement('#delete-account-confirmation');
 
-        expect(losses.textContent).toMatch(/shared projects/);
-        expect(losses.textContent).toMatch(/other members will lose access/);
+        expect(losses.textContent).not.toMatch(/other members will lose access/);
+        expect(kept).toContain(labels.deleteAccountKeepsShared);
         expect(losses.compareDocumentPosition(confirmation) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
     });
 

@@ -68,6 +68,7 @@ export function DeleteAccountForm({ email, isDeleting, isDisabled, onDelete }: D
             <h3 id="delete-account-heading">{labels.deleteAccountTitle}</h3>
             <p>{labels.deleteAccountWarning}</p>
             <AccountLosses />
+            <p>{labels.deleteAccountKeepsShared}</p>
             <p className="delete-account-warning">{labels.deleteAccountNoRecovery}</p>
             <AuthField
                 id={FIELD_ID}

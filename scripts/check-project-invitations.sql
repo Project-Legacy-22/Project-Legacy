@@ -141,3 +141,58 @@ begin
 end $$;
 
 rollback;
+
+-- Effacer la personne qui invite ne doit emporter ni l invitation ni la
+-- notification qu elle a produite pour la personne invitee (#425), tant que le
+-- projet lui-meme survit -- ce que garantit ici un second membre reel, pour ne
+-- pas confondre cette regle avec la suppression, deja voulue, d un projet dont
+-- l auteur etait le seul membre.
+begin;
+
+do $$
+declare
+  proprietaire uuid := '00000000-0000-7000-8000-0000000000a6';
+  reste        uuid := '00000000-0000-7000-8000-0000000000a7';
+  invitee      uuid := '00000000-0000-7000-8000-0000000000a8';
+  projet       uuid;
+  invitation   uuid := '00000000-0000-7000-8000-0000000000b5';
+  evenement    uuid := '00000000-0000-7000-8000-0000000000c5';
+begin
+  insert into auth.users (id, email)
+  values (proprietaire, 'erase-inviter@localhost'),
+         (reste, 'erase-remaining-member@localhost'),
+         (invitee, 'erase-invitee@localhost');
+
+  select project_id into projet
+  from public.project_memberships
+  where user_id = proprietaire and role = 'owner'
+  limit 1;
+
+  insert into public.project_memberships (project_id, user_id, role)
+  values (projet, reste, 'member');
+
+  perform public.invite_member_with_event(
+    invitation, projet, invitee, proprietaire, evenement,
+    'invitation.created.v1', now(),
+    jsonb_build_object('invitationId', invitation, 'projectId', projet, 'inviteeId', invitee, 'invitedBy', proprietaire)
+  );
+  perform public.record_invitation_notification(evenement, invitee, projet, invitation);
+
+  perform public.erase_account(proprietaire);
+
+  if not exists (select 1 from public.projects where id = projet) then
+    raise exception 'erasing the inviter deleted a project that still has a member';
+  end if;
+  if not exists (
+    select 1 from public.project_invitations where id = invitation and invited_by is null
+  ) then
+    raise exception 'erasing the inviter did not clear invited_by on the invitation';
+  end if;
+  if not exists (select 1 from public.notifications where invitation_id = invitation) then
+    raise exception 'erasing the inviter deleted the notification it had produced';
+  end if;
+
+  raise notice 'invitation erasure assertions passed';
+end $$;
+
+rollback;

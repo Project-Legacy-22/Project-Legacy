@@ -137,7 +137,7 @@ communication à un tiers : il figure ici pour cette raison.
 | **Personnes concernées** | Utilisateurs inscrits |
 | **Catégories de données** | Intitulé saisi par l'utilisateur ; colonne de progression du Kanban ; priorité ; échéance facultative ; propriétaire et projet de rattachement ; membres du projet à qui la tâche est attribuée, aucun ou plusieurs (US-58, #419) ; horodatages de création et de modification |
 | **Localisation** | `public.items`, et `public.item_assignees` pour les attributions |
-| **Conservation** | Aucune : une suppression demandée par l'utilisateur efface la ligne immédiatement. Effacement immédiat également à la suppression du compte, et à celle d'un projet dont il était le dernier membre. L'attribution disparaît avec l'appartenance de la personne attribuée : la retirer du projet ou effacer son compte la retire des attributaires, et la tâche reste |
+| **Conservation** | Aucune : une suppression demandée par l'utilisateur efface la ligne immédiatement, de même qu'à la suppression d'un projet dont il était le dernier membre. À la suppression du compte : une tâche d'un projet où il était seul disparaît avec le projet ; une tâche d'un projet partagé est conservée pour les autres membres, le lien vers le compte supprimé étant rompu (`items.user_id` mis à `null`, #425). L'attribution disparaît avec l'appartenance de la personne attribuée : la retirer du projet ou effacer son compte la retire des attributaires, et la tâche reste |
 | **Destinataires** | Vercel (sous-traitant, hébergement applicatif : l'API Express tourne en fonction Vercel, `vercel.json` y redirige `/auth` et `/items`, donc le corps des requêtes et des réponses y transite en clair) ; Supabase (sous-traitant, persistance) |
 | **Mesures de sécurité** | Politiques RLS par propriétaire ; toute lecture nomme un propriétaire ; l'intitulé ne sort jamais dans un journal ni dans un événement |
 
@@ -223,12 +223,15 @@ Cette exclusion ne dépend pas de l'argument de minimisation ci-dessus.
 | **Destinataires** | Vercel (sous-traitant, hébergement applicatif) ; Supabase (sous-traitant, persistance) |
 | **Mesures de sécurité** | Politiques RLS restreignant chaque projet à ses membres ; l'appartenance est vérifiée avant toute lecture ou écriture d'une tâche ; un non-membre reçoit la même absence qu'un projet inexistant, ce qui ne révèle pas qu'un projet existe |
 
-Un projet partagé a une conséquence qu'il faut écrire ici plutôt que de la découvrir : **un
-membre qui efface son compte fait disparaître ses tâches des projets que les autres continuent
-d'utiliser**. L'intitulé d'une tâche est sa donnée personnelle, donc l'effacement la retire — et
-les autres membres perdent ce contenu sans avertissement. C'est assumé au titre du RGPD, mais
-rien ne le dit encore à l'utilisateur : la politique de confidentialité (`US-37`) doit le
-mentionner, et l'écran de suppression de compte devrait le rappeler.
+Un projet partagé avait une conséquence non désirée, corrigée par `#425` : **un membre qui
+effaçait son compte faisait disparaître ses tâches des projets que les autres continuaient
+d'utiliser.** Ce n'est plus le cas depuis la migration `20260925090000` : les tâches d'un
+projet partagé sont conservées, avec le lien vers le compte rompu plutôt que la ligne retirée —
+seul l'intitulé, saisi par la personne, reste visible aux autres membres, jamais son identité.
+Si le compte effacé était le seul propriétaire d'un projet resté partagé, la propriété est
+transférée au membre le plus ancien, pour que le projet garde quelqu'un en mesure d'inviter ou
+de retirer un membre. La politique de confidentialité (`US-37`) et l'écran de suppression de
+compte le disent.
 
 ### T-08 — Courriel de réinitialisation de mot de passe
 
@@ -267,9 +270,9 @@ devra revenir ici.
 | **Finalité** | Proposer à une personne de rejoindre un projet, et la laisser accepter ou refuser |
 | **Base légale** | Exécution du contrat : le partage d'un projet est la fonction demandée, et l'entrée dépend de l'accord de la personne invitée |
 | **Personnes concernées** | Utilisateurs inscrits : la personne qui invite et la personne invitée |
-| **Catégories de données** | Identifiants du projet, de la personne invitée et de la personne qui invite ; état de l'invitation (`pending`, `accepted`, `declined`) ; dates de création et de réponse. L'adresse de la personne qui invite est montrée à la personne invitée, lue à la demande et jamais copiée |
+| **Catégories de données** | Identifiants du projet, de la personne invitée et de la personne qui invite ; état de l'invitation (`pending`, `accepted`, `declined`) ; dates de création et de réponse. L'adresse de la personne qui invite est montrée à la personne invitée, lue à la demande et jamais copiée, ou absente si ce compte a depuis été effacé |
 | **Localisation** | `public.project_invitations`, et la colonne `invitation_id` de `public.notifications` |
-| **Conservation** | Toute la vie du projet. Une invitation traitée reste pour que l'historique dise qui a refusé ; elle part avec le projet, ou avec le compte de l'une ou l'autre des deux personnes (clés étrangères en cascade) |
+| **Conservation** | Toute la vie du projet. Une invitation traitée reste pour que l'historique dise qui a refusé ; elle part avec le projet ou avec le compte de la personne invitée. L'effacement du compte de la personne qui invite ne la retire plus (`#425`, `ADR-0021`) : seul `invited_by` passe à `null`, et la notification produite pour la personne invitée reste lisible |
 | **Destinataires** | Vercel (sous-traitant, hébergement applicatif) ; Supabase (sous-traitant, persistance) |
 | **Mesures de sécurité** | Seul un propriétaire du projet invite ; seule la personne invitée lit et répond à son invitation, les autres comptes reçoivent la même absence qu'une invitation inexistante ; l'adresse saisie n'est ni journalisée ni placée dans l'événement ; vingt invitations par compte et par quart d'heure bornent l'usage de la route pour tester quelles adresses ont un compte |
 

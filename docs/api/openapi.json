@@ -1707,7 +1707,10 @@
                             "type": "string"
                           },
                           "invitedByEmail": {
-                            "type": "string"
+                            "type": [
+                              "string",
+                              "null"
+                            ]
                           },
                           "createdAt": {
                             "type": "string",
