@@ -13,9 +13,10 @@ let harness: Harness | undefined;
 async function serve(
     relaySecret: string | undefined,
     deliverPending = vi.fn(async () => ({ published: 2, consumed: 2, failed: 0 })),
+    purgeExpired = vi.fn(async () => ({ notifications: 0, processedEvents: 0, outbox: 0 })),
 ): Promise<Harness> {
     const logger = recordingLogger();
-    const useCases = makeAppUseCases({ notifications: { deliverPending } });
+    const useCases = makeAppUseCases({ notifications: { deliverPending, purgeExpired } });
 
     harness = await listen(createServer({ ...testConfig, relaySecret }, useCases, { logger: logger }), logger);
     return harness;
@@ -81,5 +82,31 @@ describe('POST /internal/relay', () => {
 
         expect(relais.status).toBe(inconnu.status);
         expect(deliverPending).not.toHaveBeenCalled();
+    });
+});
+
+describe('POST /internal/purge', () => {
+    it('lance une passe de purge et rend ce qu elle a supprime', async () => {
+        const purgeExpired = vi.fn(async () => ({ notifications: 4, processedEvents: 4, outbox: 7 }));
+        const served = await serve(SECRET, undefined, purgeExpired);
+
+        const response = await served.request('/internal/purge', {
+            ...json('POST', {}),
+            headers: { 'x-relay-secret': SECRET },
+        });
+
+        expect(response.status).toBe(200);
+        await expect(response.json()).resolves.toEqual({ notifications: 4, processedEvents: 4, outbox: 7 });
+        expect(purgeExpired).toHaveBeenCalledTimes(1);
+    });
+
+    it('refuse sans le secret, et ne purge rien', async () => {
+        const purgeExpired = vi.fn(async () => ({ notifications: 0, processedEvents: 0, outbox: 0 }));
+        const served = await serve(SECRET, undefined, purgeExpired);
+
+        const response = await served.request('/internal/purge', json('POST', {}));
+
+        expect(response.status).toBe(403);
+        expect(purgeExpired).not.toHaveBeenCalled();
     });
 });

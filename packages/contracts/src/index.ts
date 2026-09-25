@@ -59,6 +59,7 @@ export {
     MAX_PROJECT_PAGE_SIZE,
 } from './projects.js';
 export { AttentionQuery, AttentionItemDto, AttentionGroupDto, Workload, AttentionDto } from './attention.js';
+export { PurgeResult } from './retention.js';
 export {
     ITEM_CREATED_V1,
     ItemCreatedV1,

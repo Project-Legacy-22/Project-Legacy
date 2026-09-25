@@ -108,6 +108,7 @@ const NOTIFICATIONS: readonly Operation[] = [
 
 const OPERATIONS_ROUTES: readonly Operation[] = [
     { method: 'post', path: '/internal/relay', tag: 'Operations', summary: 'Run one delivery pass of the event outbox', access: 'relay', success: { status: 200, description: 'What the pass published, consumed and failed' } },
+    { method: 'post', path: '/internal/purge', tag: 'Operations', summary: 'Run one pass of the retention purge', access: 'relay', success: { status: 200, description: 'Rows deleted per treatment; no personal data' } },
     { method: 'get', path: '/internal/state', tag: 'Operations', summary: 'The current gauges as one JSON row, for a live dashboard', access: 'relay', success: { status: 200, description: 'Gauge name to value; no personal data' } },
     { method: 'get', path: '/internal/metrics', tag: 'Operations', summary: 'Metrics in the Prometheus text format', access: 'relay', success: { status: 200, description: 'Prometheus exposition format', contentType: 'text/plain' } },
 ];

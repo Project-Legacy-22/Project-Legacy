@@ -26,6 +26,8 @@ export type { RelayDependencies } from './outbox-relay.js';
 export { consume } from './event-consumer.js';
 export { deliverPending } from './delivery-pass.js';
 export type { DeliveryPassDependencies, DeliveryPassResult } from './delivery-pass.js';
+export { createSupabaseRetentionStore, purgeExpired } from './retention-store.js';
+export type { RetentionStore } from './retention-store.js';
 export type { ConsumeDependencies, ConsumeOutcome } from './event-consumer.js';
 export { createPrometheusMetrics } from './prometheus-metrics.js';
 export type { MetricsOptions } from './prometheus-metrics.js';

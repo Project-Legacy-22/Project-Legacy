@@ -3,7 +3,7 @@
 Ce que GitHub Actions exécute, quand, et ce qui empêche une pull request d'être intégrée. État au
 12 septembre 2026 ; chaque affirmation se vérifie dans `.github/workflows/`.
 
-## Les sept campagnes
+## Les huit campagnes
 
 | Campagne | Déclenchée par | Ce qu'elle fait |
 |---|---|---|
@@ -12,6 +12,7 @@ Ce que GitHub Actions exécute, quand, et ce qui empêche une pull request d'êt
 | `guard-branches` | chaque push | refuse un commit qui n'a pas l'origine attendue |
 | `image` | push sur `main` | rejoue `ci`, puis publie l'image sur GHCR et crée la release |
 | `migrations` | chaque exécution verte de `ci` sur `dev`, ou à la main | applique à la base hébergée les migrations qu'elle n'a pas encore |
+| `purge` | une fois par jour à 03:17 UTC, ou à la main | une passe de la purge de conservation sur le déploiement (US-39) : durées du registre des traitements, résultat dans le résumé de l'exécution |
 | `pages` | push sur `dev` | publie le rapport de couverture sur GitHub Pages |
 | `relais` | en continu, relancé par lui-même ; le cron de cinq minutes ne sert qu'à redémarrer la chaîne | une passe de livraison de l'outbox toutes les trente secondes pendant 345 minutes, les mesures sommées vers Grafana Cloud toutes les dix passes (ADR-0020) |
 
@@ -139,6 +140,27 @@ ajoute, livrée ; puis, après la livraison du code qui ne lit plus l'ancien, ce
 Tant que le jeton ou l'identifiant du projet manque, le workflow échoue à sa première étape en nommant ce qui manque : une
 application qui ne se fait pas doit se voir, pas passer pour une base à jour. La CLI lit le jeton
 et le mot de passe dans l'environnement ; ni l'un ni l'autre ne passe en argument de commande.
+
+## Purge de conservation
+
+**Quand.** Le workflow `purge` tourne une fois par jour, à 03:17 UTC, et peut être lancé à la main
+(`workflow_dispatch`). Le planificateur de GitHub prend parfois des heures de retard ; les durées se
+comptent en jours, donc ce retard ne change rien. Deux exécutions ne se chevauchent pas.
+
+**Ce qu'il fait.** Un appel `POST /internal/purge` sur `RELAY_URL`, avec `RELAY_SECRET`, les mêmes
+réglages que le relais. La route exécute `public.purge_expired_data`, qui supprime les
+notifications et les événements traités de plus de quatre-vingt-dix jours et les événements publiés
+depuis plus de sept jours. Un événement jamais publié n'est jamais supprimé. Les durées sont
+décidées dans `docs/gdpr/registre.md`.
+
+**Où lire le résultat.** Dans le résumé de chaque exécution du workflow `purge`, onglet Actions :
+la date et, par traitement, le nombre de lignes supprimées. Les journaux de l'API portent la même
+information, une ligne `retention purge` par traitement. Ni l'un ni l'autre ne contient de donnée
+personnelle.
+
+**Quand ça échoue.** Si `RELAY_URL` ou `RELAY_SECRET` manque, ou si la route ne répond pas 200,
+l'exécution échoue et le dit : une purge qui n'a pas lieu doit se voir. La suivante reprend là où
+celle-ci s'est arrêtée, puisqu'une passe ne dépend pas de la précédente.
 
 ## Références
 

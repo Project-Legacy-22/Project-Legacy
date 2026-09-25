@@ -1,0 +1,53 @@
+# Applique les durees de conservation du registre des traitements (US-39) :
+# une passe par jour sur le deploiement, par la route interne /internal/purge.
+#
+# Meme cible et meme secret que le relais (relay.yml) : l appelant est un
+# workflow dans les deux cas. Une passe quotidienne suffit, les durees se
+# comptent en jours, et un retard de quelques heures du planificateur de
+# GitHub ne change rien a ce qui est supprime. Deux passes de suite ne font
+# rien de plus qu une seule.
+#
+# Le resultat, date, traitement et nombre de lignes supprimees, est dans le
+# resume de chaque execution. Il ne contient aucune donnee personnelle.
+
+name: purge
+
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: purge
+  cancel-in-progress: false
+
+jobs:
+  purge:
+    name: Purge de conservation
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Purger
+        env:
+          TARGET: ${{ vars.RELAY_URL }}
+          RELAY_SECRET: ${{ secrets.RELAY_SECRET }}
+        run: |
+          if [ -z "$TARGET" ] || [ -z "$RELAY_SECRET" ]; then
+            echo "::error::RELAY_URL ou RELAY_SECRET absent, aucune purge n a eu lieu"
+            exit 1
+          fi
+
+          result=$(curl --silent --show-error --fail-with-body --max-time 60 \
+            -X POST -H "x-relay-secret: $RELAY_SECRET" "$TARGET/internal/purge")
+          echo "$result"
+
+          {
+            echo "### Purge du $(date -u '+%Y-%m-%d %H:%M') UTC"
+            echo
+            echo "| Traitement | Lignes supprimees |"
+            echo "|---|---|"
+            echo "$result" | jq -r 'to_entries[] | "| \(.key) | \(.value) |"'
+          } >> "$GITHUB_STEP_SUMMARY"

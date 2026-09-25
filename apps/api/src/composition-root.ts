@@ -12,11 +12,13 @@ import {
     createSupabaseOutboxStore,
     createSupabasePersonalDataStore,
     createSupabaseProjectRepository,
+    createSupabaseRetentionStore,
     createBuildStateReading,
     createBusStateReadings,
     createPrometheusMetrics,
     createSupabaseStateReadings,
     deliverPending,
+    purgeExpired,
     relayOnce,
 } from '@legacy/infra';
 import type {
@@ -27,7 +29,7 @@ import type {
     OutboxStore,
     RelayDependencies,
 } from '@legacy/infra';
-import type { Logger, Metrics, StateReading } from '@legacy/contracts';
+import type { Logger, Metrics, PurgeResult, StateReading } from '@legacy/contracts';
 import {
     makeChangeEmail,
     makeChangePassword,
@@ -120,6 +122,8 @@ export interface NotificationUseCases {
     // sans processus long, personne ne fait tourner le relais : la route qui
     // lit les notifications et le workflow planifie l appellent.
     deliverPending: () => Promise<DeliveryPassResult>;
+    // La purge de conservation (US-39), declenchee comme la passe ci-dessus.
+    purgeExpired: () => Promise<PurgeResult>;
 }
 
 // Its own group: it reads items across projects through its own port, and
@@ -164,6 +168,7 @@ interface Adapters {
     invitations: ReturnType<typeof createSupabaseInvitationRepository>;
     outbox: OutboxStore;
     notifications: NotificationStore;
+    retention: ReturnType<typeof createSupabaseRetentionStore>;
     // Absent when no broker is configured. Serving HTTP does not need one; the
     // relay does, and start() is where that is enforced.
     bus: EventBus | undefined;
@@ -205,6 +210,7 @@ function createAdapters(config: Config): Adapters {
         invitations: createSupabaseInvitationRepository(supabase),
         outbox: createSupabaseOutboxStore(supabase),
         notifications: createSupabaseNotificationStore(supabase),
+        retention: createSupabaseRetentionStore(supabase),
         bus,
         stateReadings: [
             // En premier parce qu elle ne depend de rien : elle repond meme
@@ -327,7 +333,7 @@ export function projectUseCases(
 
 export function compose(config: Config): Application {
     const adapters = createAdapters(config);
-    const { store, attention, identity, personalData, outbox, notifications, bus } = adapters;
+    const { store, attention, identity, personalData, outbox, notifications, retention, bus } = adapters;
     const { stateReadings } = adapters;
     const logger = createLogger(config.logLevel);
     const deliver = makeDeliverPending({ outbox, bus, notifications, logger });
@@ -360,6 +366,7 @@ export function compose(config: Config): Application {
                 markNotificationRead: makeMarkNotificationRead(notifications),
                 countUnread: makeCountUnreadNotifications(notifications),
                 deliverPending: deliver,
+                purgeExpired: () => purgeExpired(retention, logger),
             },
         },
         // start() no longer creates the schema -- that is what migrations are
