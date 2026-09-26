@@ -59,7 +59,7 @@ function parametersOf(schema: z.ZodObject | undefined, place: 'path' | 'query'):
     }));
 }
 
-function successOf(success: Operation['success']): Json {
+function successOf(success: Pick<Operation['success'], 'description' | 'schema' | 'contentType'>): Json {
     if (success.schema !== undefined) {
         return { description: success.description, content: { 'application/json': { schema: schemaOf(success.schema, 'output') } } };
     }
@@ -73,7 +73,10 @@ function responsesOf(operation: Operation): Json {
     const statuses = [...new Set([...COMMON_ERRORS[operation.access], ...(operation.errors ?? [])])].sort((left, right) => left - right);
     const responses: Json = { [String(operation.success.status)]: successOf(operation.success) };
     for (const status of statuses) {
-        responses[String(status)] = { $ref: `#/components/responses/Error${String(status)}` };
+        const custom = operation.errorResponses?.[status];
+        responses[String(status)] = custom === undefined
+            ? { $ref: `#/components/responses/Error${String(status)}` }
+            : successOf(custom);
     }
     return responses;
 }

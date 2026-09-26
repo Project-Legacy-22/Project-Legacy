@@ -96,6 +96,32 @@ pour que cela ne puisse pas arriver en silence.
 workflow `image` à chaque livraison sur `main`, pour qu'une exécution hors Vercel soit possible.
 La production, elle, est servie par Vercel.
 
+## Controle de sante et correlation des evenements
+
+`GET /health` est public et ne demande pas de session. Il interroge la base via une lecture
+sans contenu de la table `users`, et Redis via la profondeur de la file d'evenements. Les deux
+sondes ont une limite de trois secondes et s'executent en parallele. La reponse vaut 200 quand
+les deux services repondent, 503 sinon. Elle ne contient que `status` (`ready` ou
+`unavailable`) et `dependencies.database` / `dependencies.broker` (`up` ou `down`) : aucune
+adresse interne, version, donnee de compte ou erreur brute. L'en-tete `Cache-Control: no-store`
+evite qu'un etat ancien soit pris pour l'etat courant.
+
+Sur Vercel, `/health` est reecrit vers la fonction API comme les autres routes. Sur un
+deploiement de l'image Docker, `docker inspect --format '{{json .State.Health}}' <conteneur>`
+montre le resultat du `HEALTHCHECK`. Pour voir quelle dependance ne repond plus, appeler
+`GET /health` sur l'URL du deploiement ; aucune cle n'est necessaire. L'image sert aussi au
+worker, qui ne sert pas de HTTP : si elle est lancee avec la commande du worker, utiliser
+`--no-healthcheck` et superviser le processus worker separement. Un 503 n'expose pas la cause
+brute ; la chercher dans les journaux de l'API et dans les mesures protegees sous `/internal`.
+
+La correlation entre HTTP et evenement ne change pas le contrat de l'enveloppe. Apres l'ecriture
+atomique d'une tache ou d'une invitation et de son evenement, le producteur journalise
+`traceId` et `eventId` ensemble. Le journal de la requete HTTP porte ce meme `traceId` ; le
+relais et le consommateur portent `eventId`. Rechercher d'abord le `traceId` d'une erreur HTTP,
+puis son `eventId` dans les journaux du relais et du worker. Un evenement non cree (invitation
+deja en attente ou ecriture refusee) ne produit aucune ligne `event recorded`. Aucun contenu
+de tache, adresse e-mail ou payload d'evenement n'est journalise.
+
 **État au 15 septembre 2026**, mesuré par l'API Vercel et par l'historique des workflows :
 
 - la production sert le commit `3deb3cb`, déployé le 11 septembre depuis `main` — la livraison
