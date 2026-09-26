@@ -104,5 +104,7 @@ describe('relayOnce', () => {
         await relayOnce({ outbox, bus: fakeBus(), logger });
 
         expect(JSON.stringify(logger.lines)).not.toContain('01931f3a-0000-7000-8000-000000000002');
+        expect(logger.lines.find(line => line.message === 'event published')?.fields)
+            .toEqual({ eventId: 'event-1' });
     });
 });

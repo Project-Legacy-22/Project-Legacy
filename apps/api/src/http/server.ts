@@ -15,6 +15,8 @@ import { credentialsRouter } from './routes/credentials.js';
 import { itemsRouter } from './routes/items.js';
 import { notificationsRouter } from './routes/notifications.js';
 import { metricsRouter, observeRequests } from './metrics.js';
+import { healthRouter } from './health.js';
+import type { HealthProbes } from './health.js';
 import { relayRouter } from './routes/relay.js';
 import { projectsRouter } from './routes/projects.js';
 import { translateErrors } from './error-middleware.js';
@@ -103,6 +105,7 @@ function shellHandler(appShell: string | undefined): RequestHandler {
 // that they belong together.
 export interface Observability {
     logger: Logger;
+    health?: HealthProbes;
     // Absent, the server runs without measuring: a test suite has no reason to
     // build an adapter in order to check a route.
     metrics?: Metrics;
@@ -124,7 +127,7 @@ function mountObservability(app: Express, metrics: Metrics | undefined, secret: 
 export function createServer(
     config: Config,
     useCases: AppUseCases,
-    { logger, metrics }: Observability,
+    { logger, metrics, health }: Observability,
 ): Express {
     const app = express();
     const appShell = readAppShell(config.staticDir, logger);
@@ -147,6 +150,7 @@ export function createServer(
     app.use(cors(config.webOrigin));
     app.use(express.json({ limit: MAX_BODY_SIZE }));
     app.use(logRequests(logger));
+    app.use(healthRouter(health));
     app.use(express.static(config.staticDir));
 
     app.use(

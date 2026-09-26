@@ -14,6 +14,7 @@ import {
     InviteMemberBody,
     ItemDto,
     ItemPageDto,
+    HealthResponse,
     ListItemsQuery,
     ListNotificationsQuery,
     ListProjectsQuery,
@@ -59,6 +60,7 @@ export interface Operation {
     // Refusals this route produces on its own, beyond those every route of its
     // access level can answer (see the builder).
     errors?: readonly number[];
+    errorResponses?: Readonly<Partial<Record<number, { description: string; schema: z.ZodType }>>>;
 }
 
 const noContent = (description: string) => ({ status: 204, description });
@@ -107,6 +109,7 @@ const NOTIFICATIONS: readonly Operation[] = [
 ];
 
 const OPERATIONS_ROUTES: readonly Operation[] = [
+    { method: 'get', path: '/health', tag: 'Operations', summary: 'Readiness of the database and event broker', access: 'public', success: json(HealthResponse, 'Both dependencies responded'), errorResponses: { 503: { description: 'At least one dependency did not respond', schema: HealthResponse } } },
     { method: 'post', path: '/internal/relay', tag: 'Operations', summary: 'Run one delivery pass of the event outbox', access: 'relay', success: { status: 200, description: 'What the pass published, consumed and failed' } },
     { method: 'post', path: '/internal/purge', tag: 'Operations', summary: 'Run one pass of the retention purge', access: 'relay', success: { status: 200, description: 'Rows deleted per treatment; no personal data' } },
     { method: 'get', path: '/internal/state', tag: 'Operations', summary: 'The current gauges as one JSON row, for a live dashboard', access: 'relay', success: { status: 200, description: 'Gauge name to value; no personal data' } },
