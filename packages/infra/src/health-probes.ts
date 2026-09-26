@@ -9,7 +9,7 @@ const PROBE_DEADLINE_MS = 3_000;
 export function createHealthProbes(
     settings: SupabaseSettings,
     bus: EventBus | undefined,
-    readDatabase?: () => Promise<{ error: unknown }>,
+    readDatabase?: () => Promise<{ error: Error | null }>,
 ) {
     const client = serviceRoleClient(settings);
     const read = readDatabase ?? (() => client.from('users').select('id', { head: true }).limit(1));
