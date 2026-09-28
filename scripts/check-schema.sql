@@ -643,8 +643,20 @@ rollback;
 -- #401: invitations, their answer and their notification.
 \ir check-project-invitations.sql
 
--- #348: assigning a task to a member of its project.
-\ir check-item-assignee.sql
+-- #421: the single assignee column of #348 is gone, replaced by item_assignees.
+-- A migration that brought it back would split assignments across two places.
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public' and table_name = 'items' and column_name = 'assignee_id'
+  ) then
+    raise exception 'items.assignee_id must not exist: assignments live in item_assignees';
+  end if;
+
+  raise notice 'items.assignee_id absence assertion passed';
+end $$;
 
 -- #419: several assignees per task, from its creation.
 \ir check-item-assignees.sql
