@@ -49,8 +49,9 @@ between, and the adapter maps that refusal (`23503`) to the same 404. Reads embe
 assignees, including the row returned by a reorder.
 
 Migration `20260924120000_item_assignee` (#348) had added a single `items.assignee_id`. Its
-values were copied into the new table and the column is no longer read. It is dropped by a
-later migration (#421), once the release that stops reading it is in production (ADR-0019).
+values were copied into the new table, and `20260928100000_drop_item_assignee_column` (#421)
+dropped it once the release that stops reading it was in production (ADR-0019), after copying
+again any value the first copy could have missed. `check-schema.sql` fails if it comes back.
 
 The data migration tool exports `item_assignees`; on MySQL and SQLite the keys point at the
 task, the project and the account, since the "member of the project" rule does not cross.
