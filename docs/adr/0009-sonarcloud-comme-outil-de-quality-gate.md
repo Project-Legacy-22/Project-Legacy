@@ -1,102 +1,99 @@
-# ADR-0009 — SonarCloud comme outil de quality gate, seuils du gate integre
+# ADR-0009 — SonarCloud as the quality gate tool, thresholds of the built-in gate
 
-- **Statut** : Accepté
-- **Date** : 2026-09-04
-- **Décideurs** : aurelienpochart (EN-17)
-- **Issue liée** : #18
+- **Status**: Accepted
+- **Date**: 2026-09-04
+- **Deciders**: aurelienpochart (EN-17)
+- **Related issue**: #18
 
-## Contexte
+## Context
 
-`EN-07` fait tourner l'analyse statique, les types et les tests sur chaque pull request, mais
-rien ne mesure la qualite du **nouveau code** ni ne bloque une regression : c'est l'objet
-d'`EN-17`. `standards/07-quality-gates.md` section 4 fixe la cible sur le nouveau code
-uniquement (couverture, duplication, bugs et vulnerabilites bloquants, note de
-maintenabilite) et nomme explicitement « SonarCloud ou equivalent », deja retenu comme
-proposition dans `docs/adr/README.md` (decision `D-10`). Le seuil de couverture (`D-11`) y est
-propose a 70 %, sans etre tranche.
+`EN-07` runs static analysis, types and tests on every pull request, but nothing measures the
+quality of the **new code** or blocks a regression: that is the purpose of `EN-17`.
+`standards/07-quality-gates.md` section 4 sets the target on new code only (coverage,
+duplication, blocking bugs and vulnerabilities, maintainability rating) and explicitly names
+"SonarCloud or equivalent", already chosen as a proposal in `docs/adr/README.md` (decision
+`D-10`). The coverage threshold (`D-11`) is proposed there at 70 %, without being decided.
 
-L'organisation GitHub `Project-Legacy-22` est sur le plan **Free** de SonarCloud.
+The GitHub organisation `Project-Legacy-22` is on the SonarCloud **Free** plan.
 
-## Options considérées
+## Options considered
 
-### Option A — SonarCloud, gate integre « Sonar way »
-- Avantages : deja nomme par les standards ; l'app GitHub est deja installee sur
-  l'organisation ; l'analyse de pull request compare nativement contre la branche cible, donc
-  le nouveau code est mesure sans configuration supplementaire ; gratuit.
-- Inconvenients : verifie a l'API (`qualitygates/select` et `qualitygates/set_as_default`) —
-  le plan Free interdit de choisir ou de modifier le gate applique a un projet
-  (`Organization ... is not allowed to modify Quality gates`). Le gate integre est impose tel
-  quel, ses seuils ne sont pas negociables sans passer sur un plan payant.
+### Option A — SonarCloud, built-in "Sonar way" gate
+- Pros: already named by the standards; the GitHub app is already installed on the organisation;
+  pull request analysis natively compares against the target branch, so new code is measured
+  without additional configuration; free.
+- Cons: checked through the API (`qualitygates/select` and `qualitygates/set_as_default`) — the
+  Free plan forbids choosing or modifying the gate applied to a project
+  (`Organization ... is not allowed to modify Quality gates`). The built-in gate is imposed as
+  is, and its thresholds cannot be negotiated without moving to a paid plan.
 
-### Option B — Script maison (vitest + diff Git)
-- Avantages : aucune dependance externe, seuils entierement choisis par l'equipe.
-- Inconvenients : reimplemente ce qu'un outil dedie fait deja ; ne mesure ni la duplication ni
-  la maintenabilite, seulement la couverture ; le standard nomme explicitement un outil dedie,
-  s'en detourner sans raison forte contredirait `07-quality-gates.md`.
+### Option B — Home-made script (vitest + Git diff)
+- Pros: no external dependency, thresholds entirely chosen by the team.
+- Cons: reimplements what a dedicated tool already does; measures neither duplication nor
+  maintainability, only coverage; the standard explicitly names a dedicated tool, and moving
+  away from it without a strong reason would contradict `07-quality-gates.md`.
 
-### Option C — SonarCloud avec un gate personnalise
-- Ecartee : impossible sur le plan Free (verifie a l'API, cf. Option A). Redeviendrait
-  possible sur un plan payant.
+### Option C — SonarCloud with a custom gate
+- Discarded: impossible on the Free plan (checked through the API, see Option A). Would become
+  possible again on a paid plan.
 
-## Décision
+## Decision
 
-Nous retenons **l'option A — SonarCloud, gate integre « Sonar way »**, tel quel.
+We choose **option A — SonarCloud, built-in "Sonar way" gate**, as is.
 
-Parce que :
+Because:
 
-1. C'est deja la proposition du standard et de la reunion de lancement ; l'infrastructure
-   (organisation, app GitHub) existe deja.
-2. Le plan Free ne laisse pas le choix d'un gate personnalise : ecrire un ADR pour une option
-   techniquement indisponible n'aurait rien tranche.
-3. « Sonar way » est **plus strict** que la proposition initiale sur la seule metrique qui
-   differe (couverture), jamais plus laxiste : accepter ses seuils ne degrade aucune exigence
-   du standard.
+1. It is already the proposal of the standard and of the kickoff meeting; the infrastructure
+   (organisation, GitHub app) already exists.
+2. The Free plan leaves no choice of a custom gate: writing an ADR for a technically unavailable
+   option would have decided nothing.
+3. "Sonar way" is **stricter** than the initial proposal on the only metric that differs
+   (coverage), never more lenient: accepting its thresholds weakens no requirement of the
+   standard.
 
-Seuils reellement appliques, sur le nouveau code uniquement (verifies a l'API
-`qualitygates/list`) :
+Thresholds actually applied, on new code only (checked through the API `qualitygates/list`):
 
-| Metrique | Seuil |
+| Metric | Threshold |
 |---|---|
-| Couverture | ≥ 80 % (`D-11` proposait 70 % ; le gate impose est plus strict) |
-| Duplication | ≤ 3 % (identique a la proposition) |
-| Note de fiabilite | A |
-| Note de securite | A |
-| Note de maintenabilite | A (identique a la proposition) |
-| Hotspots de securite revus | 100 % |
+| Coverage | ≥ 80 % (`D-11` proposed 70 %; the imposed gate is stricter) |
+| Duplication | ≤ 3 % (identical to the proposal) |
+| Reliability rating | A |
+| Security rating | A |
+| Maintainability rating | A (identical to the proposal) |
+| Security hotspots reviewed | 100 % |
 
-## Conséquences
+## Consequences
 
-**Positives**
-- Verdict publie automatiquement sur chaque pull request par l'app GitHub SonarCloud, sans
-  configuration supplementaire.
-- Le nouveau code est isole nativement par l'analyse de pull request : aucun script de diff a
-  maintenir.
-- Seuils plus stricts que la proposition initiale, sans effort supplementaire.
+**Positive**
+- Verdict published automatically on every pull request by the SonarCloud GitHub app, without
+  additional configuration.
+- New code is isolated natively by pull request analysis: no diff script to maintain.
+- Thresholds stricter than the initial proposal, without additional effort.
 
-**Négatives / dette acceptée**
-- Le seuil de couverture reel (80 %) n'est pas celui propose dans le backlog (70 %) : `D-11`
-  est cloture par cet ADR sur cette valeur, imposee par la plateforme et non choisie.
-- Aucun gate personnalise n'est possible tant que l'organisation reste sur le plan Free : une
-  metrique que l'equipe voudrait ajouter ou assouplir plus tard (ex. `D-11` a une valeur
-  differente) resterait hors de portee sans changement de plan.
-- Le blocage reel du merge (critere d'acceptation d'`EN-17`) suppose de rendre le check
-  SonarCloud obligatoire dans la protection de branche `dev` : une action de configuration du
-  depot, distincte de cet ADR.
+**Negative / accepted debt**
+- The actual coverage threshold (80 %) is not the one proposed in the backlog (70 %): `D-11` is
+  closed by this ADR on that value, imposed by the platform and not chosen.
+- No custom gate is possible as long as the organisation stays on the Free plan: a metric the
+  team would want to add or relax later (for example `D-11` at a different value) would remain
+  out of reach without a change of plan.
+- Actually blocking the merge (acceptance criterion of `EN-17`) requires making the SonarCloud
+  check mandatory in the protection of the `dev` branch: a repository configuration action,
+  distinct from this ADR.
 
-**Ce que ça impose au reste du projet**
-- Toute PR qui degraderait la couverture, la duplication, ou une note de qualite sur le code
-  qu'elle ajoute ou modifie sera signalee par ce gate ; en dessous de 80 % de couverture sur du
-  code neuf, la PR echoue le gate.
+**What it imposes on the rest of the project**
+- Any PR that would degrade the coverage, the duplication, or a quality rating on the code it adds
+  or modifies will be reported by this gate; below 80 % coverage on new code, the PR fails the
+  gate.
 
-## Comment on saura qu'on s'est trompé
+## How we will know we were wrong
 
-Si le plan Free devient limitant autrement que sur ce seul point (ex. quota d'analyses,
-retention des rapports), ou si l'equipe juge 80 % de couverture trop couteux a maintenir sur
-des adaptateurs difficiles a tester (cf. `packages/infra`), remettre en cause cet ADR et
-evaluer le cout d'un plan payant plutot que de contourner le gate.
+If the Free plan becomes limiting in some other way than this single point (for example an
+analysis quota, report retention), or if the team finds 80 % coverage too expensive to maintain
+on adapters that are hard to test (see `packages/infra`), question this ADR and assess the cost of
+a paid plan rather than work around the gate.
 
-## Références
+## References
 
-- `docs/backlog.md`, décisions `D-10` et `D-11`
+- `docs/backlog.md`, decisions `D-10` and `D-11`
 - `standards/07-quality-gates.md`, section 4
-- `docs/adr/README.md`, table « Ce qui reste a trancher »
+- `docs/adr/README.md`, table "What remains to be decided"
