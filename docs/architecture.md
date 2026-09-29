@@ -1,111 +1,111 @@
 # Architecture
 
-État au 11 septembre 2026. Ce document décrit ce que le dépôt contient, pas une cible : chaque
-affirmation est vérifiable en lisant les chemins cités.
+State as of 11 September 2026. This document describes what the repository contains, not a
+target: every statement can be checked by reading the paths quoted.
 
-## Découpage
+## Split
 
-Un monorepo npm workspaces, découpé par domaine et non par couche technique — c'est la décision de
-l'ADR-0003, prise parce qu'un découpage horizontal reproduisait le couplage du code repris.
+An npm workspaces monorepo, split by domain and not by technical layer — this is the decision of
+ADR-0003, taken because a horizontal split reproduced the coupling of the code taken over.
 
 ```
 apps/
-  api/        le serveur Express, la composition, les routes HTTP
-  web/        l'interface React servie par Vite
-  worker/     le consommateur d'événements, dans son propre processus
+  api/        the Express server, the composition, the HTTP routes
+  web/        the React interface served by Vite
+  worker/     the event consumer, in its own process
 packages/
-  contracts/  les schémas partagés entre l'API et l'interface, et le catalogue d'événements
+  contracts/  the schemas shared between the API and the interface, and the event catalogue
   core/
-    auth/         comptes, sessions, réinitialisation, données personnelles
-    items/        tâches, statuts Kanban, priorités
-    projects/     projets et appartenances
+    auth/         accounts, sessions, reset, personal data
+    items/        tasks, Kanban statuses, priorities
+    projects/     projects and memberships
     notifications/ notifications
-  infra/      les adaptateurs : Supabase, Redis, HIBP, le journal
+  infra/      the adapters: Supabase, Redis, HIBP, the log
 ```
 
-Chaque domaine de `core/` a la même forme interne :
+Each domain of `core/` has the same internal shape:
 
 ```
-domain/       les types et les règles, qui n'importent rien
-application/  les cas d'usage, qui dépendent des ports
-ports/        les interfaces que l'infrastructure implémente
+domain/       the types and the rules, which import nothing
+application/  the use cases, which depend on the ports
+ports/        the interfaces the infrastructure implements
 ```
 
-## La règle de dépendance
+## The dependency rule
 
-`domain/` n'importe rien — ni un autre domaine, ni un port, ni une bibliothèque. `application/`
-n'atteint l'extérieur qu'à travers `ports/`. `infra/` implémente les ports et ne connaît aucun cas
-d'usage. Rien, dans `core/`, ne connaît Express, React ou Supabase.
+`domain/` imports nothing — neither another domain, nor a port, nor a library. `application/`
+only reaches the outside through `ports/`. `infra/` implements the ports and knows no use case.
+Nothing, in `core/`, knows Express, React or Supabase.
 
-Cette règle est vérifiée par `scripts/check-layers.mjs`, branché sur `npm run typecheck`. Un script
-et non le graphe de paquets, pour une raison mesurée : npm workspaces remonte chaque dépendance
-dans le `node_modules` racine, donc un fichier de `packages/core` résout `express` alors que son
-`package.json` ne le déclare pas, et TypeScript compile sans rien dire. La frontière de paquet
-documente l'intention ; elle ne l'applique pas.
+This rule is checked by `scripts/check-layers.mjs`, wired into `npm run typecheck`. A script and
+not the package graph, for a measured reason: npm workspaces hoists each dependency into the root
+`node_modules`, so a file of `packages/core` resolves `express` while its `package.json` does not
+declare it, and TypeScript compiles without a word. The package boundary documents the intent; it
+does not enforce it.
 
-## Le flux d'une requête
+## The flow of a request
 
-`GET /projects/:projectId/items` traverse cinq étages, dans cet ordre :
+`GET /projects/:projectId/items` goes through five stages, in this order:
 
-1. **Express** — `apps/api/src/http/server.ts`. En-têtes de sécurité, CORS, limite de corps,
-   journal, fichiers statiques.
-2. **Session** — `apps/api/src/http/session.ts`. Le cookie `session` est lu, l'identité demandée au
-   fournisseur, et renouvelée avec le cookie `refresh` si le jeton a expiré. Sans session, la
-   requête s'arrête ici avec un `401` en `problem+json`.
-3. **Route** — `apps/api/src/http/routes/items.ts`. La requête est validée à la frontière par un
-   schéma de `contracts`, jamais après.
-4. **Cas d'usage** — `packages/core/items/src/application/`. Il décide, et n'atteint la base qu'à
-   travers son port.
-5. **Adaptateur** — `packages/infra/src/item-store.ts`. Il traduit vers PostgREST, et les
-   politiques de sécurité au niveau ligne de Supabase filtrent par propriétaire.
+1. **Express** — `apps/api/src/http/server.ts`. Security headers, CORS, body limit, log, static
+   files.
+2. **Session** — `apps/api/src/http/session.ts`. The `session` cookie is read, the identity asked
+   of the provider, and renewed with the `refresh` cookie if the token has expired. Without a
+   session, the request stops here with a `401` in `problem+json`.
+3. **Route** — `apps/api/src/http/routes/items.ts`. The request is validated at the boundary by a
+   schema of `contracts`, never later.
+4. **Use case** — `packages/core/items/src/application/`. It decides, and only reaches the
+   database through its port.
+5. **Adapter** — `packages/infra/src/item-store.ts`. It translates to PostgREST, and the row-level
+   security policies of Supabase filter by owner.
 
-La composition assemble les cinq : `apps/api/src/composition-root.ts` est le seul endroit où un
-cas d'usage rencontre un adaptateur.
+The composition assembles the five: `apps/api/src/composition-root.ts` is the only place where a
+use case meets an adapter.
 
-## Le flux événementiel
+## The event flow
 
-Une seule famille d'événements aujourd'hui, `item.created`, en deux versions (`docs/events/catalog.md`).
+A single family of events today, `item.created`, in two versions (`docs/events/catalog.md`).
 
 ```
-créer une tâche
-  └─ create_item_with_event  (une transaction : la tâche et son événement)
+create a task
+  └─ create_item_with_event  (one transaction: the task and its event)
        ├─ public.items
-       └─ public.outbox                     le fait est écrit, personne n'est encore prévenu
-            └─ relais  ──publie──▶  Redis   packages/infra/src/outbox-relay.ts
-                                      └─ consommateur  packages/infra/src/event-consumer.ts
-                                           ├─ public.processed_events   absorbe un rejeu
+       └─ public.outbox                     the fact is written, nobody is notified yet
+            └─ relay  ──publishes──▶  Redis  packages/infra/src/outbox-relay.ts
+                                      └─ consumer  packages/infra/src/event-consumer.ts
+                                           ├─ public.processed_events   absorbs a replay
                                            └─ public.notifications
 ```
 
-La garantie est l'outbox, ratifiée par l'ADR-0013 : l'événement et le fait partagent une
-transaction, donc un événement publié correspond toujours à quelque chose qui s'est produit. La
-livraison est au moins une fois, et `processed_events` rend un rejeu sans effet.
+The guarantee is the outbox, ratified by ADR-0013: the event and the fact share a transaction, so
+a published event always matches something that happened. Delivery is at least once, and
+`processed_events` makes a replay have no effect.
 
-Le relais tourne différemment selon la cible, et c'est la seule différence entre elles :
+The relay runs differently depending on the target, and this is the only difference between them:
 
-| Cible | Ce qui fait tourner le relais |
+| Target | What runs the relay |
 |---|---|
-| Processus local, image Docker | un intervalle, ouvert par `start()` |
-| Fonction serverless | l'écriture elle-même (`apps/api/src/after-write.ts`), plus un appel sur `POST /internal/relay` toutes les trente secondes par le workflow `relais` (ADR-0020) |
+| Local process, Docker image | an interval, opened by `start()` |
+| Serverless function | the write itself (`apps/api/src/after-write.ts`), plus a call to `POST /internal/relay` every thirty seconds by the `relais` workflow (ADR-0020) |
 
-Le consommateur vit dans `apps/worker` quand un processus long existe. Sur la cible serverless, la
-même fonction de consommation est appelée par la passe de livraison, sans second processus.
+The consumer lives in `apps/worker` when a long-running process exists. On the serverless target,
+the same consumption function is called by the delivery pass, without a second process.
 
-## Ce qui garde tout ça honnête
+## What keeps all this honest
 
-| Contrôle | Ce qu'il empêche |
+| Check | What it prevents |
 |---|---|
-| `scripts/check-layers.mjs` | un import qui traverse une frontière de couche |
-| `test/test-levels.test.ts` | un fichier de test que plus aucun niveau n'exécute |
-| `test/sql-function-owners.test.ts` | deux migrations qui redéfinissent la même fonction sans se voir |
-| `apps/api/src/http/vercel-rewrites.test.ts` | une route servie par l'application mais injoignable une fois déployée |
-| `apps/web/src/styles/contrast.test.ts` | une couleur hors palette, ou un contraste sous le seuil |
-| `apps/web/src/styles/parse.test.ts` | une feuille de style que le build refuserait |
-| `test/coverage-exclusions.test.ts` | deux listes d'exclusion de couverture qui divergent |
+| `scripts/check-layers.mjs` | an import that crosses a layer boundary |
+| `test/test-levels.test.ts` | a test file that no level runs any more |
+| `test/sql-function-owners.test.ts` | two migrations that redefine the same function without seeing each other |
+| `apps/api/src/http/vercel-rewrites.test.ts` | a route served by the application but unreachable once deployed |
+| `apps/web/src/styles/contrast.test.ts` | a colour outside the palette, or a contrast below the threshold |
+| `apps/web/src/styles/parse.test.ts` | a stylesheet the build would refuse |
+| `test/coverage-exclusions.test.ts` | two coverage exclusion lists that diverge |
 
-Chacun a été écrit après un défaut réel ; les issues correspondantes le racontent.
+Each one was written after a real defect; the corresponding issues tell the story.
 
-## Références
+## References
 
-- ADR-0003 (découpage par domaine), ADR-0007 et ADR-0013 (événements), ADR-0004 et ADR-0005 (base)
+- ADR-0003 (split by domain), ADR-0007 and ADR-0013 (events), ADR-0004 and ADR-0005 (database)
 - `docs/events/catalog.md`, `docs/testing-levels.md`
