@@ -31,4 +31,5 @@ const application = compose(config);
 export default createServer(config, application.useCases, {
     logger: application.logger,
     metrics: application.metrics,
+    health: application.health,
 });

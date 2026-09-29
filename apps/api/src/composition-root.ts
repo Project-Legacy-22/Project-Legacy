@@ -17,9 +17,10 @@ import {
     createBusStateReadings,
     createPrometheusMetrics,
     createSupabaseStateReadings,
+    createHealthProbes,
+    startRelay,
     deliverPending,
     purgeExpired,
-    relayOnce,
 } from '@legacy/infra';
 import type {
     DeliveryPassResult,
@@ -27,9 +28,9 @@ import type {
     ItemStore,
     NotificationStore,
     OutboxStore,
-    RelayDependencies,
 } from '@legacy/infra';
 import type { Logger, Metrics, PurgeResult, StateReading } from '@legacy/contracts';
+import type { HealthProbes } from './http/health.js';
 import {
     makeChangeEmail,
     makeChangePassword,
@@ -71,6 +72,7 @@ import {
 } from '@legacy/core-projects';
 
 import { afterWrite } from './after-write.js';
+import { correlateInvitationEvents, correlateItemEvents } from './event-correlation.js';
 import type { Config } from './config.js';
 
 export interface ItemUseCases {
@@ -141,16 +143,12 @@ export interface AppUseCases {
     notifications: NotificationUseCases;
 }
 
-// How often the relay drains the outbox. Short enough that the effect looks
-// immediate in a demonstration, long enough not to hammer the database while
-// nothing happens.
-const RELAY_INTERVAL_MS = 1_000;
-
 export interface Application {
     useCases: AppUseCases;
     logger: Logger;
     // Built here because this layer is the only one that reaches an adapter.
     metrics: Metrics;
+    health: HealthProbes;
     start(): Promise<void>;
     stop(): Promise<void>;
 }
@@ -223,31 +221,6 @@ function createAdapters(config: Config): Adapters {
     };
 }
 
-// A pass that outlives its interval must not have a second one start behind it:
-// both would read the same unpublished rows and publish them twice, in an order
-// neither controls. The flag makes the tick skip instead, and the skipped work
-// is still there on the next one.
-function startRelay(dependencies: RelayDependencies): NodeJS.Timeout {
-    let relaying = false;
-
-    const timer = setInterval(() => {
-        if (relaying) return;
-        relaying = true;
-
-        void relayOnce(dependencies)
-            .catch((err: unknown) => {
-                dependencies.logger.warn({ err }, 'relay pass failed, will retry');
-            })
-            .finally(() => {
-                relaying = false;
-            });
-    }, RELAY_INTERVAL_MS);
-
-    // Does not hold the process open on its own.
-    timer.unref();
-    return timer;
-}
-
 // Assembled apart from compose, which stays a list of what is wired to what:
 // this is the group that gains a use case with every authentication story, and
 // it is the only one whose members all share a single adapter.
@@ -292,17 +265,18 @@ export function itemUseCases(
     deliver: () => Promise<unknown>,
     logger: Logger,
 ): ItemUseCases {
+    const correlatedStore = correlateItemEvents(store, logger);
     return {
-        listItems: makeListItems(store),
+        listItems: makeListItems(correlatedStore),
         addItem: afterWrite(
-            makeAddItem({ repository: store, newId: uuid, now: () => new Date() }),
+            makeAddItem({ repository: correlatedStore, newId: uuid, now: () => new Date() }),
             deliver,
             logger,
         ),
-        changeItem: makeChangeItem(store),
-        moveItem: makeMoveItem(store),
-        reorderItem: makeReorderItem(store),
-        removeItem: makeRemoveItem(store),
+        changeItem: makeChangeItem(correlatedStore),
+        moveItem: makeMoveItem(correlatedStore),
+        reorderItem: makeReorderItem(correlatedStore),
+        removeItem: makeRemoveItem(correlatedStore),
     };
 }
 
@@ -315,6 +289,7 @@ export function projectUseCases(
     deliver: () => Promise<unknown>,
     logger: Logger,
 ): ProjectUseCases {
+    const correlatedInvitations = correlateInvitationEvents(invitations, logger);
     return {
         listProjects: makeListProjects(projects),
         addProject: makeAddProject({ repository: projects, newId: uuid }),
@@ -322,7 +297,7 @@ export function projectUseCases(
         listProjectMembers: makeListProjectMembers(memberships),
         removeProjectMember: makeRemoveProjectMember(memberships),
         inviteProjectMember: afterWrite(
-            makeInviteProjectMember({ repository: invitations, newId: uuid, now: () => new Date() }),
+            makeInviteProjectMember({ repository: correlatedInvitations, newId: uuid, now: () => new Date() }),
             deliver,
             logger,
         ),
@@ -338,6 +313,10 @@ export function compose(config: Config): Application {
     const logger = createLogger(config.logLevel);
     const deliver = makeDeliverPending({ outbox, bus, notifications, logger });
     const metrics = createPrometheusMetrics({ readings: stateReadings, logger });
+    const health = createHealthProbes(
+        { url: config.supabaseUrl, serviceRoleKey: config.supabaseServiceRoleKey },
+        bus,
+    );
     const compromisedPasswords = createHibpPasswordRegistry({ logger });
 
     // The relay lives with the writer, not with the consumer: it reads a table
@@ -349,6 +328,7 @@ export function compose(config: Config): Application {
     return {
         logger,
         metrics,
+        health,
         useCases: {
             items: itemUseCases(store, deliver, logger),
             attention: { listAttention: makeListAttention(attention) },

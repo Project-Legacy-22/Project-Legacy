@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { v4 as uuid } from 'uuid';
 import type { RequestHandler, Response } from 'express';
 
@@ -19,10 +20,20 @@ interface TraceLocals {
 }
 
 const MANQUANT = 'withTraceId doit etre monte avant tout usage de traceIdOf.';
+const traceContext = new AsyncLocalStorage<string>();
+
+export function currentTraceId(): string | undefined {
+    return traceContext.getStore();
+}
+
+export function runWithTraceId<T>(traceId: string, work: () => T): T {
+    return traceContext.run(traceId, work);
+}
 
 export const withTraceId: RequestHandler = (_req, res, next) => {
-    (res.locals as TraceLocals).traceId = uuid();
-    next();
+    const traceId = uuid();
+    (res.locals as TraceLocals).traceId = traceId;
+    runWithTraceId(traceId, next);
 };
 
 export function traceIdOf(res: Response): string {

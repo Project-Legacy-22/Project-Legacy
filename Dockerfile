@@ -71,6 +71,11 @@ COPY --chown=node:node package.json ./
 # Documente le port ecoute ; le port reel se configure par l environnement.
 EXPOSE 3000
 
+# Node is already in the image. An HTTP 503 means a dependency failed, not a
+# healthy process; no additional probe binary or secret is needed.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD node -e "fetch('http://127.0.0.1:' + (process.env.PORT || '3000') + '/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+
 # L API par defaut. Le worker se lance depuis la meme image en remplacant la
 # commande :
 #   docker run --entrypoint node <image> apps/worker/dist/index.js

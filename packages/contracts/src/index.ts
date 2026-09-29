@@ -81,6 +81,8 @@ export {
     PendingInvitationListDto,
 } from './invitations.js';
 export { ProblemDetails } from './problem-details.js';
+export { HealthResponse } from './health.js';
+export type { HealthResponseDto } from './health.js';
 export { ServiceUnavailable } from './service-unavailable.js';
 export type { Unavailability } from './service-unavailable.js';
 export type { Logger } from './logger.js';
