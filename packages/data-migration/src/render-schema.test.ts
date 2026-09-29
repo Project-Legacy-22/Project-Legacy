@@ -138,9 +138,14 @@ describe('renderSchema', () => {
         expect(sql.match(/on delete (?:cascade|set null)/gu)).toHaveLength(declared.length);
     });
 
-    // US-58: removing the person a task is assigned to must not delete the task.
-    it.each(DIALECTS)('keeps a task whose assignee is deleted for %s', dialect => {
-        expect(renderSchema(dialect)).toMatch(/foreign key \([`"]assignee_id[`"]\) references [`"]users[`"] \([`"]id[`"]\) on delete set null/u);
+    // #425: erasing the account that created a task must not delete the task.
+    it.each(DIALECTS)('keeps a task whose creator is deleted for %s', dialect => {
+        expect(renderSchema(dialect)).toMatch(/foreign key \([`"]user_id[`"]\) references [`"]users[`"] \([`"]id[`"]\) on delete set null/u);
+    });
+
+    // #421: assignments live in item_assignees only.
+    it.each(DIALECTS)('carries no single assignee column on items for %s', dialect => {
+        expect(renderSchema(dialect)).not.toContain('assignee_id');
     });
 
     it('names the composite key of a membership in both its columns', () => {
