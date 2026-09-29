@@ -1,337 +1,329 @@
-# Registre des traitements
+# Register of processing activities
 
-Ce que l'application collecte, pourquoi, pendant combien de temps et pour qui. Une ligne par
-traitement, tenue à jour à chaque migration qui ajoute ou retire un champ.
+What the application collects, why, for how long and for whom. One entry per processing activity,
+kept up to date with every migration that adds or removes a field.
 
-Le registre est la source : la politique de confidentialité (`US-37`) le reformule pour un
-lecteur non technique, et les durées écrites ici sont celles que la purge automatique
-(`US-39`) applique. Une durée qui change se change d'abord ici, puis dans
-`public.purge_expired_data`, qui la porte en dur.
+The register is the source: the privacy policy (`US-37`) rephrases it for a non-technical reader,
+and the durations written here are the ones the automatic purge (`US-39`) applies. A duration that
+changes is changed here first, then in `public.purge_expired_data`, which hard-codes it.
 
-## Responsable de traitement
+## Data controller
 
 | | |
 |---|---|
-| **Responsable** | Équipe Legacy 22 (`Project-Legacy-22`) |
+| **Controller** | Legacy 22 team (`Project-Legacy-22`) |
 | **Contact** | Seïf Soltane — seif.soltane@epitech.eu |
 
-Le responsable est l'équipe, pas une personne : c'est elle qui décide des finalités et des
-moyens, et le règlement désigne à ce titre l'entité, pas un de ses membres. Seïf Soltane est
-le point de contact, comme la réunion de lancement l'a acté.
+The controller is the team, not a person: it is the team that decides the purposes and the means,
+and the regulation designates the entity in that capacity, not one of its members. Seïf Soltane is
+the point of contact, as the kickoff meeting recorded.
 
-Ces deux valeurs sont reprises telles quelles par la politique de confidentialité (`US-37`).
-Elles changent ici en premier.
+These two values are repeated as they are by the privacy policy (`US-37`). They change here first.
 
-## Sous-traitants et localisation
+## Processors and location
 
-Les traitements ci-dessous nomment leurs destinataires. Cette section dit une fois pour toutes où
-ils se trouvent, parce que la colonne « Localisation » de chaque traitement désigne la table, pas le
-pays.
+The processing activities below name their recipients. This section says once and for all where
+they are, because the "Location" column of each processing activity designates the table, not the
+country.
 
-| Sous-traitant | Ce qu'il fait | Où | Société |
+| Processor | What it does | Where | Company |
 |---|---|---|---|
-| Supabase | base de données et authentification | Irlande, région `eu-west-1` | Supabase Inc., États-Unis |
-| Vercel | exécution de l'application et journaux | Paris, région `cdg1`, fixée par `vercel.json` | Vercel Inc., États-Unis |
-| Grafana Cloud | supervision : métriques et tableaux de bord | Allemagne, région `prod-eu-west-2` | Grafana Labs, États-Unis |
-| File d'événements (Upstash for Redis) | transport des événements entre l'API et le consommateur de notifications | Union européenne ; provisionnée depuis le projet Vercel | Upstash, Inc., États-Unis |
-| Have I Been Pwned | vérification d'un mot de passe compromis | réseau du fournisseur | opéré depuis l'Australie |
+| Supabase | database and authentication | Ireland, region `eu-west-1` | Supabase Inc., United States |
+| Vercel | running the application and logs | Paris, region `cdg1`, set by `vercel.json` | Vercel Inc., United States |
+| Grafana Cloud | monitoring: metrics and dashboards | Germany, region `prod-eu-west-2` | Grafana Labs, United States |
+| Event queue (Upstash for Redis) | transport of the events between the API and the notification consumer | European Union; provisioned from the Vercel project | Upstash, Inc., United States |
+| Have I Been Pwned | check for a compromised password | network of the provider | operated from Australia |
 
-Tout est donc stocké et traité dans l'Union. Ce qui n'est pas neutre pour autant : Supabase et
-Vercel sont des sociétés américaines, donc soumises au CLOUD Act, et une autorité américaine peut
-les contraindre à communiquer des données qui n'ont jamais quitté l'Europe. C'est une dépendance
-assumée, pas un oubli, et elle est écrite dans la politique de confidentialité plutôt que laissée
-implicite.
+Everything is therefore stored and processed in the Union. That is not neutral for all that:
+Supabase and Vercel are American companies, hence subject to the CLOUD Act, and an American
+authority can compel them to disclose data that has never left Europe. It is an owned dependency,
+not an oversight, and it is written in the privacy policy rather than left implicit.
 
-Ce qui la rend réversible : le schéma est décrit par des migrations versionnées, donc un PostgreSQL
-quelconque le reconstruit. Ce qu'il faudrait réécrire est ce que Supabase fournit en plus du SQL,
-l'authentification et les politiques de sécurité au niveau ligne. Les conséquences complètes sont
-suivies par #273 et #274.
+What makes it reversible: the schema is described by versioned migrations, so any PostgreSQL
+rebuilds it. What would have to be rewritten is what Supabase provides on top of SQL,
+authentication and the row-level security policies. The full consequences are tracked by #273 and
+#274.
 
-Grafana Cloud ne reçoit aucune donnée personnelle, et c'est une contrainte de conception, pas une
-observation : l'ADR-0016 interdit d'étiqueter une métrique par un identifiant de compte, une
-adresse, un intitulé de tâche ou une adresse IP. Ce qui sort est un compteur ou une durée agrégée.
+Grafana Cloud receives no personal data, and it is a design constraint, not an observation:
+ADR-0016 forbids labelling a metric with an account identifier, an address, a task title or an IP
+address. What goes out is a counter or an aggregated duration.
 
-**La file d'événements, elle, en reçoit — et il faut le dire précisément.** Chaque tâche créée y
-fait transiter deux identifiants, celui de la tâche et celui de son propriétaire, et rien d'autre :
-ni adresse, ni intitulé, aucun contenu. Ce sont des identifiants **pseudonymes**, et le
-considérant 26 du règlement est clair : une donnée pseudonymisée reste une donnée personnelle dès
-lors que le responsable peut réidentifier, ce que nous pouvons puisque `users.id` mène à l'adresse.
+**The event queue, on the other hand, does receive some — and it must be said precisely.** Each
+task created sends two identifiers through it, that of the task and that of its owner, and nothing
+else: no address, no title, no content. They are **pseudonymous** identifiers, and recital 26 of
+the regulation is clear: pseudonymised data remains personal data as long as the controller can
+re-identify it, which we can since `users.id` leads to the address.
 
-La formule « aucune donnée personnelle ne traverse le bus » a longtemps figuré dans le code et
-dans ce registre. Elle était trop forte. Ce qui est vrai, et qui reste une bonne propriété, c'est
-qu'aucun **contenu** ne le traverse, et que les identifiants y sont effacés dès que la notification
-est écrite. « Aucun contenu » et « rien de personnel » ne sont pas la même phrase.
+The wording "no personal data crosses the bus" long appeared in the code and in this register. It
+was too strong. What is true, and remains a good property, is that no **content** crosses it, and
+that the identifiers are erased from it as soon as the notification is written. "No content" and
+"nothing personal" are not the same sentence.
 
-La file est **Upstash for Redis**, magasin `upstash-kv-cyclamen-leaf`, créé le 11 septembre 2026
-et provisionné depuis l'onglet Storage du projet Vercel — Vercel est donc le revendeur, et Upstash
-l'opérateur. Cela ajoute une société américaine de plus à la liste, avec la même conséquence que
-pour les trois autres : le CLOUD Act s'applique au sous-traitant même quand la région est
-européenne.
+The queue is **Upstash for Redis**, store `upstash-kv-cyclamen-leaf`, created on 11 September 2026
+and provisioned from the Storage tab of the Vercel project — Vercel is therefore the reseller, and
+Upstash the operator. This adds one more American company to the list, with the same consequence
+as for the three others: the CLOUD Act applies to the processor even when the region is European.
 
-L'offre est gratuite, ce qui pour cette ligne ne pose pas le problème de conservation que
-`docs/backup-and-exit.md` décrit pour la base : rien n'est censé y séjourner. Un événement y passe
-le temps d'une livraison, et il est effacé dès que la notification est écrite. Une file vidée est
-l'état normal ; une file qui se remplit est un incident, pas un stock.
+The plan is free, which for this entry does not raise the retention problem that
+`docs/backup-and-exit.md` describes for the database: nothing is meant to stay there. An event
+passes through it for the time of a delivery, and it is erased as soon as the notification is
+written. An empty queue is the normal state; a queue that fills up is an incident, not a stock.
 
-**Qui a accès, et c'est le même partout.** Les six développeurs de l'équipe ont le même accès à
-chacun de ces outils. Il n'y a pas de séparation de rôle sur l'accès à l'infrastructure, et ce
-n'est pas une mesure de sécurité qu'on peut invoquer : la politique de confidentialité l'énonce
-telle quelle, après avoir annoncé pendant un temps un accès plus restreint qu'il ne l'était.
+**Who has access, and it is the same everywhere.** The six developers of the team have the same
+access to each of these tools. There is no separation of roles on access to the infrastructure, and
+it is not a security measure that can be invoked: the privacy policy states it as it is, after
+having announced for a time a more restricted access than it was.
 
-Have I Been Pwned ne reçoit aucune donnée personnelle : cinq caractères d'une empreinte, qui
-n'identifient personne, et rien n'est conservé. Il est cité pour être exhaustif.
+Have I Been Pwned receives no personal data: five characters of a hash, which identify nobody, and
+nothing is kept. It is listed for completeness.
 
-## Traitements
+## Processing activities
 
-### T-01 — Compte et authentification
+### T-01 — Account and authentication
 
 | | |
 |---|---|
-| **Finalité** | Permettre à une personne de créer un compte, de s'y connecter et de retrouver ses données d'une session à l'autre |
-| **Base légale** | Exécution du contrat : sans compte, le service ne peut pas être rendu |
-| **Personnes concernées** | Utilisateurs inscrits |
-| **Catégories de données** | Adresse e-mail ; empreinte du mot de passe ; horodatages de création et de modification ; jetons de session ; version de la politique de confidentialité acceptée et date de cette acceptation |
-| **Localisation** | `auth.users` (Supabase Auth), reflété dans `public.users` par un déclencheur |
-| **Conservation** | Toute la vie du compte, puis effacement immédiat à sa suppression (`US-13`) |
-| **Destinataires** | Vercel (sous-traitant, hébergement applicatif : l'API Express tourne en fonction Vercel, `vercel.json` y redirige `/auth` et `/items`, donc le corps des requêtes et des réponses y transite en clair) ; Supabase (sous-traitant, persistance et authentification) |
-| **Mesures de sécurité** | Mot de passe haché par Supabase Auth, jamais stocké ni journalisé en clair ; session en cookie `httpOnly` et `SameSite=Lax` ; politiques RLS restreignant chaque ligne à son propriétaire ; limitation de fréquence sur l'inscription et la connexion |
+| **Purpose** | Allow a person to create an account, sign in to it and find their data again from one session to the next |
+| **Legal basis** | Performance of the contract: without an account, the service cannot be provided |
+| **Data subjects** | Registered users |
+| **Data categories** | Email address; password hash; creation and modification timestamps; session tokens; version of the privacy policy accepted and date of that acceptance |
+| **Location** | `auth.users` (Supabase Auth), mirrored into `public.users` by a trigger |
+| **Retention** | The whole life of the account, then immediate erasure when it is deleted (`US-13`) |
+| **Recipients** | Vercel (processor, application hosting: the Express API runs as a Vercel function, `vercel.json` routes `/auth` and `/items` to it, so the body of the requests and responses passes through it in clear) ; Supabase (processor, persistence and authentication) |
+| **Security measures** | Password hashed by Supabase Auth, never stored or logged in clear; session in an `httpOnly` and `SameSite=Lax` cookie; RLS policies restricting each row to its owner; rate limiting on registration and sign-in |
 
-La trace du consentement (`policy_version`, `policy_accepted_at`) est écrite par le
-déclencheur de miroir, dans la transaction qui crée le compte. Elle est conservée aussi
-longtemps que le compte : c'est elle qui permet de dire à quoi la personne a consenti le jour
-où le texte change, et l'effacer reviendrait à perdre la preuve que l'on doit pouvoir produire.
+The record of consent (`policy_version`, `policy_accepted_at`) is written by the mirror trigger, in
+the transaction that creates the account. It is kept as long as the account: it is what allows
+saying what the person consented to on the day the text changes, and erasing it would mean losing
+the evidence we must be able to produce.
 
-`public.users` ne duplique qu'`id` et `email`. Le miroir existe parce qu'`items.user_id` doit
-référencer une table du schéma `public` ; l'e-mail y est repris parce que l'export de données
-personnelles le restitue.
+`public.users` only duplicates `id` and `email`. The mirror exists because `items.user_id` must
+reference a table of the `public` schema; the email is repeated there because the personal data
+export returns it.
 
-Quitter Supabase transfère ces données (#426) : `npm run data:export` écrit, pour chaque moteur
-cible, un fichier `<cible>-accounts.sql` qui porte l'identifiant, l'adresse, l'empreinte bcrypt
-et la date de confirmation de chaque compte. Les jetons de session et le journal d'audit de
-GoTrue ne traversent pas. Ce fichier et le vidage dont il vient sont des données personnelles
-au même titre qu'une sauvegarde : écrits dans `data-out/`, que `.gitignore` exclut, et à
-supprimer une fois appliqués. Le transfert ne change ni la finalité ni la base légale ; le
-nouvel hébergeur devient destinataire et doit être ajouté ci-dessus le jour où il est choisi.
+Leaving Supabase transfers this data (#426): `npm run data:export` writes, for each target engine,
+a `<target>-accounts.sql` file that carries the identifier, the address, the bcrypt hash and the
+confirmation date of each account. The session tokens and the audit log of GoTrue do not cross.
+This file and the dump it comes from are personal data just like a backup: written into
+`data-out/`, which `.gitignore` excludes, and to be deleted once applied. The transfer changes
+neither the purpose nor the legal basis; the new host becomes a recipient and must be added above
+on the day it is chosen.
 
-### T-02 — Vérification des mots de passe compromis
-
-| | |
-|---|---|
-| **Finalité** | Refuser un mot de passe figurant dans une fuite connue, lors d'une réinitialisation |
-| **Base légale** | Intérêt légitime : protéger les comptes contre la réutilisation d'identifiants |
-| **Personnes concernées** | Utilisateurs réinitialisant leur mot de passe |
-| **Catégories de données** | Les cinq premiers caractères d'une empreinte SHA-1 du mot de passe candidat |
-| **Localisation** | Aucune. Rien n'est stocké : l'empreinte est une clé de recherche, calculée puis jetée |
-| **Conservation** | Sans objet |
-| **Destinataires** | Have I Been Pwned (API Pwned Passwords), atteinte depuis le réseau sortant de Vercel (sous-traitant, hébergement applicatif) |
-| **Mesures de sécurité** | k-anonymat : seul un préfixe de cinq caractères sort du processus, la comparaison se fait localement ; en-tête `Add-Padding` pour que la taille de la réponse ne révèle rien ; délai de deux secondes, un échec ne bloque pas la réinitialisation |
-
-Le préfixe ne permet pas de retrouver le mot de passe, mais l'appel constitue une
-communication à un tiers : il figure ici pour cette raison.
-
-### T-03 — Tâches
+### T-02 — Check for compromised passwords
 
 | | |
 |---|---|
-| **Finalité** | Créer, consulter, modifier et supprimer ses propres tâches |
-| **Base légale** | Exécution du contrat : c'est le service lui-même |
-| **Personnes concernées** | Utilisateurs inscrits |
-| **Catégories de données** | Intitulé saisi par l'utilisateur ; colonne de progression du Kanban ; priorité ; échéance facultative ; propriétaire et projet de rattachement ; membres du projet à qui la tâche est attribuée, aucun ou plusieurs (US-58, #419) ; horodatages de création et de modification |
-| **Localisation** | `public.items`, et `public.item_assignees` pour les attributions |
-| **Conservation** | Aucune : une suppression demandée par l'utilisateur efface la ligne immédiatement, de même qu'à la suppression d'un projet dont il était le dernier membre. À la suppression du compte : une tâche d'un projet où il était seul disparaît avec le projet ; une tâche d'un projet partagé est conservée pour les autres membres, le lien vers le compte supprimé étant rompu (`items.user_id` mis à `null`, #425). L'attribution disparaît avec l'appartenance de la personne attribuée : la retirer du projet ou effacer son compte la retire des attributaires, et la tâche reste |
-| **Destinataires** | Vercel (sous-traitant, hébergement applicatif : l'API Express tourne en fonction Vercel, `vercel.json` y redirige `/auth` et `/items`, donc le corps des requêtes et des réponses y transite en clair) ; Supabase (sous-traitant, persistance) |
-| **Mesures de sécurité** | Politiques RLS par propriétaire ; toute lecture nomme un propriétaire ; l'intitulé ne sort jamais dans un journal ni dans un événement |
+| **Purpose** | Refuse a password that appears in a known breach, during a reset |
+| **Legal basis** | Legitimate interest: protect the accounts against credential reuse |
+| **Data subjects** | Users resetting their password |
+| **Data categories** | The first five characters of a SHA-1 hash of the candidate password |
+| **Location** | None. Nothing is stored: the hash is a lookup key, computed then discarded |
+| **Retention** | Not applicable |
+| **Recipients** | Have I Been Pwned (Pwned Passwords API), reached from the outgoing network of Vercel (processor, application hosting) |
+| **Security measures** | k-anonymity: only a five-character prefix leaves the process, the comparison is done locally; `Add-Padding` header so that the size of the response reveals nothing; two-second timeout, a failure does not block the reset |
 
-L'intitulé est du contenu libre : il peut contenir n'importe quelle donnée personnelle, y
-compris sensible, sans que l'application puisse l'anticiper. C'est ce qui rend l'effacement
-immédiat préférable à un délai de grâce : une tâche supprimée ne survit nulle part, et il n'y
-a pas de fenêtre pendant laquelle une donnée que l'utilisateur a voulu retirer reste lisible.
+The prefix does not allow finding the password, but the call is a communication to a third party:
+it appears here for that reason.
 
-La suppression douce a existé jusqu'à la migration `20260909123004_remove_item_soft_deletion` :
-la colonne `deleted_at` a disparu avec elle, et aucune ligne n'est plus marquée plutôt que
-retirée.
+### T-03 — Tasks
+
+| | |
+|---|---|
+| **Purpose** | Create, view, modify and delete one's own tasks |
+| **Legal basis** | Performance of the contract: it is the service itself |
+| **Data subjects** | Registered users |
+| **Data categories** | Title entered by the user; progress column of the Kanban; priority; optional due date; owner and project it belongs to; members of the project the task is assigned to, none or several (US-58, #419); creation and modification timestamps |
+| **Location** | `public.items`, and `public.item_assignees` for the assignments |
+| **Retention** | None: a deletion requested by the user erases the row immediately, as does the deletion of a project of which they were the last member. When the account is deleted: a task of a project where they were alone disappears with the project; a task of a shared project is kept for the other members, the link to the deleted account being broken (`items.user_id` set to `null`, #425). The assignment disappears with the membership of the person assigned: removing them from the project or erasing their account removes them from the assignees, and the task stays |
+| **Recipients** | Vercel (processor, application hosting: the Express API runs as a Vercel function, `vercel.json` routes `/auth` and `/items` to it, so the body of the requests and responses passes through it in clear) ; Supabase (processor, persistence) |
+| **Security measures** | RLS policies per owner; every read names an owner; the title never goes out in a log or in an event |
+
+The title is free content: it can contain any personal data, including sensitive data, without the
+application being able to anticipate it. This is what makes immediate erasure preferable to a grace
+period: a deleted task survives nowhere, and there is no window during which data the user wanted
+to remove remains readable.
+
+Soft deletion existed until the migration `20260909123004_remove_item_soft_deletion`: the
+`deleted_at` column disappeared with it, and no row is marked any more rather than removed.
 
 ### T-04 — Notifications
 
 | | |
 |---|---|
-| **Finalité** | Signaler à une personne qu'une de ses tâches a été créée |
-| **Base légale** | Exécution du contrat, comme le service qu'elles accompagnent |
-| **Personnes concernées** | Utilisateurs inscrits |
-| **Catégories de données** | Identifiants du destinataire, de la tâche et de l'événement d'origine ; date de lecture ; horodatages |
-| **Localisation** | `public.notifications` |
-| **Conservation** | Quatre-vingt-dix jours après création, puis effacement par la purge quotidienne (voir « Purge automatique » ci-dessous). Immédiat à la suppression du compte |
-| **Destinataires** | Vercel (sous-traitant, hébergement applicatif : l'API Express tourne en fonction Vercel, `vercel.json` y redirige `/auth` et `/items`, donc le corps des requêtes et des réponses y transite en clair) ; Supabase (sous-traitant, persistance) |
-| **Mesures de sécurité** | Aucun libellé stocké : le texte affiché est construit par l'interface, la table ne contient que des identifiants |
+| **Purpose** | Tell a person that one of their tasks was created |
+| **Legal basis** | Performance of the contract, like the service they accompany |
+| **Data subjects** | Registered users |
+| **Data categories** | Identifiers of the recipient, of the task and of the originating event; read date; timestamps |
+| **Location** | `public.notifications` |
+| **Retention** | Ninety days after creation, then erasure by the daily purge (see "Automatic purge" below). Immediate when the account is deleted |
+| **Recipients** | Vercel (processor, application hosting: the Express API runs as a Vercel function, `vercel.json` routes `/auth` and `/items` to it, so the body of the requests and responses passes through it in clear) ; Supabase (processor, persistence) |
+| **Security measures** | No label stored: the text displayed is built by the interface, the table only contains identifiers |
 
-### T-05 — File d'événements
-
-| | |
-|---|---|
-| **Finalité** | Garantir qu'un fait enregistré est annoncé une fois et une seule aux composants qui en dépendent |
-| **Base légale** | Intérêt légitime : fiabilité technique du service |
-| **Personnes concernées** | Utilisateurs inscrits, indirectement |
-| **Catégories de données** | Identifiant d'événement, nom versionné, instant, et un payload restreint à des identifiants (`itemId`, `ownerId`) |
-| **Localisation** | `public.outbox`, `public.processed_events`, et la file Redis pendant le transport |
-| **Conservation** | `outbox` : sept jours après publication (`published_at`). Un événement jamais publié (`published_at is null`) n'est pas purgé : il représente un fait écrit dont personne n'a encore été prévenu, et le supprimer perdrait l'effet au lieu de le retarder. `processed_events` : quatre-vingt-dix jours à compter de sa création, c'est-à-dire de la consommation, ce qui rend un rejeu sans effet pendant cette durée. La file Redis ne conserve rien : un message en sort dès qu'il est lu, et le broker n'est pas persistant |
-| **Destinataires** | Vercel (sous-traitant, hébergement applicatif : l'API Express tourne en fonction Vercel, `vercel.json` y redirige `/auth` et `/items`, donc le corps des requêtes et des réponses y transite en clair) ; Supabase (sous-traitant, persistance de l'outbox et des événements traités). Le broker Redis est exécuté par l'équipe et n'est pas un tiers distinct ; s'il était un jour hébergé, il rejoindrait cette ligne |
-| **Mesures de sécurité** | Le contrat d'événement interdit toute donnée personnelle dans le payload, et un test échoue si l'intitulé d'une tâche s'y trouve ; schéma strict, un champ ajouté est rejeté |
-
-Un événement ne transporte que des identifiants, et `ownerId` en est un : il désigne un compte,
-donc il reste rattachable à une personne. C'est une **minimisation**, pas une anonymisation — la
-CNIL distingue les deux, et un identifiant pseudonyme demeure une donnée personnelle.
-
-**L'effacement les supprime donc, et le fait déjà.** `account_erasure.sql` retire les lignes de
-`public.outbox` dont le `payload ->> 'ownerId'` désigne le compte, et les lignes de
-`public.processed_events` correspondantes.
-
-**L'arbitrage que la purge imposait est tranché (`US-39`).** L'effacement retrouvait les
-`processed_events` d'un compte **en passant par l'outbox**, chemin qu'une purge à J+7 supprime :
-une suppression de compte à J+8 aurait laissé les traces de traitement en place. Depuis la
-migration `20260925120000_retention_purge`, `erase_account` les retrouve aussi **par la
-notification** qu'ils ont produite : chaque événement traité est écrit dans la même transaction
-que sa notification, pour la personne notifiée (`notifications.user_id`). Ce chemin vaut pour tous
-les événements, quel que soit le nom que leur payload donne au destinataire (`ownerId`,
-`memberId`), et il tient aussi longtemps que la notification. Aucune colonne n'a été ajoutée.
-
-Ce qui reste hors de portée de l'effacement, et pourquoi ce n'est pas une donnée personnelle : un
-événement traité sans notification, une fois son outbox purgée, se réduit à un identifiant
-aléatoire et un instant, que plus rien ne relie à un compte. La purge le retire à quatre-vingt-dix
-jours comme les autres.
-
-**La portabilité, elle, les exclut**, et pour une raison qui lui est propre : le droit porte sur
-les données que la personne a fournies ou qui la concernent, pas sur les traces techniques que
-leur traitement produit. Un identifiant d'événement et un instant de publication ne lui
-apprennent rien sur elle ; l'objet auquel ils renvoient — la tâche — est restitué par `T-03`.
-Cette exclusion ne dépend pas de l'argument de minimisation ci-dessus.
-
-### T-06 — Journaux applicatifs
+### T-05 — Event queue
 
 | | |
 |---|---|
-| **Finalité** | Diagnostiquer une panne et constater un abus |
-| **Base légale** | Intérêt légitime : maintien en condition opérationnelle |
-| **Personnes concernées** | Toute personne émettant une requête, inscrite ou non |
-| **Catégories de données** | Méthode, chemin appelé, code de réponse, durée, identifiant de corrélation. Le chemin peut contenir l'identifiant d'une tâche |
-| **Localisation** | Sortie standard des processus, collectée par l'hébergeur |
-| **Conservation** | Trente jours au plus. Ce ne sont pas des lignes de notre base : l'hébergeur les retient selon l'offre du projet, une heure en offre Hobby, un jour en Pro, trente jours au maximum avec Observability Plus (documentation Vercel, *Runtime Logs*, section *Limits*). Aucune offre ne dépasse la durée annoncée, donc aucune purge de notre côté n'est nécessaire ; un changement d'offre ou un drain de journaux vers un autre outil la ferait revenir ici |
-| **Destinataires** | Vercel (sous-traitant, journaux d'exécution). Ses journaux de bord enregistrent l'adresse IP du client quoi que notre ligne de journal contienne, ce qui est une finalité et une durée distinctes de l'hébergement applicatif ci-dessus |
-| **Mesures de sécurité** | Masquage du corps des requêtes, de l'en-tête d'autorisation, du cookie et de tout champ nommé `password` ; ni adresse e-mail ni intitulé de tâche n'est journalisé, ce qu'un test vérifie |
+| **Purpose** | Guarantee that a recorded fact is announced once and only once to the components that depend on it |
+| **Legal basis** | Legitimate interest: technical reliability of the service |
+| **Data subjects** | Registered users, indirectly |
+| **Data categories** | Event identifier, versioned name, instant, and a payload restricted to identifiers (`itemId`, `ownerId`) |
+| **Location** | `public.outbox`, `public.processed_events`, and the Redis queue during transport |
+| **Retention** | `outbox`: seven days after publication (`published_at`). An event never published (`published_at is null`) is not purged: it represents a written fact nobody has been told about yet, and deleting it would lose the effect instead of delaying it. `processed_events`: ninety days from its creation, that is from consumption, which makes a replay have no effect during that period. The Redis queue keeps nothing: a message leaves it as soon as it is read, and the broker is not persistent |
+| **Recipients** | Vercel (processor, application hosting: the Express API runs as a Vercel function, `vercel.json` routes `/auth` and `/items` to it, so the body of the requests and responses passes through it in clear) ; Supabase (processor, persistence of the outbox and of the processed events). The Redis broker is run by the team and is not a distinct third party; if it were one day hosted, it would join this entry |
+| **Security measures** | The event contract forbids any personal data in the payload, and a test fails if the title of a task is found in it; strict schema, an added field is rejected |
 
-### T-07 — Projets et appartenance
+An event only carries identifiers, and `ownerId` is one of them: it designates an account, so it
+remains linkable to a person. It is **minimisation**, not anonymisation — the CNIL distinguishes
+the two, and a pseudonymous identifier remains personal data.
 
-| | |
-|---|---|
-| **Finalité** | Regrouper des tâches et les partager entre plusieurs comptes |
-| **Base légale** | Exécution du contrat : le regroupement est la fonction demandée |
-| **Personnes concernées** | Utilisateurs inscrits, membres d'au moins un projet |
-| **Catégories de données** | Intitulé du projet, choisi par l'utilisateur et pouvant contenir ce qu'il veut ; identifiant du compte membre ; rôle (`owner` ou `member`) ; horodatages de création et de mise à jour |
-| **Localisation** | `public.projects` et `public.project_memberships` |
-| **Conservation** | Toute la vie du projet. À la suppression d'un compte, ses appartenances partent, et un projet dont il était le dernier membre est supprimé avec ses tâches ; un projet encore partagé subsiste |
-| **Destinataires** | Vercel (sous-traitant, hébergement applicatif) ; Supabase (sous-traitant, persistance) |
-| **Mesures de sécurité** | Politiques RLS restreignant chaque projet à ses membres ; l'appartenance est vérifiée avant toute lecture ou écriture d'une tâche ; un non-membre reçoit la même absence qu'un projet inexistant, ce qui ne révèle pas qu'un projet existe |
+**Erasure therefore deletes them, and already does.** `account_erasure.sql` removes the rows of
+`public.outbox` whose `payload ->> 'ownerId'` designates the account, and the corresponding rows of
+`public.processed_events`.
 
-Un projet partagé avait une conséquence non désirée, corrigée par `#425` : **un membre qui
-effaçait son compte faisait disparaître ses tâches des projets que les autres continuaient
-d'utiliser.** Ce n'est plus le cas depuis la migration `20260925090000` : les tâches d'un
-projet partagé sont conservées, avec le lien vers le compte rompu plutôt que la ligne retirée —
-seul l'intitulé, saisi par la personne, reste visible aux autres membres, jamais son identité.
-Si le compte effacé était le seul propriétaire d'un projet resté partagé, la propriété est
-transférée au membre le plus ancien, pour que le projet garde quelqu'un en mesure d'inviter ou
-de retirer un membre. La politique de confidentialité (`US-37`) et l'écran de suppression de
-compte le disent.
+**The trade-off the purge imposed is settled (`US-39`).** Erasure found the `processed_events` of
+an account **through the outbox**, a path that a purge at D+7 deletes: an account deletion at D+8
+would have left the processing traces in place. Since the migration
+`20260925120000_retention_purge`, `erase_account` also finds them **through the notification** they
+produced: each processed event is written in the same transaction as its notification, for the
+person notified (`notifications.user_id`). This path holds for every event, whatever name their
+payload gives the recipient (`ownerId`, `memberId`), and it lasts as long as the notification. No
+column was added.
 
-### T-08 — Courriel de réinitialisation de mot de passe
+What remains out of reach of erasure, and why it is not personal data: a processed event without a
+notification, once its outbox is purged, comes down to a random identifier and an instant, which
+nothing links to an account any more. The purge removes it at ninety days like the others.
 
-| | |
-|---|---|
-| **Finalité** | Permettre à une personne qui ne peut plus se connecter de reprendre la main sur son compte |
-| **Base légale** | Exécution du contrat : sans ce canal, un mot de passe oublié rend le compte inaccessible |
-| **Personnes concernées** | Utilisateurs demandant une réinitialisation |
-| **Catégories de données** | Adresse e-mail, et un jeton de récupération à usage unique envoyé dans le message |
-| **Localisation** | Aucune de notre côté. Le jeton est émis et vérifié par Supabase Auth ; le message part vers la boîte du destinataire |
-| **Conservation** | Le jeton expire côté fournisseur et est à usage unique. Le message vit dans la boîte du destinataire, hors de notre portée |
-| **Destinataires** | Supabase (sous-traitant, émission du message) et le fournisseur SMTP configuré. En développement, le mail-catcher de la pile locale ; en production, aucun SMTP n'est encore provisionné (#164) |
-| **Mesures de sécurité** | La réponse de l'API est identique que l'adresse ait un compte ou non, donc la demande ne révèle pas qui est inscrit ; l'échange du jeton se fait entièrement côté serveur ; le lien n'est jamais journalisé |
+**Portability, for its part, excludes them**, and for a reason of its own: the right covers the
+data the person provided or that concerns them, not the technical traces their processing
+produces. An event identifier and a publication instant teach them nothing about themselves; the
+object they point to — the task — is returned by `T-03`. This exclusion does not depend on the
+minimisation argument above.
 
-C'est le seul traitement où une donnée personnelle **sort vers un tiers qui n'est ni Vercel ni
-Supabase**. L'ADR-0010 a tranché ce canal ; le choix du fournisseur de production reste ouvert et
-devra revenir ici.
-
-### T-09 — Limitation de fréquence
+### T-06 — Application logs
 
 | | |
 |---|---|
-| **Finalité** | Refuser une attaque par force brute sur l'inscription, la connexion et la demande de réinitialisation, et borner le sondage des adresses inscrites par l'invitation (`T-10`) |
-| **Base légale** | Intérêt légitime : protéger les comptes contre l'essai systématique d'identifiants |
-| **Personnes concernées** | Toute personne émettant une requête, inscrite ou non |
-| **Catégories de données** | Adresse IP de l'appelant, seule clé du compteur des routes publiques ; identifiant du compte pour l'invitation, qui exige une session |
-| **Localisation** | Mémoire du processus, dans une table effacée au redémarrage |
-| **Conservation** | La durée de la fenêtre, de cinq minutes à une heure selon la route, puis la clé est retirée |
-| **Destinataires** | Aucun. La valeur ne quitte pas le processus |
-| **Mesures de sécurité** | Jamais journalisée — `request-log.ts` ne consigne aucune adresse, ce qu'un test vérifie — jamais persistée, jamais transmise. `TRUST_PROXY` détermine combien de sauts de proxy sont crus pour la dériver, et une valeur fausse ferait partager un même compteur à tous les visiteurs |
+| **Purpose** | Diagnose a failure and detect abuse |
+| **Legal basis** | Legitimate interest: keeping the service operational |
+| **Data subjects** | Any person issuing a request, registered or not |
+| **Data categories** | Method, path called, response code, duration, correlation identifier. The path can contain the identifier of a task |
+| **Location** | Standard output of the processes, collected by the host |
+| **Retention** | Thirty days at most. These are not rows of our database: the host retains them according to the plan of the project, one hour on the Hobby plan, one day on Pro, thirty days at most with Observability Plus (Vercel documentation, *Runtime Logs*, *Limits* section). No plan exceeds the announced duration, so no purge is needed on our side; a change of plan or a log drain to another tool would bring it back here |
+| **Recipients** | Vercel (processor, runtime logs). Its edge logs record the IP address of the client whatever our log line contains, which is a purpose and a duration distinct from the application hosting above |
+| **Security measures** | Masking of the request body, of the authorization header, of the cookie and of any field named `password`; neither an email address nor a task title is logged, which a test checks |
 
-### T-10 — Invitations dans un projet
+### T-07 — Projects and membership
 
 | | |
 |---|---|
-| **Finalité** | Proposer à une personne de rejoindre un projet, et la laisser accepter ou refuser |
-| **Base légale** | Exécution du contrat : le partage d'un projet est la fonction demandée, et l'entrée dépend de l'accord de la personne invitée |
-| **Personnes concernées** | Utilisateurs inscrits : la personne qui invite et la personne invitée |
-| **Catégories de données** | Identifiants du projet, de la personne invitée et de la personne qui invite ; état de l'invitation (`pending`, `accepted`, `declined`) ; dates de création et de réponse. L'adresse de la personne qui invite est montrée à la personne invitée, lue à la demande et jamais copiée, ou absente si ce compte a depuis été effacé |
-| **Localisation** | `public.project_invitations`, et la colonne `invitation_id` de `public.notifications` |
-| **Conservation** | Toute la vie du projet. Une invitation traitée reste pour que l'historique dise qui a refusé ; elle part avec le projet ou avec le compte de la personne invitée. L'effacement du compte de la personne qui invite ne la retire plus (`#425`, `ADR-0021`) : seul `invited_by` passe à `null`, et la notification produite pour la personne invitée reste lisible |
-| **Destinataires** | Vercel (sous-traitant, hébergement applicatif) ; Supabase (sous-traitant, persistance) |
-| **Mesures de sécurité** | Seul un propriétaire du projet invite ; seule la personne invitée lit et répond à son invitation, les autres comptes reçoivent la même absence qu'une invitation inexistante ; l'adresse saisie n'est ni journalisée ni placée dans l'événement ; vingt invitations par compte et par quart d'heure bornent l'usage de la route pour tester quelles adresses ont un compte |
+| **Purpose** | Group tasks and share them between several accounts |
+| **Legal basis** | Performance of the contract: grouping is the function requested |
+| **Data subjects** | Registered users, members of at least one project |
+| **Data categories** | Title of the project, chosen by the user and able to contain whatever they want; identifier of the member account; role (`owner` or `member`); creation and update timestamps |
+| **Location** | `public.projects` and `public.project_memberships` |
+| **Retention** | The whole life of the project. When an account is deleted, its memberships go, and a project of which it was the last member is deleted with its tasks; a project still shared remains |
+| **Recipients** | Vercel (processor, application hosting) ; Supabase (processor, persistence) |
+| **Security measures** | RLS policies restricting each project to its members; membership is checked before any read or write of a task; a non-member receives the same absence as for a project that does not exist, which does not reveal that a project exists |
 
-Inviter répond « aucun compte ne porte cette adresse » quand c'est le cas, pour que la
-personne qui invite corrige une faute de frappe. La route révèle donc qu'une adresse est
-inscrite, à un compte authentifié et dans la limite de son budget. Ce choix est assumé : le
-refus silencieux laisserait une invitation partir vers personne sans que l'auteur le sache.
+A shared project had an unwanted consequence, corrected by `#425`: **a member who erased their
+account made their tasks disappear from the projects the others kept using.** This is no longer the
+case since the migration `20260925090000`: the tasks of a shared project are kept, with the link to
+the account broken rather than the row removed — only the title, entered by the person, remains
+visible to the other members, never their identity. If the erased account was the only owner of a
+project that remained shared, ownership is transferred to the oldest member, so that the project
+keeps someone able to invite or remove a member. The privacy policy (`US-37`) and the account
+deletion screen say so.
 
-## Purge automatique
+### T-08 — Password reset email
 
-`public.purge_expired_data` applique les durées de `T-04` et `T-05`, en une transaction :
-
-| Traitement | Ce qui est supprimé |
+| | |
 |---|---|
-| `notifications` | les lignes créées il y a plus de quatre-vingt-dix jours |
-| `processed_events` | les lignes traitées il y a plus de quatre-vingt-dix jours |
-| `outbox` | les lignes publiées il y a plus de sept jours ; une ligne jamais publiée n'est jamais supprimée |
+| **Purpose** | Allow a person who can no longer sign in to regain control of their account |
+| **Legal basis** | Performance of the contract: without this channel, a forgotten password makes the account inaccessible |
+| **Data subjects** | Users requesting a reset |
+| **Data categories** | Email address, and a single-use recovery token sent in the message |
+| **Location** | None on our side. The token is issued and checked by Supabase Auth; the message goes to the mailbox of the recipient |
+| **Retention** | The token expires on the provider side and is single-use. The message lives in the mailbox of the recipient, out of our reach |
+| **Recipients** | Supabase (processor, sending the message) and the configured SMTP provider. In development, the mail catcher of the local stack; in production, no SMTP is provisioned yet (#164) |
+| **Security measures** | The response of the API is identical whether or not the address has an account, so the request does not reveal who is registered; the token exchange happens entirely on the server side; the link is never logged |
 
-Le workflow `purge` l'appelle une fois par jour par `POST /internal/purge` (`docs/ci.md`). Chaque
-passe écrit, dans le résumé de son exécution et dans les journaux de l'API, la date, le traitement
-et le nombre de lignes supprimées, sans aucun identifiant. Une seconde passe juste après la
-première ne supprime rien. `T-06` n'y figure pas : ses journaux ne sont pas dans notre base.
+It is the only processing activity where personal data **goes out to a third party that is neither
+Vercel nor Supabase**. ADR-0010 decided this channel; the choice of the production provider remains
+open and will have to come back here.
 
-## Ce que le registre ne couvre pas encore
+### T-09 — Rate limiting
 
-Rien. Les dix traitements ci-dessus couvrent chaque table du schéma, chaque appel sortant et
-chaque donnée tenue en mémoire par le processus.
+| | |
+|---|---|
+| **Purpose** | Refuse a brute-force attack on registration, sign-in and reset requests, and bound the probing of registered addresses through invitations (`T-10`) |
+| **Legal basis** | Legitimate interest: protect the accounts against the systematic trial of credentials |
+| **Data subjects** | Any person issuing a request, registered or not |
+| **Data categories** | IP address of the caller, the only key of the counter of the public routes; identifier of the account for invitations, which require a session |
+| **Location** | Memory of the process, in a table cleared at restart |
+| **Retention** | The duration of the window, from five minutes to one hour depending on the route, then the key is removed |
+| **Recipients** | None. The value does not leave the process |
+| **Security measures** | Never logged — `request-log.ts` records no address, which a test checks — never persisted, never transmitted. `TRUST_PROXY` determines how many proxy hops are trusted to derive it, and a wrong value would make every visitor share the same counter |
 
-## Champs sans finalité identifiée
+### T-10 — Invitations into a project
 
-Chaque colonne persistée a été rattachée à un traitement ci-dessus. Aucune n'est restée sans
-finalité, donc aucune suppression de champ n'est requise par cette issue.
+| | |
+|---|---|
+| **Purpose** | Offer a person to join a project, and let them accept or decline |
+| **Legal basis** | Performance of the contract: sharing a project is the function requested, and joining depends on the agreement of the invited person |
+| **Data subjects** | Registered users: the person who invites and the invited person |
+| **Data categories** | Identifiers of the project, of the invited person and of the person who invites; state of the invitation (`pending`, `accepted`, `declined`); creation and response dates. The address of the person who invites is shown to the invited person, read on demand and never copied, or absent if that account has since been erased |
+| **Location** | `public.project_invitations`, and the `invitation_id` column of `public.notifications` |
+| **Retention** | The whole life of the project. A handled invitation stays so that the history says who declined; it goes with the project or with the account of the invited person. Erasing the account of the person who invites no longer removes it (`#425`, `ADR-0021`): only `invited_by` becomes `null`, and the notification produced for the invited person remains readable |
+| **Recipients** | Vercel (processor, application hosting) ; Supabase (processor, persistence) |
+| **Security measures** | Only an owner of the project invites; only the invited person reads and answers their invitation, the other accounts receive the same absence as for an invitation that does not exist; the address entered is neither logged nor placed in the event; twenty invitations per account per quarter of an hour bound the use of the route to test which addresses have an account |
 
-Le cas examiné de près est `public.users.email`, qui duplique `auth.users.email`. Il est
-conservé : le miroir est ce qui permet à `items.user_id` de référencer un compte, et l'e-mail
-y est nécessaire à l'export de données personnelles, qui doit restituer l'adresse sans
-dépendre d'un appel à l'API d'authentification.
+Inviting answers "no account carries this address" when that is the case, so that the person who
+invites corrects a typo. The route therefore reveals that an address is registered, to an
+authenticated account and within the limit of its budget. This choice is owned: a silent refusal
+would let an invitation go to nobody without its author knowing.
 
-## Décisions à ratifier
+## Automatic purge
 
-Chaque durée ci-dessus a été confrontée au schéma en vigueur, pas à celui du sprint 1 : une
-durée que le code ne pratique pas est pire qu'une durée absente, puisqu'elle affirme une
-rétention qui n'existe pas. Depuis `US-39`, chacune est appliquée par la purge automatique ou
-par l'hébergeur, et la contrainte que `T-05` posait à la purge est levée. Trois points demandent
-une confirmation de l'équipe en relecture :
+`public.purge_expired_data` applies the durations of `T-04` and `T-05`, in one transaction:
 
-1. **La région d'hébergement Supabase.** Une instance hors Union européenne impose un
-   encadrement des transferts qu'il faut alors décrire ici. C'est le seul point qui peut
-   encore changer le contenu d'un traitement.
-2. **Les durées elles-mêmes.** Le compte rendu de lancement proposait « indéfiniment sauf
-   demande de l'utilisateur ». Ce n'est pas tenable : la limitation de la conservation est un
-   principe du règlement, et une durée indéfinie ne s'écrit pas dans un registre. Les valeurs
-   retenues ici sont celles qui paraissent proportionnées à chaque finalité ; l'équipe peut
-   les allonger ou les raccourcir, pas les supprimer.
+| Processing activity | What is deleted |
+|---|---|
+| `notifications` | the rows created more than ninety days ago |
+| `processed_events` | the rows processed more than ninety days ago |
+| `outbox` | the rows published more than seven days ago; a row never published is never deleted |
+
+The `purge` workflow calls it once a day through `POST /internal/purge` (`docs/ci.md`). Each pass
+writes, in the summary of its run and in the API logs, the date, the processing activity and the
+number of rows deleted, without any identifier. A second pass right after the first deletes
+nothing. `T-06` is not included: its logs are not in our database.
+
+## What the register does not cover yet
+
+Nothing. The ten processing activities above cover every table of the schema, every outgoing call
+and every piece of data held in memory by the process.
+
+## Fields without an identified purpose
+
+Each persisted column has been attached to a processing activity above. None was left without a
+purpose, so no field deletion is required by this issue.
+
+The case examined closely is `public.users.email`, which duplicates `auth.users.email`. It is kept:
+the mirror is what allows `items.user_id` to reference an account, and the email is needed there
+for the personal data export, which must return the address without depending on a call to the
+authentication API.
+
+## Decisions to ratify
+
+Each duration above was checked against the schema in force, not against that of sprint 1: a
+duration the code does not practise is worse than a missing duration, since it asserts a retention
+that does not exist. Since `US-39`, each one is applied by the automatic purge or by the host, and
+the constraint `T-05` placed on the purge is lifted. Three points need a confirmation from the team
+at review:
+
+1. **The Supabase hosting region.** An instance outside the European Union requires a framework
+   for the transfers, which must then be described here. It is the only point that can still
+   change the content of a processing activity.
+2. **The durations themselves.** The kickoff record proposed "indefinitely unless the user asks".
+   That is not tenable: storage limitation is a principle of the regulation, and an indefinite
+   duration cannot be written in a register. The values chosen here are those that seem
+   proportionate to each purpose; the team can lengthen or shorten them, not remove them.
