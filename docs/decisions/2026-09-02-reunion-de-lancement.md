@@ -1,53 +1,53 @@
-# Réunion de lancement — 2 septembre 2026
+# Kickoff meeting — 2 September 2026
 
-Objectif fixé : sortir de la réunion avec les décisions qui conditionnent la Definition of Ready.
-Tant qu'elles n'étaient pas actées, aucune user story de développement ne pouvait démarrer.
+Goal set: leave the meeting with the decisions that condition the Definition of Ready. As long as
+they were not recorded, no development user story could start.
 
-Pour chaque point, une recommandation argumentée servait de départ, à valider ou à rejeter.
-Chaque décision structurante devait ensuite devenir un ADR ([docs/adr/](../adr/README.md)).
+For each point, a reasoned recommendation served as the starting point, to be validated or
+rejected. Each structuring decision was then to become an ADR ([docs/adr/](../adr/README.md)).
 
-Règle de tenue : on tranche, on note la raison en une phrase, on passe ; un point qui déborde est
-reporté avec une date.
+Meeting rule: decide, note the reason in one sentence, move on; a point that overruns is postponed
+with a date.
 
-## Décisions
+## Decisions
 
-| # | Sujet | Recommandation apportée | Décision retenue |
+| # | Subject | Recommendation brought | Decision taken |
 |---|---|---|---|
-| 1 | Product Owner | une seule personne, qui arbitre le périmètre | Victor Briez |
-| 1 | Rotation du Scrum Master | exigée par le sujet | sprint 1 : Aurélien Pochart ; sprint 2 : Arthur Gasmi ; sprint 3 : Arthur Guyetand |
-| 1 | Revues et daily | échéances de sprint les 4, 11 et 25 septembre | revue du sprint 1 le vendredi 4 septembre à 14 h 30 ; daily à 16 h |
-| 2 | Périmètre utilisateur | mono-utilisateur, le partage en Would have | **projets partagés** |
-| 3.1 | Typage du backend | TypeScript strict | TypeScript |
-| 3.2 | Découpage du backend | par domaine, en couches à l'intérieur | par domaine, en couches à l'intérieur |
-| 4.1 | SGBD | PostgreSQL | **Supabase** (PostgreSQL hébergé) |
-| 4.2 | Accès aux données | query builder ou ORM léger, migrations versionnées | le query builder de Supabase |
-| 5 | Chaîne de build du front | Vite, React conservé | Vite, React conservé |
-| 6 | Mécanisme d'événements | bus en mémoire avec table outbox | **broker externe, Redis** |
-| 7 | Sessions et authentification | jeton d'accès court et jeton de renouvellement révocable, en cookie httpOnly | **Supabase** (Supabase Auth) |
-| 8 | Quality gate, couverture, registre d'images | SonarCloud bloquant ; 70 % sur le nouveau code ; GHCR | aucune décision consignée en séance |
-| 9 | Accessibilité, langue, direction graphique | WCAG 2.1 AA ; une seule langue ; bibliothèque ou CSS maison | aucune décision consignée en séance |
+| 1 | Product Owner | a single person, who arbitrates the scope | Victor Briez |
+| 1 | Rotation of the Scrum Master | required by the subject | sprint 1: Aurélien Pochart; sprint 2: Arthur Gasmi; sprint 3: Arthur Guyetand |
+| 1 | Reviews and daily | sprint deadlines on 4, 11 and 25 September | sprint 1 review on Friday 4 September at 2:30 pm; daily at 4 pm |
+| 2 | User scope | single user, sharing as a Would have | **shared projects** |
+| 3.1 | Backend typing | strict TypeScript | TypeScript |
+| 3.2 | Backend split | by domain, in layers inside | by domain, in layers inside |
+| 4.1 | Database | PostgreSQL | **Supabase** (hosted PostgreSQL) |
+| 4.2 | Data access | query builder or light ORM, versioned migrations | the Supabase query builder |
+| 5 | Front-end build chain | Vite, React kept | Vite, React kept |
+| 6 | Event mechanism | in-memory bus with an outbox table | **external broker, Redis** |
+| 7 | Sessions and authentication | short access token and revocable refresh token, in an httpOnly cookie | **Supabase** (Supabase Auth) |
+| 8 | Quality gate, coverage, image registry | blocking SonarCloud; 70 % on new code; GHCR | no decision recorded during the session |
+| 9 | Accessibility, language, visual direction | WCAG 2.1 AA; a single language; library or custom CSS | no decision recorded during the session |
 
-En gras, les points où la décision s'écarte de la recommandation apportée. Les ADR du dépôt en
-donnent la justification.
+In bold, the points where the decision departs from the recommendation brought. The ADRs of the
+repository give the justification.
 
-## Points hors ordre du jour, tranchés quand même
+## Points outside the agenda, decided anyway
 
-| Sujet | Décision |
+| Subject | Decision |
 |---|---|
-| Canal de notification | les deux : dans l'application et par e-mail |
-| Responsable de traitement RGPD et contact | Seïf Soltane |
-| Durées de conservation des données | indéfiniment, sauf demande de l'utilisateur et dans le cadre du RGPD |
-| Cible de déploiement | Vercel |
-| Scénario et jeu de données de démonstration | à voir plus tard |
+| Notification channel | both: in the application and by email |
+| GDPR data controller and contact | Seïf Soltane |
+| Data retention periods | indefinitely, unless the user asks and within the GDPR framework |
+| Deployment target | Vercel |
+| Demonstration scenario and dataset | to be seen later |
 
-## Après la réunion
+## After the meeting
 
-Suites prévues en séance :
+Follow-ups planned during the session:
 
-1. Écrire un ADR par décision structurante, mergé avant que l'item qu'il débloque démarre.
-2. Compléter `docs/team.md` : rôles, rotation, calendrier.
-3. Affiner `.github/CODEOWNERS` avec l'ownership par module.
-4. Activer l'assignation tournante des relectures sur l'équipe.
-5. Repasser les items du sprint 1 en Ready une fois leurs décisions levées.
-6. Prendre les premières issues dans l'ordre des dépendances : EN-03 et EN-04 en parallèle, puis
+1. Write one ADR per structuring decision, merged before the item it unblocks starts.
+2. Complete `docs/team.md`: roles, rotation, calendar.
+3. Refine `.github/CODEOWNERS` with the ownership per module.
+4. Enable rotating review assignment across the team.
+5. Move the sprint 1 items back to Ready once their decisions are lifted.
+6. Take the first issues in the order of the dependencies: EN-03 and EN-04 in parallel, then
    EN-05, EN-09, EN-06.

@@ -1,42 +1,43 @@
 # Sprint 2 — Dailies
 
-Scrum Master : Arthur Gasmi. Daily à 14 h 30. Seuls les dailies consignés en séance figurent ici.
+Scrum Master: Arthur Gasmi. Daily at 2:30 pm. Only the dailies recorded during the session appear
+here.
 
-## Mardi 8 septembre 2026
+## Tuesday 8 September 2026
 
-Absents : aucun. Durée réelle : 15 minutes.
+Absent: none. Actual duration: 15 minutes.
 
-| Membre | Fait la veille | Prévu | Blocage |
+| Member | Done the day before | Planned | Blocker |
 |---|---|---|---|
-| Arthur Dos Santos | — | EN-48 | aucun |
-| Arthur Gasmi | mise à jour des issues du sprint 2, dossier et modèles de documentation | US-13, exporter et supprimer mes données personnelles | aucun |
-| Arthur Guyetand | début de US-16 | finir US-16 | aucun |
-| Aurélien Pochart | EN-25 | US-47 | aucun |
-| Seïf Soltane | — | US-37 et EN-38 | aucun |
-| Victor Briez | travail en relecture | US-36 | aucun |
+| Arthur Dos Santos | — | EN-48 | none |
+| Arthur Gasmi | update of the sprint 2 issues, documentation folder and templates | US-13, export and delete my personal data | none |
+| Arthur Guyetand | start of US-16 | finish US-16 | none |
+| Aurélien Pochart | EN-25 | US-47 | none |
+| Seïf Soltane | — | US-37 and EN-38 | none |
+| Victor Briez | work in review | US-36 | none |
 
-## Mercredi 9 septembre 2026
+## Wednesday 9 September 2026
 
-Absents : aucun. Durée réelle : 10 minutes.
+Absent: none. Actual duration: 10 minutes.
 
-| Membre | Fait la veille | Prévu | Blocage |
+| Member | Done the day before | Planned | Blocker |
 |---|---|---|---|
-| Arthur Dos Santos | EN-49 | US-14 | nombreuses pull requests à gérer |
-| Arthur Gasmi | US-13 | US-27 | aucun |
-| Arthur Guyetand | US-16 | US-31 | aucun |
-| Aurélien Pochart | US-47 | US-18 | aucun |
-| Seïf Soltane | US-37 | EN-38 | gestion de conflits |
-| Victor Briez | configuration SMTP, EN-29 | US-36 | aucun |
+| Arthur Dos Santos | EN-49 | US-14 | many pull requests to handle |
+| Arthur Gasmi | US-13 | US-27 | none |
+| Arthur Guyetand | US-16 | US-31 | none |
+| Aurélien Pochart | US-47 | US-18 | none |
+| Seïf Soltane | US-37 | EN-38 | conflict resolution |
+| Victor Briez | SMTP configuration, EN-29 | US-36 | none |
 
-## Jeudi 10 septembre 2026
+## Thursday 10 September 2026
 
-Absents : aucun. Durée réelle : 15 minutes.
+Absent: none. Actual duration: 15 minutes.
 
-| Membre | Fait la veille | Prévu | Blocage |
+| Member | Done the day before | Planned | Blocker |
 |---|---|---|---|
-| Arthur Dos Santos | EN-48 et US-14 | finir après le merge des autres pull requests | attente des merges des autres pull requests |
-| Arthur Gasmi | relectures et US-27 | finir US-27 | aucun |
-| Arthur Guyetand | US-16, US-31 | US-15 | attente de merge |
-| Aurélien Pochart | relectures et US-18 | finir US-18 | aucun |
-| Seïf Soltane | EN-38 | finir US-37 | attente d'une relecture |
-| Victor Briez | — | US-3 (tel que noté en séance) | aucun |
+| Arthur Dos Santos | EN-48 and US-14 | finish after the merge of the other pull requests | waiting for the merges of the other pull requests |
+| Arthur Gasmi | reviews and US-27 | finish US-27 | none |
+| Arthur Guyetand | US-16, US-31 | US-15 | waiting for a merge |
+| Aurélien Pochart | reviews and US-18 | finish US-18 | none |
+| Seïf Soltane | EN-38 | finish US-37 | waiting for a review |
+| Victor Briez | — | US-3 (as noted during the session) | none |
