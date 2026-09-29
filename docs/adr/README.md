@@ -20,7 +20,7 @@ Comment nous écrivons le code, indépendamment des services dont il dépend.
 | [0002](0002-typescript-strict.md) | TypeScript strict sur tout le dépôt | Accepté | `EN-04`, `EN-06` |
 | [0003](0003-decoupage-du-backend-par-domaine.md) | Découpage du backend par domaine, en couches à l'intérieur | Accepté | `EN-04` |
 | [0006](0006-chaine-front-vite-et-react.md) | Vite pour la chaîne front, React conservé | Accepté | `EN-05` |
-| [0011](0011-anglais-pour-le-code-et-l-interface.md) | Anglais pour le code et l'interface, français pour la documentation | Accepté | la migration de nommage, toutes les revues |
+| [0011](0011-anglais-pour-le-code-et-l-interface.md) | Anglais pour le code et l'interface, français pour la documentation | Accepté, remplacé en partie par 0022 | la migration de nommage, toutes les revues |
 | [0012](0012-pas-de-formateur-automatique.md) | Pas de formateur automatique pour l'instant | Accepté | la mise en forme, qui reste tenue par la relecture |
 | [0013](0013-garantie-de-livraison-des-evenements.md) | L'outbox est la garantie, et la notification est l'effet démontrable | Accepté | tout producteur d'événement, toute cible de déploiement |
 | [0014](0014-niveau-d-accessibilite-wcag-21-aa.md) | WCAG 2.1 AA comme niveau visé | Accepté | les critères d'acceptation de toutes les US front |
@@ -30,6 +30,7 @@ Comment nous écrivons le code, indépendamment des services dont il dépend.
 | [0018](0018-migration-des-donnees-par-scripts-sql-relus.md) | Migration des données dans les deux sens par scripts SQL générés et relus | Accepté | la reprise du legacy, la sortie de Supabase, tout changement de schéma |
 | [0019](0019-application-automatique-des-migrations-hebergees.md) | Application automatique des migrations à la base hébergée, migrations additives | Accepté | toute migration |
 | [0020](0020-relais-par-boucle-de-trente-secondes.md) | Relais serverless par une boucle de trente secondes | Accepté | tout producteur d'événement sur la cible serverless |
+| [0022](0022-english-for-the-repository-documentation.md) | Anglais pour toute la documentation du dépôt | Proposé | la traduction de la documentation |
 
 L'ADR-0001 a été tranché **contre** la recommandation du backlog, qui proposait le
 mono-utilisateur. Il porte la raison qui a emporté la décision et le coût accepté en échange.

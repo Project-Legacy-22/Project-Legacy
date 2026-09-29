@@ -1,6 +1,6 @@
 # ADR-0011 — Anglais pour le code et pour l'interface
 
-- **Statut** : Accepté
+- **Statut** : Accepté ; remplacé par ADR-0022 pour la langue de la documentation et des échanges GitHub
 - **Date** : 2026-09-10
 - **Décideurs** : équipe
 - **Issue liée** : #15 (constat), la migration a la sienne

@@ -8,8 +8,8 @@ code and cannot drift from it. An issue is not done until its page exists and is
 
 Format: `docs/features/_template.md`. File name: `<issue-number>-<slug>.md`.
 
-These pages are written in English. The rest of the repository documentation, including the
-architecture decision records and the event catalogue, is in French.
+These pages are written in English, like the rest of the repository documentation
+(ADR-0022).
 
 ## Scope
 
