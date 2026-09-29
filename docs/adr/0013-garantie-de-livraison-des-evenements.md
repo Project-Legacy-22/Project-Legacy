@@ -1,68 +1,68 @@
-# ADR-0013 — L'outbox est la garantie, et la notification est l'effet démontrable
+# ADR-0013 — The outbox is the guarantee, and the notification is the demonstrable effect
 
-- **Statut** : Accepté
-- **Date** : 2026-09-11
-- **Décideurs** : équipe, à la revue du sprint 2
-- **Issue liée** : #228, prolonge l'ADR-0007
+- **Status**: Accepted
+- **Date**: 2026-09-11
+- **Deciders**: team, at the sprint 2 review
+- **Related issue**: #228, extends ADR-0007
 
-## Contexte
+## Context
 
-L'ADR-0007 a retenu un courtier externe sans statuer sur ce qui garantit qu'un événement publié
-corresponde à un fait réellement écrit. Sa ligne 69 laisse le choix ouvert : « soit conserver
-l'outbox avec Redis comme transport, soit assumer explicitement qu'un événement peut être perdu ».
+ADR-0007 chose an external broker without ruling on what guarantees that a published event matches
+a fact actually written. Its consequences leave the choice open: "either keep the outbox table
+with Redis as the transport, or explicitly accept that an event can be lost".
 
-Le code a tranché de lui-même depuis. Au 11 septembre 2026 : la table `outbox` est écrite dans la
-même transaction que la tâche (`create_item_with_event`), un relais la vide vers Redis,
-`processed_events` absorbe un rejeu, et la purge est documentée au registre des traitements. La
-question restait ouverte dans le dépôt alors qu'elle était fermée dans le schéma.
+The code has decided by itself since then. As of 11 September 2026: the `outbox` table is written
+in the same transaction as the task (`create_item_with_event`), a relay drains it to Redis,
+`processed_events` absorbs a replay, and the purge is documented in the register of processing
+activities. The question remained open in the repository while it was closed in the schema.
 
-Le sujet demande par ailleurs « au moins un flux événementiel démontrable », sans dire lequel.
+The subject also asks for "at least one demonstrable event flow", without saying which.
 
-## Options considérées
+## Options considered
 
-### Option A — Conserver l'outbox, Redis comme transport
-- Avantages : un événement publié correspond toujours à un fait écrit, puisque les deux écritures
-  partagent une transaction. Un courtier indisponible retarde la livraison sans la perdre.
-- Inconvénients : une table de plus, un relais à faire tourner, et une livraison au moins une fois
-  qui oblige le consommateur à être idempotent.
+### Option A — Keep the outbox, Redis as the transport
+- Pros: a published event always matches a written fact, since both writes share a transaction.
+  An unavailable broker delays delivery without losing it.
+- Cons: one more table, a relay to run, and an at-least-once delivery that forces the consumer to
+  be idempotent.
 
-### Option B — Publier directement, perte assumée
-- Avantages : ni table ni relais.
-- Inconvénients : une panne du courtier entre l'écriture et la publication perd l'événement
-  définitivement, et rien ne permet de savoir lequel.
+### Option B — Publish directly, loss accepted
+- Pros: neither table nor relay.
+- Cons: a broker failure between the write and the publication loses the event permanently, and
+  nothing tells which one.
 
-## Décision
+## Decision
 
-Nous retenons **l'option A**, et nous nommons l'effet démontrable : **créer une tâche produit une
-notification visible par son destinataire**.
+We choose **option A**, and we name the demonstrable effect: **creating a task produces a
+notification visible to its recipient**.
 
-Parce que la garantie est déjà construite et testée, et parce que l'alternative rend une perte
-invisible : rien, dans l'option B, ne dit quel événement a disparu. L'effet retenu est celui qui
-traverse toute la chaîne — écriture, outbox, courtier, consommateur, lecture — en un seul geste
-observable.
+Because the guarantee is already built and tested, and because the alternative makes a loss
+invisible: nothing, in option B, says which event disappeared. The chosen effect is the one that
+goes through the whole chain — write, outbox, broker, consumer, read — in a single observable
+action.
 
-## Conséquences
+## Consequences
 
-**Positives**
-- Le consommateur est idempotent par construction, `processed_events` faisant foi.
-- Le flux se démontre en une action : créer une tâche, ouvrir les notifications.
+**Positive**
+- The consumer is idempotent by construction, `processed_events` being authoritative.
+- The flow is demonstrated in one action: create a task, open the notifications.
 
-**Négatives / dette acceptée**
-- Livraison au moins une fois, jamais exactement une fois.
-- Un événement que le consommateur ne peut pas appliquer est perdu : il a déjà quitté la file. La
-  file d'attente morte est l'objet de `EN-35`.
+**Negative / accepted debt**
+- At-least-once delivery, never exactly once.
+- An event the consumer cannot apply is lost: it has already left the queue. The dead-letter queue
+  is the subject of `EN-35`.
 
-**Ce que ça impose au reste du projet**
-- Tout producteur d'événement écrit dans l'outbox dans la transaction du fait, jamais après.
-- Toute cible de déploiement doit faire tourner une passe de relais. Sur une cible sans processus
-  long, elle est déclenchée par l'écriture et balayée par un appel planifié (#258).
+**What it imposes on the rest of the project**
+- Every event producer writes into the outbox within the transaction of the fact, never after.
+- Every deployment target must run a relay pass. On a target without a long-running process, it
+  is triggered by the write and swept by a scheduled call (#258).
 
-## Comment on saura qu'on s'est trompé
+## How we will know we were wrong
 
-Une ligne de l'outbox non publiée depuis plus longtemps que l'intervalle du balai, sans panne du
-courtier pour l'expliquer.
+An outbox row left unpublished for longer than the sweep interval, without a broker failure to
+explain it.
 
-## Références
+## References
 
-- ADR-0007 (mécanisme d'événements), `docs/features/127-event-consumer-and-notifications.md`
-- `docs/gdpr/registre.md`, traitement des événements
+- ADR-0007 (event mechanism), `docs/features/127-event-consumer-and-notifications.md`
+- `docs/gdpr/registre.md`, processing of the events

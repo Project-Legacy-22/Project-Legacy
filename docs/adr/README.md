@@ -1,71 +1,71 @@
-# Décisions d'architecture
+# Architecture decisions
 
-Une décision structurante par fichier. Un ADR n'est pas un compte rendu : il enregistre le
-contexte au moment du choix, les options réellement envisagées, la raison qui a tranché, le
-coût accepté, et le signal observable qui le remettrait en cause.
+One structuring decision per file. An ADR is not a meeting record: it records the context at the
+time of the choice, the options actually considered, the reason that decided, the accepted cost,
+and the observable signal that would call it into question.
 
-Un ADR est **immuable une fois mergé**. Une décision qui change ne se réécrit pas : on ouvre
-un nouvel ADR et on passe l'ancien en `Remplacé par ADR-NNNN`. L'historique des décisions est
-un livrable au même titre que le code.
+An ADR is **immutable once merged**. A decision that changes is not rewritten: a new ADR is opened
+and the old one moves to `Superseded by ADR-NNNN`. The history of the decisions is a deliverable
+just like the code.
 
-Format : `docs/adr/_template.md`. Numérotation continue, jamais réattribuée.
+Format: `docs/adr/_template.md`. Continuous numbering, never reassigned.
 
-## Décisions de conception
+## Design decisions
 
-Comment nous écrivons le code, indépendamment des services dont il dépend.
+How we write the code, independently of the services it depends on.
 
-| ADR | Décision | Statut | Débloque |
+| ADR | Decision | Status | Unblocks |
 |---|---|---|---|
-| [0001](0001-perimetre-utilisateur-projets-partages.md) | Un projet est partagé entre plusieurs comptes | Accepté | `EN-09`, `US-11`, `US-16`, le modèle entier |
-| [0002](0002-typescript-strict.md) | TypeScript strict sur tout le dépôt | Accepté | `EN-04`, `EN-06` |
-| [0003](0003-decoupage-du-backend-par-domaine.md) | Découpage du backend par domaine, en couches à l'intérieur | Accepté | `EN-04` |
-| [0006](0006-chaine-front-vite-et-react.md) | Vite pour la chaîne front, React conservé | Accepté | `EN-05` |
-| [0011](0011-anglais-pour-le-code-et-l-interface.md) | Anglais pour le code et l'interface, français pour la documentation | Accepté, remplacé en partie par 0022 | la migration de nommage, toutes les revues |
-| [0012](0012-pas-de-formateur-automatique.md) | Pas de formateur automatique pour l'instant | Accepté | la mise en forme, qui reste tenue par la relecture |
-| [0013](0013-garantie-de-livraison-des-evenements.md) | L'outbox est la garantie, et la notification est l'effet démontrable | Accepté | tout producteur d'événement, toute cible de déploiement |
-| [0014](0014-niveau-d-accessibilite-wcag-21-aa.md) | WCAG 2.1 AA comme niveau visé | Accepté | les critères d'acceptation de toutes les US front |
-| [0015](0015-ghcr-comme-registre-d-images.md) | GHCR comme registre d'images | Accepté | la publication d'image et les releases |
-| [0016](0016-supervision-prometheus-et-grafana-cloud.md) | Prometheus comme format, Grafana Cloud en Allemagne comme plateforme | Accepté | toute métrique ajoutée, la démonstration du flux |
-| [0017](0017-supabase-heberge-dependance-assumee.md) | Supabase hébergé, dépendance assumée et réversible | Accepté | toute évolution du schéma, la procédure de sortie |
-| [0018](0018-migration-des-donnees-par-scripts-sql-relus.md) | Migration des données dans les deux sens par scripts SQL générés et relus | Accepté | la reprise du legacy, la sortie de Supabase, tout changement de schéma |
-| [0019](0019-application-automatique-des-migrations-hebergees.md) | Application automatique des migrations à la base hébergée, migrations additives | Accepté | toute migration |
-| [0020](0020-relais-par-boucle-de-trente-secondes.md) | Relais serverless par une boucle de trente secondes | Accepté | tout producteur d'événement sur la cible serverless |
-| [0022](0022-english-for-the-repository-documentation.md) | Anglais pour toute la documentation du dépôt | Proposé | la traduction de la documentation |
+| [0001](0001-perimetre-utilisateur-projets-partages.md) | A project is shared between several accounts | Accepted | `EN-09`, `US-11`, `US-16`, the whole model |
+| [0002](0002-typescript-strict.md) | Strict TypeScript across the whole repository | Accepted | `EN-04`, `EN-06` |
+| [0003](0003-decoupage-du-backend-par-domaine.md) | Backend split by domain, in layers inside each domain | Accepted | `EN-04` |
+| [0006](0006-chaine-front-vite-et-react.md) | Vite for the front-end toolchain, React kept | Accepted | `EN-05` |
+| [0011](0011-anglais-pour-le-code-et-l-interface.md) | English for the code and the interface, French for the documentation | Accepted, partly superseded by 0022 | the naming migration, every review |
+| [0012](0012-pas-de-formateur-automatique.md) | No automatic formatter for now | Accepted | formatting, which remains held by review |
+| [0013](0013-garantie-de-livraison-des-evenements.md) | The outbox is the guarantee, and the notification is the demonstrable effect | Accepted | every event producer, every deployment target |
+| [0014](0014-niveau-d-accessibilite-wcag-21-aa.md) | WCAG 2.1 AA as the target level | Accepted | the acceptance criteria of every front-end US |
+| [0015](0015-ghcr-comme-registre-d-images.md) | GHCR as the image registry | Accepted | image publication and releases |
+| [0016](0016-supervision-prometheus-et-grafana-cloud.md) | Prometheus as the format, Grafana Cloud in Germany as the platform | Accepted | every metric added, the demonstration of the flow |
+| [0017](0017-supabase-heberge-dependance-assumee.md) | Hosted Supabase, an owned and reversible dependency | Accepted | every schema change, the exit procedure |
+| [0018](0018-migration-des-donnees-par-scripts-sql-relus.md) | Data migration in both directions through generated and reviewed SQL scripts | Accepted | the legacy import, leaving Supabase, every schema change |
+| [0019](0019-application-automatique-des-migrations-hebergees.md) | Automatic application of the migrations to the hosted database, additive migrations | Accepted | every migration |
+| [0020](0020-relais-par-boucle-de-trente-secondes.md) | Serverless relay through a thirty-second loop | Accepted | every event producer on the serverless target |
+| [0022](0022-english-for-the-repository-documentation.md) | English for the whole repository documentation | Proposed | the translation of the documentation |
 
-L'ADR-0001 a été tranché **contre** la recommandation du backlog, qui proposait le
-mono-utilisateur. Il porte la raison qui a emporté la décision et le coût accepté en échange.
+ADR-0001 was decided **against** the recommendation of the backlog, which proposed a single user.
+It carries the reason that won the decision and the cost accepted in exchange.
 
-## Décisions de plateforme
+## Platform decisions
 
-Les quatre décisions qui engagent un service externe. Ce sont celles dont le coût de sortie
-doit être écrit, et dont les affirmations techniques sont sourcées plutôt que supposées.
+The four decisions that commit to an external service. They are the ones whose exit cost must be
+written, and whose technical claims are sourced rather than assumed.
 
-| ADR | Décision | Statut | Débloque |
+| ADR | Decision | Status | Unblocks |
 |---|---|---|---|
-| [0004](0004-supabase-comme-sgbd.md) | Supabase comme SGBD, pile locale en développement et en CI | Accepté | `EN-03`, `EN-09`, `EN-30` |
-| [0005](0005-acces-aux-donnees-et-migrations.md) | Accès par le client Supabase, schéma versionné en migrations | Accepté | `EN-09` |
-| [0007](0007-mecanisme-d-evenements-broker-redis.md) | Redis comme broker d'événements | Accepté | `US-10`, `US-18`, `EN-35` |
-| [0008](0008-strategie-de-session-supabase-auth.md) | Sessions et authentification par Supabase Auth | Accepté | `US-11`, `US-27`, `US-47`, `US-13` |
-| [0009](0009-sonarcloud-comme-outil-de-quality-gate.md) | SonarCloud comme outil de quality gate, seuils du gate intégré | Accepté | `EN-17` |
-| [0010](0010-canal-de-recuperation-de-compte-par-e-mail.md) | Récupération de compte par e-mail, via Supabase Auth | Accepté | `US-28` |
+| [0004](0004-supabase-comme-sgbd.md) | Supabase as the database, local stack in development and in CI | Accepted | `EN-03`, `EN-09`, `EN-30` |
+| [0005](0005-acces-aux-donnees-et-migrations.md) | Access through the Supabase client, schema versioned as migrations | Accepted | `EN-09` |
+| [0007](0007-mecanisme-d-evenements-broker-redis.md) | Redis as the event broker | Accepted | `US-10`, `US-18`, `EN-35` |
+| [0008](0008-strategie-de-session-supabase-auth.md) | Sessions and authentication through Supabase Auth | Accepted | `US-11`, `US-27`, `US-47`, `US-13` |
+| [0009](0009-sonarcloud-comme-outil-de-quality-gate.md) | SonarCloud as the quality gate tool, thresholds of the built-in gate | Accepted | `EN-17` |
+| [0010](0010-canal-de-recuperation-de-compte-par-e-mail.md) | Account recovery by email, through Supabase Auth | Accepted | `US-28` |
 
-L'ADR-0007 a lui aussi été tranché **contre** la recommandation du backlog, qui proposait un
-bus in-process. Les huit décisions bloquantes (`D-03` à `D-20`) sont désormais couvertes.
+ADR-0007 was also decided **against** the recommendation of the backlog, which proposed an
+in-process bus. The eight blocking decisions (`D-03` to `D-20`) are now covered.
 
-L'ADR-0009 tranche `D-11` (seuil de couverture) sur une valeur différente de la proposition du
-backlog (80 % au lieu de 70 %), imposée par le plan gratuit de SonarCloud plutôt que choisie :
-la raison est dans l'ADR, pas ici.
+ADR-0009 decides `D-11` (coverage threshold) on a value different from the proposal of the
+backlog (80 % instead of 70 %), imposed by the free plan of SonarCloud rather than chosen: the
+reason is in the ADR, not here.
 
-## Ce qui reste à trancher
+## What remains to be decided
 
-Ces points n'ont pas d'ADR parce qu'ils n'ont pas de décision. Ils ne bloquent pas le
-sprint 1, mais chacun bloque quelque chose plus loin.
+These points have no ADR because they have no decision. They do not block sprint 1, but each one
+blocks something further on.
 
-| À trancher | Proposition | Bloque | Échéance |
+| To be decided | Proposal | Blocks | Deadline |
 |---|---|---|---|
-| Direction graphique, et qui arbitre | bibliothèque de composants ou CSS maison | toutes les US front | sprint 3 |
+| Visual direction, and who arbitrates | component library or custom CSS | every front-end US | sprint 3 |
 
-Les quatre autres points de ce tableau ont été ratifiés le 11 septembre 2026 : la garantie de
-livraison et l'effet démontrable par l'ADR-0013, le niveau d'accessibilité par l'ADR-0014, le
-registre d'images par l'ADR-0015. Ils étaient tranchés dans le code depuis des semaines sans
-qu'aucun ADR ne l'enregistre, ce qui est ce que #228 corrige.
+The four other points of this table were ratified on 11 September 2026: the delivery guarantee
+and the demonstrable effect by ADR-0013, the accessibility level by ADR-0014, the image registry
+by ADR-0015. They had been decided in the code for weeks without any ADR recording it, which is
+what #228 corrects.

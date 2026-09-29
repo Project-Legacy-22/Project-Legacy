@@ -1,116 +1,113 @@
-# ADR-0011 — Anglais pour le code et pour l'interface
+# ADR-0011 — English for the code and for the interface
 
-- **Statut** : Accepté ; remplacé par ADR-0022 pour la langue de la documentation et des échanges GitHub
-- **Date** : 2026-09-10
-- **Décideurs** : équipe
-- **Issue liée** : #15 (constat), la migration a la sienne
+- **Status**: Accepted; superseded by ADR-0022 for the language of the documentation and of the GitHub exchanges
+- **Date**: 2026-09-10
+- **Deciders**: team
+- **Related issue**: #15 (finding), the migration has its own
 
-## Contexte
+## Context
 
-Deux questions de langue traînaient depuis le sprint 1, chacune sans décision écrite.
+Two language questions had been lingering since sprint 1, each without a written decision.
 
-La première est dans le tableau « À trancher » de l'index des ADR : « Langue de l'interface,
-messages d'erreur compris — une seule, tranchée une fois », donnée comme bloquant toutes les
-US front. Elle n'a jamais été tranchée. Dans les faits, l'interface est déjà entièrement en
-anglais : `apps/web/src/labels.ts` compte 121 libellés, aucun accentué, et aucun message
-d'erreur de l'API ne l'est non plus. La décision existait dans le code sans exister sur le
-papier.
+The first is in the "To be decided" table of the ADR index: "Language of the interface, error
+messages included — a single one, decided once", listed as blocking every front-end US. It was
+never decided. In practice, the interface is already entirely in English: `apps/web/src/labels.ts`
+holds 121 labels, none of them accented, and none of the API error messages is either. The
+decision existed in the code without existing on paper.
 
-La seconde est la langue du code. `standards/03-testing.md` §3 demande qu'un test soit nommé
-« en français ou en anglais mais **de façon uniforme** », sans désigner laquelle. Mesure du
-10 septembre sur les 332 noms de tests du dépôt : **168 en français, 164 en anglais**. Le
-partage est de l'ordre de la moitié dans `apps/web`, dans `apps/api` et dans `packages`
-séparément, donc il ne s'agit pas d'une convention par zone mais d'une dérive. Les
-identifiants et les commentaires suivent le même désordre.
+The second is the language of the code. `standards/03-testing.md` §3 asks for a test to be named
+"in French or in English but **uniformly**", without saying which. Measurement of 10 September on
+the 332 test names of the repository: **168 in French, 164 in English**. The split is about half
+and half in `apps/web`, in `apps/api` and in `packages` separately, so it is not a convention per
+area but a drift. Identifiers and comments follow the same disorder.
 
-Le coût n'est pas cosmétique. Un lecteur qui cherche `fichiersDeTest` ne trouve pas
-`testFiles`. Une recherche par mot-clé rate la moitié du dépôt, et une revue de code passe son
-temps à traduire.
+The cost is not cosmetic. A reader looking for `fichiersDeTest` does not find `testFiles`. A
+keyword search misses half of the repository, and a code review spends its time translating.
 
-## Options considérées
+## Options considered
 
-### Option A — Français partout dans le code
-- Avantages : c'est la langue de l'équipe et celle des issues ; les noms de domaine métier
-  restent proches du vocabulaire des User Stories.
-- Inconvénients : l'écosystème est anglophone, donc chaque identifiant côtoie un mot anglais
-  qu'on ne traduit pas (`request`, `response`, `cursor`, `outbox`) ; les accents obligent à
-  choisir entre les écrire dans les identifiants, ce qui est fragile, et écrire un français
-  faux ; il faudrait retraduire l'interface, déjà anglaise à 121 libellés.
-- Coût de mise en œuvre : le plus élevé des trois, interface comprise.
+### Option A — French everywhere in the code
+- Pros: it is the language of the team and of the issues; the business domain names stay close to
+  the vocabulary of the User Stories.
+- Cons: the ecosystem is English-speaking, so each identifier sits next to an English word we do
+  not translate (`request`, `response`, `cursor`, `outbox`); accents force a choice between
+  writing them in identifiers, which is fragile, and writing incorrect French; the interface,
+  already English with 121 labels, would have to be translated back.
+- Implementation cost: the highest of the three, interface included.
 
-### Option B — Anglais pour le code et l'interface, français pour la documentation du dépôt
-- Avantages : aligne le code sur son écosystème et sur l'interface existante ; rend une
-  recherche par mot-clé fiable ; ne demande aucun travail sur l'interface ; laisse la
-  documentation dans la langue où l'équipe raisonne le mieux, ce que `docs/features/README.md`
-  documente déjà pour les ADR et le catalogue d'événements.
-- Inconvénients : une frontière à tenir, donc une règle de plus à connaître ; migration de
-  168 noms de tests et des identifiants français existants.
+### Option B — English for the code and the interface, French for the repository documentation
+- Pros: aligns the code with its ecosystem and with the existing interface; makes a keyword search
+  reliable; requires no work on the interface; leaves the documentation in the language in which
+  the team reasons best, which `docs/features/README.md` already documents for the ADRs and the
+  event catalogue.
+- Cons: a boundary to maintain, hence one more rule to know; migration of 168 test names and of
+  the existing French identifiers.
 
-### Option C — Laisser chacun choisir, en exigeant seulement la cohérence d'un fichier
-- Avantages : aucun travail de migration.
-- Inconvénients : c'est l'état actuel, et il est déjà à 168/164. La règle « uniforme » sans
-  langue désignée n'a rien empêché en deux sprints. Une règle qu'on ne peut pas enfreindre
-  parce qu'elle ne dit rien n'est pas une règle.
+### Option C — Let everyone choose, requiring only consistency within a file
+- Pros: no migration work.
+- Cons: it is the current state, and it is already at 168/164. The "uniform" rule without a named
+  language prevented nothing in two sprints. A rule that cannot be broken because it says nothing
+  is not a rule.
 
-## Décision
+## Decision
 
-Nous retenons **l'option B**.
+We choose **option B**.
 
-Parce que l'interface était déjà tranchée en anglais sans que personne l'écrive, et qu'aligner
-le code dessus coûte moins que l'inverse. Parce que la règle actuelle a produit un partage à
-la moitié en deux sprints, ce qui démontre qu'exiger l'uniformité sans nommer la langue ne
-suffit pas. Et parce que la documentation du dépôt est déjà officiellement en français : la
-frontière existe, elle n'était pas énoncée.
+Because the interface had already been decided in English without anyone writing it down, and
+aligning the code with it costs less than the opposite. Because the current rule produced a
+half-and-half split in two sprints, which shows that requiring uniformity without naming the
+language is not enough. And because the repository documentation is already officially in French:
+the boundary exists, it had not been stated.
 
-### Périmètre exact
+### Exact scope
 
-**En anglais :**
-- les identifiants — variables, fonctions, types, fichiers, dossiers ;
-- les commentaires de code ;
-- les noms de tests, `describe` et `it` ;
-- l'interface, messages d'erreur affichés compris ;
-- les messages de commit et les titres de pull request, ce qui était déjà la règle de
+**In English:**
+- identifiers — variables, functions, types, files, folders;
+- code comments;
+- test names, `describe` and `it`;
+- the interface, displayed error messages included;
+- commit messages and pull request titles, which was already the rule of
   `standards/04-git.md`.
 
-**En français :**
-- la documentation du dépôt : ADR, catalogue d'événements, audit du legacy. Le présent ADR en
-  est un exemple ;
-- les issues, descriptions de pull request, commentaires de revue et notes de board, qui sont
-  la langue de travail de l'équipe.
+**In French:**
+- the repository documentation: ADRs, event catalogue, legacy audit. This ADR is an example of
+  it;
+- issues, pull request descriptions, review comments and board notes, which are the working
+  language of the team.
 
-Les pages de `docs/features/` restent en anglais, comme leur README l'exige déjà.
+The pages of `docs/features/` remain in English, as their README already requires.
 
-## Conséquences
+## Consequences
 
-**Positives**
-- Une recherche par mot-clé retrouve tous les usages d'un concept.
-- L'interface n'a rien à changer.
-- La question ne se repose plus à chaque revue.
+**Positive**
+- A keyword search finds every use of a concept.
+- The interface has nothing to change.
+- The question is no longer raised at every review.
 
-**Négatives / dette acceptée**
-- 168 noms de tests à traduire, plus les identifiants et commentaires français. Ce travail ne
-  peut pas se faire d'un coup : 41 des 60 fichiers de test sont modifiés par des pull requests
-  ouvertes, et les toucher provoquerait des conflits chez leurs auteurs. La migration se fait
-  donc par zones libres, avec son issue, et le reste après les merges.
-- Pendant la migration le dépôt reste mélangé, donc temporairement moins cohérent que si l'on
-  n'avait rien décidé. C'est le coût d'une transition, pas un état d'arrivée.
+**Negative / accepted debt**
+- 168 test names to translate, plus the French identifiers and comments. This work cannot be done
+  at once: 41 of the 60 test files are modified by open pull requests, and touching them would
+  cause conflicts for their authors. The migration is therefore done by free areas, with its own
+  issue, and the rest after the merges.
+- During the migration the repository stays mixed, hence temporarily less consistent than if
+  nothing had been decided. It is the cost of a transition, not a final state.
 
-**Ce que ça impose au reste du projet**
-- `standards/02-code-style.md` et `standards/03-testing.md` §3 portent désormais la langue
-  désignée, au lieu de « français ou anglais ».
-- Toute nouvelle pull request est écrite en anglais côté code. Une revue peut le refuser.
-- Le tableau « À trancher » de l'index perd sa ligne sur la langue de l'interface.
+**What it imposes on the rest of the project**
+- `standards/02-code-style.md` and `standards/03-testing.md` §3 now carry the designated language,
+  instead of "French or English".
+- Every new pull request is written in English on the code side. A review can refuse it.
+- The "To be decided" table of the index loses its line on the language of the interface.
 
-## Comment on saura qu'on s'est trompé
+## How we will know we were wrong
 
-Si des noms de domaine métier deviennent moins clairs traduits qu'en français — le vocabulaire
-des User Stories étant français — au point qu'une revue doive régulièrement demander ce qu'un
-identifiant désigne. Le signal serait une discussion de traduction dans une revue de code, et
-non plus une discussion de comportement.
+If business domain names become less clear translated than in French — the vocabulary of the User
+Stories being French — to the point that a review regularly has to ask what an identifier refers
+to. The signal would be a translation discussion in a code review, rather than a discussion about
+behaviour.
 
-## Références
+## References
 
-- `standards/03-testing.md` §3, règle « de façon uniforme » sans langue désignée
-- `standards/04-git.md`, messages de commit déjà en anglais
-- `docs/features/README.md`, documentation du dépôt en français, pages de fonctionnalité en anglais
-- Mesure du 2026-09-10 : 332 noms de tests, 168 français, 164 anglais
+- `standards/03-testing.md` §3, "uniformly" rule without a designated language
+- `standards/04-git.md`, commit messages already in English
+- `docs/features/README.md`, repository documentation in French, feature pages in English
+- Measurement of 2026-09-10: 332 test names, 168 French, 164 English

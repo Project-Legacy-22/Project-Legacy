@@ -1,50 +1,50 @@
-# ADR-NNNN — <Titre de la décision>
+# ADR-NNNN — <Title of the decision>
 
-- **Statut** : Proposé | Accepté | Rejeté | Remplacé par ADR-NNNN
-- **Date** : AAAA-MM-JJ
-- **Décideurs** : 
-- **Issue liée** : #
+- **Status**: Proposed | Accepted | Rejected | Superseded by ADR-NNNN
+- **Date**: YYYY-MM-DD
+- **Deciders**: 
+- **Related issue**: #
 
-## Contexte
+## Context
 
-Quel problème se pose, à quel moment du projet, sous quelles contraintes (délai, taille de
-l'équipe, exigences du sujet, dette existante). Faits uniquement.
+What problem arises, at what point of the project, under which constraints (deadline, team size,
+requirements of the subject, existing debt). Facts only.
 
-## Options considérées
+## Options considered
 
-### Option A — <nom>
-- Avantages :
-- Inconvénients :
-- Coût d'apprentissage / de mise en œuvre :
+### Option A — <name>
+- Pros:
+- Cons:
+- Learning / implementation cost:
 
-### Option B — <nom>
-- Avantages :
-- Inconvénients :
+### Option B — <name>
+- Pros:
+- Cons:
 
-### Option C — <nom>
+### Option C — <name>
 
-## Décision
+## Decision
 
-Nous retenons **<option>**.
+We choose **<option>**.
 
-Parce que : (les deux ou trois raisons qui ont réellement tranché, reliées aux contraintes
-du contexte — pas une liste générique d'avantages).
+Because: (the two or three reasons that actually decided, tied to the constraints of the
+context — not a generic list of advantages).
 
-## Conséquences
+## Consequences
 
-**Positives**
+**Positive**
 - 
 
-**Négatives / dette acceptée**
+**Negative / accepted debt**
 - 
 
-**Ce que ça impose au reste du projet**
+**What it imposes on the rest of the project**
 - 
 
-## Comment on saura qu'on s'est trompé
+## How we will know we were wrong
 
-Signal observable qui déclencherait la remise en cause de cette décision.
+Observable signal that would call this decision into question.
 
-## Références
+## References
 
 - 

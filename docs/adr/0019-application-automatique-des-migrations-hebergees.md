@@ -1,90 +1,87 @@
-# ADR-0019 — Application automatique des migrations à la base hébergée
+# ADR-0019 — Automatic application of the migrations to the hosted database
 
-- **Statut** : Accepté
-- **Date** : 2026-09-23
-- **Décideurs** : équipe
-- **Issue liée** : #385, prolonge l'ADR-0005
+- **Status**: Accepted
+- **Date**: 2026-09-23
+- **Deciders**: team
+- **Related issue**: #385, extends ADR-0005
 
-## Contexte
+## Context
 
-L'ADR-0005 versionne le schéma en migrations SQL. Il ne dit pas qui les applique à la base
-hébergée. Personne n'en a la charge : le 23 septembre, six migrations fusionnées sur `dev`
-n'ont jamais atteint la base, le code de #382 lisait une colonne absente, et les
-prévisualisations répondaient 500 (#385).
+ADR-0005 versions the schema as SQL migrations. It does not say who applies them to the hosted
+database. Nobody is in charge of it: on 23 September, six migrations merged into `dev` had never
+reached the database, the code of #382 read a missing column, and the previews answered 500
+(#385).
 
-Une contrainte pèse sur le choix : la production et les prévisualisations partagent un seul
-projet Supabase, sur l'offre gratuite (ADR-0017).
+One constraint weighs on the choice: production and the previews share a single Supabase project,
+on the free plan (ADR-0017).
 
-## Options considérées
+## Options considered
 
-### Option A — application manuelle par une personne désignée
-- Avantages : aucun secret de base dans la CI.
-- Inconvénients : c'est la situation qui a produit l'incident ; la personne peut être absente, et
-  rien ne signale l'oubli avant la première erreur 500.
+### Option A — manual application by a designated person
+- Pros: no database secret in the CI.
+- Cons: it is the situation that produced the incident; the person can be absent, and nothing
+  reports the omission before the first 500 error.
 
-### Option B — application à la livraison, dans le workflow de `main`
-- Avantages : la migration part avec le code qui s'en sert.
-- Inconvénients : la base étant partagée, les prévisualisations de `dev` lisent déjà le nouveau
-  code sans la migration, jusqu'à la livraison suivante.
+### Option B — application at release, in the workflow of `main`
+- Pros: the migration ships with the code that uses it.
+- Cons: the database being shared, the previews of `dev` already read the new code without the
+  migration, until the next release.
 
-### Option C — application après chaque exécution verte de `ci` sur `dev`
-- Avantages : une migration fusionnée atteint la base en quelques minutes ; elle a déjà été
-  rejouée sur une base vide par `ci` ; la liste de ce qui part est écrite dans le résumé de
-  l'exécution.
-- Inconvénients : une migration atteint la production avant le code qui s'en sert ; des secrets
-  d'accès à la base dans la CI.
+### Option C — application after each green `ci` run on `dev`
+- Pros: a merged migration reaches the database within minutes; it has already been replayed on
+  an empty database by `ci`; the list of what goes out is written in the summary of the run.
+- Cons: a migration reaches production before the code that uses it; database access secrets in
+  the CI.
 
-### Option D — un projet Supabase par environnement
-- Avantages : isole les prévisualisations de la production.
-- Inconvénients : un second projet à configurer, à sauvegarder et à tenir à jour, et des
-  secrets en double dans Vercel et la CI ; pour les prévisualisations d'un projet de trois
-  sprints, le coût dépasse le risque que la règle additive couvre déjà.
+### Option D — one Supabase project per environment
+- Pros: isolates the previews from production.
+- Cons: a second project to configure, back up and keep up to date, and duplicated secrets in
+  Vercel and in the CI; for the previews of a three-sprint project, the cost exceeds the risk that
+  the additive rule already covers.
 
-## Décision
+## Decision
 
-Nous retenons **l'option C** (workflow `migrations`), avec une règle qui fait partie de la
-décision : **une migration est additive**.
+We choose **option C** (`migrations` workflow), with a rule that is part of the decision: **a
+migration is additive**.
 
-Parce que : l'incident venait de l'absence de responsable, et un déclenchement automatique en
-est un ; `ci` a déjà appliqué chaque migration à une base vide avant qu'elle arrive ici ; et la
-contrainte de la base partagée se traite par une règle d'écriture plutôt que par un second
-projet à tenir.
+Because: the incident came from the absence of an owner, and an automatic trigger is one; `ci` has
+already applied each migration to an empty database before it arrives here; and the constraint of
+the shared database is handled by a writing rule rather than by a second project to maintain.
 
-La règle : une migration doit rester compatible avec le code déjà livré, puisqu'elle atteint la
-production avant lui. Ajouter une table, une colonne avec une valeur par défaut ou une fonction,
-ou redéfinir une fonction sans changer sa signature. Un renommage, une suppression ou un
-changement de signature se fait en deux temps : la migration qui ajoute, livrée ; puis, une fois
-livré le code qui ne lit plus l'ancien, celle qui retire.
+The rule: a migration must remain compatible with the code already released, since it reaches
+production before it. Add a table, a column with a default value or a function, or redefine a
+function without changing its signature. A rename, a removal or a signature change happens in two
+steps: the migration that adds, released; then, once the code that no longer reads the old one is
+released, the one that removes.
 
-## Conséquences
+## Consequences
 
-**Positives**
-- Une migration fusionnée atteint la base sans que personne n'ait à y penser. L'application est
-  rejouable sans effet quand la base est à jour.
-- Deux applications ne se chevauchent pas : le groupe de concurrence les met en file, sans jamais
-  en annuler une.
-- Le commit appliqué est celui que `ci` a vérifié, pas la tête de `dev` au moment du démarrage.
+**Positive**
+- A merged migration reaches the database without anyone having to think about it. The
+  application can be replayed without effect when the database is up to date.
+- Two applications do not overlap: the concurrency group queues them, without ever cancelling
+  one.
+- The commit applied is the one `ci` checked, not the head of `dev` at start time.
 
-**Négatives / dette acceptée**
-- La CI détient `SUPABASE_ACCESS_TOKEN`. Le jeton et le mot de passe passent par l'environnement,
-  jamais en argument.
-- Une migration destructive fusionnée par erreur casserait la production. La relecture et la
-  règle additive en sont les seules protections, avec la sauvegarde (`npm run backup`,
-  `docs/backup-and-exit.md`) pour revenir en arrière.
+**Negative / accepted debt**
+- The CI holds `SUPABASE_ACCESS_TOKEN`. The token and the password go through the environment,
+  never as an argument.
+- A destructive migration merged by mistake would break production. Review and the additive rule
+  are the only protections, with the backup (`npm run backup`, `docs/backup-and-exit.md`) to roll
+  back.
 
-**Ce que ça impose au reste du projet**
-- Toute migration est relue au regard de la règle additive.
-- `docs/ci.md`, section « Migrations de la base hébergée », tient la configuration et la règle.
+**What it imposes on the rest of the project**
+- Every migration is reviewed against the additive rule.
+- `docs/ci.md`, section "Migrations of the hosted database", holds the configuration and the rule.
 
-## Comment on saura qu'on s'est trompé
+## How we will know we were wrong
 
-Une migration additive casse quand même la production, parce que le code livré dépendait d'un
-comportement qu'elle change ; ou l'équipe doit régulièrement suspendre le workflow pour livrer un
-changement en deux temps. Dans les deux cas, un projet séparé pour les prévisualisations
-redevient à étudier, même payant.
+An additive migration breaks production anyway, because the released code depended on a behaviour
+it changes; or the team must regularly suspend the workflow to release a change in two steps. In
+both cases, a separate project for the previews becomes worth studying again, even a paid one.
 
-## Références
+## References
 
 - `.github/workflows/migrations.yml`
-- `docs/ci.md`, section « Migrations de la base hébergée »
-- ADR-0005 (migrations versionnées), ADR-0017 (Supabase hébergé)
+- `docs/ci.md`, section "Migrations of the hosted database"
+- ADR-0005 (versioned migrations), ADR-0017 (hosted Supabase)
