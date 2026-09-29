@@ -1,115 +1,116 @@
-# Démonstration finale
+# Final demonstration
 
-Le déroulé de la revue finale, étape par étape : ce qu'on montre, ce que chaque étape doit
-prouver, qui la présente et combien de temps elle prend (#47). Il couvre chaque point de la grille
-d'évaluation du sujet (§9) et dit, pour chacun, quelle étape y répond.
+The running order of the final review, step by step: what we show, what each step must prove, who
+presents it and how long it takes (#47). It covers each point of the assessment grid of the subject
+(§9) and says, for each one, which step answers it.
 
-**Durée visée : 20 minutes**, questions non comprises. Le sujet ne fixe pas la durée de la revue :
-c'est une hypothèse à confirmer auprès de l'encadrement, et le minutage se resserre si elle est plus
-courte (les étapes 7 et 9 se fondent alors dans les autres).
+**Target duration: 20 minutes**, questions not included. The subject does not set the duration of
+the review: it is an assumption to confirm with the supervisors, and the timing tightens if it is
+shorter (steps 7 and 9 then merge into the others).
 
-## Préparation
+## Preparation
 
-La veille :
+The day before:
 
-- [ ] `npm ci && npm run up` sur la machine qui présente ; puis `npm run db:reset`, qui recharge le
-      jeu de démonstration avec des échéances calculées depuis le jour même (une tâche en retard,
-      une pour aujourd'hui).
-- [ ] La production répond : <https://project-legacy-web-legacy-9eee.vercel.app>, connexion avec
-      un compte d'équipe.
-- [ ] La dernière exécution de `ci` sur `dev` est verte, la dernière livraison a publié son image
-      et sa release, le workflow `relais` est vert.
-- [ ] Le tableau Grafana « Legacy 22 — flux et service » affiche des mesures des dernières heures.
-- [ ] Une pull request de démonstration est ouverte et **non approuvée**, pour l'étape 6.
-- [ ] Les comptes rendus de revue et de rétrospective de chaque sprint sont écrits dans
-      `docs/reviews/sprint-N.md` et `docs/retros/sprint-N.md`, actions assignées comprises. Au
-      24 septembre 2026, aucun n'est dans le dépôt : l'étape 8 n'a rien à montrer tant qu'ils
-      manquent, et seule l'équipe peut les écrire.
+- [ ] `npm ci && npm run up` on the presenting machine; then `npm run db:reset`, which reloads the
+      demonstration dataset with due dates computed from the same day (one overdue task, one for
+      today).
+- [ ] Production responds: <https://project-legacy-web-legacy-9eee.vercel.app>, sign-in with a
+      team account.
+- [ ] The last `ci` run on `dev` is green, the last release published its image and its release,
+      the `relais` workflow is green.
+- [ ] The Grafana dashboard "Legacy 22 — flux et service" displays measurements from the last
+      hours.
+- [ ] A demonstration pull request is open and **not approved**, for step 6.
+- [ ] The review and retrospective records of each sprint are written in
+      `docs/reviews/sprint-N.md` and `docs/retros/sprint-N.md`, assigned actions included. As of
+      24 September 2026, none is in the repository: step 8 has nothing to show while they are
+      missing, and only the team can write them.
 
-Le jour même, dans cet ordre, trois terminaux et un navigateur :
+On the day, in this order, three terminals and a browser:
 
 ```bash
-# terminal 1 : broker et base
+# terminal 1: broker and database
 docker compose up -d && npm run db:start
-# terminal 2 : API et front
+# terminal 2: API and front end
 npm run dev:api & npm run dev:web
-# terminal 3 : le worker seul, pour pouvoir l'arrêter à l'étape 3
+# terminal 3: the worker alone, so that it can be stopped at step 3
 npm run dev:worker
 ```
 
-Onglets ouverts à l'avance : l'application locale (<http://localhost:5173>), la production, le
-dépôt (pull requests, onglet Actions), le board du Project, SonarCloud, le site Pages (couverture
-et documentation d'API), Grafana.
+Tabs opened in advance: the local application (<http://localhost:5173>), production, the repository
+(pull requests, Actions tab), the board of the Project, SonarCloud, the Pages site (coverage and API
+documentation), Grafana.
 
-Comptes du jeu de démonstration, qui n'existent que sur la pile locale : `camille.demo@example.com`
-et `hugo.demo@example.com`, mot de passe `DemoLegacy2026`.
+Accounts of the demonstration dataset, which only exist on the local stack:
+`camille.demo@example.com` and `hugo.demo@example.com`, password `DemoLegacy2026`.
 
-## Le déroulé
+## The running order
 
-| # | Durée | Étape | Ce qu'on montre | Ce que ça prouve |
+| # | Duration | Step | What we show | What it proves |
 |---|---|---|---|---|
-| 1 | 1 min | D'où l'on part | `docs/audit-legacy.md` : l'application reprise, sa dette mesurée, point par point | l'existant a été compris avant d'être changé |
-| 2 | 4 min | Le produit, par priorité | connexion en tant que Camille ; écran d'accueil (tâche en retard, tâche du jour, priorité haute) ; ouverture d'une tâche depuis l'accueil ; création d'une tâche avec priorité et échéance ; déplacement dans le Kanban **au clavier** ; réordonnancement dans une colonne ; membres d'un projet | les Must puis les Should livrés, et l'accessibilité tenue |
-| 3 | 3 min | Le flux événementiel de bout en bout | `Ctrl+C` dans le terminal 3 ; création d'une tâche ; `docker compose exec redis redis-cli LLEN legacy22:events` monte ; relance de `npm run dev:worker` ; la file se vide et la notification apparaît dans l'interface ; `docs/events/catalog.md` | l'outbox transactionnelle, le courtier, la consommation idempotente ; un événement n'est jamais perdu quand le consommateur tombe |
-| 4 | 2 min | RGPD | export JSON du compte ; suppression du compte d'Hugo après confirmation par l'adresse ; `docs/gdpr/registre.md` | portabilité, effacement réel, registre tenu |
-| 5 | 3 min | Qualité et tests | les jobs de `ci` sur une pull request ; le quality gate SonarCloud ; le rapport de couverture sur Pages ; la documentation d'API générée ; `docs/testing-levels.md` | une pyramide de tests réelle, une couverture mesurée, une API décrite sans lire le code |
-| 6 | 2 min | Ce qui bloque une pull request | la PR non approuvée : bouton de merge bloqué (une approbation et SonarCloud exigés sur `dev`) ; une approbation annulée par un nouveau push ; `git push origin HEAD:dev` refusé par le hook `pre-push` ; le workflow `guard-branches` ; `tk verify` et ses seize contrôles | le processus n'est pas déclaratif : un contournement est refusé ou tracé |
-| 7 | 2 min | Livraison | `tk release` : la PR `dev` vers `main`, le merge commit ; l'image GHCR taguée `sha-<court>` avec son attestation ; la release ; le déploiement Vercel ; le workflow `migrations` | CI/CD complet, artefacts traçables jusqu'au commit |
-| 8 | 2 min | Organisation agile | le board et ses vues (sprint courant, bloqué, hors périmètre) ; MoSCoW et milestones ; les Would documentés et non développés ; les comptes rendus `docs/reviews/` et `docs/retros/` | Scrum pratiqué, priorisation assumée, traces laissées |
-| 9 | 1 min | Architecture et décisions | `docs/architecture.md` (couches, flux d'une requête) ; l'index des ADR ; le tableau Grafana | des choix explicites, justifiables, et un système observable |
+| 1 | 1 min | Where we start from | `docs/audit-legacy.md`: the application taken over, its measured debt, point by point | the existing system was understood before being changed |
+| 2 | 4 min | The product, by priority | sign-in as Camille; home screen (overdue task, task of the day, high priority); opening a task from the home screen; creating a task with a priority and a due date; moving it in the Kanban **with the keyboard**; reordering within a column; members of a project | the Must then the Should delivered, and accessibility held |
+| 3 | 3 min | The event flow end to end | `Ctrl+C` in terminal 3; creating a task; `docker compose exec redis redis-cli LLEN legacy22:events` goes up; restarting `npm run dev:worker`; the queue drains and the notification appears in the interface; `docs/events/catalog.md` | the transactional outbox, the broker, idempotent consumption; an event is never lost when the consumer goes down |
+| 4 | 2 min | GDPR | JSON export of the account; deletion of Hugo's account after confirmation by the address; `docs/gdpr/registre.md` | portability, real erasure, register maintained |
+| 5 | 3 min | Quality and tests | the `ci` jobs on a pull request; the SonarCloud quality gate; the coverage report on Pages; the generated API documentation; `docs/testing-levels.md` | a real test pyramid, a measured coverage, an API described without reading the code |
+| 6 | 2 min | What blocks a pull request | the unapproved PR: merge button blocked (an approval and SonarCloud required on `dev`); an approval dismissed by a new push; `git push origin HEAD:dev` refused by the `pre-push` hook; the `guard-branches` workflow; `tk verify` and its sixteen checks | the process is not declarative: a workaround is refused or traced |
+| 7 | 2 min | Release | `tk release`: the PR from `dev` to `main`, the merge commit; the GHCR image tagged `sha-<short>` with its attestation; the release; the Vercel deployment; the `migrations` workflow | complete CI/CD, artefacts traceable back to the commit |
+| 8 | 2 min | Agile organisation | the board and its views (current sprint, blocked, out of scope); MoSCoW and milestones; the Would documented and not developed; the records `docs/reviews/` and `docs/retros/` | Scrum practised, prioritisation owned, traces left |
+| 9 | 1 min | Architecture and decisions | `docs/architecture.md` (layers, flow of a request); the ADR index; the Grafana dashboard | explicit, justifiable choices, and an observable system |
 
-Total : 20 minutes.
+Total: 20 minutes.
 
-## Correspondance avec la grille d'évaluation
+## Mapping to the assessment grid
 
-| Point de la grille (sujet §9) | Étapes |
+| Point of the grid (subject §9) | Steps |
 |---|---|
-| Couverture fonctionnelle selon les priorités | 2, 3, 4 |
-| Qualité du code et couverture de tests | 5, 9 |
+| Functional coverage according to the priorities | 2, 3, 4 |
+| Code quality and test coverage | 5, 9 |
 | CI/CD | 5, 6, 7 |
-| Historique Git et pratique des pull requests | 6, 7 |
-| Organisation agile et rétrospective d'équipe | 8 |
-| Qualité et maintenabilité d'ensemble | 1, 5, 9 |
-| Rappel de la revue intermédiaire : architecture, flux événementiel, backlog, conventions Git, quality gate, parcours d'une US | 9, 3, 8, 6, 5, 2 et 7 |
+| Git history and pull request practice | 6, 7 |
+| Agile organisation and team retrospective | 8 |
+| Overall quality and maintainability | 1, 5, 9 |
+| Reminder of the intermediate review: architecture, event flow, backlog, Git conventions, quality gate, journey of a US | 9, 3, 8, 6, 5, 2 and 7 |
 
-## Plan de repli
+## Fallback plan
 
-Chaque dépendance qui ne nous appartient pas a son alternative, préparée la veille.
+Each dependency that does not belong to us has its alternative, prepared the day before.
 
-| Si ceci manque | On montre à la place |
+| If this is missing | We show instead |
 |---|---|
-| Vercel ou la production | la pile locale, qui porte tout le parcours ; le dernier déploiement dans l'historique Vercel |
-| Le projet Supabase hébergé | la pile locale (`npm run db:start`), qui est un Supabase complet |
-| Upstash | le Redis local de `compose.yaml`, qui est celui de l'étape 3 de toute façon |
-| GitHub | `git log --graph` en local ; les pages de PR et d'Actions enregistrées la veille en PDF |
-| SonarCloud ou Grafana | une capture de la veille, datée ; le rapport de couverture local (`coverage/index.html`) |
-| Le réseau entier | la pile locale seule ; les captures et PDF de la veille pour le reste |
+| Vercel or production | the local stack, which carries the whole journey; the last deployment in the Vercel history |
+| The hosted Supabase project | the local stack (`npm run db:start`), which is a complete Supabase |
+| Upstash | the local Redis of `compose.yaml`, which is the one of step 3 anyway |
+| GitHub | `git log --graph` locally; the PR and Actions pages saved the day before as PDF |
+| SonarCloud or Grafana | a screenshot from the day before, dated; the local coverage report (`coverage/index.html`) |
+| The whole network | the local stack alone; the screenshots and PDFs from the day before for the rest |
 
-La pile locale ne dépend que de Docker : elle est le socle de repli de toutes les autres lignes.
+The local stack only depends on Docker: it is the fallback foundation of every other line.
 
-## Qui présente quoi
+## Who presents what
 
-Proposition fondée sur ce que chacun a porté, d'après les revues de sprint : deux interventions par
-membre, **à valider en réunion d'équipe**. La répartition finale se reporte ici, nommément, avant
-la répétition.
+Proposal based on what each person carried, according to the sprint reviews: two presentations per
+member, **to be validated in a team meeting**. The final distribution is recorded here, by name,
+before the rehearsal.
 
-| Étape | Présente | Répond aux questions sur |
+| Step | Presents | Answers questions on |
 |---|---|---|
-| 1 | Arthur Dos Santos | l'audit de l'existant, la fondation |
-| 2, connexion et session | Arthur Gasmi | comptes, session persistante et expiration |
-| 2, accueil et recherche | Victor Briez | écran d'accueil, recherche et filtres |
-| 2, Kanban et membres | Arthur Guyetand | tâches, Kanban, réordonnancement, membres |
-| 3 | Seïf Soltane | flux événementiel, idempotence |
-| 4 | Arthur Gasmi | export et suppression des données, RGPD |
-| 5 | Aurélien Pochart | tests, accessibilité |
-| 6 | Aurélien Pochart | quality gate, protections d'une pull request |
-| 7 | Arthur Dos Santos | intégration continue, livraison |
-| 8 | Victor Briez et Arthur Guyetand | backlog et priorisation ; board et rétrospective |
-| 9 | Seïf Soltane | architecture, ADR, hébergement des données |
+| 1 | Arthur Dos Santos | the audit of the existing system, the foundation |
+| 2, sign-in and session | Arthur Gasmi | accounts, persistent session and expiry |
+| 2, home and search | Victor Briez | home screen, search and filters |
+| 2, Kanban and members | Arthur Guyetand | tasks, Kanban, reordering, members |
+| 3 | Seïf Soltane | event flow, idempotency |
+| 4 | Arthur Gasmi | export and deletion of the data, GDPR |
+| 5 | Aurélien Pochart | tests, accessibility |
+| 6 | Aurélien Pochart | quality gate, protections of a pull request |
+| 7 | Arthur Dos Santos | continuous integration, release |
+| 8 | Victor Briez and Arthur Guyetand | backlog and prioritisation; board and retrospective |
+| 9 | Seïf Soltane | architecture, ADRs, data hosting |
 
-## Répétition
+## Rehearsal
 
-- [ ] Répétée de bout en bout, chronomètre en main : date, durée mesurée, ce qui a débordé.
-- [ ] Le plan de repli essayé au moins pour la ligne « le réseau entier ».
+- [ ] Rehearsed from start to finish, stopwatch in hand: date, measured duration, what overran.
+- [ ] The fallback plan tried at least for the line "the whole network".
 
-Tant que ces deux cases ne sont pas cochées et datées, la démonstration n'est pas prête.
+As long as these two boxes are not ticked and dated, the demonstration is not ready.

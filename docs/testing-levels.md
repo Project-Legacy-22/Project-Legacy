@@ -1,150 +1,147 @@
-# Les niveaux de test
+# The test levels
 
-But de cette page : en regardant un test, savoir a quel niveau il appartient, ce qu il a le
-droit de supposer, et ce qui n a rien a y faire. Le vocabulaire est celui de
-`standards/03-testing.md`, section 1. Cette page ne le remplace pas, elle dit comment il se
-traduit dans ce depot.
+Purpose of this page: looking at a test, know which level it belongs to, what it is allowed to
+assume, and what has no business being there. The vocabulary is that of
+`standards/03-testing.md`, section 1. This page does not replace it, it says how it translates in
+this repository.
 
-Les motifs de fichiers de chaque niveau vivent dans `vitest.levels.ts`, en un seul endroit,
-parce que `vitest.config.ts`, `vitest.integration.config.ts` et le garde ci-dessous lisent les
-memes.
+The file patterns of each level live in `vitest.levels.ts`, in a single place, because
+`vitest.config.ts`, `vitest.integration.config.ts` and the guard below read the same ones.
 
-## Les quatre niveaux qui existent
+## The four levels that exist
 
-| Niveau | Commande | Ou vivent ses fichiers |
+| Level | Command | Where its files live |
 |---|---|---|
-| `unit` | `npm run test:unit` | `packages/**`, plus deux fichiers purs de `apps/api/src` |
+| `unit` | `npm run test:unit` | `packages/**`, plus two pure files of `apps/api/src` |
 | `http` | `npm run test:http` | `apps/api/src/http/routes/**` |
 | `dom` | `npm run test:dom` | `apps/web/src/**` |
-| `integration` | `npm run test:integration` | `apps/api/test/integration/**`, pile locale requise |
+| `integration` | `npm run test:integration` | `apps/api/test/integration/**`, local stack required |
 
-Les motifs exacts sont dans `vitest.levels.ts` ; cette colonne les resume. Aucun compte de
-fichiers ni de cas ici : il perimerait au prochain test ajoute, et cette page serait alors fausse
-sans que rien ne le signale -- exactement ce que le garde plus bas existe pour empecher ailleurs.
-Pour les chiffres du jour, `npm test`.
+The exact patterns are in `vitest.levels.ts`; this column summarises them. No count of files or
+cases here: it would go stale with the next test added, and this page would then be wrong without
+anything reporting it -- exactly what the guard further down exists to prevent elsewhere. For
+today's figures, `npm test`.
 
-`npm test` lance les trois premiers ensemble et produit **le** rapport de couverture. Il n est
-pas la somme de trois commandes : deux rapports partiels rendraient tout seuil ininterpretable,
-ce que le commentaire de `vitest.config.ts` disait deja avant ce decoupage. Les commandes par
-niveau servent la boucle courte pendant le developpement, jamais la mesure.
+`npm test` runs the first three together and produces **the** coverage report. It is not the sum of
+three commands: two partial reports would make any threshold impossible to interpret, which the
+comment of `vitest.config.ts` already said before this split. The per-level commands serve the
+short loop during development, never the measurement.
 
-Les noms sont ceux des niveaux, pas des runtimes. `node` et `jsdom` decrivent un environnement,
-ce qui ne dit rien de ce qu un test a le droit de supposer.
+The names are those of the levels, not of the runtimes. `node` and `jsdom` describe an environment,
+which says nothing about what a test is allowed to assume.
 
 ### `unit`
 
-`packages/**`, plus `apps/api/src/config.test.ts` et `apps/api/src/http/cookies.test.ts`.
+`packages/**`, plus `apps/api/src/config.test.ts` and `apps/api/src/http/cookies.test.ts`.
 
-**Ce qu on y teste** : le domaine et l application des paquets `core`, les schemas partages de
-`contracts`, la traduction faite par les adaptateurs de `infra`, et les fonctions pures de
-`apps/api` qui ne montent aucun serveur.
+**What is tested there**: the domain and the application of the `core` packages, the shared schemas
+of `contracts`, the translation done by the adapters of `infra`, and the pure functions of
+`apps/api` that mount no server.
 
-**Ce qu un test peut supposer** : rien d exterieur. Tout ce qui est derriere un port est un faux
-ecrit a la main qui implemente reellement le port. L horloge et le generateur d identifiants
-sont injectes, donc le test est deterministe sans rien attendre.
+**What a test can assume**: nothing external. Everything behind a port is a hand-written fake that
+actually implements the port. The clock and the identifier generator are injected, so the test is
+deterministic without waiting for anything.
 
-**Ce qui n a rien a y faire** : un vrai serveur, une vraie base, un vrai bus, une horloge
-reelle, un `sleep`.
+**What has no business there**: a real server, a real database, a real bus, a real clock, a
+`sleep`.
 
 ### `http`
 
 `apps/api/src/http/routes/**`.
 
-**Ce qu on y teste** : le cablage d une route. Un vrai serveur Express ecoute sur le port 0 et
-est interroge par `fetch`, avec des faux derriere les ports. Ce qui est verifie est le code
-HTTP, l en-tete, le corps rendu, le cookie pose.
+**What is tested there**: the wiring of a route. A real Express server listens on port 0 and is
+queried with `fetch`, with fakes behind the ports. What is checked is the HTTP code, the header, the
+rendered body, the cookie set.
 
-**Ce qu un test peut supposer** : que la regle metier appelee est deja verifiee au niveau
-`unit`. Un test de route n a pas a reprouver une regle de validation du domaine ; il verifie que
-la route la delegue et traduit son resultat.
+**What a test can assume**: that the business rule called is already checked at the `unit` level. A
+route test does not have to prove a domain validation rule again; it checks that the route delegates
+to it and translates its result.
 
-**Ce qui n a rien a y faire** : une regle de domaine, une vraie base, un vrai bus.
+**What has no business there**: a domain rule, a real database, a real bus.
 
 ### `dom`
 
 `apps/web/src/**`.
 
-**Ce qu on y teste** : des composants montes en jsdom par `apps/web/src/test/react-root.tsx`,
-interroges par selecteur CSS. Les etats rendus, les libelles annonces, l ordre de tabulation, le
-contraste des jetons de couleur, et les violations detectables par `axe-core` sur `wcag2a`,
-`wcag2aa` et `wcag21aa`.
+**What is tested there**: components mounted in jsdom by `apps/web/src/test/react-root.tsx`, queried
+by CSS selector. The rendered states, the announced labels, the tab order, the contrast of the
+colour tokens, and the violations detectable by `axe-core` on `wcag2a`, `wcag2aa` and `wcag21aa`.
 
-**Ce qu un test peut supposer** : que le harnais dit vrai. Il est lui-meme teste, par
-`apps/web/src/test/react-root.test.tsx`, contre du DOM ecrit a la main -- sans quoi une erreur
-dedans rendrait vert un test qui devrait etre rouge, sans aucun echec pour le signaler.
+**What a test can assume**: that the harness tells the truth. It is itself tested, by
+`apps/web/src/test/react-root.test.tsx`, against hand-written DOM -- otherwise an error in it would
+make green a test that should be red, without any failure to report it.
 
-**Ce qu un test ne peut pas supposer** : que jsdom se comporte comme un navigateur. Il
-n implemente ni la navigation sequentielle au clavier ni la soumission implicite d un
-formulaire, et ne calcule aucune couleur effective -- `color-contrast` est donc desactive dans
-chaque passe `axe`, et le contraste est verifie autrement, en lisant les jetons et en calculant
-la luminance relative. La simulation clavier boucle du dernier element au premier la ou un
-navigateur sortirait vers sa propre barre d outils : rien ne peut conclure sur la sortie de la
-page.
+**What a test cannot assume**: that jsdom behaves like a browser. It implements neither sequential
+keyboard navigation nor the implicit submission of a form, and computes no effective colour --
+`color-contrast` is therefore disabled in every `axe` pass, and contrast is checked another way, by
+reading the tokens and computing the relative luminance. The keyboard simulation loops from the last
+element to the first where a browser would move out to its own toolbar: nothing can conclude about
+leaving the page.
 
-**Ce qui n a rien a y faire** : un appel reseau reel, une assertion sur une couleur calculee, un
-parcours qui traverse plusieurs pages.
+**What has no business there**: a real network call, an assertion on a computed colour, a journey
+that crosses several pages.
 
 ### `integration`
 
-`apps/api/test/integration/**`, config et commande separees.
+`apps/api/test/integration/**`, separate configuration and command.
 
-**Ce qu on y teste** : une vraie route contre une vraie base. C est le seul niveau qui prouve
-qu une politique RLS fait ce qu elle annonce, et que les adaptateurs sortants parlent bien a
+**What is tested there**: a real route against a real database. It is the only level that proves
+that an RLS policy does what it announces, and that the outgoing adapters actually talk to
 PostgREST.
 
-**Ce qu un test peut supposer** : que la pile Supabase locale tourne (`npm run db:start`). C est
-pourquoi il ne fait pas partie de `npm test`, que tout le monde lance a chaque changement.
+**What a test can assume**: that the local Supabase stack runs (`npm run db:start`). This is why it
+is not part of `npm test`, which everybody runs on every change.
 
-**Ce qui n a rien a y faire** : un cas qui se verifie sans base. Ces tests coutent des secondes
-la ou les autres coutent des millisecondes.
+**What has no business there**: a case that can be checked without a database. These tests cost
+seconds where the others cost milliseconds.
 
-## Le niveau qui n existe pas
+## The level that does not exist
 
-**E2E navigateur.** Porte par #27 (`EN-26`), classe `Could`, bloque par `US-15`.
+**Browser E2E.** Carried by #27 (`EN-26`), classified `Could`, blocked by `US-15`.
 
-Le seul argument serieux pour l ajouter maintenant etait le contraste, que jsdom ne sait pas
-calculer. Il se resout autrement, par le test de jetons du niveau `dom`. Les parcours navigateur
-porteraient par ailleurs sur des ecrans qui vont changer.
+The only serious argument for adding it now was contrast, which jsdom cannot compute. It is solved
+another way, by the token test of the `dom` level. Browser journeys would moreover cover screens
+that are going to change.
 
-**Signal qui remettrait cette decision en cause** : le jour ou un critere d acceptation ne peut
-plus etre verifie hors navigateur. Le contraste en etait un ; il ne l est plus.
+**Signal that would call this decision into question**: the day an acceptance criterion can no
+longer be checked outside a browser. Contrast was one; it no longer is.
 
-## Le garde qui tient la partition
+## The guard that holds the partition
 
-`test/test-levels.test.ts` verifie deux choses sur les motifs de `vitest.levels.ts` :
+`test/test-levels.test.ts` checks two things on the patterns of `vitest.levels.ts`:
 
-- chaque fichier de test **versionne** appartient a un niveau ;
-- aucun n appartient a deux.
+- each **versioned** test file belongs to a level;
+- none belongs to two.
 
-Sans lui, un fichier de test place hors de tous les motifs ne serait lance par rien, et **rien
-ne le dirait** : la suite deviendrait simplement plus silencieuse, sans un seul echec. C est la
-forme de perte la plus couteuse a retrouver.
+Without it, a test file placed outside every pattern would be run by nothing, and **nothing would
+say so**: the suite would simply become quieter, without a single failure. It is the form of loss
+that is most expensive to find again.
 
-Sa limite est dans son nom : il ne voit que ce que `git ls-files` connait. Un fichier non
-versionne echappe au controle, mais il echappe aussi au depot.
+Its limit is in its name: it only sees what `git ls-files` knows. An unversioned file escapes the
+check, but it also escapes the repository.
 
-## Deux ecarts avec les standards, a arbitrer en equipe
+## Two gaps with the standards, to be arbitrated by the team
 
-Ni l un ni l autre n est corrige ici : `standards/` vit dans un autre depot et fait foi sur son
-sujet. Les noter est le minimum ; les changer est une decision d equipe.
+Neither is corrected here: `standards/` lives in another repository and is authoritative on its
+subject. Noting them is the minimum; changing them is a team decision.
 
-**La table de `03-testing.md` section 1 compte trois lignes** -- Unitaire, Integration, E2E --
-la ou ce depot distingue trois familles avant l integration. Les niveaux `unit`, `http` et `dom`
-appartiennent tous a la ligne « Unitaire » au sens du standard, puisque tout ce qui est derriere
-un port y est un faux. La table ne nomme donc pas la difference entre verifier une regle et
-verifier le cablage qui l appelle.
+**The table of `03-testing.md` section 1 has three rows** -- Unit, Integration, E2E -- where this
+repository distinguishes three families before integration. The `unit`, `http` and `dom` levels all
+belong to the "Unit" row in the sense of the standard, since everything behind a port is a fake
+there. The table therefore does not name the difference between checking a rule and checking the
+wiring that calls it.
 
-**`07-quality-gates.md` section 3 nomme une etape `test:unit` qui porte la couverture.** Dans ce
-depot, c est `npm test` qui la porte, et `npm run test:unit` est la boucle courte sans
-couverture. Le nom du standard et celui du depot ne designent pas la meme chose.
+**`07-quality-gates.md` section 3 names a `test:unit` step that carries the coverage.** In this
+repository, it is `npm test` that carries it, and `npm run test:unit` is the short loop without
+coverage. The name in the standard and the one in the repository do not designate the same thing.
 
-## Ce que d autres issues portent
+## What other issues carry
 
-| Etage | Porte par |
+| Layer | Carried by |
 |---|---|
-| Contrat entre composants | #24 (`EN-23`) |
-| Bout en bout navigateur | #27 (`EN-26`) |
-| Accessibilite et clavier | #181 (`US-14a`) |
-| Flux evenementiel | #179 (`EN-50b`) |
-| Angles morts de mesure | #180 (`EN-50c`) |
-| Cohesion des harnais entre branches | #170 |
+| Contract between components | #24 (`EN-23`) |
+| Browser end to end | #27 (`EN-26`) |
+| Accessibility and keyboard | #181 (`US-14a`) |
+| Event flow | #179 (`EN-50b`) |
+| Measurement blind spots | #180 (`EN-50c`) |
+| Cohesion of the harnesses between branches | #170 |
