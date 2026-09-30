@@ -236,3 +236,31 @@ describe('the tab order across the board', () => {
         expect(stop).toBe(target);
     });
 });
+
+// #455: a column's count was a span named by aria-label, which HTML does not
+// allow on an element without a role, and which a screen reader may skip,
+// reading the bare number. axe in jsdom only lists that rule for review, so
+// none of the passes above could fail on it.
+describe('the count of each column', () => {
+    it('is read from its content, the number hidden and the sentence spoken', async () => {
+        await renderWith([TODO, DOING, DONE]);
+
+        for (const status of ['todo', 'doing', 'done'] as const) {
+            const count = getElement(`[data-kanban-status="${status}"] .kanban-count`);
+
+            expect(count.hasAttribute('aria-label')).toBe(false);
+            expect(count.querySelector('[aria-hidden="true"]')?.textContent).toBe('1');
+            expect(count.querySelector('.visually-hidden')?.textContent).toBe(labels.columnItemCount(1));
+        }
+    });
+
+    it('leaves no name on an element without a role, anywhere on the board', async () => {
+        await renderWith([TODO, DOING, DONE]);
+
+        const unnamed = [...document.querySelectorAll('span[aria-label], div[aria-label], p[aria-label]')]
+            .filter(element => !element.hasAttribute('role'))
+            .map(element => element.outerHTML.slice(0, 80));
+
+        expect(unnamed).toEqual([]);
+    });
+});

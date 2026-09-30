@@ -48,8 +48,12 @@ function KanbanColumn(props: KanbanColumnProps) {
         >
             <div className="kanban-column-heading">
                 <h3 id={headingId}>{labels.itemStatus(props.status)}</h3>
-                <span className="kanban-count" aria-label={labels.columnItemCount(items.length)}>
-                    {items.length}
+                {/* Read from the content, as .item-count is: aria-label is not
+                    allowed on a span without a role (#455), and a screen reader
+                    could read "3" without saying what it counts. */}
+                <span className="kanban-count">
+                    <span aria-hidden="true">{items.length}</span>
+                    <span className="visually-hidden">{labels.columnItemCount(items.length)}</span>
                 </span>
             </div>
             {items.length === 0 ? (
