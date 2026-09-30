@@ -2,22 +2,22 @@
     display: grid;
     grid-template-columns: minmax(180px, 1fr) minmax(280px, 1fr) auto;
     align-items: end;
-    gap: 14px;
+    gap: var(--space-6);
 }
 
 .item-planning-fields {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: end;
-    gap: 14px;
+    gap: var(--space-6);
 }
 
 .items-filters {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
     align-items: end;
-    gap: 14px;
-    margin-bottom: 18px;
+    gap: var(--space-6);
+    margin-bottom: var(--space-7);
 }
 
 /* The label wraps the box, so the label is the touch target: 44 px tall keeps
@@ -26,8 +26,8 @@
     display: flex;
     min-height: 44px;
     align-items: center;
-    gap: 8px;
-    margin-top: 8px;
+    gap: var(--space-4);
+    margin-top: var(--space-4);
     font-weight: 500;
 }
 
@@ -42,21 +42,21 @@
 
 label {
     display: block;
-    margin-bottom: 6px;
+    margin-bottom: var(--space-3);
     color: #172033;
     font-weight: 750;
 }
 
 .field-help,
 .field-error {
-    margin-bottom: 8px;
+    margin-bottom: var(--space-4);
     color: #465568;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     line-height: 1.45;
 }
 
 .field-error {
-    margin: 8px 0 0;
+    margin: var(--space-4) 0 0;
     color: #8a1c16;
     font-weight: 700;
 }
@@ -65,7 +65,7 @@ input,
 select {
     width: 100%;
     min-height: 46px;
-    padding: 10px 12px;
+    padding: var(--space-4) var(--space-5);
     border: 2px solid #65768a;
     border-radius: 6px;
     color: #172033;
@@ -85,7 +85,7 @@ input[aria-invalid="true"] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 10px 16px;
+    padding: var(--space-4) var(--space-6);
     border: 2px solid transparent;
     border-radius: 6px;
     font-weight: 750;
@@ -144,7 +144,7 @@ select:disabled {
 .status-message,
 .empty-message {
     margin-bottom: 0;
-    padding: 18px;
+    padding: var(--space-7);
     border: 1px dashed #8798a8;
     border-radius: 8px;
     color: #39495c;
@@ -153,7 +153,7 @@ select:disabled {
 }
 
 .error-message {
-    padding: 14px;
+    padding: var(--space-6);
     border: 1px solid #d89a96;
     border-radius: 8px;
     color: #751912;
@@ -161,14 +161,14 @@ select:disabled {
 }
 
 .error-message p {
-    margin-bottom: 12px;
+    margin-bottom: var(--space-5);
 }
 
 /* Seulement quand une action suit : un etat vide qu on ne peut pas remplir
    n affiche qu un paragraphe, et une marge sous le dernier element ajouterait
    un blanc que rien ne justifie. */
 .empty-message p:not(:last-child) {
-    margin-bottom: 12px;
+    margin-bottom: var(--space-5);
 }
 
 .action-error {

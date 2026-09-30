@@ -1,7 +1,7 @@
 /* La classe intro est celle de l en-tete bleu fonce : sur un panneau blanc son
    #e5edf4 etait invisible. */
 .panel-intro {
-    margin-bottom: 16px;
+    margin-bottom: var(--space-6);
     color: #39495c;
     line-height: 1.6;
 }
@@ -12,9 +12,9 @@
 
 .delete-account {
     display: grid;
-    gap: 12px;
-    margin-top: 28px;
-    padding-top: 20px;
+    gap: var(--space-5);
+    margin-top: var(--space-9);
+    padding-top: var(--space-7);
     border-top: 1px solid #d6dee7;
 }
 
@@ -31,7 +31,7 @@
 
 .delete-account-losses {
     margin: 0;
-    padding-left: 22px;
+    padding-left: var(--space-8);
     color: #39495c;
     line-height: 1.5;
 }
@@ -40,7 +40,7 @@
    qu il n y a ni delai ni retour en arriere. Le contraste reste au-dessus de
    4.5:1 sur le fond du panneau (US-14). */
 .delete-account-warning {
-    padding: 12px 14px;
+    padding: var(--space-5) var(--space-6);
     border: 1px solid #d89a96;
     border-radius: 8px;
     color: #751912;

@@ -1,16 +1,16 @@
 .attention-groups {
     display: grid;
-    gap: 18px;
+    gap: var(--space-7);
 }
 
 .attention-group h3 {
-    margin: 0 0 8px;
-    font-size: 1rem;
+    margin: 0 0 var(--space-4);
+    font-size: var(--font-size-md);
 }
 
 .attention-list {
     display: grid;
-    gap: 8px;
+    gap: var(--space-4);
     margin: 0;
     padding: 0;
     list-style: none;
@@ -20,8 +20,8 @@
     display: grid;
     width: 100%;
     min-height: 48px;
-    gap: 4px;
-    padding: 10px 14px;
+    gap: var(--space-2);
+    padding: var(--space-4) var(--space-6);
     border: 2px solid var(--border-input);
     border-radius: 8px;
     color: var(--text-body);
@@ -43,18 +43,18 @@
 .attention-details {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px 12px;
+    gap: var(--space-2) var(--space-5);
     color: var(--text-secondary);
-    font-size: 0.8125rem;
+    font-size: var(--font-size-sm);
 }
 
 .attention-empty,
 .attention-more {
     margin: 0;
     color: var(--text-muted);
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
 }
 
 .attention-more {
-    margin-top: 8px;
+    margin-top: var(--space-4);
 }
