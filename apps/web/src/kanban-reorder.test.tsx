@@ -4,7 +4,7 @@ import { ApiError } from './api/items-api';
 import type { ItemDto, ItemsApi } from './api/items-api';
 import { App } from './app';
 import { labels } from './labels';
-import { createApi, createAuth, createProjectsApi, itemPage } from './test/app-fixture';
+import { createApi, createAuth, createProjectsApi, itemPage, startAt } from './test/app-fixture';
 import { anItem } from './test/builders/item-builder';
 import { click, createReactTestRoot, flushTimers, getElement, waitFor } from './test/react-root';
 import type { ReactTestRoot } from './test/react-root';
@@ -31,7 +31,10 @@ async function render(api: ItemsApi): Promise<void> {
     await flushTimers();
 }
 
-beforeEach(() => { root = createReactTestRoot(); });
+beforeEach(() => {
+    root = createReactTestRoot();
+    startAt('projects');
+});
 afterEach(async () => { await root.unmount(); vi.clearAllMocks(); });
 
 describe('reordering within a Kanban column', () => {

@@ -45,6 +45,12 @@ function pageProps(overrides: Partial<TodoPageProps> = {}): TodoPageProps {
         onNoDueDateChange: vi.fn(),
         onClearFilters: vi.fn(),
         selectedProject: project,
+        view: 'projects',
+        session: null,
+        onNavigate: vi.fn(),
+        home: null,
+        members: null,
+        account: null,
         projects: {
             projects: [project],
             selectedProjectId: project.id,

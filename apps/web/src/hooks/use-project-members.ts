@@ -13,16 +13,15 @@ function messageFor(error: unknown, fallback: string): string {
     return error instanceof ApiError ? error.message : fallback;
 }
 
-// Fetched only while the panel is open, like the notification list: most
-// visits never look at who is in a project.
-function useMemberList(api: MembersApi, projectId: string, isEnabled: boolean) {
+// Fetched when the members view mounts (#446): most visits never look at who is
+// in a project, and those visits never open that view.
+function useMemberList(api: MembersApi, projectId: string) {
     const [members, setMembers] = useState<readonly ProjectMemberDto[]>([]);
     const [loadState, setLoadState] = useState<LoadState>({ status: 'loading' });
     const [attempt, setAttempt] = useState(0);
     const retry = useCallback(() => setAttempt(previous => previous + 1), []);
 
     useEffect(() => {
-        if (!isEnabled) return;
         const controller = new AbortController();
         setMembers([]);
         setLoadState({ status: 'loading' });
@@ -39,7 +38,7 @@ function useMemberList(api: MembersApi, projectId: string, isEnabled: boolean) {
             });
 
         return () => controller.abort();
-    }, [api, projectId, isEnabled, attempt]);
+    }, [api, projectId, attempt]);
 
     return { members, setMembers, loadState, retry };
 }
@@ -113,8 +112,8 @@ function useMemberActions(api: MembersApi, projectId: string, setMembers: SetMem
     return { feedback, isInviting, pendingUserId, invite, remove };
 }
 
-export function useProjectMembers(api: MembersApi, projectId: string, isEnabled: boolean) {
-    const list = useMemberList(api, projectId, isEnabled);
+export function useProjectMembers(api: MembersApi, projectId: string) {
+    const list = useMemberList(api, projectId);
     const actions = useMemberActions(api, projectId, list.setMembers);
 
     return {

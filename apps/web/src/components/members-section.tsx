@@ -1,5 +1,3 @@
-import { useState } from 'react';
-
 import type { MembersApi, ProjectMemberDto } from '../api/members-api';
 import type { ProjectDto } from '../api/projects-api';
 import { useProjectMembers } from '../hooks/use-project-members';
@@ -86,11 +84,11 @@ function MembersContent({ project, currentEmail, members }: Omit<MembersSectionP
     );
 }
 
-// Collapsed by default, and fetched only once opened: who is in a project is
-// looked at when inviting or tidying up, not on every visit.
+// Its own view since #446, which is what the collapsed panel used to provide:
+// who is in a project is looked at when inviting or tidying up, and the list is
+// fetched when somebody opens the view, not on every visit to the projects.
 export function MembersSection({ api, project, currentEmail, onRemoved }: MembersSectionProps) {
-    const [isOpen, setIsOpen] = useState(false);
-    const state = useProjectMembers(api, project.id, isOpen);
+    const state = useProjectMembers(api, project.id);
     const members: MembersState = {
         ...state,
         remove: async member => {
@@ -104,21 +102,34 @@ export function MembersSection({ api, project, currentEmail, onRemoved }: Member
         <section
             className="panel members-panel"
             aria-labelledby="members-heading"
-            aria-busy={isOpen && members.loadState.status === 'loading'}
+            aria-busy={members.loadState.status === 'loading'}
         >
             <div className="section-heading">
-                <h2 id="members-heading">{labels.membersTitle(project.name)}</h2>
+                <h2 id="members-heading" tabIndex={-1}>
+                    {labels.membersTitle(project.name)}
+                </h2>
             </div>
-            <button
-                type="button"
-                className="button button-secondary"
-                aria-expanded={isOpen}
-                aria-controls="members-content"
-                onClick={() => setIsOpen(current => !current)}
-            >
-                {isOpen ? labels.hideMembers : labels.showMembers}
-            </button>
-            {isOpen && <MembersContent project={project} currentEmail={currentEmail} members={members} />}
+            <MembersContent project={project} currentEmail={currentEmail} members={members} />
+        </section>
+    );
+}
+
+// The members view before a project is chosen: members belong to a project, and
+// the way to choose one is named rather than left to guess.
+export function NoProjectMembers({ onGoToProjects }: { onGoToProjects: () => void }) {
+    return (
+        <section className="panel" aria-labelledby="members-heading">
+            <div className="section-heading">
+                <h2 id="members-heading" tabIndex={-1}>
+                    {labels.viewName('members')}
+                </h2>
+            </div>
+            <div className="empty-message">
+                <p>{labels.membersNoProject}</p>
+                <button className="button button-secondary" type="button" onClick={onGoToProjects}>
+                    {labels.goToProjects}
+                </button>
+            </div>
         </section>
     );
 }

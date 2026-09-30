@@ -4,7 +4,7 @@ import type { AccountApi } from './api/account-api';
 import type { CredentialsApi } from './api/credentials-api';
 import { App } from './app';
 import { labels } from './labels';
-import { ACCOUNT, createApi, createAuth, createCredentialsApi, createProjectsApi } from './test/app-fixture';
+import { ACCOUNT, createApi, createAuth, createCredentialsApi, createProjectsApi, startAt } from './test/app-fixture';
 import { deferred } from './test/deferred';
 import {
     accessibleName,
@@ -72,6 +72,8 @@ function formOf(headingId: string): HTMLFormElement {
 
 beforeEach(() => {
     root = createReactTestRoot();
+    // The account forms are in their own view since #446.
+    startAt('account');
 });
 
 afterEach(async () => {
