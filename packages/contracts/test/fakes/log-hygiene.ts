@@ -13,8 +13,10 @@
 
 // Deliberately loose. It is not validating an address, it is noticing one, and
 // a pattern that missed "a.b+tag@sub.example.co.uk" would miss the leak that
-// matters.
-const ADDRESS = /[\w.+-]+@[\w-]+\.[\w.-]+/u;
+// matters. An at sign followed by a dotted domain is enough, and matching only
+// that keeps the search linear: a repeated local part before the at sign made
+// it backtrack on long values.
+const ADDRESS = /@[\w-]+\.[\w-]/u;
 
 // The three dot-separated segments of a JSON Web Token, the second of which is
 // what the session pair carries.
