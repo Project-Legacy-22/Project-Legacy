@@ -43,6 +43,10 @@ export interface TodoPageProps {
     onDueDateChange: (dueDate: string) => void;
     onNoDueDateChange: (noDueDate: boolean) => void;
     onClearFilters: () => void;
+    // Who is signed in, the unread count and the notifications (#456): after
+    // the header, so the page's h1 is its first heading and the skip link its
+    // first stop, and before the main landmark, which the skip link jumps to.
+    session: ReactNode;
     // The views this page does not own (#446), each rendered alone inside the
     // main landmark when it is the current one.
     home: ReactNode;
@@ -110,12 +114,15 @@ export function TodoPage(props: TodoPageProps) {
             <PageHeader>
                 <ViewNav current={props.view} onNavigate={props.onNavigate} />
             </PageHeader>
-            <main id="main-content" className="main-content" tabIndex={-1}>
-                {props.view === 'home' && props.home}
-                {props.view === 'projects' && <ProjectsView {...props} />}
-                {props.view === 'members' && props.members}
-                {props.view === 'account' && props.account}
-            </main>
+            <div className="app-body">
+                <div className="panel session-card">{props.session}</div>
+                <main id="main-content" className="main-content" tabIndex={-1}>
+                    {props.view === 'home' && props.home}
+                    {props.view === 'projects' && <ProjectsView {...props} />}
+                    {props.view === 'members' && props.members}
+                    {props.view === 'account' && props.account}
+                </main>
+            </div>
         </div>
     );
 }

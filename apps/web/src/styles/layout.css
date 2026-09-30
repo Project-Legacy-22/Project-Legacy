@@ -6,7 +6,7 @@
 }
 
 .header-content,
-.main-content {
+.app-body {
     width: min(1600px, 100%);
     margin: 0 auto;
 }
@@ -43,11 +43,19 @@ h1 {
     line-height: 1.6;
 }
 
-.main-content {
+/* The session card and the main landmark, drawn up over the bottom of the
+   header together (issue 456): the card comes after the header in the
+   document, and still sits where the eye expects it. */
+.app-body {
     display: grid;
     gap: var(--space-7);
     padding: 0 var(--space-6) var(--space-11);
     transform: translateY(-42px);
+}
+
+.main-content {
+    display: grid;
+    gap: var(--space-7);
 }
 
 /* La colonne suit la fenetre, mais une ligne de texte qui ferait 1500 px ne se

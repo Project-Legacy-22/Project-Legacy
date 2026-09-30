@@ -9,6 +9,7 @@ import { createApi, createAuth, createProjectsApi, itemPage, startAt } from './t
 import { anItem } from './test/builders/item-builder';
 import {
     accessibleName,
+    click,
     createReactTestRoot,
     flushTimers,
     getElement,
@@ -131,5 +132,30 @@ describe('the document the application is served in', () => {
 
         expect(title?.[1]?.trim()).toBeTruthy();
         expect(title?.[1]).toContain(labels.productName);
+    });
+});
+
+// #456: the session banner and the notifications panel were rendered before
+// the header, so once the panel was open its h2 came before the page's h1, and
+// the skip link was only the third stop, after two controls it could not skip.
+describe('the session card after the header', () => {
+    it('leaves the page title as the first heading, with the notifications open', async () => {
+        await renderSignedIn();
+
+        await click(getElement<HTMLButtonElement>('.notifications-panel button'));
+        await flushTimers();
+
+        const headings = [...document.querySelectorAll('h1, h2, h3, h4, h5, h6')].map(heading => heading.tagName);
+        expect(headings[0]).toBe('H1');
+        expect(headings).toContain('H2');
+    });
+
+    it('makes the skip link the first stop, before the session controls it skips', async () => {
+        await renderSignedIn();
+
+        const stops = tabbables();
+
+        expect(stops[0]?.classList.contains('skip-link')).toBe(true);
+        expect(getElement('.session-banner').closest('main')).toBeNull();
     });
 });
