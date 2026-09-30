@@ -48,10 +48,9 @@ const RULES = [
         local: /^\.\.?\//,
     },
     {
-        // L outil de reprise et de sortie des donnees ne depend de rien, pas
-        // meme de nos propres paquets : il sert le jour ou l application ne
-        // tourne plus, ou ne tourne plus ici. Un outil de sortie qui depend de
-        // ce qu on quitte n est pas un outil de sortie.
+        // The data recovery and exit tool depends on nothing, not even on our own packages: it
+        // serves the day the application no longer runs, or no longer runs here. An exit tool that
+        // depends on what one is leaving is not an exit tool.
         name: 'the data migration tool depends on nothing',
         match: /^packages\/data-migration\//,
         bare: [/^node:/],
@@ -68,9 +67,8 @@ const RULES = [
         local: /^\.\.?\//,
     },
     {
-        // Le worker est un consommateur : il assemble des adaptateurs et n a
-        // aucune logique metier a lui. Il n atteint donc jamais un domaine
-        // directement, seulement infra et les contrats.
+        // The worker is a consumer: it assembles adapters and has no business logic of its own. It
+        // therefore never reaches a domain directly, only infra and the contracts.
         name: 'the worker composes adapters and holds no domain logic',
         match: /^apps\/worker\//,
         bare: [/^@legacy\/(contracts|infra)$/, /^node:/, /^zod$/],

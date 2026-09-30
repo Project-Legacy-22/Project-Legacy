@@ -1,10 +1,8 @@
-# Analyse de securite statique. Gratuite sur un depot public, elle complete le
-# gate qualite de EN-17 : celui-ci mesure la qualite du code, celle-ci cherche
-# des failles connues.
+# Static security analysis. Free on a public repository, it complements the EN-17 quality gate: that
+# one measures code quality, this one looks for known vulnerabilities.
 #
-# Elle tourne sur les pull requests et une fois par semaine : une faille
-# publiee apres l ecriture du code n apparaitrait jamais sans execution
-# periodique.
+# It runs on pull requests and once a week: a vulnerability published after the code was written
+# would never show up without a periodic run.
 
 name: codeql
 
@@ -13,7 +11,7 @@ on:
   push:
     branches: [dev]
   schedule:
-    # Lundi matin, avant le daily : les resultats sont la quand l equipe arrive.
+    # Monday morning, before the daily: the results are there when the team arrives.
     - cron: '0 5 * * 1'
 
 permissions:
@@ -35,9 +33,8 @@ jobs:
         uses: github/codeql-action/init@v4
         with:
           languages: javascript-typescript
-          # security-and-quality ajoute des regles de maintenabilite qui
-          # feraient doublon avec ESLint. On garde le jeu de securite seul,
-          # pour que chaque outil ait un role distinct.
+          # security-and-quality adds maintainability rules that would duplicate ESLint. We keep the
+          # security set alone, so that each tool has a distinct role.
           queries: security-extended
 
       - name: Analyser

@@ -1,15 +1,13 @@
-# Fait tourner le relais de l outbox sur le deploiement, toutes les trente
-# secondes.
+# Runs the outbox relay on the deployment, every thirty seconds.
 #
-# Vercel n a pas de processus qui tourne entre deux requetes, donc personne n y
-# fait tourner le relais. Les crons Vercel en offre gratuite sont limites a une
-# fois par jour, et GitHub refuse un cron sous cinq minutes sans meme tenir
-# celui-la : le 24 septembre, les passes planifiees ont eu lieu a 21:41, 23:58,
-# 03:39 et 08:44 (#410). Un job reste donc actif pres de six heures et declenche
-# une passe toutes les trente secondes (scripts/relay-loop.mjs), puis lance son
-# successeur. Le cron ne sert plus qu a relancer la chaine si elle s arrete.
+# Vercel has no process running between two requests, so nobody runs the relay there. Vercel crons
+# on the free plan are limited to once a day, and GitHub refuses a cron under five minutes without
+# even keeping to that one: on 24 September, the scheduled passes took place at 21:41, 23:58, 03:39
+# and 08:44 (#410). A job therefore stays active for nearly six hours and triggers a pass every
+# thirty seconds (scripts/relay-loop.mjs), then starts its successor. The cron now only serves to
+# restart the chain if it stops.
 #
-# Le depot est public : les minutes des runners heberges ne sont pas comptees.
+# The repository is public: the minutes of hosted runners are not counted.
 
 name: relais
 
@@ -36,10 +34,9 @@ jobs:
     outputs:
       demarrer: ${{ steps.verifier.outputs.demarrer }}
     steps:
-      # Une boucle qui tourne deja declenche une passe dans les trente
-      # secondes : en demarrer une seconde n apporterait rien. La relance faite
-      # par la boucle sortante passe outre, puisque cette boucle-la est encore
-      # en cours au moment ou elle demande sa successeure.
+      # A loop already running triggers a pass within thirty seconds: starting a second one would
+      # bring nothing. The restart made by the outgoing loop goes past this check, since that loop
+      # is still running when it asks for its successor.
       - name: Verifier
         id: verifier
         env:
@@ -66,15 +63,14 @@ jobs:
     needs: garde
     if: needs.garde.outputs.demarrer == 'true'
     runs-on: ubuntu-latest
-    # La boucle dure 345 minutes ; GitHub arrete un job a 360.
+    # The loop lasts 345 minutes; GitHub stops a job at 360.
     timeout-minutes: 355
     permissions:
       contents: read
       actions: write
     concurrency:
-      # Une boucle a la fois : deux passes concurrentes liraient les memes
-      # lignes non publiees et les publieraient deux fois. La successeure
-      # attend ici que la boucle sortante se termine.
+      # One loop at a time: two concurrent passes would read the same unpublished rows and publish
+      # them twice. The successor waits here for the outgoing loop to finish.
       group: relais
       cancel-in-progress: false
     steps:
@@ -84,9 +80,8 @@ jobs:
         with:
           node-version-file: .nvmrc
 
-      # Les mesures partent de la boucle, sommees toutes les dix passes, et non
-      # d une campagne a part : un second declencheur de passe rouvrirait la
-      # course que le groupe de concurrence ferme.
+      # The measurements leave from the loop, summed every ten passes, and not from a separate run:
+      # a second pass trigger would reopen the race the concurrency group closes.
       - name: Livrer
         id: boucle
         env:
@@ -97,9 +92,9 @@ jobs:
           GRAFANA_PUSH_TOKEN: ${{ secrets.GRAFANA_PUSH_TOKEN }}
         run: node scripts/relay-loop.mjs
 
-      # Le GITHUB_TOKEN ne declenche aucun workflow, sauf workflow_dispatch.
-      # Seule une boucle allee a son terme relance : une boucle arretee net
-      # (variable absente) se relancerait sinon aussi vite que GitHub file.
+      # The GITHUB_TOKEN triggers no workflow, except workflow_dispatch. Only a loop that ran to its
+      # end restarts: a loop stopped short (missing variable) would otherwise restart as fast as
+      # GitHub queues.
       - name: Relancer la boucle
         if: steps.boucle.outputs.relancer == 'true'
         env:

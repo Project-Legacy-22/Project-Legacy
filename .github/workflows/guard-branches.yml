@@ -1,19 +1,16 @@
-# Garde-fou des branches integrees.
+# Guard of the integrated branches.
 #
-# Le depot est prive sur un plan gratuit : ni la protection de branche ni les
-# rulesets ne sont disponibles, rien ne peut refuser un push direct. Ce workflow
-# ne l empeche pas, il le rend visible et trace. Un contournement laisse une
-# execution rouge et une issue ouverte au nom de son auteur.
+# The repository is private on a free plan: neither branch protection nor rulesets are available,
+# nothing can refuse a direct push. This workflow does not prevent it, it makes it visible and
+# traced. A bypass leaves a red run and an issue opened in its author's name.
 #
-# Deux invariants, verifies differemment :
-#   dev  ne recoit que des commits issus d une pull request qui le cible.
-#   main ne recoit que du contenu deja present dans dev. C est l invariant reel :
-#        inspecter la branche source d une pull request est fragile, un commit
-#        pouvant appartenir a plusieurs pull requests. On verifie donc que le
-#        commit est bien un ancetre de dev, ce qui est vrai d une livraison et
-#        faux de tout raccourci.
+# Two invariants, checked differently: dev only receives commits coming from a pull request that
+# targets it; main only receives content already present in dev. That is the real invariant:
+# inspecting the source branch of a pull request is fragile, a commit can belong to several pull
+# requests. We therefore check that the commit is an ancestor of dev, which is true of a delivery
+# and false of any shortcut.
 #
-# A retirer le jour ou une regle serveur devient disponible.
+# To be removed the day a server rule becomes available.
 
 name: guard-branches
 
@@ -21,9 +18,9 @@ on:
   push:
     branches: [main, dev]
 
-# Le jeton du workflow n a que les droits declares ici. Lister les pull requests
-# associees a un commit releve de pull-requests, pas de contents : sans cette
-# ligne, l appel repond 403 et le garde-fou ne verifie rien.
+# The workflow token only has the rights declared here. Listing the pull requests associated with a
+# commit falls under pull-requests, not contents: without this line, the call answers 403 and the
+# guard checks nothing.
 permissions:
   contents: read
   issues: write
@@ -32,8 +29,8 @@ permissions:
 jobs:
   verifier-origine:
     name: Origine du commit
-    # Creer ou supprimer une branche n est pas un push de contenu : il n y a
-    # rien a verifier, et le commit appartient deja a une branche existante.
+    # Creating or deleting a branch is not a content push: there is nothing to check, and the commit
+    # already belongs to an existing branch.
     if: github.event.created == false && github.event.deleted == false
     runs-on: ubuntu-latest
     steps:
@@ -49,13 +46,12 @@ jobs:
           echo "branche=$branche" >> "$GITHUB_OUTPUT"
 
           if [ "$branche" = "main" ]; then
-            # Tout ce qui arrive sur main doit deja exister dans dev.
+            # Everything that arrives on main must already exist in dev.
             #
-            # Une livraison est un commit de fusion : lui-meme n existe pas
-            # dans dev, mais son second parent est la tete de dev au moment du
-            # merge. C est donc ce parent qu il faut comparer. Comparer le
-            # commit de fusion signalerait chaque livraison comme un
-            # contournement, et un garde-fou qui crie a tort finit ignore.
+            # A delivery is a merge commit: it does not itself exist in dev, but its second parent
+            # is the head of dev at the time of the merge. That parent is therefore the one to
+            # compare. Comparing the merge commit would flag every delivery as a bypass, and a guard
+            # that cries wolf ends up ignored.
             parents="$(gh api "repos/$DEPOT/commits/$SHA" --jq '[.parents[].sha] | join(" ")')"
             candidat="$SHA"
             if [ "$(printf '%s' "$parents" | wc -w | tr -d ' ')" -ge 2 ]; then
@@ -78,8 +74,7 @@ jobs:
             exit 0
           fi
 
-          # dev : au moins une pull request fermee sur cette branche doit
-          # contenir le commit.
+          # dev: at least one closed pull request on this branch must contain the commit.
           if ! json="$(gh api "repos/$DEPOT/commits/$SHA/pulls" 2>&1)"; then
             echo "::error::Impossible d interroger l API des pull requests : $json"
             echo "Verifier le bloc permissions du workflow." >&2
@@ -106,9 +101,9 @@ jobs:
           SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          # Le contenu passe par des variables d environnement plutot que par
-          # une interpolation directe : un message de commit contenant des
-          # guillemets casserait la commande, et pourrait y injecter du shell.
+          # The content goes through environment variables rather than direct interpolation: a
+          # commit message containing quotes would break the command, and could inject shell into
+          # it.
           {
             printf '%s\n\n' "$RAISON"
             printf 'Commit : %s\n' "$SHA"

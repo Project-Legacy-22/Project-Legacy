@@ -1,6 +1,6 @@
--- #419 : plusieurs attributaires par tache, des la creation.
+-- #419: several assignees per task, from its creation.
 --
--- Dans une transaction annulee, comme les autres blocs.
+-- In a rolled-back transaction, like the other blocks.
 begin;
 
 do $$
@@ -26,7 +26,7 @@ begin
   insert into public.project_memberships (project_id, user_id, role)
   values (projet, membre, 'member');
 
-  -- La creation ecrit la tache et ses attributaires ; un doublon compte une fois.
+  -- Creation writes the task and its assignees; a duplicate counts once.
   perform public.create_item_with_event(
     tache, proprietaire, projet, 'Tache partagee', 'normal', null,
     '00000000-0000-7000-8000-0000000000f6', 'item.created.v1', now(),
@@ -38,7 +38,7 @@ begin
     raise exception 'creating a task must store each assignee once, got %', nombre;
   end if;
 
-  -- Un intrus annule toute la creation : ni tache, ni evenement.
+  -- An outsider cancels the whole creation: neither task nor event.
   begin
     perform public.create_item_with_event(
       refusee, proprietaire, projet, 'Refusee', 'normal', null,
@@ -55,7 +55,7 @@ begin
     raise exception 'a refused creation must leave neither task nor event';
   end if;
 
-  -- Remplacer la liste retire ce qui n y est plus et ajoute le reste.
+  -- Replacing the list removes what is no longer in it and adds the rest.
   perform public.set_item_assignees(tache, projet, array[membre]);
   if (select array_agg(user_id) from public.item_assignees where item_id = tache) <> array[membre] then
     raise exception 'setting the assignees must replace the list';
@@ -72,7 +72,7 @@ begin
     when foreign_key_violation then null;
   end;
 
-  -- Retirer le membre supprime son attribution, pas la tache.
+  -- Removing the member deletes their assignment, not the task.
   perform public.set_item_assignees(tache, projet, array[proprietaire, membre]);
   delete from public.project_memberships where project_id = projet and user_id = membre;
   if exists (select 1 from public.item_assignees where item_id = tache and user_id = membre)
@@ -80,7 +80,7 @@ begin
     raise exception 'removing a member must remove their assignment and keep the task';
   end if;
 
-  -- Supprimer la tache supprime ses attributions.
+  -- Deleting the task deletes its assignments.
   delete from public.items where id = tache;
   if exists (select 1 from public.item_assignees where item_id = tache) then
     raise exception 'deleting a task must delete its assignments';

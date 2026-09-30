@@ -1,7 +1,7 @@
--- #401 : l invitation, sa reponse et sa notification.
+-- #401: the invitation, its answer and its notification.
 --
--- Verifie ici plutot qu au niveau integration pour la meme raison que les blocs
--- d appartenance : le `rollback` garantit qu aucune ligne d outbox ne survit.
+-- Checked here rather than at the integration level for the same reason as the membership blocks:
+-- the `rollback` guarantees that no outbox row survives.
 begin;
 
 do $$
@@ -44,8 +44,8 @@ begin
     raise exception 'l evenement de l invitation manque';
   end if;
 
-  -- Deux invitations en attente pour la meme personne ne coexistent pas, et
-  -- la seconde n annonce rien.
+  -- Two pending invitations for the same person do not coexist, and the second one announces
+  -- nothing.
   issue := public.invite_member_with_event(
     seconde, projet, invitee, proprietaire, event_deux, 'invitation.created.v1', now(),
     jsonb_build_object('invitationId', seconde, 'projectId', projet, 'inviteeId', invitee, 'invitedBy', proprietaire)
@@ -74,7 +74,7 @@ begin
     raise exception 'la notification d invitation ne porte pas ce qu elle doit porter';
   end if;
 
-  -- Une autre personne ne repond pas a l invitation : elle n existe pas pour elle.
+  -- Another person does not answer the invitation: it does not exist for them.
   if public.respond_to_invitation(invitation, intrus, true) <> 'not_found' then
     raise exception 'un autre compte a pu repondre a l invitation';
   end if;
@@ -92,7 +92,7 @@ begin
     raise exception 'une invitation traitee a pu etre traitee une seconde fois';
   end if;
 
-  -- Inviter un membre ne cree rien.
+  -- Inviting a member creates nothing.
   if public.invite_member_with_event(
     troisieme, projet, invitee, proprietaire, event_trois, 'invitation.created.v1', now(), '{}'::jsonb
   ) <> 'already_member' then
@@ -142,11 +142,10 @@ end $$;
 
 rollback;
 
--- Effacer la personne qui invite ne doit emporter ni l invitation ni la
--- notification qu elle a produite pour la personne invitee (#425), tant que le
--- projet lui-meme survit -- ce que garantit ici un second membre reel, pour ne
--- pas confondre cette regle avec la suppression, deja voulue, d un projet dont
--- l auteur etait le seul membre.
+-- Erasing the inviting person must take away neither the invitation nor the notification it
+-- produced for the invited person (#425), as long as the project itself survives -- which a real
+-- second member guarantees here, so as not to confuse this rule with the deletion, already
+-- intended, of a project whose author was its only member.
 begin;
 
 do $$

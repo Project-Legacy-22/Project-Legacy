@@ -1,32 +1,28 @@
-// Une seule commande demarre tout : le broker, la base et l application.
+// A single command starts everything: the broker, the database and the application.
 //
-// Trois etages a lancer dans l ordre, parce que chacun depend du precedent.
-// Le broker est declare dans compose.yaml ; la pile Supabase est orchestree par
-// son propre CLI, qui applique aussi les migrations. Le script enchaine les
-// deux, puis transmet a l application les coordonnees que le CLI vient
-// d imprimer : c est ce qui supprime la copie manuelle de .env, qui etait la
-// seule etape a la main du parcours de demarrage.
+// Three stages to start in order, because each depends on the previous one. The broker is declared
+// in compose.yaml; the Supabase stack is orchestrated by its own CLI, which also applies the
+// migrations. The script chains the two, then passes to the application the coordinates the CLI has
+// just printed: that is what removes the manual copy of .env, which was the only manual step of the
+// start-up journey.
 //
-// Chaque etape est idempotente. Relancer la commande sur une pile deja debout
-// ne casse rien et ne repart pas de zero : les donnees de developpement
-// survivent au redemarrage.
+// Each step is idempotent. Running the command again on a stack already up breaks nothing and does
+// not start from scratch: the development data survives a restart.
 
 import { spawn, spawnSync } from 'node:child_process';
 
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 
-// Ce que l API attend, et d ou cela vient dans la sortie du CLI Supabase.
+// What the API expects, and where it comes from in the output of the Supabase CLI.
 const REQUIRED = {
     SUPABASE_URL: 'API_URL',
     SUPABASE_SERVICE_ROLE_KEY: 'SERVICE_ROLE_KEY',
     SUPABASE_ANON_KEY: 'ANON_KEY',
 };
 
-// Le broker ecoute sur la boucle locale. Le port par defaut est celui de Redis ;
-// un poste qui en fait deja tourner un le surcharge par REDIS_PORT, sans quoi
-// la publication du port echouerait au demarrage. La meme valeur sert a
-// compose.yaml et a l URL transmise a l application, pour que les deux ne
-// puissent pas diverger.
+// The broker listens on the loopback. The default port is Redis's; a computer already running one
+// overrides it with REDIS_PORT, otherwise publishing the port would fail at start-up. The same
+// value serves compose.yaml and the URL passed to the application, so that the two cannot diverge.
 const redisPort = process.env.REDIS_PORT ?? '6379';
 const REDIS_URL = `redis://127.0.0.1:${redisPort}`;
 
@@ -36,9 +32,8 @@ function fail(message, detail) {
     process.exit(1);
 }
 
-// Une etape d infrastructure : elle doit reussir, sa sortie va au terminal.
-// `hint` porte ce que l utilisateur peut faire quand elle echoue, quand la
-// sortie de la commande ne le dit pas d elle-meme.
+// An infrastructure step: it must succeed, its output goes to the terminal. `hint` carries what the
+// user can do when it fails, when the command's output does not say it by itself.
 function step({ label, command, args, environment = {}, hint }) {
     console.log(`\n  ${label}`);
     const result = spawnSync(command, args, {
@@ -57,8 +52,8 @@ function readSupabaseEnvironment() {
         fail('Impossible de lire les coordonnees de la pile Supabase', result.stderr);
     }
 
-    // Format `CLE="valeur"`, une par ligne. Les guillemets sont retires ; une
-    // valeur peut contenir des `=`, d ou la limite sur la premiere occurrence.
+    // Format `KEY="value"`, one per line. The quotes are removed; a value can contain `=`, hence
+    // the split on the first occurrence.
     const values = new Map();
     for (const line of result.stdout.split('\n')) {
         const separator = line.indexOf('=');
@@ -78,8 +73,8 @@ function readSupabaseEnvironment() {
     }
 
     if (missing.length > 0) {
-        // Nommer ce qui manque plutot que de laisser l API refuser de demarrer
-        // plus loin avec une erreur qui ne designerait pas la vraie cause.
+        // Name what is missing rather than let the API refuse to start further on with an error
+        // that would not point at the real cause.
         fail(
             `La pile Supabase n a pas fourni ${missing.join(', ')}`,
             `  Cles lues : ${[...values.keys()].join(', ') || 'aucune'}`,
@@ -129,8 +124,8 @@ console.log(`
   npm run down les arrete.
 `);
 
-// L application par-dessus. `npm run dev` gere deja ses deux processus et leur
-// arret ; le reproduire ici ferait deux implementations du meme sujet.
+// The application on top. `npm run dev` already manages its two processes and their shutdown;
+// reproducing it here would make two implementations of the same thing.
 const application = spawn(npmCommand, ['run', 'dev'], {
     stdio: 'inherit',
     env: { ...process.env, ...supabaseEnvironment, REDIS_URL },
