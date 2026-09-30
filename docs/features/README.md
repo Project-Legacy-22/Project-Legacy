@@ -44,3 +44,4 @@ the acceptance criteria: it describes the feature as it now behaves, in the pres
 | [#401](401-project-invitations.md) | Invite one or several people into a project, from its creation (#420); they accept or decline | Projects |
 | [#421](421-drop-item-assignee-column.md) | Drop the single assignee column | Tasks |
 | [#426](426-export-accounts.md) | Take the accounts along when leaving Supabase | GDPR |
+| [#461](461-rename-project.md) | Rename a project | Projects |

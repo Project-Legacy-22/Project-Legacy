@@ -149,4 +149,5 @@ verify nothing changes; confirm again and verify the named project and its item 
 
 - Member addition and the members screen are tracked by #353 and #351 under US-33 (#34).
   The removal API is documented in [#354](354-remove-project-member.md); role changes remain outside it.
-- Project renaming and archiving are outside this issue.
+- Renaming is described in [#461: Rename a project](461-rename-project.md). Archiving is outside
+  this issue.
