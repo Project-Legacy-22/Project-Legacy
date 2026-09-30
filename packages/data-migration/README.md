@@ -1,19 +1,18 @@
 # @legacy/data-migration
 
-Le chemin des données entre notre PostgreSQL et les moteurs d'à côté.
+The path of the data between our PostgreSQL and the engines next to it.
 
-Ce paquet ne déclare **aucune dépendance**, ni externe ni interne. C'est voulu : il sert à
-récupérer des données le jour où l'application ne tourne plus, ou ne tourne plus ici. Un outil
-de sortie qui dépend de ce qu'on quitte n'est pas un outil de sortie.
+This package declares **no dependency**, neither external nor internal. It is intentional: it
+serves to recover data on the day the application no longer runs, or no longer runs here. An exit
+tool that depends on what it leaves is not an exit tool.
 
-Il ne parle à aucune base. Il lit du texte et il en écrit :
+It talks to no database. It reads text and writes text:
 
-- en entrée, un export SQL produit par `mysqldump` ou par `sqlite3 .dump` (#275), ou notre
-  propre vidage `supabase db dump`, comptes de `auth.users` compris (#282, #426) ;
-- en sortie, un script SQL que quelqu'un relit avant de l'appliquer.
+- as input, a SQL export produced by `mysqldump` or by `sqlite3 .dump` (#275), or our own
+  `supabase db dump`, accounts of `auth.users` included (#282, #426);
+- as output, a SQL script that somebody reviews before applying it.
 
-C'est la raison pour laquelle rien ici n'ouvre de connexion : un script qu'on relit avant de
-l'exécuter est le seul format qui laisse une chance de refuser une reprise qui se serait
-trompée.
+This is the reason why nothing here opens a connection: a script reviewed before it is run is the
+only format that leaves a chance to refuse an import that went wrong.
 
-L'ADR-0017 dit pourquoi ce paquet existe.
+ADR-0017 says why this package exists.

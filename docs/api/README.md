@@ -1,30 +1,32 @@
-# Documentation de l'API
+# API documentation
 
-`openapi.json` décrit chaque route de l'API au format OpenAPI 3.1 : méthode, chemin, paramètres,
-corps accepté, réponse et codes d'erreur, ces derniers au format problem details (RFC 7807) que
-l'API rend déjà (#45).
+`openapi.json` describes each route of the API in the OpenAPI 3.1 format: method, path,
+parameters, accepted body, response and error codes, the latter in the problem details format
+(RFC 7807) the API already returns (#45).
 
-## D'où il vient
+## Where it comes from
 
-Il n'est pas écrit à la main. `apps/api/src/openapi/catalog.ts` liste les routes en désignant, pour
-chacune, les schémas zod de `packages/contracts` que la route applique vraiment ;
-`apps/api/src/openapi/document.ts` les rend en JSON Schema 2020-12, que zod 4 produit sans
-dépendance supplémentaire.
+It is not written by hand. `apps/api/src/openapi/catalog.ts` lists the routes by designating, for
+each one, the zod schemas of `packages/contracts` the route actually applies;
+`apps/api/src/openapi/document.ts` renders them as JSON Schema 2020-12, which zod 4 produces
+without an additional dependency.
 
-## Ce qui l'empêche de dériver
+## What keeps it from drifting
 
-`apps/api/src/openapi/openapi.test.ts`, qui tourne avec `npm test` et donc en intégration continue :
+`apps/api/src/openapi/openapi.test.ts`, which runs with `npm test` and therefore in continuous
+integration:
 
-- le fichier versionné doit être exactement celui que le code produit ; sinon le test échoue et
-  nomme la commande qui corrige, `npm run docs:api` ;
-- la liste documentée doit être exactement celle des routes que l'application monte, méthode par
-  méthode, lue dans l'application et non recopiée ;
-- chaque opération documente sa réponse `500`, chaque référence d'erreur existe.
+- the versioned file must be exactly the one the code produces; otherwise the test fails and
+  names the command that fixes it, `npm run docs:api`;
+- the documented list must be exactly that of the routes the application mounts, method by method,
+  read from the application and not copied;
+- each operation documents its `500` response, each error reference exists.
 
-## Où le lire
+## Where to read it
 
-<https://project-legacy-22.github.io/Project-Legacy/api/>, publiée par le workflow `pages` à chaque
-intégration sur `dev`. Le document brut est à côté, `openapi.json`, pour un outil qui le consomme.
+<https://project-legacy-22.github.io/Project-Legacy/api/>, published by the `pages` workflow on
+every integration into `dev`. The raw document is next to it, `openapi.json`, for a tool that
+consumes it.
 
-Le document ne contient ni secret ni adresse interne : les deux schémas d'authentification nomment
-le cookie de session et l'en-tête du secret de relais, jamais leur valeur.
+The document contains neither a secret nor an internal address: the two authentication schemes
+name the session cookie and the header of the relay secret, never their value.

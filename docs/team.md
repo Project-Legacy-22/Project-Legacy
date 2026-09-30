@@ -1,55 +1,55 @@
-# Équipe
+# Team
 
-## Membres
+## Members
 
 Arthur Dos Santos, Arthur Gasmi, Arthur Guyetand, Aurélien Pochart, Seïf Soltane, Victor Briez.
 
-Tous les membres ont un accès administrateur au dépôt et à l'organisation GitHub (décision du
-planning du sprint 1).
+Every member has administrator access to the repository and to the GitHub organisation (decision
+of the sprint 1 planning).
 
-## Rôles
+## Roles
 
-| Rôle | Titulaire |
+| Role | Holder |
 |---|---|
-| Product Owner, sur toute la durée du projet | Victor Briez |
-| Scrum Master du sprint 1 | Aurélien Pochart |
-| Scrum Master du sprint 2 | Arthur Gasmi |
-| Scrum Master du sprint 3 | Arthur Guyetand |
-| Responsable de traitement RGPD et contact | Seïf Soltane |
+| Product Owner, for the whole duration of the project | Victor Briez |
+| Scrum Master of sprint 1 | Aurélien Pochart |
+| Scrum Master of sprint 2 | Arthur Gasmi |
+| Scrum Master of sprint 3 | Arthur Guyetand |
+| GDPR data controller and contact | Seïf Soltane |
 
-Le Product Owner arbitre le périmètre. Le Scrum Master tourne à chaque sprint, comme le sujet
-l'exige. L'équipe de développement, les six membres, prend les issues du board : une seule issue
-en cours par personne, chaque branche liée à une issue, chaque pull request relue et approuvée par
-un autre membre avant son intégration ([docs/ci.md](ci.md)).
+The Product Owner arbitrates the scope. The Scrum Master rotates at each sprint, as the subject
+requires. The development team, the six members, takes the issues of the board: a single issue in
+progress per person, each branch linked to an issue, each pull request reviewed and approved by
+another member before it is integrated ([docs/ci.md](ci.md)).
 
-## Calendrier
+## Calendar
 
-| Sprint | Période | Planning | Revue |
+| Sprint | Period | Planning | Review |
 |---|---|---|---|
-| 1 | du 1er au 4 septembre 2026 | mardi 1er septembre | vendredi 4 septembre, 14 h 30 |
-| 2 | du 7 au 11 septembre 2026 | lundi 7 septembre | vendredi 11 septembre, 14 h 30 |
-| 3 | du 17 au 25 septembre 2026 | jeudi 17 septembre | vendredi 25 septembre |
+| 1 | from 1 to 4 September 2026 | Tuesday 1 September | Friday 4 September, 2:30 pm |
+| 2 | from 7 to 11 September 2026 | Monday 7 September | Friday 11 September, 2:30 pm |
+| 3 | from 17 to 25 September 2026 | Thursday 17 September | Friday 25 September |
 
-Daily de quinze minutes : 16 h au sprint 1, déplacé à 14 h 30 à partir du sprint 2 (décision du
-planning du 7 septembre).
+Fifteen-minute daily: 4 pm in sprint 1, moved to 2:30 pm from sprint 2 on (decision of the planning
+of 7 September).
 
-## Comptes rendus
+## Records
 
-| Cérémonie | Sprint 1 | Sprint 2 | Sprint 3 |
+| Ceremony | Sprint 1 | Sprint 2 | Sprint 3 |
 |---|---|---|---|
 | Planning | [sprint-1](plannings/sprint-1.md) | [sprint-2](plannings/sprint-2.md) | [sprint-3](plannings/sprint-3.md) |
 | Dailies | [sprint-1](dailies/sprint-1.md) | [sprint-2](dailies/sprint-2.md) | [sprint-3](dailies/sprint-3.md) |
-| Revue | [sprint-1](reviews/sprint-1.md) | [sprint-2](reviews/sprint-2.md) | [sprint-3](reviews/sprint-3.md), préparée pour le 25 septembre |
-| Rétrospective | [sprint-1](retros/sprint-1.md), rédigée a posteriori | [sprint-2](retros/sprint-2.md), rédigée a posteriori | [sprint-3](retros/sprint-3.md), préparée pour le 25 septembre |
+| Review | [sprint-1](reviews/sprint-1.md) | [sprint-2](reviews/sprint-2.md) | [sprint-3](reviews/sprint-3.md), prepared for 25 September |
+| Retrospective | [sprint-1](retros/sprint-1.md), written afterwards | [sprint-2](retros/sprint-2.md), written afterwards | [sprint-3](retros/sprint-3.md), prepared for 25 September |
 
-Autres réunions :
+Other meetings:
 
-- [Réunion de lancement du 2 septembre](decisions/2026-09-02-reunion-de-lancement.md) : les
-  décisions structurantes, reprises depuis dans les ADR ;
-- [Soutenance intermédiaire](reviews/soutenance-intermediaire.md) : les retours de l'enseignant, les
-  actions qui en découlent et les suites données à chacune.
+- [Kickoff meeting of 2 September](decisions/2026-09-02-reunion-de-lancement.md): the structuring
+  decisions, since carried over into the ADRs;
+- [Intermediate defense](reviews/soutenance-intermediaire.md): the feedback of the teacher, the
+  actions that follow from it and what was done about each one.
 
-Les plannings, dailies et revues des sprints 1 et 2 reprennent les notes prises en séance ; les
-dailies non consignés ne sont pas reconstitués. Les rétrospectives des sprints 1 et 2, qui n'avaient
-pas été consignées, ont été rédigées le 24 septembre à partir de ces traces et le disent en tête ;
-elles sont à valider en équipe.
+The plannings, dailies and reviews of sprints 1 and 2 reproduce the notes taken during the
+sessions; dailies that were not recorded are not reconstructed. The retrospectives of sprints 1 and
+2, which had not been recorded, were written on 24 September from these traces and say so at the
+top; they are to be validated by the team.

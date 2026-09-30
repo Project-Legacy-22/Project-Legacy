@@ -1,106 +1,103 @@
-# ADR-0021 — Réassignation du propriétaire d'un projet partagé à l'effacement de son compte
+# ADR-0021 — Reassigning the owner of a shared project when their account is erased
 
-- **Statut** : Accepté
-- **Date** : 2026-09-25
-- **Décideurs** : équipe
-- **Issue liée** : #425
+- **Status**: Accepted
+- **Date**: 2026-09-25
+- **Deciders**: team
+- **Related issue**: #425
 
-## Contexte
+## Context
 
-`erase_account` supprimait déjà, avant cette décision, toute ligne nommant le compte effacé :
-appartenances, événements en file, puis le compte lui-même. Les tâches d'un projet partagé
-suivaient le même sort que le compte qui les avait créées : `items.user_id` était `not null`
-avec `on delete cascade`, si bien qu'effacer son propre compte effaçait aussi les tâches créées
-dans un projet partagé avec d'autres membres, alors que ces membres y avaient encore accès la
-minute précédente.
+Before this decision, `erase_account` already deleted every row naming the erased account:
+memberships, queued events, then the account itself. The tasks of a shared project followed the
+same fate as the account that had created them: `items.user_id` was `not null` with
+`on delete cascade`, so that erasing one's own account also erased the tasks created in a project
+shared with other members, while those members still had access to them the minute before.
 
-Un projet dont le compte effacé était l'unique propriétaire pose une deuxième question, distincte
-de la première : `project_memberships` n'impose aucune contrainte sur le nombre de propriétaires
-ni sur leur permanence. Sans règle explicite, un tel projet resterait sans propriétaire après
-l'effacement, alors qu'il compte encore des membres.
+A project whose erased account was the only owner raises a second question, distinct from the
+first: `project_memberships` imposes no constraint on the number of owners or on their
+permanence. Without an explicit rule, such a project would remain without an owner after the
+erasure, while it still has members.
 
-Le même mécanisme touchait une troisième table, trouvée en écrivant le test d'intégration de
-cette décision plutôt qu'en relisant le schéma : `project_invitations.invited_by` était lui
-aussi `not null` avec `on delete cascade`. Effacer le compte qui a invité quelqu'un supprimait
-l'invitation, ce qui supprimait en cascade la notification que la personne invitée avait déjà
-reçue (`notifications.invitation_id` référence `project_invitations` en cascade) — y compris
-dans un projet que l'effacement laisse par ailleurs intact.
+The same mechanism affected a third table, found while writing the integration test of this
+decision rather than while reading the schema: `project_invitations.invited_by` was also
+`not null` with `on delete cascade`. Erasing the account that invited someone deleted the
+invitation, which in turn deleted in cascade the notification the invited person had already
+received (`notifications.invitation_id` references `project_invitations` in cascade) — including
+in a project the erasure otherwise leaves intact.
 
-## Options considérées
+## Options considered
 
-### Option A — ne rien changer, documenter la perte comme une limite connue
-- Avantages : aucun code à écrire.
-- Inconvénients : un membre perd son propre travail sur simple décision d'un autre compte ; la
-  politique de confidentialité (US-37) promet la conservation des données des autres personnes,
-  que cette perte contredit directement.
+### Option A — change nothing, document the loss as a known limit
+- Pros: no code to write.
+- Cons: a member loses their own work through the sole decision of another account; the privacy
+  policy (US-37) promises to keep the data of other people, which this loss directly contradicts.
 
-### Option B — transférer le compte effacé à un compte système anonyme
-- Avantages : `user_id` reste `not null`, aucune migration de contrainte.
-- Inconvénients : un compte système qui n'existe dans aucun flux d'authentification est une
-  fiction à maintenir partout où `user_id` est lu comme un compte réel (notifications,
-  autorisation) ; introduit une exception à documenter sans bénéfice mesurable sur la première.
+### Option B — transfer the erased account to an anonymous system account
+- Pros: `user_id` stays `not null`, no constraint migration.
+- Cons: a system account that exists in no authentication flow is a fiction to maintain everywhere
+  `user_id` is read as a real account (notifications, authorization); it introduces an exception
+  to document without any measurable benefit over the first option.
 
-### Option C — `user_id` nullable avec `on delete set null`, et réassignation du membre le plus
-ancien comme propriétaire quand le compte effacé était le seul
-- Avantages : la tâche reste, avec un lien vers son créateur rompu par construction plutôt que
-  simulé ; un projet à plusieurs membres ne se retrouve jamais sans propriétaire ; la règle de
-  réassignation est déterministe et ne demande aucune saisie au moment de l'effacement.
-- Inconvénients : `user_id` devient nullable, ce qui déplace la charge de la non-nullité vers
-  chaque lecture qui en dépendait implicitement (repéré et corrigé site par site à l'implémentation :
-  `Item.ownerId`, `itemCreated`).
+### Option C — nullable `user_id` with `on delete set null`, and reassignment of the oldest member
+as owner when the erased account was the only one
+- Pros: the task remains, with a link to its creator broken by construction rather than
+  simulated; a project with several members never ends up without an owner; the reassignment rule
+  is deterministic and requires no input at the time of the erasure.
+- Cons: `user_id` becomes nullable, which moves the burden of non-nullity onto every read that
+  implicitly depended on it (found and fixed site by site during implementation: `Item.ownerId`,
+  `itemCreated`).
 
-## Décision
+## Decision
 
-Nous retenons **l'option C**, et lui appliquons le même traitement qu'à `items.user_id` :
-`project_invitations.invited_by` devient nullable avec `on delete set null` au lieu de
-`on delete cascade`. L'invitation et la notification qu'elle a produite survivent à
-l'effacement de la personne qui a invité ; seul le lien vers elle est rompu.
+We choose **option C**, and apply the same treatment as for `items.user_id` to
+`project_invitations.invited_by`: it becomes nullable with `on delete set null` instead of
+`on delete cascade`. The invitation and the notification it produced survive the erasure of the
+person who invited; only the link to that person is broken.
 
-Parce que : l'autorisation d'accès à un projet est déjà entièrement portée par
-`project_memberships` (confirmé en lisant les politiques RLS existantes, qui ne référencent pas
-`items.user_id`) — nullifier ce champ ne retire donc aucun droit à personne ; le critère
-« membre le plus ancien » ne demande aucune entrée externe au moment de l'effacement, un geste
-qui doit rester immédiat ; et une réassignation explicite, testée, vaut mieux qu'un projet sans
-propriétaire découvert plus tard par un comportement qui échoue silencieusement. La même
-logique vaut pour `invited_by` : rien n'autorise ou n'affiche quoi que ce soit à partir de ce
-champ en dehors de l'adresse montrée à la personne invitée, qui devient simplement absente.
+Because: authorization to access a project is already carried entirely by `project_memberships`
+(confirmed by reading the existing RLS policies, which do not reference `items.user_id`) — making
+this field null therefore removes no right from anybody; the "oldest member" criterion requires no
+external input at the time of the erasure, an action that must stay immediate; and an explicit,
+tested reassignment is better than an ownerless project discovered later through a behaviour that
+fails silently. The same logic applies to `invited_by`: nothing authorizes or displays anything
+from this field apart from the address shown to the invited person, which simply becomes absent.
 
-## Conséquences
+## Consequences
 
-**Positives**
-- Un membre d'un projet partagé ne perd plus son accès à une tâche du seul fait qu'un autre
-  membre a effacé son compte.
-- Un projet à plusieurs membres garde toujours un propriétaire après l'effacement de l'ancien.
-- Une invitation en attente, et la notification qu'elle a produite, ne disparaissent plus parce
-  que la personne qui a invité a effacé son compte — tant que le projet lui-même survit.
+**Positive**
+- A member of a shared project no longer loses access to a task merely because another member
+  erased their account.
+- A project with several members always keeps an owner after the former one is erased.
+- A pending invitation, and the notification it produced, no longer disappear because the person
+  who invited erased their account — as long as the project itself survives.
 
-**Négatives / dette acceptée**
-- `items.user_id` et `project_invitations.invited_by` étant nullables, le typage de
-  `Item.ownerId` et `PendingInvitation.invitedByEmail` (`string | null`) rend visible, partout où
-  ils sont lus, qu'une ligne peut avoir survécu à son auteur. Chaque site déjà présent a été revu
-  à l'implémentation ; un site futur qui suppose l'un des deux non nul sans le vérifier est un
-  bug, pas une conséquence acceptée de cette décision.
-- Une fois l'un ou l'autre champ mis à `null`, aucune trace ne permet de retrouver quel compte
-  avait créé la tâche ou envoyé l'invitation : la réassignation comme la rupture du lien sont
-  irréversibles par construction.
+**Negative / accepted debt**
+- With `items.user_id` and `project_invitations.invited_by` nullable, the typing of
+  `Item.ownerId` and `PendingInvitation.invitedByEmail` (`string | null`) makes visible, wherever
+  they are read, that a row may have outlived its author. Every existing site was reviewed during
+  implementation; a future site that assumes either one non-null without checking it is a bug, not
+  an accepted consequence of this decision.
+- Once either field is set to `null`, no trace allows finding which account had created the task
+  or sent the invitation: both the reassignment and the broken link are irreversible by
+  construction.
 
-**Ce que ça impose au reste du projet**
-- Toute nouvelle lecture de `items.user_id` ou de `project_invitations.invited_by` (ou de leurs
-  équivalents domaine) doit traiter le cas nul comme un état normal, pas une erreur.
-- Le critère de réassignation (membre restant le plus ancien, par `project_memberships.created_at`)
-  est écrit une seule fois, dans `erase_account` ; il n'est pas dupliqué côté application.
+**What it imposes on the rest of the project**
+- Every new read of `items.user_id` or of `project_invitations.invited_by` (or of their domain
+  equivalents) must treat the null case as a normal state, not an error.
+- The reassignment criterion (oldest remaining member, by `project_memberships.created_at`) is
+  written only once, in `erase_account`; it is not duplicated on the application side.
 
-## Comment on saura qu'on s'est trompé
+## How we will know we were wrong
 
-Un projet à plusieurs membres se retrouve sans propriétaire après un effacement, observé en
-production ou en intégration ; un accès à une tâche est refusé à un membre légitime à cause
-d'un `user_id` devenu nul ; ou une notification d'invitation disparaît pour son destinataire
-après l'effacement de la personne qui a invité, alors que le projet survit.
+A project with several members ends up without an owner after an erasure, observed in production
+or in integration; access to a task is refused to a legitimate member because of a `user_id` that
+became null; or an invitation notification disappears for its recipient after the erasure of the
+person who invited, while the project survives.
 
-## Références
+## References
 
 - `supabase/migrations/20260925090000_preserve_shared_project_items_on_erasure.sql`
 - `supabase/migrations/20260925093000_preserve_invitations_on_inviter_erasure.sql`
 - `apps/api/test/integration/account-erasure.integration.test.ts`
 - `scripts/check-project-invitations.sql`
-- `docs/gdpr/registre.md`, sections T-03, T-07 et T-10
+- `docs/gdpr/registre.md`, sections T-03, T-07 and T-10

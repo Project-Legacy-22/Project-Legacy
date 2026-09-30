@@ -1,51 +1,50 @@
-# ADR-0015 — GHCR comme registre d'images
+# ADR-0015 — GHCR as the image registry
 
-- **Statut** : Accepté
-- **Date** : 2026-09-11
-- **Décideurs** : équipe, à la revue du sprint 2
-- **Issue liée** : #228, décision `D-13`
+- **Status**: Accepted
+- **Date**: 2026-09-11
+- **Deciders**: team, at the sprint 2 review
+- **Related issue**: #228, decision `D-13`
 
-## Contexte
+## Context
 
-Le sujet demande la publication d'une image Docker. Le registre n'avait jamais été ratifié, alors
-que `.github/workflows/image.yml` publie sur GitHub Container Registry depuis le sprint 1, avec une
-attestation de provenance.
+The subject asks for a Docker image to be published. The registry had never been ratified, while
+`.github/workflows/image.yml` has been publishing to GitHub Container Registry since sprint 1,
+with a provenance attestation.
 
-## Options considérées
+## Options considered
 
 ### Option A — GHCR
-- Avantages : déjà lié au dépôt, aucun secret supplémentaire à gérer — le jeton de la campagne
-  suffit — et l'attestation de provenance est native.
-- Inconvénients : lie la publication à GitHub, comme le reste de la chaîne.
+- Pros: already linked to the repository, no additional secret to manage — the token of the
+  workflow run is enough — and the provenance attestation is native.
+- Cons: ties publication to GitHub, like the rest of the chain.
 
 ### Option B — Docker Hub
-- Avantages : le plus connu.
-- Inconvénients : un compte et un secret de plus, des limites de tirage sur l'offre gratuite, et
-  aucune attestation.
+- Pros: the best known.
+- Cons: one more account and secret, pull limits on the free offer, and no attestation.
 
-## Décision
+## Decision
 
-Nous retenons **l'option A**.
+We choose **option A**.
 
-Parce qu'elle n'ajoute aucun secret à gérer, ce qui est le coût réel d'un second registre dans un
-projet de six personnes, et parce que l'attestation de provenance vient sans travail.
+Because it adds no secret to manage, which is the real cost of a second registry in a project of
+six people, and because the provenance attestation comes without work.
 
-## Conséquences
+## Consequences
 
-**Positives**
-- Une image publiée est rattachable à la campagne qui l'a produite.
+**Positive**
+- A published image can be traced back to the workflow run that produced it.
 
-**Négatives / dette acceptée**
-- La chaîne de livraison dépend entièrement de GitHub.
+**Negative / accepted debt**
+- The delivery chain depends entirely on GitHub.
 
-**Ce que ça impose au reste du projet**
-- Aucune image ne se pousse depuis un poste : seule la campagne déclenchée par un push sur `main`
-  publie, après avoir rejoué les vérifications.
+**What it imposes on the rest of the project**
+- No image is pushed from a workstation: only the workflow run triggered by a push on `main`
+  publishes, after replaying the checks.
 
-## Comment on saura qu'on s'est trompé
+## How we will know we were wrong
 
-Une contrainte de déploiement qui exigerait un registre tiers, ou une limite de GHCR rencontrée.
+A deployment constraint that would require a third-party registry, or a GHCR limit reached.
 
-## Références
+## References
 
 - `.github/workflows/image.yml`

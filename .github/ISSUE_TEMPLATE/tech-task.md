@@ -1,35 +1,35 @@
 ---
-name: Tâche technique
-about: Travail technique sans valeur utilisateur directe
-title: "<type>: <titre court>"
+name: Technical task
+about: Technical work without direct user value
+title: "<type>: <short title>"
 labels: tech
 ---
 
-## Objectif
+## Goal
 
-Ce qu'il faut obtenir, et pourquoi maintenant.
+What must be achieved, and why now.
 
-## Contexte
+## Context
 
-État actuel, contrainte ou dette qui motive la tâche.
+Current state, constraint or debt that motivates the task.
 
-## Périmètre
+## Scope
 
-**Inclus**
+**Included**
 - 
 
-**Exclu** (à ne pas faire dans cette issue)
+**Excluded** (not to be done in this issue)
 - 
 
-## Critères de complétion
+## Completion criteria
 
 - [ ] 
-- [ ] Vérifiable par : (commande, check CI, comportement observable)
+- [ ] Verifiable by: (command, CI check, observable behaviour)
 
-## Modules touchés / owners à prévenir
+## Modules affected / owners to notify
 
 - 
 
-## Dépendances
+## Dependencies
 
-Bloquée par : #
+Blocked by: #

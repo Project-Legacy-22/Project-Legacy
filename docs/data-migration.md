@@ -1,234 +1,227 @@
-# Migration des données
+# Data migration
 
-Comment faire entrer des données venues d'un autre moteur, et comment en faire sortir les nôtres.
-L'ADR-0017 dit pourquoi ces deux chemins existent : la dépendance à Supabase est assumée parce
-qu'elle est réversible, et une réversibilité qu'on n'a jamais exécutée est une intention, pas une
-propriété.
+How to bring in data coming from another engine, and how to take ours out. ADR-0017 says why these
+two paths exist: the dependency on Supabase is owned because it is reversible, and a reversibility
+that has never been run is an intention, not a property.
 
-Les outils sont dans `packages/data-migration`. Ce paquet **ne déclare aucune dépendance**, ni
-externe ni interne, et il n'ouvre **aucune connexion** : il lit du texte et il en écrit. Les deux
-choix sont volontaires. Le premier parce qu'un outil de sortie qui dépend de ce qu'on quitte n'est
-pas un outil de sortie. Le second parce qu'un script relu avant d'être appliqué est la seule forme
-qui laisse une chance de refuser une reprise qui s'est trompée — et qu'appliquer une migration est
-une décision qui appartient à une personne, pas à un programme.
+The tools are in `packages/data-migration`. This package **declares no dependency**, neither
+external nor internal, and it opens **no connection**: it reads text and writes text. Both choices
+are intentional. The first because an exit tool that depends on what it leaves is not an exit
+tool. The second because a script reviewed before being applied is the only form that leaves a
+chance to refuse an import that went wrong — and applying a migration is a decision that belongs to
+a person, not to a program.
 
-Pour sauvegarder et restaurer sans changer de moteur — et pour ce que coûterait un départ de
-Supabase — c'est `docs/backup-and-exit.md`.
+To back up and restore without changing engine — and for what a departure from Supabase would
+cost — see `docs/backup-and-exit.md`.
 
-## Ce qui ne traverse jamais
+## What never crosses
 
-Avant les procédures, ce qu'aucune des deux ne transporte, parce que ce n'est pas du SQL :
+Before the procedures, what neither of them carries, because it is not SQL:
 
-- **le service d'authentification**. Les comptes traversent depuis #426, empreintes comprises
-  (voir « Les comptes » plus bas), mais pas GoTrue : l'inscription, la connexion, les jetons et
-  les courriels sont à fournir par la cible, avec une bibliothèque bcrypt pour relire les
-  empreintes. Les sessions et les jetons de rafraîchissement ne traversent pas : chacun se
-  reconnecte une fois.
-- **les politiques de sécurité au niveau ligne**, qui sont du PostgreSQL et n'ont pas d'équivalent
-  en MySQL ni en SQLite. Sur un autre moteur, l'autorisation redevient entièrement du code
-  applicatif.
+- **the authentication service**. The accounts cross since #426, hashes included (see "The
+  accounts" below), but not GoTrue: registration, sign-in, tokens and emails have to be provided by
+  the target, with a bcrypt library to read the hashes back. Sessions and refresh tokens do not
+  cross: everybody signs in again once.
+- **the row-level security policies**, which are PostgreSQL and have no equivalent in MySQL or in
+  SQLite. On another engine, authorization becomes entirely application code again.
 
-L'ADR-0017 les nomme comme le coût de sortie. Ils sont écrits ici pour qu'on ne les découvre pas
-le jour du départ.
+ADR-0017 names them as the exit cost. They are written here so that nobody discovers them on the
+day of departure.
 
-## Sens 1 : d'un MySQL ou d'un SQLite vers notre PostgreSQL
+## Direction 1: from a MySQL or a SQLite to our PostgreSQL
 
-C'est le chemin de reprise du projet d'origine, qui stockait ses tâches dans l'un ou l'autre au
-choix du déploiement : `src/persistence/mysql.js` et `src/persistence/sqlite.js` au commit
-`42752ef`, tous deux créant la même table
+This is the import path of the original project, which stored its tasks in one or the other
+depending on the deployment: `src/persistence/mysql.js` and `src/persistence/sqlite.js` at commit
+`42752ef`, both creating the same table
 `todo_items (id varchar(36), name varchar(255), completed boolean)`.
 
-### 1. Produire l'export
+### 1. Produce the export
 
-Depuis un MySQL :
+From a MySQL:
 
 ```bash
 mysqldump --no-tablespaces --skip-add-locks legacy todo_items > legacy.sql
 ```
 
-Depuis un SQLite :
+From a SQLite:
 
 ```bash
 sqlite3 legacy.db .dump > legacy.sql
 ```
 
-Les deux formes sont lues. Le moteur est un paramètre de la commande suivante, jamais une
-détection : `mysqldump` écrit une apostrophe `\'`, `sqlite3` écrit `''` et laisse une
-contre-oblique telle quelle, et lire un export SQLite avec les règles de MySQL fusionnerait deux
-colonnes dès qu'un nom de tâche finit par une contre-oblique.
+Both forms are read. The engine is a parameter of the next command, never a detection: `mysqldump`
+writes an apostrophe as `\'`, `sqlite3` writes `''` and leaves a backslash as is, and reading a
+SQLite export with the rules of MySQL would merge two columns as soon as a task name ends with a
+backslash.
 
-### 2. Écrire le script de reprise
+### 2. Write the import script
 
-Le compte destinataire doit exister : la reprise rattache des tâches, elle ne crée pas de compte.
-L'identifiant de projet est fourni plutôt que tiré au hasard, et c'est lui qui rend la reprise
-rejouable — le réutiliser à l'identique ne crée pas un second projet.
+The recipient account must exist: the import attaches tasks, it does not create an account. The
+project identifier is provided rather than drawn at random, and it is what makes the import
+replayable — reusing it identically does not create a second project.
 
 ```bash
-uuidgen | tr 'A-Z' 'a-z'          # l'identifiant de projet, a garder
+uuidgen | tr 'A-Z' 'a-z'          # the project identifier, to keep
 npm run data:import -- \
   --from legacy.sql \
   --engine mysql \
-  --owner quelquun@example.com \
-  --project-id <l-uuid-ci-dessus> \
-  --project "Reprise du legacy" \
+  --owner someone@example.com \
+  --project-id <the-uuid-above> \
+  --project "Legacy import" \
   --out data-out
 ```
 
-La commande écrit deux fichiers dans `data-out/`, que `.gitignore` couvre : le script porte
-l'adresse du destinataire en clair, parce que c'est la clé qui résout le compte, et une donnée
-personnelle n'a rien à faire dans l'historique du dépôt.
+The command writes two files into `data-out/`, which `.gitignore` covers: the script carries the
+address of the recipient in clear text, because it is the key that resolves the account, and
+personal data has nothing to do in the history of the repository.
 
-### 3. Relire le script, puis l'appliquer
+### 3. Review the script, then apply it
 
 ```bash
-psql "$DATABASE_URL" --set ON_ERROR_STOP=1 -f data-out/import-<horodatage>.sql
+psql "$DATABASE_URL" --set ON_ERROR_STOP=1 -f data-out/import-<timestamp>.sql
 ```
 
-Le script est encadré par une transaction. Si aucun compte ne porte l'adresse, il lève et tout est
-annulé : mieux vaut une reprise qui refuse qu'un projet que personne ne possède.
+The script is wrapped in a transaction. If no account carries the address, it raises and
+everything is rolled back: better an import that refuses than a project nobody owns.
 
-### Ce que la reprise décide, et ce qu'elle refuse
+### What the import decides, and what it refuses
 
-Le legacy a trois colonnes, `items` en a dix.
+The legacy has three columns, `items` has ten.
 
-| Champ | Ce qui est écrit | Pourquoi |
+| Field | What is written | Why |
 |---|---|---|
-| propriétaire | l'adresse de `--owner`, résolue en SQL | une adresse inconnue annule la reprise |
-| projet | créé par la reprise | `items.project_id` est `not null` depuis US-16 |
-| `status` | `completed` vrai vers `done`, faux vers `todo` | le seul champ que le legacy porte |
-| `priority`, `due_date`, `version` | laissés au schéma | le legacy n'en a aucun |
-| dates | la date de la reprise, écrite en clair dans le script | la source n'en a pas, et en inventer une par ligne serait un mensonge |
+| owner | the address of `--owner`, resolved in SQL | an unknown address cancels the import |
+| project | created by the import | `items.project_id` is `not null` since US-16 |
+| `status` | `completed` true to `done`, false to `todo` | the only field the legacy carries |
+| `priority`, `due_date`, `version` | left to the schema | the legacy has none of them |
+| dates | the date of the import, written in clear in the script | the source has none, and inventing one per row would be a lie |
 
-Un `completed` nul est lu comme `todo`, et le rapport le dit : c'est une lecture, pas un fait.
+A null `completed` is read as `todo`, and the report says so: it is a reading, not a fact.
 
-Rien n'est altéré pour faire entrer une ligne : un nom n'est ni tronqué ni même rogné. Une tâche
-silencieusement modifiée est pire qu'une tâche manquante, parce que la manquante est dans le
-rapport. Sont refusées et nommées, avec leur ligne dans l'export : l'absence d'identifiant, un
-identifiant qui n'est pas un UUID, un identifiant qui apparaît deux fois, un nom nul, vide, ou
-au-delà de 255 caractères.
+Nothing is altered to make a row fit: a name is neither truncated nor even trimmed. A silently
+modified task is worse than a missing task, because the missing one is in the report. Refused and
+named, with their line in the export: a missing identifier, an identifier that is not a UUID, an
+identifier that appears twice, a name that is null, empty, or longer than 255 characters.
 
-## Sens 2 : de notre PostgreSQL vers un autre moteur
+## Direction 2: from our PostgreSQL to another engine
 
-Une distinction d'abord, parce qu'elle doit être écrite plutôt que découverte :
+A distinction first, because it must be written rather than discovered:
 
-- **vers un PostgreSQL** reconstruit par le schéma rendu, l'export est fidèle : rien ne se perd ;
-- **vers un MySQL ou un SQLite**, il l'est seulement si le schéma cible est **traduit du nôtre**.
-  Réécrire les données dans la table `todo_items` de trois colonnes du projet d'origine perdrait le
-  projet, le propriétaire, la priorité, l'échéance et les notifications. La sortie traduit donc le
-  schéma ; elle ne revient pas au legacy.
+- **to a PostgreSQL** rebuilt by the rendered schema, the export is faithful: nothing is lost;
+- **to a MySQL or a SQLite**, it is faithful only if the target schema is **translated from ours**.
+  Rewriting the data into the three-column `todo_items` table of the original project would lose
+  the project, the owner, the priority, the due date and the notifications. The exit therefore
+  translates the schema; it does not go back to the legacy.
 
-### 1. Produire l'export
+### 1. Produce the export
 
 ```bash
-mkdir -p data-out   # le CLI ne cree pas le dossier
+mkdir -p data-out   # the CLI does not create the folder
 npx supabase db dump --local --data-only -s public,auth -f data-out/dump.sql
 ```
 
-Sur le projet hébergé, remplacer `--local` par `--linked`. La commande écrit des `insert`, sauf
-si on lui demande `--use-copy` : c'est cette forme que l'outil lit.
+On the hosted project, replace `--local` with `--linked`. The command writes `insert` statements,
+unless asked for `--use-copy`: that is the form the tool reads.
 
-Avec `auth`, le vidage porte les empreintes des mots de passe, les sessions et les jetons de
-rafraîchissement : c'est un secret. Il est écrit dans `data-out/`, que `.gitignore` exclut, et
-se supprime une fois l'export fait. Sans `auth`, l'export se fait quand même, sans aucun compte.
+With `auth`, the dump carries the password hashes, the sessions and the refresh tokens: it is a
+secret. It is written into `data-out/`, which `.gitignore` excludes, and is deleted once the export
+is done. Without `auth`, the export happens anyway, without any account.
 
-L'export doit être produit **en UTC**. Un horodatage portant un autre décalage est refusé plutôt
-que converti : ni `datetime(6)` ni le texte de SQLite ne porte de fuseau, et décaler toutes les
-dates au jugé est précisément le genre de silence que ces outils existent pour éviter.
+The export must be produced **in UTC**. A timestamp carrying another offset is refused rather than
+converted: neither `datetime(6)` nor the text of SQLite carries a time zone, and shifting every
+date by guesswork is precisely the kind of silence these tools exist to avoid.
 
-### 2. Écrire le schéma et les données pour les trois cibles
+### 2. Write the schema and the data for the three targets
 
 ```bash
 npm run data:export -- --from data-out/dump.sql --out data-out
 ```
 
-Neuf fichiers dans `data-out/` : `<cible>-schema.sql`, `<cible>-data.sql` et
-`<cible>-accounts.sql` pour `postgres`, `mysql` et `sqlite`. On applique le schéma, puis les
-données, puis les comptes.
+Nine files in `data-out/`: `<target>-schema.sql`, `<target>-data.sql` and `<target>-accounts.sql`
+for `postgres`, `mysql` and `sqlite`. The schema is applied first, then the data, then the
+accounts.
 
-### Les comptes
+### The accounts
 
-`<cible>-accounts.sql` crée une table `accounts` et y écrit chaque ligne de `auth.users` :
+`<target>-accounts.sql` creates an `accounts` table and writes each row of `auth.users` into it:
 
-| Colonne | Vient de | Note |
+| Column | Comes from | Note |
 |---|---|---|
-| `id` | `auth.users.id` | égal à `users.id`, clé étrangère vers lui : le compte retrouve ses tâches |
+| `id` | `auth.users.id` | equal to `users.id`, foreign key to it: the account finds its tasks again |
 | `email` | `auth.users.email` | unique |
-| `password_hash` | `auth.users.encrypted_password` | bcrypt (`$2a$`), tel que GoTrue l'a écrit ; nul si le compte n'a pas de mot de passe |
-| `email_confirmed_at` | idem | nul pour une adresse jamais confirmée |
-| `created_at` | idem | |
+| `password_hash` | `auth.users.encrypted_password` | bcrypt (`$2a$`), as GoTrue wrote it; null if the account has no password |
+| `email_confirmed_at` | same | null for an address never confirmed |
+| `created_at` | same | |
 
-Les comptes sont dans un fichier à part parce qu'il porte les empreintes : il se transmet, se
-garde et se supprime comme un secret, et `<cible>-data.sql` reste sans aucun. Une empreinte ne
-se déchiffre pas : une bibliothèque bcrypt, sur n'importe quelle plateforme, compare un mot de
-passe saisi avec elle. Chaque personne se connecte donc sur la cible avec son mot de passe
-d'origine ; celles qui n'en avaient pas, comptées par la commande, passent par une
-réinitialisation.
+The accounts are in a separate file because it carries the hashes: it is transmitted, kept and
+deleted like a secret, and `<target>-data.sql` stays without any. A hash cannot be decrypted: a
+bcrypt library, on any platform, compares an entered password with it. Each person therefore signs
+in on the target with their original password; those who had none, counted by the command, go
+through a reset.
 
-Toutes les lignes partent en une seule instruction, dans une transaction : si la cible porte
-déjà l'une des adresses, aucun compte n'est écrit.
+All the rows go in a single statement, within a transaction: if the target already carries one of
+the addresses, no account is written.
 
-### Ce que la traduction du schéma porte, et ce qu'elle laisse
+### What the schema translation carries, and what it leaves
 
-| Nous | postgres | mysql | sqlite |
+| Ours | postgres | mysql | sqlite |
 |---|---|---|---|
 | `uuid` | `uuid` | `char(36)` | `text` |
-| `timestamptz` | `timestamptz` | `datetime(6)`, sans fuseau | `text`, UTC |
+| `timestamptz` | `timestamptz` | `datetime(6)`, without a time zone | `text`, UTC |
 | `jsonb` | `jsonb` | `json` | `text` |
-| énumération | le type qu'elle a déjà | `enum(...)` en ligne | `text` + `check` |
+| enumeration | the type it already has | inline `enum(...)` | `text` + `check` |
 
-Les types, la nullabilité, les clés, les clés étrangères, l'unicité et les valeurs par défaut
-traversent. Ne traversent pas : les contrôles de valeur (`char_length` ne s'écrit pas pareil en
-SQLite), les politiques de sécurité au niveau ligne, les déclencheurs, et le générateur
-d'identifiants — une fonction à nous, dont une cible n'a pas besoin puisqu'elle reçoit les
-identifiants avec les données.
+Types, nullability, keys, foreign keys, uniqueness and default values cross. What does not cross:
+value checks (`char_length` is not written the same way in SQLite), row-level security policies,
+triggers, and the identifier generator — a function of ours, which a target does not need since it
+receives the identifiers with the data.
 
-## Rejouer la preuve
+## Replaying the proof
 
-Une procédure qu'on ne peut pas rejouer n'est pas une preuve. Tout est dans le dépôt :
+A procedure that cannot be replayed is not a proof. Everything is in the repository:
 
 ```bash
 npm run test:migration
 ```
 
-La commande démarre trois conteneurs — PostgreSQL 17, MySQL 8.4 et un Alpine qui ne porte que
-`sqlite3` — et rejoue les deux sens : un export `mysqldump` entre dans notre schéma, puis nos
-données ressortent vers les trois cibles, et les valeurs sont comparées de bout en bout. Les
-comptes sortent aussi, et l'empreinte relue dans chaque cible doit accepter le mot de passe
-d'origine (`accounts.migration.test.ts`).
+The command starts three containers — PostgreSQL 17, MySQL 8.4 and an Alpine that only carries
+`sqlite3` — and replays both directions: a `mysqldump` export enters our schema, then our data goes
+out to the three targets, and the values are compared end to end. The accounts go out too, and the
+hash read back in each target must accept the original password (`accounts.migration.test.ts`).
 
-Aucun port n'est publié et aucun client n'a besoin d'être installé : tout passe par
-`docker compose exec`. Docker suffit, et la chaîne d'intégration exécute exactement la même
-commande. Les conteneurs vivent sous le profil `migration`, donc `npm run up` ne les démarre pas.
+No port is published and no client needs to be installed: everything goes through
+`docker compose exec`. Docker is enough, and the integration pipeline runs exactly the same
+command. The containers live under the `migration` profile, so `npm run up` does not start them.
 
 ```bash
-docker compose ps                          # les voir
-docker compose --profile migration down    # les arreter
+docker compose ps                          # see them
+docker compose --profile migration down    # stop them
 ```
 
-Dans la chaîne d'intégration, le job `Migration de donnees` ne tourne que sur le chemin de
-livraison : la pull request de `dev` vers `main` et le push sur `main`. Sur une pull request
-ordinaire il est ignoré — trois moteurs à démarrer pour un code qui change rarement.
+In the integration pipeline, the `Migration de donnees` job only runs on the release path: the pull
+request from `dev` to `main` and the push on `main`. On an ordinary pull request it is skipped —
+three engines to start for code that rarely changes.
 
-La garde qui empêche le modèle de dériver est ailleurs, au niveau `integration` :
-`schema-model.integration.test.ts` compare `packages/data-migration/src/schema.ts` à
-`information_schema` de la vraie base. Une colonne ajoutée par une migration et absente du
-modèle fait échouer ce test, au lieu de disparaître silencieusement des exports.
+The guard that keeps the model from drifting is elsewhere, at the `integration` level:
+`schema-model.integration.test.ts` compares `packages/data-migration/src/schema.ts` with the
+`information_schema` of the real database. A column added by a migration and missing from the
+model fails this test, instead of silently disappearing from the exports.
 
-## Exécutions réelles
+## Real runs
 
-Une procédure qu'on n'a jamais jouée n'est pas une procédure.
+A procedure that has never been played is not a procedure.
 
-| Date | Sens | Ce qui a été fait |
+| Date | Direction | What was done |
 |---|---|---|
-| 2026-09-12 | legacy vers nous | Un MySQL 8.4 chargé de six lignes `todo_items`, exporté par `mysqldump`, repris par `npm run data:import`. Quatre lignes reprises, deux refusées et nommées. Script appliqué sur PostgreSQL 17.6, puis réappliqué : rien de dupliqué. Adresse inconnue : la transaction est annulée. |
-| 2026-09-12 | nous vers ailleurs | Export des quatre tâches vers les trois cibles. Schéma et données appliqués sur PostgreSQL 17.6, MySQL 8.4 et SQLite 3.41. Comptes identiques, et une tâche nommée avec deux contre-obliques et une apostrophe retrouvée caractère pour caractère dans les trois. |
-| 2026-09-24 | nous vers ailleurs, avec les comptes | Vidage `-s public,auth` de la pile locale (les deux comptes du jeu de démonstration, créés par GoTrue). Schéma, données et comptes appliqués sur les trois moteurs des conteneurs. Dans chacun, l'empreinte arrivée accepte le mot de passe d'origine et refuse un autre, vérifié par `crypt()` de pgcrypto. Aucune empreinte dans les fichiers de données. |
+| 2026-09-12 | legacy to us | A MySQL 8.4 loaded with six `todo_items` rows, exported by `mysqldump`, imported by `npm run data:import`. Four rows imported, two refused and named. Script applied on PostgreSQL 17.6, then applied again: nothing duplicated. Unknown address: the transaction is rolled back. |
+| 2026-09-12 | us to elsewhere | Export of the four tasks to the three targets. Schema and data applied on PostgreSQL 17.6, MySQL 8.4 and SQLite 3.41. Identical counts, and a task named with two backslashes and an apostrophe found character for character in all three. |
+| 2026-09-24 | us to elsewhere, with the accounts | `-s public,auth` dump of the local stack (the two accounts of the demonstration dataset, created by GoTrue). Schema, data and accounts applied on the three engines of the containers. In each one, the hash that arrived accepts the original password and refuses another, checked with `crypt()` from pgcrypto. No hash in the data files. |
 
-Ces deux lignes sont l'exécution qui a servi à écrire la procédure. `npm run test:migration` les
-rejoue, et c'est cette commande qui vaut preuve : elle ne dépend d'aucun état laissé par la
-précédente, puisqu'elle refait les trois bases depuis rien.
+These two rows are the run that served to write the procedure. `npm run test:migration` replays
+them, and that command is what counts as proof: it depends on no state left by the previous one,
+since it rebuilds the three databases from nothing.
 
-L'épreuve a trouvé deux défauts réels, ce qui est la raison de son existence. Le schéma rendu ne
-portait pas les valeurs par défaut, donc une cible refusait les lignes que notre propre script de
-reprise lui envoyait (`null value in column "version"`). Et une contre-oblique était divisée par
-deux en arrivant dans MySQL, où elle est une échappée à l'intérieur d'un littéral.
+The test found two real defects, which is the reason it exists. The rendered schema did not carry
+the default values, so a target refused the rows our own import script sent it
+(`null value in column "version"`). And a backslash was halved on arriving in MySQL, where it is an
+escape inside a literal.

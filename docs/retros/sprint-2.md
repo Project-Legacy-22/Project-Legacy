@@ -1,38 +1,37 @@
-# Sprint 2 — Rétrospective
+# Sprint 2 — Retrospective
 
-- **Sprint** : 2, du 7 au 11 septembre 2026
-- **Équipe** : Arthur Dos Santos, Arthur Gasmi, Arthur Guyetand, Aurélien Pochart, Seïf Soltane, Victor Briez
-- **Scrum Master** : Arthur Gasmi · **Product Owner** : Victor Briez
+- **Sprint**: 2, from 7 to 11 September 2026
+- **Team**: Arthur Dos Santos, Arthur Gasmi, Arthur Guyetand, Aurélien Pochart, Seïf Soltane, Victor Briez
+- **Scrum Master**: Arthur Gasmi · **Product Owner**: Victor Briez
 
-Aucune rétrospective n'a été consignée en séance. Celle-ci est rédigée le 24 septembre 2026 à
-partir des traces du sprint : [planning](../plannings/sprint-2.md), [dailies](../dailies/sprint-2.md),
-[revue](../reviews/sprint-2.md) et historique des pull requests. Elle est à relire et à compléter en
-équipe.
+No retrospective was recorded during the session. This one was written on 24 September 2026 from
+the traces of the sprint: [planning](../plannings/sprint-2.md), [dailies](../dailies/sprint-2.md),
+[review](../reviews/sprint-2.md) and the history of the pull requests. It is to be reviewed and
+completed by the team.
 
-## Ce qui a bien marché
+## What went well
 
-- Les 16 items engagés, 63 points, ont tous été livrés, Must d'abord comme décidé au planning.
-- Chacun des six membres a porté des user stories du cœur fonctionnel : tâches, projets, Kanban,
-  compte, notifications, données personnelles, accessibilité, sécurité.
-- Le découpage en sous-issues a gardé les pull requests sous 400 lignes, donc relisables.
-- Le Product Owner a jugé le plan respecté et les délais tenus.
+- The 16 items committed, 63 points, were all delivered, Must first as decided at the planning.
+- Each of the six members carried user stories of the functional core: tasks, projects, Kanban,
+  account, notifications, personal data, accessibility, security.
+- The split into sub-issues kept pull requests under 400 lines, hence reviewable.
+- The Product Owner judged that the plan was respected and the deadlines met.
 
-## Ce qui a coincé
+## What got stuck
 
-- Cinq items sans porteur au planning, dont deux Must : ils ont été répartis en cours de sprint.
-- Les relectures et les merges sont devenus le goulot : au daily du 10 septembre, la moitié de
-  l'équipe attendait un merge ou une relecture, et des conflits sont apparus sur les fichiers
-  partagés.
-- Beaucoup de pull requests simultanées : 64 fusionnées sur la semaine.
-- 20 bugs découverts pendant le sprint : tous corrigés, mais autant de travail non prévu au
-  planning.
-- La production servait encore le code du 11 septembre ; le relais d'événements n'y tournait pas
-  tant que la livraison suivante n'était pas faite.
+- Five items without an owner at the planning, two of them Must: they were distributed during the
+  sprint.
+- Reviews and merges became the bottleneck: at the daily of 10 September, half of the team was
+  waiting for a merge or a review, and conflicts appeared on the shared files.
+- Many simultaneous pull requests: 64 merged over the week.
+- 20 bugs discovered during the sprint: all fixed, but as much work not planned at the planning.
+- Production still served the code of 11 September; the event relay did not run there until the
+  next release was done.
 
-## Actions, et ce qu'il en est advenu
+## Actions, and what became of them
 
-| Action | Suite constatée |
+| Action | Observed follow-up |
 |---|---|
-| Classer un bug découvert à part, sans remplacer silencieusement un engagement | décidé au planning du sprint 3 |
-| Livrer régulièrement vers `main` | livraison du 15 septembre ; le relais tourne en production depuis |
-| Répondre aux points de vigilance de la soutenance intermédiaire | ADR-0016 et ADR-0017, sauvegarde et restauration éprouvées, migration de données dans les deux sens ; voir la [revue de la soutenance](../reviews/soutenance-intermediaire.md) |
+| Classify a discovered bug separately, without silently replacing a commitment | decided at the sprint 3 planning |
+| Release to `main` regularly | release of 15 September; the relay has been running in production since |
+| Answer the points of attention of the intermediate defense | ADR-0016 and ADR-0017, backup and restore tested, data migration in both directions; see the [defense review](../reviews/soutenance-intermediaire.md) |

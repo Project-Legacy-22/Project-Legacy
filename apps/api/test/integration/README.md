@@ -1,58 +1,53 @@
-# Tests d'intégration
+# Integration tests
 
-Contre le système réellement assemblé : Postgres, PostgREST, GoTrue, migrations
-appliquées. Aucune doublure ici — `packages/core/*/test/` et
-`apps/api/src/http/routes/*.test.ts` couvrent déjà le comportement applicatif
-contre des fakes, plus vite et sans dépendance externe ; ce dossier couvre ce
-qu'une doublure ne peut pas prouver : que les pièces marchent une fois reliées
-pour de vrai.
+Against the system actually assembled: Postgres, PostgREST, GoTrue, migrations applied. No test
+double here — `packages/core/*/test/` and `apps/api/src/http/routes/*.test.ts` already cover the
+application behaviour against fakes, faster and without external dependencies; this folder covers
+what a double cannot prove: that the pieces work once really connected.
 
-## Fichiers
+## Files
 
-- `support.ts` — compose une vraie `Application` (`composition-root.ts`),
-  inscrit et connecte de vrais comptes par l'authentification réelle.
-- `projects.integration.test.ts` — projet par défaut, création avec appartenance,
-  visibilité des membres, refus des non-membres et cascade de suppression.
-- `remove-project-member.integration.test.ts` — retrait via HTTP, conservation des tâches
-  et du compte, révocation de l'accès au projet via l'API et RLS, protection de la RPC.
-- `member-removal-concurrency.integration.test.ts` — transactions simultanées contre
-  PostgreSQL : conservation du dernier propriétaire et refus d'un appelant retiré pendant
-  l'attente. Nécessite Docker ; la base est identifiée par le port de l'API testée.
-  Ces tests appellent `/usr/bin/docker` sous Linux (y compris WSL) ou
-  `/Applications/Docker.app/Contents/Resources/bin/docker` sous macOS. Ils ne cherchent
-  pas l'exécutable dans `PATH` ; un test vérifie les requêtes et transactions avec un `PATH` vide.
-- `project-counts.integration.test.ts` — compteur aligné sur les tâches visibles,
-  y compris pour un projet vide ou contenant uniquement des tâches supprimées
-  logiquement. Exerce le vrai agrégat PostgREST utilisé par l'API.
-- `items.integration.test.ts` — l'API HTTP réelle : CRUD sous un projet et
-  isolation entre membres et non-membres, telle que l'application l'applique.
-- `row-level-security.integration.test.ts` — les politiques RLS elles-mêmes,
-  atteintes directement via PostgREST avec la clé publique et le jeton d'un
-  vrai compte, sans passer par l'API ni par le rôle de service. C'est la seule
-  suite qui exerce réellement ce que
-  les migrations d'authentification et de projets posent : le filet de sécurité
-  si le rôle de service fuit ou si un client interroge PostgREST directement.
-- `retention-purge.integration.test.ts` — la purge de conservation (`US-39`) :
-  ce qui a dépassé sa durée part, le reste demeure, un événement jamais publié
-  n'est jamais supprimé, une seconde passe ne fait rien, et l'effacement d'un
-  compte retrouve ses événements traités après la purge de son outbox.
+- `support.ts` — composes a real `Application` (`composition-root.ts`), registers and signs in
+  real accounts through the real authentication.
+- `projects.integration.test.ts` — default project, creation with membership, visibility to
+  members, refusal of non-members and deletion cascade.
+- `remove-project-member.integration.test.ts` — removal through HTTP, tasks and account kept,
+  access to the project revoked through the API and RLS, protection of the RPC.
+- `member-removal-concurrency.integration.test.ts` — simultaneous transactions against
+  PostgreSQL: the last owner is kept and a caller removed during the wait is refused. Requires
+  Docker; the database is identified by the port of the API under test.
+  These tests call `/usr/bin/docker` on Linux (WSL included) or
+  `/Applications/Docker.app/Contents/Resources/bin/docker` on macOS. They do not look for the
+  executable in `PATH`; a test checks the queries and transactions with an empty `PATH`.
+- `project-counts.integration.test.ts` — counter aligned with the visible tasks, including for an
+  empty project or one that only contains logically deleted tasks. Exercises the real PostgREST
+  aggregate used by the API.
+- `items.integration.test.ts` — the real HTTP API: CRUD under a project and isolation between
+  members and non-members, as the application enforces it.
+- `row-level-security.integration.test.ts` — the RLS policies themselves, reached directly through
+  PostgREST with the public key and the token of a real account, without going through the API or
+  the service role. It is the only suite that actually exercises what the authentication and
+  project migrations set up: the safety net if the service role leaks or if a client queries
+  PostgREST directly.
+- `retention-purge.integration.test.ts` — the retention purge (`US-39`): what exceeded its
+  duration goes, the rest stays, an event never published is never deleted, a second pass does
+  nothing, and the erasure of an account finds its processed events after the purge of its outbox.
 
-## Lancer
+## Running
 
 ```bash
-npm run db:start        # pile Supabase locale, migrations appliquees
+npm run db:start        # local Supabase stack, migrations applied
 npm run test:integration
 ```
 
-Suite exclue de `npm test` : elle a besoin de la pile locale, que tout le
-monde ne fait pas tourner à chaque modification. `npm run test:integration`
-lit `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` et `SUPABASE_ANON_KEY` dans
-l'environnement du process (`supabase status -o env` les imprime) et échoue
-tôt, en les nommant, si l'un manque.
+Suite excluded from `npm test`: it needs the local stack, which not everybody runs on every
+change. `npm run test:integration` reads `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` and
+`SUPABASE_ANON_KEY` from the environment of the process (`supabase status -o env` prints them) and
+fails early, naming them, if one is missing.
 
 ## Isolation
 
-Chaque suite crée ses propres comptes (adresse générée, `crypto.randomUUID()`)
-et chaque test crée les projets ou items qu'il exerce. Aucun test ne dépend de
-l'ordre d'exécution. Un `npm run db:reset` entre deux lancements n'est jamais
-nécessaire pour que la suite passe, seulement pour repartir d'une base vide.
+Each suite creates its own accounts (generated address, `crypto.randomUUID()`) and each test
+creates the projects or items it exercises. No test depends on the execution order. A
+`npm run db:reset` between two runs is never necessary for the suite to pass, only to start again
+from an empty database.

@@ -1,13 +1,13 @@
 ---
 name: Bug
-about: Un comportement qui ne correspond pas à l'attendu
-title: "bug: <symptôme observable>"
+about: A behaviour that does not match what is expected
+title: "bug: <observable symptom>"
 labels: bug
 ---
 
-## Symptôme
+## Symptom
 
-Ce qui se produit, vu de l'utilisateur.
+What happens, as seen by the user.
 
 ## Reproduction
 
@@ -15,26 +15,26 @@ Ce qui se produit, vu de l'utilisateur.
 2. 
 3. 
 
-## Attendu
+## Expected
 
-## Observé
+## Observed
 
-Message d'erreur exact, `traceId`, capture si pertinent.
+Exact error message, `traceId`, screenshot if relevant.
 
-## Environnement
+## Environment
 
-Branche / commit : 
-Navigateur ou runtime : 
+Branch / commit: 
+Browser or runtime: 
 
-## Gravité
+## Severity
 
-Bloquant / Majeur / Mineur / Cosmétique
+Blocking / Major / Minor / Cosmetic
 
-## Correction
+## Fix
 
-- [ ] Test de non-régression écrit **avant** le correctif
-- [ ] Cause racine identifiée (et notée ci-dessous)
-- [ ] Correctif
-- [ ] Vérifié que le cas n'existe pas ailleurs dans le code
+- [ ] Regression test written **before** the fix
+- [ ] Root cause identified (and noted below)
+- [ ] Fix
+- [ ] Checked that the case does not exist elsewhere in the code
 
-**Cause racine** :
+**Root cause**:

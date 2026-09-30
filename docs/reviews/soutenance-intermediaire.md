@@ -1,112 +1,110 @@
-# Soutenance intermédiaire — retours de l'enseignant
+# Intermediate defense — feedback of the teacher
 
-Compte rendu de la première défense intermédiaire, tenue entre les sprints 2 et 3 (date non notée
-dans le compte rendu).
+Record of the first intermediate defense, held between sprints 2 and 3 (date not noted in the
+record).
 
-## Organisation de l'équipe
+## Organisation of the team
 
-Les rôles importants du projet doivent être clairement présentés :
+The important roles of the project must be clearly presented:
 
-- le Product Owner ;
-- le Scrum Master de chaque sprint ;
-- les responsabilités de l'équipe de développement.
+- the Product Owner;
+- the Scrum Master of each sprint;
+- the responsibilities of the development team.
 
-La présentation doit aussi expliquer concrètement le fonctionnement de l'équipe et la répartition
-des responsabilités.
+The presentation must also explain concretely how the team works and how the responsibilities are
+distributed.
 
-## Méthode de travail
+## Working method
 
-L'équipe utilise Scrum, avec des sprints itératifs. Le travail est organisé autour :
+The team uses Scrum, with iterative sprints. The work is organised around:
 
-- d'un Sprint Planning ;
-- de user stories regroupées dans un backlog ;
-- de réunions quotidiennes pour suivre l'avancement et identifier les blocages ;
-- de branches de travail associées aux issues ;
-- de pull requests relues par un autre membre avant leur intégration.
+- a Sprint Planning;
+- user stories grouped in a backlog;
+- daily meetings to follow progress and identify blockers;
+- work branches associated with the issues;
+- pull requests reviewed by another member before they are integrated.
 
 ## GitHub Actions
 
-La prochaine présentation doit montrer les GitHub Actions du projet et expliquer :
+The next presentation must show the GitHub Actions of the project and explain:
 
-- les vérifications lancées automatiquement ;
-- les tests exécutés ;
-- les contrôles de qualité ;
-- le processus de déploiement ;
-- les conditions nécessaires avant l'intégration d'une pull request.
+- the checks run automatically;
+- the tests run;
+- the quality checks;
+- the deployment process;
+- the conditions required before a pull request is integrated.
 
-## Décisions d'architecture
+## Architecture decisions
 
-Les ADR doivent être présentés pour justifier les choix techniques : les principales alternatives
-étudiées, la décision retenue, ses avantages et ses limites.
+The ADRs must be presented to justify the technical choices: the main alternatives studied, the
+decision taken, its advantages and its limits.
 
-## Points de vigilance concernant Supabase
+## Points of attention about Supabase
 
-### Hébergement et souveraineté des données
+### Hosting and data sovereignty
 
-L'hébergement proposé par Supabase peut placer les données sur des serveurs situés à l'étranger.
-Cela soulève des questions sur la localisation réelle des données, les autorisations d'accès, la
-conformité avec les exigences de protection des données, et la dépendance envers un fournisseur
-non souverain. Ce choix doit être assumé et clairement documenté.
+The hosting offered by Supabase can place the data on servers located abroad. This raises questions
+about the real location of the data, access permissions, compliance with data protection
+requirements, and the dependency on a non-sovereign provider. This choice must be owned and clearly
+documented.
 
-### Pérennité des données
+### Durability of the data
 
-Une offre gratuite présente un risque pour la conservation des données sur plusieurs années.
-L'équipe doit vérifier et documenter :
+A free plan presents a risk for keeping the data over several years. The team must check and
+document:
 
-- la durée de conservation garantie ;
-- les conséquences d'une suspension ou d'une suppression du projet Supabase ;
-- la procédure de sauvegarde ;
-- la procédure de récupération des données ;
-- la méthode permettant de changer de fournisseur sans perdre les données des utilisateurs.
+- the guaranteed retention period;
+- the consequences of a pause or a deletion of the Supabase project;
+- the backup procedure;
+- the data recovery procedure;
+- the method to change provider without losing the users' data.
 
-Abandonner les données des utilisateurs en cas de problème avec Supabase n'est pas acceptable.
+Abandoning the users' data in case of a problem with Supabase is not acceptable.
 
-### Migration des données
+### Data migration
 
-Le projet étant une reprise d'une application legacy, l'objectif principal reste de faire évoluer
-le système sans casser ce qui fonctionne déjà. Une procédure claire doit expliquer comment migrer
-les données depuis MySQL ou SQLite vers PostgreSQL et Supabase ; la migration doit être
-reproductible et aussi transparente que possible pour les utilisateurs.
+The project being a takeover of a legacy application, the main goal remains to evolve the system
+without breaking what already works. A clear procedure must explain how to migrate the data from
+MySQL or SQLite to PostgreSQL and Supabase; the migration must be reproducible and as transparent as
+possible for the users.
 
-Pour limiter la dépendance envers Supabase, les évolutions de la base doivent être décrites par des
-migrations versionnées. Une solution de remplacement doit pouvoir reconstruire le schéma et
-récupérer les données.
+To limit the dependency on Supabase, the changes to the database must be described by versioned
+migrations. A replacement solution must be able to rebuild the schema and recover the data.
 
-## Priorisation
+## Prioritisation
 
-L'équipe doit vérifier qu'un critère secondaire lié au déploiement ne passe pas avant un besoin
-classé Must. Si un compromis est nécessaire, la décision doit être assumée, expliquée et
-documentée.
+The team must check that a secondary criterion related to deployment does not come before a need
+classified Must. If a compromise is needed, the decision must be owned, explained and documented.
 
 ## Monitoring
 
-Une plateforme de monitoring doit être choisie avant la fin du projet, et faire l'objet d'un ADR
-présentant les besoins de surveillance, les solutions comparées, la solution retenue, les données
-collectées, les coûts et les limites, et les impacts sur la sécurité et les données personnelles.
+A monitoring platform must be chosen before the end of the project, and be the subject of an ADR
+presenting the monitoring needs, the solutions compared, the solution chosen, the data collected,
+the costs and the limits, and the impacts on security and personal data.
 
-## Actions pour la suite
+## Actions for what comes next
 
-1. Clarifier les rôles dans la présentation et dans la documentation.
-2. Présenter le fonctionnement des GitHub Actions.
-3. Montrer les ADR les plus importants.
-4. Documenter les limites de Supabase et le risque d'hébergement non souverain.
-5. Définir une procédure de sauvegarde, de restauration et de migration des données.
-6. Préparer une stratégie permettant de changer de base ou de fournisseur.
-7. Choisir une plateforme de monitoring et rédiger l'ADR correspondant.
-8. Vérifier que les fonctionnalités Must restent prioritaires.
+1. Clarify the roles in the presentation and in the documentation.
+2. Present how the GitHub Actions work.
+3. Show the most important ADRs.
+4. Document the limits of Supabase and the risk of non-sovereign hosting.
+5. Define a procedure for backup, restore and migration of the data.
+6. Prepare a strategy to change database or provider.
+7. Choose a monitoring platform and write the corresponding ADR.
+8. Check that the Must features remain the priority.
 
-## Suites données
+## Follow-up
 
-État au 24 septembre 2026. Chaque action renvoie au document qui y répond ; ce qui reste ouvert
-est dit comme tel.
+State as of 24 September 2026. Each action points to the document that answers it; what remains
+open is said as such.
 
-| # | Action demandée | Réponse | Ce qui reste |
+| # | Action requested | Answer | What remains |
 |---|---|---|---|
-| 1 | Clarifier les rôles | [docs/team.md](../team.md) : Product Owner, Scrum Master de chaque sprint, responsable RGPD, fonctionnement de l'équipe | — |
-| 2 | Présenter les GitHub Actions | [docs/ci.md](../ci.md) : les sept campagnes, les neuf vérifications de `ci`, ce qui bloque une intégration, le chemin d'une modification jusqu'au déploiement | à montrer en démonstration, étapes 5 à 7 de [docs/demo.md](../demo.md) |
-| 3 | Montrer les ADR importants | [docs/adr/](../adr/README.md) : 20 ADR, chacun avec ses alternatives, sa décision et ses conséquences | à montrer en démonstration, étape 9 |
-| 4 | Documenter les limites de Supabase et le risque non souverain | ADR-0017 : région `eu-west-1` (Irlande), société et infrastructure américaines soumises au CLOUD Act, aucun engagement de conservation sur l'offre gratuite ; [registre RGPD](../gdpr/registre.md) : chaque sous-traitant, sa région, ce qu'il détient | — |
-| 5 | Procédure de sauvegarde, de restauration et de migration des données | [docs/backup-and-exit.md](../backup-and-exit.md) : sauvegarde par `npm run backup`, restauration éprouvée le 12 septembre, comptes reconnectés avec leur mot de passe d'origine ; [docs/data-migration.md](../data-migration.md) : reprise depuis MySQL ou SQLite, rejouable ; ADR-0018 : le choix d'un outil qui écrit des scripts relus, dans les deux sens, et ses alternatives ; ADR-0019 : l'application automatique des migrations à la base hébergée | l'application de `schema.sql` à un projet réellement neuf n'a pas été éprouvée, faute d'un second projet ; le risque est écrit dans le document |
-| 6 | Stratégie pour changer de base ou de fournisseur | [docs/backup-and-exit.md](../backup-and-exit.md), section « Sortir » : schéma et données acquis, éprouvés sur trois moteurs par `npm run test:migration` ; ce qui serait à réécrire est nommé (authentification, politiques de ligne, PostgREST) | — |
-| 7 | Choisir une plateforme de monitoring, avec un ADR | ADR-0016 : besoins, solutions comparées, Prometheus et Grafana Cloud en Allemagne, données collectées, coûts, limites, impact sur les données personnelles ; tableau « Legacy 22 — flux et service » en service | — |
-| 8 | Garder les Must prioritaires | [docs/priorisation.md](../priorisation.md) : tous les Must sont livrés ; le déploiement continu complet, classé Could, n'est pas passé devant | — |
+| 1 | Clarify the roles | [docs/team.md](../team.md): Product Owner, Scrum Master of each sprint, GDPR contact, how the team works | — |
+| 2 | Present the GitHub Actions | [docs/ci.md](../ci.md): the seven workflows, the nine checks of `ci`, what blocks an integration, the path of a change up to deployment | to show in the demonstration, steps 5 to 7 of [docs/demo.md](../demo.md) |
+| 3 | Show the important ADRs | [docs/adr/](../adr/README.md): 20 ADRs, each with its alternatives, its decision and its consequences | to show in the demonstration, step 9 |
+| 4 | Document the limits of Supabase and the non-sovereign risk | ADR-0017: region `eu-west-1` (Ireland), American company and infrastructure subject to the CLOUD Act, no retention commitment on the free plan; [GDPR register](../gdpr/registre.md): each processor, its region, what it holds | — |
+| 5 | Procedure for backup, restore and migration of the data | [docs/backup-and-exit.md](../backup-and-exit.md): backup with `npm run backup`, restore tested on 12 September, accounts signed in again with their original password; [docs/data-migration.md](../data-migration.md): import from MySQL or SQLite, replayable; ADR-0018: the choice of a tool that writes reviewed scripts, in both directions, and its alternatives; ADR-0019: the automatic application of the migrations to the hosted database | applying `schema.sql` to a truly new project was not tested, for lack of a second project; the risk is written in the document |
+| 6 | Strategy to change database or provider | [docs/backup-and-exit.md](../backup-and-exit.md), section "Leaving": schema and data secured, tested on three engines by `npm run test:migration`; what would have to be rewritten is named (authentication, row policies, PostgREST) | — |
+| 7 | Choose a monitoring platform, with an ADR | ADR-0016: needs, solutions compared, Prometheus and Grafana Cloud in Germany, data collected, costs, limits, impact on personal data; dashboard "Legacy 22 — flux et service" in service | — |
+| 8 | Keep the Must items first | [docs/priorisation.md](../priorisation.md): every Must is delivered; complete continuous deployment, classified Could, did not come first | — |

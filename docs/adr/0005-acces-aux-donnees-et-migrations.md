@@ -1,82 +1,80 @@
-# ADR-0005 — Accès aux données par le client Supabase, schéma versionné en migrations
+# ADR-0005 — Data access through the Supabase client, schema versioned as migrations
 
-- **Statut** : Accepté
-- **Date** : 2026-09-02
-- **Décideurs** : équipe complète, réunion de lancement
-- **Issue liée** : #2
+- **Status**: Accepted
+- **Date**: 2026-09-02
+- **Deciders**: whole team, kickoff meeting
+- **Related issue**: #2
 
-## Contexte
+## Context
 
-Le schéma hérité est créé au démarrage par un `CREATE TABLE IF NOT EXISTS` en ligne, exécuté
-par chaque pilote, sans versionnement (`DET-26`). Il n'a ni clé primaire, ni index, ni
-contrainte : deux lignes peuvent partager le même identifiant (`DET-27`).
+The legacy schema is created at startup by an inline `CREATE TABLE IF NOT EXISTS`, run by each
+driver, without versioning (`DET-26`). It has no primary key, no index and no constraint: two
+rows can share the same identifier (`DET-27`).
 
-Le point évalué par le sujet est le **versionnement du schéma**, pas l'outil retenu pour
-écrire les requêtes.
+The point assessed by the subject is **schema versioning**, not the tool chosen to write the
+queries.
 
-## Options considérées
+## Options considered
 
-### Option A — SQL manuel
-- Avantages : contrôle total, aucune couche à expliquer.
-- Inconvénients : beaucoup de code répétitif, et un risque d'injection dès qu'on relâche la
-  discipline sur la construction des requêtes.
+### Option A — Hand-written SQL
+- Pros: full control, no layer to explain.
+- Cons: a lot of repetitive code, and a risk of injection as soon as discipline on building
+  queries slackens.
 
-### Option B — Query builder du client Supabase
-- Avantages : requêtes lisibles, paramétrées, aucun comportement implicite. Le client est
-  déjà présent pour l'authentification et RLS (ADR-0004, ADR-0008).
-- Inconvénients : ne couvre pas les requêtes complexes ; l'API est propre à Supabase.
+### Option B — Query builder of the Supabase client
+- Pros: readable, parameterised queries, no implicit behaviour. The client is already present
+  for authentication and RLS (ADR-0004, ADR-0008).
+- Cons: does not cover complex queries; the API is specific to Supabase.
 
-### Option C — ORM complet (Prisma, TypeORM)
-- Avantages : rapide au démarrage, migrations intégrées.
-- Inconvénients : comportements implicites — chargement différé, cascades, requêtes générées
-  — difficiles à expliquer en soutenance, et qui masquent ce que le sujet demande de
-  démontrer.
+### Option C — Full ORM (Prisma, TypeORM)
+- Pros: fast to start with, built-in migrations.
+- Cons: implicit behaviours — lazy loading, cascades, generated queries — hard to explain at the
+  defense, and which hide what the subject asks us to demonstrate.
 
-## Décision
+## Decision
 
-Nous retenons **l'option B — le query builder du client Supabase**, avec le schéma versionné
-en fichiers de migration SQL.
+We choose **option B — the query builder of the Supabase client**, with the schema versioned as
+SQL migration files.
 
-Parce que :
+Because:
 
-1. Le point noté est le versionnement, et il est satisfait par la CLI :
-   `supabase migration new` crée un fichier horodaté dans `supabase/migrations/`,
-   `supabase db reset` les rejoue toutes, `supabase db push` les applique à la cible.
-2. Le client Supabase est déjà présent pour l'authentification et pour RLS. En ajouter un
-   second uniquement pour les requêtes ferait cohabiter deux vérités sur la connexion et sur
-   l'identité de l'appelant — donc deux endroits où l'autorisation peut diverger.
-3. Un ORM complet demanderait de défendre en soutenance des requêtes que nous n'aurions pas
-   écrites.
+1. The graded point is versioning, and the CLI satisfies it: `supabase migration new` creates a
+   timestamped file in `supabase/migrations/`, `supabase db reset` replays them all,
+   `supabase db push` applies them to the target.
+2. The Supabase client is already present for authentication and for RLS. Adding a second one
+   only for the queries would make two truths coexist about the connection and about the
+   identity of the caller — hence two places where authorization can diverge.
+3. A full ORM would require defending at the defense queries we would not have written.
 
-## Conséquences
+## Consequences
 
-**Positives**
-- Plus aucun `CREATE TABLE` au démarrage : la fonction d'initialisation du legacy disparaît
-  avec `EN-09`.
-- Toute évolution du schéma est un fichier relu en pull request, réversible et daté.
-- Le client applique les politiques RLS avec l'identité de l'appelant : l'autorisation de
-  l'ADR-0001 s'exerce au niveau de la base, pas seulement dans les routes.
+**Positive**
+- No more `CREATE TABLE` at startup: the initialisation function of the legacy disappears with
+  `EN-09`.
+- Every schema change is a file reviewed in a pull request, reversible and dated.
+- The client applies the RLS policies with the identity of the caller: the authorization of
+  ADR-0001 is enforced at the database level, not only in the routes.
 
-**Négatives / dette acceptée**
-- Le query builder ne couvre pas tout. Une requête complexe passe par une fonction SQL
-  versionnée dans une migration, **pas** par une chaîne construite à la main.
-- L'API du client est propre à Supabase. Atténuation : les requêtes restent derrière le port
-  du domaine (ADR-0003), donc le remplacement se limite à un adaptateur.
+**Negative / accepted debt**
+- The query builder does not cover everything. A complex query goes through a SQL function
+  versioned in a migration, **not** through a hand-built string.
+- The client API is specific to Supabase. Mitigation: the queries stay behind the port of the
+  domain (ADR-0003), so a replacement is limited to one adapter.
 
-**Ce que ça impose au reste du projet**
-- `EN-09` livre les migrations initiales avec clés primaires, index et contraintes — les
-  trois absences de `DET-27`.
-- Aucune modification de schéma appliquée à la main sur un projet hébergé : elle serait
-  invisible du dépôt et impossible à rejouer.
+**What it imposes on the rest of the project**
+- `EN-09` delivers the initial migrations with primary keys, indexes and constraints — the three
+  things missing in `DET-27`.
+- No schema change applied by hand on a hosted project: it would be invisible from the repository
+  and impossible to replay.
 
-## Comment on saura qu'on s'est trompé
+## How we will know we were wrong
 
-Si plus d'un quart des accès doivent contourner le query builder par du SQL brut, le besoin
-est celui d'un outil SQL généraliste : on remplace l'adaptateur par un query builder complet.
-Les migrations, elles, restent valables — c'est ce qui rend ce changement peu coûteux.
+If more than a quarter of the accesses have to bypass the query builder with raw SQL, the need is
+that of a general-purpose SQL tool: we replace the adapter with a full query builder. The
+migrations remain valid — which is what makes that change cheap.
 
-## Références
+## References
 
-- `docs/backlog.md`, décision `D-06`
-- `docs/audit-legacy.md`, dettes `DET-26`, `DET-27` (`SP-00`, PR #107)
+- `docs/backlog.md`, decision `D-06`
+- `docs/audit-legacy.md`, debts `DET-26`, `DET-27` (`SP-00`, PR #107)
 - https://supabase.com/docs/guides/local-development/overview

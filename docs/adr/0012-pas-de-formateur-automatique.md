@@ -1,75 +1,73 @@
-# ADR-0012 — Pas de formateur automatique pour l'instant
+# ADR-0012 — No automatic formatter for now
 
-- **Statut** : Accepté
-- **Date** : 2026-09-11
-- **Décideurs** : équipe, à la revue du sprint 2
-- **Issue liée** : #221
+- **Status**: Accepted
+- **Date**: 2026-09-11
+- **Deciders**: team, at the sprint 2 review
+- **Related issue**: #221
 
-## Contexte
+## Context
 
-Le dépôt n'a ni `prettier`, ni `.editorconfig`, ni règle de mise en forme dans `eslint.config.js` :
-la mise en forme tient par convention seule, sur 267 fichiers TypeScript.
+The repository has neither `prettier`, nor `.editorconfig`, nor any formatting rule in
+`eslint.config.js`: formatting holds by convention alone, across 267 TypeScript files.
 
-Mesure du 11 septembre 2026 sur ces 267 fichiers :
+Measurement of 11 September 2026 on those 267 files:
 
-| Ce qui est mesuré | Résultat |
+| What is measured | Result |
 |---|---|
-| Indentations rencontrées | 4, 8, 12, 16 espaces — multiples de 4, sans exception mesurée |
-| Guillemets | 11 610 simples contre 1 094 doubles, ces derniers presque tous à l'intérieur de chaînes |
-| Lignes de plus de 100 caractères | 446 |
+| Indentations found | 4, 8, 12, 16 spaces — multiples of 4, without any measured exception |
+| Quotes | 11,610 single against 1,094 double, the latter almost all inside strings |
+| Lines longer than 100 characters | 446 |
 
-La convention tient donc d'elle-même sur l'indentation et les guillemets. Le seul écart réel est la
-longueur de ligne.
+The convention therefore holds by itself for indentation and quotes. The only real deviation is
+line length.
 
-## Options considérées
+## Options considered
 
-### Option A — Adopter prettier maintenant
-- Avantages : la mise en forme cesse d'être un sujet de relecture ; les 446 lignes longues sont
-  reformatées d'un coup.
-- Inconvénients : un reformatage de 267 fichiers en un commit rend `git blame` inutilisable sans
-  `.git-blame-ignore-revs`, et entre en conflit avec les trois pull requests ouvertes. Les règles
-  du projet interdisent par ailleurs le reformatage global au passage d'une tâche.
-- Coût : faible en outillage, élevé en bruit d'historique au pire moment.
+### Option A — Adopt prettier now
+- Pros: formatting stops being a review topic; the 446 long lines are reformatted at once.
+- Cons: reformatting 267 files in one commit makes `git blame` unusable without
+  `.git-blame-ignore-revs`, and conflicts with the three open pull requests. The project rules
+  also forbid global reformatting in passing during a task.
+- Cost: low in tooling, high in history noise at the worst moment.
 
-### Option B — Ajouter des règles de mise en forme à eslint
-- Avantages : pas de second outil ; l'application reste dans le contrôle déjà en place.
-- Inconvénients : les règles de mise en forme d'eslint sont dépréciées au profit de
-  `@stylistic`, donc une dépendance de plus malgré tout, et le même reformatage à absorber.
+### Option B — Add formatting rules to eslint
+- Pros: no second tool; enforcement stays in the check already in place.
+- Cons: the formatting rules of eslint are deprecated in favour of `@stylistic`, so one more
+  dependency anyway, and the same reformatting to absorb.
 
-### Option C — Ne rien adopter, et laisser la convention tenir
-- Avantages : aucun reformatage, aucun conflit, aucune dépendance.
-- Inconvénients : la cohérence dépend des relecteurs ; un contributeur nouveau n'a rien qui
-  l'oriente automatiquement.
+### Option C — Adopt nothing, and let the convention hold
+- Pros: no reformatting, no conflict, no dependency.
+- Cons: consistency depends on the reviewers; a new contributor has nothing that guides them
+  automatically.
 
-## Décision
+## Decision
 
-Nous retenons **l'option C pour le sprint 2**, et l'option A comme candidate à une frontière de
-sprint.
+We choose **option C for sprint 2**, and option A as a candidate for a sprint boundary.
 
-Parce que la mesure ne montre aucune dérive à corriger : l'indentation et les guillemets sont
-uniformes sans outil. Et parce que le coût tombe au mauvais moment — trois pull requests ouvertes et
-une revue le lendemain, pour un gain qui ne se voit pas dans le code livré.
+Because the measurement shows no drift to correct: indentation and quotes are uniform without a
+tool. And because the cost falls at the wrong moment — three open pull requests and a review the
+next day, for a gain that does not show in the delivered code.
 
-## Conséquences
+## Consequences
 
-**Positives**
-- Aucun conflit introduit dans les pull requests en cours.
-- L'historique reste lisible : aucun commit ne touche 267 fichiers sans changer de comportement.
+**Positive**
+- No conflict introduced into the pull requests in progress.
+- The history stays readable: no commit touches 267 files without changing behaviour.
 
-**Négatives / dette acceptée**
-- 446 lignes dépassent 100 caractères et resteront ainsi jusqu'à une éventuelle adoption.
-- La cohérence continue de reposer sur la relecture.
+**Negative / accepted debt**
+- 446 lines exceed 100 characters and will stay that way until a possible adoption.
+- Consistency continues to rely on review.
 
-**Ce que ça impose au reste du projet**
-- Si l'adoption est décidée, elle se fait en un commit qui ne contient que le reformatage, avec un
-  `.git-blame-ignore-revs` qui le référence, et aucune pull request ouverte à ce moment-là.
+**What it imposes on the rest of the project**
+- If adoption is decided, it happens in a commit that contains only the reformatting, with a
+  `.git-blame-ignore-revs` that references it, and no pull request open at that moment.
 
-## Comment on saura qu'on s'est trompé
+## How we will know we were wrong
 
-Une relecture qui discute de mise en forme au lieu du comportement, ou une seconde mesure montrant
-plusieurs largeurs d'indentation dans le dépôt.
+A review that discusses formatting instead of behaviour, or a second measurement showing several
+indentation widths in the repository.
 
-## Références
+## References
 
-- Mesure : `git ls-files '*.ts' '*.tsx'`, 11 septembre 2026
-- Standards de style du projet, section 3 (conventions de nommage et de forme)
+- Measurement: `git ls-files '*.ts' '*.tsx'`, 11 September 2026
+- Style standards of the project, section 3 (naming and form conventions)

@@ -1,96 +1,95 @@
-# Sauvegarde, restauration, sortie
+# Backup, restore, exit
 
-Quatre questions auxquelles ce dépôt ne répondait pas : quelle durée de conservation est garantie,
-ce qui se passe si le projet est suspendu, comment on sauvegarde, comment on récupère. Elles sont
-venues de la défense intermédiaire, avec une phrase qui tranche : abandonner les données des
-utilisateurs n'est pas acceptable.
+Four questions this repository did not answer: what retention period is guaranteed, what happens if
+the project is paused, how we back up, how we recover. They came from the intermediate defense,
+with a sentence that settles it: abandoning the users' data is not acceptable.
 
-## 1. Ce que l'offre gratuite garantit
+## 1. What the free plan guarantees
 
-Rien, et c'est écrit noir sur blanc par le fournisseur.
+Nothing, and the provider writes it in black and white.
 
-| Fait | Source |
+| Fact | Source |
 |---|---|
-| « We may pause applications on the Free Plan that exhibit low activity in a 7-day period to save on server resources. » | [Going into prod](https://supabase.com/docs/guides/platform/going-into-prod) |
-| « You can restore paused projects from the Supabase dashboard. » | idem |
-| « Database backups are not available for download for Free Plan projects. » | idem |
-| « We recommend that free tier plan projects regularly export their data using the Supabase CLI `db dump` command and maintain off-site backups. » | [Backups](https://supabase.com/docs/guides/platform/backups) |
-| L'offre Pro donne accès aux sept derniers jours de sauvegardes quotidiennes. | idem |
+| "We may pause applications on the Free Plan that exhibit low activity in a 7-day period to save on server resources." | [Going into prod](https://supabase.com/docs/guides/platform/going-into-prod) |
+| "You can restore paused projects from the Supabase dashboard." | same |
+| "Database backups are not available for download for Free Plan projects." | same |
+| "We recommend that free tier plan projects regularly export their data using the Supabase CLI `db dump` command and maintain off-site backups." | [Backups](https://supabase.com/docs/guides/platform/backups) |
+| The Pro plan gives access to the last seven days of daily backups. | same |
 
-Trois conséquences, qu'il vaut mieux énoncer que découvrir :
+Three consequences, better stated than discovered:
 
-- **sept jours sans activité suffisent** pour que le projet soit mis en pause. Une période de
-  vacances, un sprint sur autre chose, et l'application ne répond plus ;
-- une pause se rattrape depuis le tableau de bord, donc elle n'est pas une perte. Mais la
-  **récupération dépend du fournisseur** : c'est lui qui détient la seule copie ;
-- sur cette offre, **la sauvegarde que nous prenons est la seule qui existe**. Supabase ne le
-  cache pas, il recommande explicitement de le faire soi-même.
+- **seven days without activity are enough** for the project to be paused. A holiday period, a
+  sprint on something else, and the application no longer responds;
+- a pause can be undone from the dashboard, so it is not a loss. But **recovery depends on the
+  provider**: it holds the only copy;
+- on this plan, **the backup we take is the only one that exists**. Supabase does not hide it, it
+  explicitly recommends doing it yourself.
 
-C'est la raison d'être de tout ce qui suit, et de l'ADR-0017.
+This is the reason for everything that follows, and for ADR-0017.
 
-## 2. Sauvegarder
+## 2. Backing up
 
 ```bash
-npm run backup              # le projet lié, celui que `supabase link` a retenu
-npm run backup -- --local   # la pile locale
+npm run backup              # the linked project, the one `supabase link` recorded
+npm run backup -- --local   # the local stack
 ```
 
-Sans `--local`, le CLI demande le mot de passe de la base, ou lit `SUPABASE_DB_PASSWORD`.
+Without `--local`, the CLI asks for the database password, or reads `SUPABASE_DB_PASSWORD`.
 
-La commande écrit dans `backups/<horodatage>/` quatre fichiers :
+The command writes four files into `backups/<timestamp>/`:
 
-| Fichier | Ce qu'il porte |
+| File | What it carries |
 |---|---|
-| `roles.sql` | les rôles du cluster et leurs réglages |
-| `schema.sql` | les tables, les types, les fonctions, les politiques de sécurité au niveau ligne |
-| `data.sql` | les données, **schéma `auth` compris** |
-| `MANIFEST.txt` | la date, la cible, la version du CLI, et la taille et l'empreinte SHA-256 de chaque fichier |
+| `roles.sql` | the roles of the cluster and their settings |
+| `schema.sql` | the tables, the types, the functions, the row-level security policies |
+| `data.sql` | the data, **`auth` schema included** |
+| `MANIFEST.txt` | the date, the target, the CLI version, and the size and SHA-256 hash of each file |
 
-L'ordre du tableau est l'ordre de restauration : les données avant le schéma n'ont nulle part où
-aller.
+The order of the table is the restore order: data before the schema has nowhere to go.
 
-**`data.sql` porte les comptes et leurs empreintes de mot de passe**, parce que le vidage des
-données inclut le schéma `auth`. Ce dossier est donc une donnée personnelle au sens du règlement :
-`.gitignore` l'exclut du dépôt, et une sauvegarde qui compte vraiment doit sortir de la machine.
+**`data.sql` carries the accounts and their password hashes**, because the data dump includes the
+`auth` schema. This folder is therefore personal data within the meaning of the regulation:
+`.gitignore` excludes it from the repository, and a backup that really matters must leave the
+machine.
 
-Le manifeste existe pour qu'un dossier de trois `.sql` trouvé dans six mois dise d'où il vient et
-si quelque chose l'a abîmé.
+The manifest exists so that a folder of three `.sql` files found in six months says where it comes
+from and whether something damaged it.
 
-## 3. Restaurer
+## 3. Restoring
 
-La cible est **un projet Supabase neuf, sur lequel nos migrations n'ont pas tourné**. Les deux
-moitiés de cette phrase ont été mesurées, et chacune a une raison.
+The target is **a new Supabase project, on which our migrations have not run**. Both halves of this
+sentence were measured, and each has a reason.
 
-*Un projet Supabase*, parce que `schema.sql` crée ses extensions dans les schémas `extensions` et
-`vault`, et que `data.sql` insère dans `auth.users` — des tables que GoTrue gère et que notre
-vidage ne crée pas. Une base PostgreSQL nue refuse donc cette restauration. Pour sortir vers un
-PostgreSQL quelconque, ou vers MySQL ou SQLite, c'est `docs/data-migration.md` qui s'applique.
+*A Supabase project*, because `schema.sql` creates its extensions in the `extensions` and `vault`
+schemas, and `data.sql` inserts into `auth.users` — tables that GoTrue manages and that our dump
+does not create. A bare PostgreSQL database therefore refuses this restore. To leave for any
+PostgreSQL, or for MySQL or SQLite, `docs/data-migration.md` applies.
 
-*Sur lequel nos migrations n'ont pas tourné*, parce que la migration initiale crée l'utilisateur
-système. Restaurer par-dessus échoue sur
-`ERROR: duplicate key value violates unique constraint "users_pkey"` — mesuré le 12 septembre
-2026, pas supposé.
+*On which our migrations have not run*, because the initial migration creates the system user.
+Restoring on top of it fails on
+`ERROR: duplicate key value violates unique constraint "users_pkey"` — measured on 12 September
+2026, not assumed.
 
 ```bash
-# 1. Un projet neuf, puis ses coordonnees
-supabase link --project-ref <nouveau-ref>
+# 1. A new project, then its coordinates
+supabase link --project-ref <new-ref>
 
-# 2. Les trois fichiers, dans cet ordre
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f backups/<horodatage>/roles.sql
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f backups/<horodatage>/schema.sql
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f backups/<horodatage>/data.sql
+# 2. The three files, in this order
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f backups/<timestamp>/roles.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f backups/<timestamp>/schema.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f backups/<timestamp>/data.sql
 
-# 3. Comparer, table par table, avec les comptes de la source
+# 3. Compare, table by table, with the counts of the source
 ```
 
-### Ce qui a été éprouvé, et quand
+### What was tested, and when
 
-Le 12 septembre 2026, sur la pile locale (PostgreSQL 17.6, CLI Supabase 2.116.0).
+On 12 September 2026, on the local stack (PostgreSQL 17.6, Supabase CLI 2.116.0).
 
-Un compte a été créé avec un mot de passe connu, et sa connexion vérifiée. Sauvegarde prise. Les
-deux schémas entièrement vidés. `data.sql` appliqué. Puis les deux vérifications qui comptent :
+An account was created with a known password, and its sign-in checked. Backup taken. Both schemas
+entirely emptied. `data.sql` applied. Then the two checks that matter:
 
-| Table | Avant | Après |
+| Table | Before | After |
 |---|---|---|
 | `auth.users` | 68 | 68 |
 | `public.users` | 69 | 69 |
@@ -100,53 +99,49 @@ deux schémas entièrement vidés. `data.sql` appliqué. Puis les deux vérifica
 | `public.outbox` | 38 | 38 |
 | `public.notifications` | 30 | 30 |
 
-Et surtout : **le compte s'est reconnecté avec son mot de passe d'origine**. Des lignes qui
-reviennent ne sont pas la même chose que des personnes qui peuvent revenir ; c'est la seconde qu'il
-fallait démontrer.
+And above all: **the account signed in again with its original password**. Rows that come back are
+not the same thing as people who can come back; the second is what had to be demonstrated.
 
-### Ce qui n'a pas été éprouvé, et pourquoi
+### What was not tested, and why
 
-`schema.sql` n'a pas été appliqué à un projet réellement neuf : il en faudrait un second, et le
-seul projet hébergé est celui qui sert. Ce que la restauration ci-dessus a exercé, c'est
-`data.sql` sur un schéma que les migrations avaient construit — or `schema.sql` est un vidage de ce
-même schéma, et la chaîne d'intégration reconstruit ce schéma depuis les migrations à chaque
-exécution. Le risque restant est donc étroit, mais il n'est pas nul, et il est écrit ici plutôt
-que passé sous silence.
+`schema.sql` was not applied to a truly new project: that would require a second one, and the only
+hosted project is the one in use. What the restore above exercised is `data.sql` on a schema the
+migrations had built — and `schema.sql` is a dump of that same schema, and the integration pipeline
+rebuilds that schema from the migrations on every run. The remaining risk is therefore narrow, but
+it is not zero, and it is written here rather than passed over in silence.
 
-## 4. Sortir
+## 4. Leaving
 
-Quitter Supabase se découpe en trois parts, dont une seule est gratuite.
+Leaving Supabase breaks down into three parts, only one of which is free.
 
-**Le schéma est acquis.** Des migrations versionnées reconstruisent un PostgreSQL vierge, et
-`packages/data-migration` le traduit aussi pour MySQL et SQLite. C'est éprouvé sur trois moteurs
-réels par `npm run test:migration`.
+**The schema is secured.** Versioned migrations rebuild a blank PostgreSQL, and
+`packages/data-migration` also translates it for MySQL and SQLite. This is tested on three real
+engines by `npm run test:migration`.
 
-**Les données sont acquises.** Dans les deux sens, et éprouvées de la même façon. Le détail est
-dans `docs/data-migration.md`.
+**The data is secured.** In both directions, and tested the same way. The detail is in
+`docs/data-migration.md`.
 
-**Ce qui reste à réécrire** — nommé maintenant, pour ne pas le découvrir le jour du départ :
+**What remains to be rewritten** — named now, so as not to discover it on the day of departure:
 
-| Ce qu'on perd | Ce qu'il faut à la place |
+| What we lose | What is needed instead |
 |---|---|
-| GoTrue : inscription, connexion, jetons, réinitialisation, courriels | un service d'authentification, ou une bibliothèque dans l'application |
-| les politiques de sécurité au niveau ligne | de l'autorisation applicative, à écrire et à tester |
-| PostgREST | les routes qui manquent à l'API, s'il en reste qui passent par lui |
+| GoTrue: registration, sign-in, tokens, reset, emails | an authentication service, or a library in the application |
+| the row-level security policies | application-level authorization, to write and test |
+| PostgREST | the routes missing from the API, if some still go through it |
 
-Deux précisions sur cette liste. Les comptes ne sont pas perdus : `npm run data:export` les écrit
-pour chaque moteur cible, empreintes bcrypt comprises (#426), et le remplaçant de GoTrue n'a
-besoin que d'une bibliothèque bcrypt pour les relire — `docs/data-migration.md`, « Les comptes ».
-Et les
-politiques de ligne sont la part la plus coûteuse : aujourd'hui la base refuse elle-même ce qu'un
-compte n'a pas le droit de lire, et sans elles c'est à l'application de ne jamais se tromper.
+Two clarifications on this list. The accounts are not lost: `npm run data:export` writes them for
+each target engine, bcrypt hashes included (#426), and the replacement of GoTrue only needs a
+bcrypt library to read them back — `docs/data-migration.md`, "The accounts". And the row policies
+are the most expensive part: today the database itself refuses what an account is not allowed to
+read, and without them it is up to the application never to make a mistake.
 
-L'ADR-0017 porte la décision et son coût. Ce document porte les commandes.
+ADR-0017 carries the decision and its cost. This document carries the commands.
 
-## 5. Ce qu'un lecteur perdrait aujourd'hui
+## 5. What a reader would lose today
 
-Si le projet hébergé disparaissait maintenant, sans sauvegarde prise : **tout**, sauf le schéma,
-que le dépôt reconstruit. Comptes, projets, tâches, notifications.
+If the hosted project disappeared now, without a backup taken: **everything**, except the schema,
+which the repository rebuilds. Accounts, projects, tasks, notifications.
 
-Avec une sauvegarde prise : rien de ce qu'elle contient, et donc tout ce qui a été écrit depuis.
-C'est la seule vraie question de fréquence, et elle n'a pas de bonne réponse automatique sur
-l'offre gratuite : la commande est manuelle, donc la perte possible est l'intervalle entre deux
-exécutions.
+With a backup taken: nothing of what it contains, and therefore everything written since. This is
+the only real question of frequency, and it has no good automatic answer on the free plan: the
+command is manual, so the possible loss is the interval between two runs.

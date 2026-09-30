@@ -1,159 +1,152 @@
-# Catalogue des événements
+# Event catalogue
 
-Référence des événements publiés par l'application. Un événement qui n'est pas décrit ici
-n'a pas le droit d'être publié : le catalogue est ce qui permet à un consommateur de savoir
-ce qu'il reçoit sans lire le code du producteur.
+Reference of the events published by the application. An event that is not described here is not
+allowed to be published: the catalogue is what lets a consumer know what it receives without
+reading the code of the producer.
 
-Le contrat exécutable est `packages/contracts/src/events.ts`. Ce document explique les
-règles et l'intention ; le schéma fait foi sur la forme.
+The executable contract is `packages/contracts/src/events.ts`. This document explains the rules
+and the intent; the schema is authoritative on the form.
 
-## Règles
+## Rules
 
-**Le nom porte la version.** Un événement s'appelle `<domaine>.<fait>.v<n>`, par exemple
-`item.created.v1`. La version est dans le nom et non dans un champ séparé : un consommateur
-s'abonne à une forme précise et continue de fonctionner le jour où `item.created.v2` est
-publié à côté. Un champ numérique obligerait chaque consommateur à se brancher dessus avant
-même de savoir s'il sait lire le payload.
+**The name carries the version.** An event is called `<domain>.<fact>.v<n>`, for example
+`item.created.v1`. The version is in the name and not in a separate field: a consumer subscribes to
+a precise form and keeps working the day `item.created.v2` is published next to it. A numeric field
+would force every consumer to branch on it before even knowing whether it can read the payload.
 
-**Un événement décrit un fait passé.** Il se nomme au participe passé et n'est jamais un
-ordre. Un consommateur décide de ce qu'il en fait ; le producteur n'attend rien en retour.
+**An event describes a past fact.** It is named in the past participle and is never an order. A
+consumer decides what it does with it; the producer expects nothing in return.
 
-**Aucune donnée personnelle ne circule.** Le payload ne transporte que des identifiants et
-ce qui est strictement nécessaire. Le nom d'un item est du contenu saisi par l'utilisateur :
-il reste en base, et un consommateur qui en a besoin le relit auprès du composant qui le
-détient. Cette règle est ce qui permet à l'export et à l'effacement (`US-13`) de rester
-maîtrisés, et elle évite qu'une donnée personnelle se retrouve dans un journal de
-consommateur. Le schéma du payload est strict : ajouter un champ échoue à la validation au
-lieu d'être silencieusement ignoré.
+**No personal data travels.** The payload only carries identifiers and what is strictly necessary.
+The name of an item is content entered by the user: it stays in the database, and a consumer that
+needs it reads it back from the component that holds it. This rule is what keeps the export and the
+erasure (`US-13`) under control, and it prevents personal data from ending up in a consumer log.
+The payload schema is strict: adding a field fails validation instead of being silently ignored.
 
-**Une livraison en double ne change rien.** Un consommateur peut recevoir deux fois le même
-événement. L'identifiant d'enveloppe est stable d'une republication à l'autre : c'est la clé
-qu'un consommateur enregistre pour reconnaître ce qu'il a déjà traité.
+**A duplicate delivery changes nothing.** A consumer can receive the same event twice. The envelope
+identifier is stable from one republication to the next: it is the key a consumer records to
+recognise what it has already handled.
 
-## Enveloppe
+## Envelope
 
-| Champ | Type | Rôle |
+| Field | Type | Role |
 |---|---|---|
-| `id` | uuid | Identité de l'événement, stable en cas de republication. Clé d'idempotence côté consommateur. |
-| `name` | littéral | Nom versionné, par exemple `item.created.v1`. Discrimine le schéma du payload. |
-| `occurredAt` | instant ISO 8601 | Date du fait, pas de la publication. |
-| `payload` | objet strict | Propre à chaque événement, décrit ci-dessous. |
+| `id` | uuid | Identity of the event, stable in case of republication. Idempotency key on the consumer side. |
+| `name` | literal | Versioned name, for example `item.created.v1`. Discriminates the payload schema. |
+| `occurredAt` | ISO 8601 instant | Date of the fact, not of the publication. |
+| `payload` | strict object | Specific to each event, described below. |
 
-## Événements
+## Events
 
 ### `item.created.v1`
 
-Un item a été créé.
+An item was created.
 
 | | |
 |---|---|
-| **Producteur** | `apps/api`, cas d'usage `addItem` de `packages/core/items` |
-| **Consommateurs** | `apps/worker` |
-| **Effet attendu** | une notification non lue pour le propriétaire, visible dans le bandeau de session |
-| **Statut** | en service |
+| **Producer** | `apps/api`, use case `addItem` of `packages/core/items` |
+| **Consumers** | `apps/worker` |
+| **Expected effect** | an unread notification for the owner, visible in the session banner |
+| **Status** | in service |
 
-Payload :
+Payload:
 
-| Champ | Type | Pourquoi il est là |
+| Field | Type | Why it is there |
 |---|---|---|
-| `itemId` | uuid | Désigne l'item concerné. Un consommateur qui a besoin de son contenu le relit. |
-| `ownerId` | uuid | Désigne le destinataire de l'effet, sans transporter son identité réelle. |
+| `itemId` | uuid | Designates the item concerned. A consumer that needs its content reads it back. |
+| `ownerId` | uuid | Designates the recipient of the effect, without carrying their real identity. |
 
-Le nom de l'item est délibérément absent : c'est du contenu utilisateur.
+The name of the item is deliberately absent: it is user content.
 
 ### `membership.created.v1`
 
-Une appartenance à un projet a été créée : quelqu'un a été ajouté à un projet.
+A membership of a project was created: somebody was added to a project.
 
 | | |
 |---|---|
-| **Producteur** | `apps/api`, cas d'usage `addProjectMember` de `packages/core/projects` |
-| **Consommateurs** | `apps/worker` |
-| **Effet attendu** | une notification non lue pour la personne ajoutée, disant par qui |
-| **Statut** | en préparation — la fonction `add_member_with_event` et le schéma du domaine existent ; le schéma de `packages/contracts` et la branche du consommateur arrivent avec #359 |
+| **Producer** | `apps/api`, use case `addProjectMember` of `packages/core/projects` |
+| **Consumers** | `apps/worker` |
+| **Expected effect** | an unread notification for the person added, saying by whom |
+| **Status** | in preparation — the `add_member_with_event` function and the domain schema exist; the schema of `packages/contracts` and the branch of the consumer arrive with #359 |
 
-Payload :
+Payload:
 
-| Champ | Type | Pourquoi il est là |
+| Field | Type | Why it is there |
 |---|---|---|
-| `projectId` | uuid | Désigne le projet rejoint. Un consommateur qui a besoin de son nom le relit. |
-| `memberId` | uuid | Désigne le destinataire de l'effet, sans transporter son identité réelle. |
-| `addedBy` | uuid | Sans lui, la notification pourrait dire « ajouté » mais pas « par qui », et c'est la raison pour laquelle l'invitation passe par le flux. |
+| `projectId` | uuid | Designates the project joined. A consumer that needs its name reads it back. |
+| `memberId` | uuid | Designates the recipient of the effect, without carrying their real identity. |
+| `addedBy` | uuid | Without it, the notification could say "added" but not "by whom", and that is the reason why the invitation goes through the flow. |
 
-L'adresse est délibérément absente : c'est ce que la personne a tapé pour trouver le compte,
-donc du contenu. Un consommateur qui a besoin de nommer quelqu'un relit l'adresse auprès du
-composant qui la détient.
+The address is deliberately absent: it is what the person typed to find the account, hence
+content. A consumer that needs to name somebody reads the address back from the component that
+holds it.
 
-**Pourquoi le schéma de contrats n'est pas encore là.** Un événement que le consommateur refuse
-est perdu : la passe de livraison le retire de la file sans le remettre, ce que l'ADR-0007
-assume et qu'EN-35 fermera avec une file de rebut. Publier ce nom avant que le consommateur
-sache l'écrire en notification perdrait donc les invitations émises entre les deux. Rien ne
-l'émet pour l'instant.
+**Why the contracts schema is not there yet.** An event the consumer refuses is lost: the delivery
+pass removes it from the queue without putting it back, which ADR-0007 accepts and which EN-35 will
+close with a dead-letter queue. Publishing this name before the consumer knows how to write it as a
+notification would therefore lose the invitations issued in between. Nothing emits it for now.
 
 ### `invitation.created.v1`
 
-Une personne a été invitée dans un projet et n'a pas encore répondu (#401).
+A person was invited into a project and has not answered yet (#401).
 
 | | |
 |---|---|
-| **Producteur** | `apps/api`, cas d'usage `inviteProjectMember` de `packages/core/projects`, par la fonction `invite_member_with_event` qui écrit l'invitation et l'événement dans la même transaction |
-| **Consommateurs** | `apps/worker`, et la passe de livraison de l'API en déploiement sans serveur |
-| **Effet attendu** | une notification non lue pour la personne invitée, qui porte l'invitation et depuis laquelle elle accepte ou refuse |
-| **Statut** | en service |
+| **Producer** | `apps/api`, use case `inviteProjectMember` of `packages/core/projects`, through the `invite_member_with_event` function that writes the invitation and the event in the same transaction |
+| **Consumers** | `apps/worker`, and the delivery pass of the API in a serverless deployment |
+| **Expected effect** | an unread notification for the invited person, which carries the invitation and from which they accept or decline |
+| **Status** | in service |
 
-Payload :
+Payload:
 
-| Champ | Type | Pourquoi il est là |
+| Field | Type | Why it is there |
 |---|---|---|
-| `invitationId` | uuid | Désigne l'invitation à laquelle la notification permet de répondre. Son état est relu, jamais transporté. |
-| `projectId` | uuid | Désigne le projet proposé. Son nom est relu à l'affichage. |
-| `inviteeId` | uuid | Désigne le destinataire de l'effet, sans transporter son identité réelle. |
-| `invitedBy` | uuid | Permet de dire qui invite sans transporter son adresse. |
+| `invitationId` | uuid | Designates the invitation the notification allows answering. Its state is read back, never carried. |
+| `projectId` | uuid | Designates the project offered. Its name is read back at display time. |
+| `inviteeId` | uuid | Designates the recipient of the effect, without carrying their real identity. |
+| `invitedBy` | uuid | Makes it possible to say who invites without carrying their address. |
 
-L'adresse saisie par la personne qui invite est absente pour la même raison que dans
-`membership.created.v1`. Une invitation déjà présente, ou adressée à un membre, n'émet rien :
-seule une invitation réellement créée produit l'événement.
+The address entered by the person who invites is absent for the same reason as in
+`membership.created.v1`. An invitation already present, or addressed to a member, emits nothing:
+only an invitation actually created produces the event.
 
-## Ajouter un événement
+## Adding an event
 
-1. Décrire le schéma dans `packages/contracts/src/events.ts` et l'ajouter à l'union
-   `DomainEvent`.
-2. Documenter ici le producteur, les consommateurs et l'effet attendu.
-3. Couvrir par un test le fait que le payload ne transporte aucune donnée personnelle.
+1. Describe the schema in `packages/contracts/src/events.ts` and add it to the `DomainEvent`
+   union.
+2. Document here the producer, the consumers and the expected effect.
+3. Cover with a test the fact that the payload carries no personal data.
 
-Changer la forme d'un événement déjà publié se fait en publiant une nouvelle version à côté
-de l'ancienne, jamais en modifiant celle qui existe : un consommateur peut être en train de
-la lire.
+Changing the form of an event already published is done by publishing a new version next to the old
+one, never by modifying the existing one: a consumer may be reading it.
 
-## Démontrer le flux
+## Demonstrating the flow
 
-Le découplage se montre plutôt qu'il ne s'explique : c'est la raison pour laquelle
-l'ADR-0007 a retenu un broker externe et un consommateur dans son propre processus.
+Decoupling is better shown than explained: this is the reason why ADR-0007 chose an external broker
+and a consumer in its own process.
 
-`npm run up` démarre les quatre étages, worker compris. La séquence tient en une minute.
+`npm run up` starts the four stages, worker included. The sequence takes one minute.
 
-1. Se connecter, créer une tâche. Le compte de notifications du bandeau passe à 1 en une
-   seconde ou deux : l'API n'a rien notifié elle-même, elle a seulement écrit l'événement
-   dans la même transaction que la tâche.
-2. Arrêter le worker seul, puis créer deux tâches. Le compte ne bouge plus. La file
-   s'accumule, ce que l'on peut lire :
+1. Sign in, create a task. The notification count of the banner goes to 1 within a second or two:
+   the API notified nothing itself, it only wrote the event in the same transaction as the task.
+2. Stop the worker alone, then create two tasks. The count no longer moves. The queue builds up,
+   which can be read:
 
    ```bash
    docker compose exec redis redis-cli LLEN legacy22:events
    ```
 
-3. Redémarrer le worker : `npm run dev:worker`. La file se vide, le compte rattrape son
-   retard. Rien n'a été perdu pendant l'arrêt.
+3. Restart the worker: `npm run dev:worker`. The queue drains, the count catches up. Nothing was
+   lost during the stop.
 
-Ce que la démonstration établit : l'API ne dépend pas du consommateur pour répondre, une
-panne du consommateur ne fait pas tomber l'API, et le travail en attente survit à son arrêt.
+What the demonstration establishes: the API does not depend on the consumer to respond, a failure
+of the consumer does not bring the API down, and the pending work survives its stop.
 
-Pour montrer l'idempotence sans attendre une panne, republier un événement déjà traité :
+To show idempotency without waiting for a failure, republish an event already handled:
 
 ```bash
 docker compose exec redis redis-cli LPUSH legacy22:events "$(...)"
 ```
 
-Le worker le consomme, journalise `event already handled, nothing to do`, et le compte de
-notifications ne bouge pas : la clé primaire de `processed_events` a refusé la seconde
-réservation.
+The worker consumes it, logs `event already handled, nothing to do`, and the notification count does
+not move: the primary key of `processed_events` refused the second reservation.
