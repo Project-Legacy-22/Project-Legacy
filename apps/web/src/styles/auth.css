@@ -5,28 +5,28 @@
 
 .auth-page {
     width: min(100% - 32px, 26rem);
-    margin: 48px auto;
+    margin: var(--space-10) auto;
 }
 
 /* La raison pour laquelle cet ecran est revenu : une session terminee. Meme
    traitement que les messages de resultat, dans la couleur du texte courant --
    ce n est pas une erreur commise par la personne. */
 .auth-notice {
-    margin: 0 0 20px;
+    margin: 0 0 var(--space-7);
     color: #465568;
     font-weight: 700;
     line-height: 1.45;
 }
 
 .auth-intro {
-    margin: 0 0 24px;
+    margin: 0 0 var(--space-8);
     color: #465568;
     line-height: 1.5;
 }
 
 .auth-form {
     display: grid;
-    gap: 18px;
+    gap: var(--space-7);
 }
 
 /* Meme traitement que .field-error, mais pour un echec qui porte sur la
@@ -49,7 +49,7 @@
 /* Bascule entre connexion et inscription : une action secondaire, qui ne doit
    pas concurrencer visuellement le bouton de soumission. */
 .button-quiet {
-    margin-top: 20px;
+    margin-top: var(--space-7);
     border-color: transparent;
     color: #184f49;
     background: transparent;
@@ -64,25 +64,25 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    margin: 0 0 16px;
+    gap: var(--space-5);
+    margin: 0 0 var(--space-6);
 }
 
 .session-banner p {
     margin: 0;
     color: #465568;
-    font-size: 0.9375rem;
+    font-size: var(--font-size-md);
 }
 
 /* Compte de notifications, dans le bandeau de session. Discret : il signale un
    effet, il ne reclame pas d action. */
 .notification-badge {
-    margin-left: 12px;
-    padding: 2px 10px;
+    margin-left: var(--space-5);
+    padding: var(--space-1) var(--space-4);
     border-radius: 999px;
     color: #184f49;
     background: #e9f6f3;
-    font-size: 0.8125rem;
+    font-size: var(--font-size-sm);
     font-weight: 700;
 }
 
@@ -90,19 +90,19 @@
    click target the checkbox deserves; the policy link and the error go below,
    where a screen reader meets them after the choice they qualify. */
 .consent-field {
-    margin-top: 4px;
+    margin-top: var(--space-2);
 }
 
 .consent-line {
     display: flex;
     align-items: flex-start;
-    gap: 10px;
+    gap: var(--space-4);
 }
 
 .consent-line input {
     width: auto;
     min-height: 0;
-    margin-top: 3px;
+    margin-top: var(--space-1);
     flex: none;
 }
 
@@ -115,7 +115,7 @@
 }
 
 .consent-policy-link {
-    margin-top: 6px;
+    margin-top: var(--space-3);
     padding-left: 0;
 }
 
@@ -123,8 +123,8 @@
     /* Alignee sur .main-content : un pied de page plus etroit que le contenu
        au-dessus se lit comme une erreur de mise en page. */
     width: min(1600px, 100% - 32px);
-    margin: 32px auto 24px;
-    padding-top: 16px;
+    margin: var(--space-9) auto var(--space-8);
+    padding-top: var(--space-6);
     border-top: 1px solid var(--border-rule);
 }
 
@@ -135,7 +135,7 @@
        736 px -- et le defilement horizontal de cette table compensait un
        manque de place au lieu que la place soit donnee. */
     width: min(1600px, 100% - 32px);
-    margin: 48px auto;
+    margin: var(--space-10) auto;
     line-height: 1.6;
 }
 
@@ -147,22 +147,22 @@
 }
 
 .policy-page h2 {
-    margin-top: 28px;
+    margin-top: var(--space-9);
 }
 
 .policy-page ul {
-    padding-left: 22px;
+    padding-left: var(--space-8);
 }
 
 .policy-page li {
-    margin-bottom: 6px;
+    margin-bottom: var(--space-3);
 }
 
 /* Quatre colonnes de prose ne tiennent pas sur un telephone : le tableau defile
    dans son propre conteneur plutot que de pousser la page. */
 .policy-processors-scroll {
     overflow-x: auto;
-    margin: 12px 0 20px;
+    margin: var(--space-5) 0 var(--space-7);
 }
 
 .policy-processors {
@@ -173,7 +173,7 @@
 
 .policy-processors th,
 .policy-processors td {
-    padding: 10px 12px;
+    padding: var(--space-4) var(--space-5);
     border: 1px solid #c4ced8;
     text-align: left;
     vertical-align: top;
@@ -190,7 +190,7 @@
 .policy-version {
     margin-top: 0;
     color: var(--text-muted);
-    font-size: 0.9375rem;
+    font-size: var(--font-size-md);
 }
 
 .session-banner .button-quiet {

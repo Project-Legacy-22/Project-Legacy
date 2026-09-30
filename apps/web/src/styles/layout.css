@@ -1,6 +1,6 @@
 .site-header {
     min-height: 260px;
-    padding: 48px 24px 76px;
+    padding: var(--space-10) var(--space-8) var(--space-12);
     color: #ffffff;
     background: #12344d;
 }
@@ -13,9 +13,9 @@
 
 .eyebrow,
 .section-kicker {
-    margin: 0 0 8px;
+    margin: 0 0 var(--space-4);
     color: #b9e7dd;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 800;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -29,8 +29,8 @@ p {
 
 h1 {
     max-width: 12ch;
-    margin-bottom: 12px;
-    font-size: clamp(2.25rem, 8vw, 4rem);
+    margin-bottom: var(--space-5);
+    font-size: var(--font-size-display);
     line-height: 1;
     letter-spacing: -0.04em;
 }
@@ -39,14 +39,14 @@ h1 {
     max-width: 38ch;
     margin-bottom: 0;
     color: #e5edf4;
-    font-size: 1.0625rem;
+    font-size: var(--font-size-lg);
     line-height: 1.6;
 }
 
 .main-content {
     display: grid;
-    gap: 20px;
-    padding: 0 16px 56px;
+    gap: var(--space-7);
+    padding: 0 var(--space-6) var(--space-11);
     transform: translateY(-42px);
 }
 
@@ -59,7 +59,7 @@ h1 {
 
 .panel {
     min-width: 0;
-    padding: clamp(20px, 5vw, 32px);
+    padding: clamp(var(--space-7), 5vw, var(--space-9));
     border: 1px solid #c4ced8;
     border-radius: 12px;
     background: #ffffff;
@@ -67,14 +67,14 @@ h1 {
 }
 
 .section-heading {
-    margin-bottom: 22px;
+    margin-bottom: var(--space-8);
 }
 
 .section-heading-row {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 16px;
+    gap: var(--space-6);
 }
 
 .section-kicker {
@@ -84,12 +84,12 @@ h1 {
 h2 {
     margin-bottom: 0;
     color: #172033;
-    font-size: 1.5rem;
+    font-size: var(--font-size-xl);
     line-height: 1.2;
 }
 
 @media (max-width: 620px) {
     .site-header {
-        padding-inline: 16px;
+        padding-inline: var(--space-6);
     }
 }
