@@ -16,7 +16,7 @@ afterEach(() => {
 });
 
 describe('attentionApi.listAttention', () => {
-    it('demande les groupes pour le jour du navigateur et les renvoie', async () => {
+    it('asks for the groups for the browser\'s day and returns them', async () => {
         const fetchMock = vi.fn<typeof fetch>(async () => response(anAttention({ workload: 'all_done' })));
         vi.stubGlobal('fetch', fetchMock);
 
@@ -26,7 +26,7 @@ describe('attentionApi.listAttention', () => {
         expect(fetchMock).toHaveBeenCalledWith('/projects/attention?today=2026-09-23', expect.anything());
     });
 
-    it('signale une reponse qui ne respecte pas le contrat', async () => {
+    it('reports a response that does not respect the contract', async () => {
         vi.stubGlobal('fetch', vi.fn(async () => response({ workload: 'busy' })));
 
         await expect(
@@ -34,7 +34,7 @@ describe('attentionApi.listAttention', () => {
         ).rejects.toMatchObject({ status: 502 });
     });
 
-    it('leve quand le serveur refuse', async () => {
+    it('throws when the server refuses', async () => {
         vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status: 500 })));
 
         await expect(

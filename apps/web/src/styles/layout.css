@@ -60,8 +60,8 @@ h1 {
     gap: var(--space-7);
 }
 
-/* La colonne suit la fenetre, mais une ligne de texte qui ferait 1500 px ne se
-   lit plus : la prose garde sa propre mesure a l interieur du panneau. */
+/* The column follows the window, but a 1500 px line of text can no longer be read: the prose keeps
+   its own measure inside the panel. */
 .panel p,
 .panel li {
     max-width: 80ch;

@@ -16,13 +16,13 @@ afterEach(() => {
 });
 
 describe('notificationsApi.unreadCount', () => {
-    it('renvoie le compte annonce par le serveur', async () => {
+    it('returns the count the server announces', async () => {
         vi.stubGlobal('fetch', vi.fn(async () => response({ unread: 3 })));
 
         await expect(notificationsApi.unreadCount(new AbortController().signal)).resolves.toBe(3);
     });
 
-    it('signale une reponse qui ne respecte pas le contrat', async () => {
+    it('reports a response that does not respect the contract', async () => {
         vi.stubGlobal('fetch', vi.fn(async () => response({ unread: 'beaucoup' })));
 
         await expect(
@@ -30,7 +30,7 @@ describe('notificationsApi.unreadCount', () => {
         ).rejects.toMatchObject({ status: 502 });
     });
 
-    it('leve quand le serveur refuse', async () => {
+    it('throws when the server refuses', async () => {
         vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status: 401 })));
 
         await expect(notificationsApi.unreadCount(new AbortController().signal)).rejects.toEqual(
@@ -38,7 +38,7 @@ describe('notificationsApi.unreadCount', () => {
         );
     });
 
-    it('interroge la route dediee, distincte de la liste', async () => {
+    it('calls the dedicated route, distinct from the list', async () => {
         const fetchMock = vi.fn<typeof fetch>(async () => response({ unread: 0 }));
         vi.stubGlobal('fetch', fetchMock);
 
@@ -49,7 +49,7 @@ describe('notificationsApi.unreadCount', () => {
 });
 
 describe('notificationsApi.listNotifications', () => {
-    it('renvoie la page et transmet le curseur a la requete suivante', async () => {
+    it('returns the page and passes the cursor to the next request', async () => {
         const fetchMock = vi.fn<typeof fetch>(async () =>
             response({ notifications: [], nextCursor: 'created at/id' }),
         );
@@ -65,7 +65,7 @@ describe('notificationsApi.listNotifications', () => {
         );
     });
 
-    it('rejette une page qui ne respecte pas le contrat', async () => {
+    it('rejects a page that does not respect the contract', async () => {
         vi.stubGlobal('fetch', vi.fn(async () => response({ notifications: 'pas une liste' })));
 
         await expect(
@@ -75,7 +75,7 @@ describe('notificationsApi.listNotifications', () => {
 });
 
 describe('notificationsApi.markAsRead', () => {
-    it('n attend aucun corps en reponse', async () => {
+    it('expects no body in the response', async () => {
         const fetchMock = vi.fn<typeof fetch>(async () => new Response(null, { status: 204 }));
         vi.stubGlobal('fetch', fetchMock);
 
@@ -83,7 +83,7 @@ describe('notificationsApi.markAsRead', () => {
         expect(fetchMock).toHaveBeenCalledWith('/notifications/un-id/read', expect.objectContaining({ method: 'PATCH' }));
     });
 
-    it('leve quand le serveur refuse', async () => {
+    it('throws when the server refuses', async () => {
         vi.stubGlobal(
             'fetch',
             vi.fn(async () =>

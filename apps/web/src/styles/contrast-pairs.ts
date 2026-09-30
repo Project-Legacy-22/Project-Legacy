@@ -5,22 +5,22 @@
 // review sees the colour and its requirement in the same diff.
 // contrast.test.ts reads it and does the arithmetic.
 //
-// WCAG 2.1 AA demande 4.5:1 pour le texte et 3:1 pour ce qui porte du sens sans
-// etre du texte -- une bordure de champ, un indicateur d'etat.
+// WCAG 2.1 AA asks for 4.5:1 for text and 3:1 for what carries meaning without
+// being text -- a field border, a state indicator.
 
 export interface ContrastPair {
     foreground: string;
     background: string;
     requirement: 'text' | 'ui';
-    // Ou le couple apparait, pour qu'un echec designe un ecran et non un jeton.
+    // Where the pair appears, so that a failure points at a screen and not at a token.
     where: string;
 }
 
 export const CONTRAST_PAIRS: readonly ContrastPair[] = [
-    // Texte sur la page
+    // Text on the page
     { foreground: '--text-body', background: '--surface-page', requirement: 'text', where: 'page body' },
 
-    // Texte sur un panneau blanc
+    // Text on a white panel
     { foreground: '--text-body', background: '--surface-card', requirement: 'text', where: 'running text of panels' },
     { foreground: '--text-secondary', background: '--surface-card', requirement: 'text', where: 'secondary text' },
     { foreground: '--text-muted', background: '--surface-card', requirement: 'text', where: 'field hint' },
@@ -28,14 +28,14 @@ export const CONTRAST_PAIRS: readonly ContrastPair[] = [
     { foreground: '--text-brand', background: '--surface-card', requirement: 'text', where: 'secondary button' },
     { foreground: '--text-brand-muted', background: '--surface-card', requirement: 'text', where: 'brand label in the layout' },
 
-    // Texte sur l'en-tete sombre
+    // Text on the dark header
     { foreground: '--text-on-brand', background: '--surface-brand', requirement: 'text', where: 'header title' },
     { foreground: '--text-on-brand-soft', background: '--surface-brand', requirement: 'text', where: 'header eyebrow' },
     { foreground: '--text-on-brand-muted', background: '--surface-brand', requirement: 'text', where: 'header introduction' },
     { foreground: '--text-on-brand', background: '--surface-brand', requirement: 'text', where: 'navigation link' },
     { foreground: '--text-brand', background: '--surface-brand-soft', requirement: 'text', where: 'navigation link of the open view' },
 
-    // Texte sur les surfaces d'etat
+    // Text on the state surfaces
     { foreground: '--text-secondary', background: '--surface-muted', requirement: 'text', where: 'loading and empty-state messages' },
     { foreground: '--text-secondary', background: '--surface-item-done', requirement: 'text', where: 'row of a finished task' },
     { foreground: '--text-danger-strong', background: '--surface-danger-soft', requirement: 'text', where: 'error box' },
@@ -46,12 +46,12 @@ export const CONTRAST_PAIRS: readonly ContrastPair[] = [
     { foreground: '--text-body', background: '--surface-brand-soft', requirement: 'text', where: 'hovered and selected project title' },
     { foreground: '--text-muted', background: '--surface-brand-soft', requirement: 'text', where: 'hovered and selected project count' },
 
-    // Texte sur une action pleine
+    // Text on a filled action
     { foreground: '--text-on-brand', background: '--action-primary', requirement: 'text', where: 'primary button' },
     { foreground: '--text-on-brand', background: '--action-primary-hover', requirement: 'text', where: 'primary button hovered' },
     { foreground: '--text-on-brand', background: '--text-body', requirement: 'text', where: 'skip link' },
 
-    // Composants : ce qui porte du sens sans etre du texte
+    // Components: what carries meaning without being text
     { foreground: '--border-input', background: '--surface-card', requirement: 'ui', where: 'field border at rest' },
     { foreground: '--border-input-hover', background: '--surface-card', requirement: 'ui', where: 'field border hovered' },
     { foreground: '--border-invalid', background: '--surface-card', requirement: 'ui', where: 'field in error' },
@@ -95,7 +95,7 @@ export const EXEMPT: readonly { token: string; reason: string }[] = [
     },
 ];
 
-// Surfaces sur lesquelles l'indicateur de focus doit rester visible.
+// Surfaces on which the focus indicator must stay visible.
 export const FOCUS_SURFACES: readonly string[] = [
     '--surface-page',
     '--surface-card',

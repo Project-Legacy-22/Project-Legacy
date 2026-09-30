@@ -29,8 +29,8 @@ function createCredentials(overrides: Partial<CredentialsApi> = {}): Credentials
 }
 
 async function afficher(credentials: CredentialsApi): Promise<void> {
-    // Poses a la main, comme dans les autres suites axe : jsdom ne charge pas
-    // le document reel, et sans eux axe signale une page sans langue ni titre.
+    // Set by hand, as in the other axe suites: jsdom does not load the real document, and without
+    // them axe reports a page without a language or a title.
     document.documentElement.lang = 'en';
     document.title = 'Confirm your email address | Legacy 22';
     await testRoot.render(
@@ -62,8 +62,8 @@ afterEach(async () => {
     window.history.replaceState(null, '', '/');
 });
 
-describe('ecran de confirmation du changement d adresse (US-36)', () => {
-    it('montre l ecran de confirmation et efface le jeton de l URL', async () => {
+describe('address change confirmation screen (US-36)', () => {
+    it('shows the confirmation screen and clears the token from the URL', async () => {
         await afficher(createCredentials());
 
         expect(getElement('h1').textContent).toBe(labels.confirmEmailChangeTitle);
@@ -71,15 +71,15 @@ describe('ecran de confirmation du changement d adresse (US-36)', () => {
         expect(document.body.innerHTML).not.toContain('abc123');
     });
 
-    it('gagne sur une session vivante', async () => {
-        // createAuth() rend un compte : sans la priorite du lien, l ecran des
-        // items s afficherait.
+    it('wins over a live session', async () => {
+        // createAuth() returns an account: without the link taking priority, the items screen would
+        // show.
         await afficher(createCredentials());
 
         expect(document.querySelector('.session-banner')).toBeNull();
     });
 
-    it('echange le jeton du lien sur un clic explicite', async () => {
+    it('exchanges the link\'s token on an explicit click', async () => {
         const credentials = createCredentials();
         await afficher(credentials);
 
@@ -90,7 +90,7 @@ describe('ecran de confirmation du changement d adresse (US-36)', () => {
         expect(getElement('[role="status"]').textContent).toBe(labels.confirmEmailChangeSucceeded);
     });
 
-    it('affiche la raison du serveur sur un lien invalide', async () => {
+    it('shows the server\'s reason on an invalid link', async () => {
         const credentials = createCredentials({
             confirmEmailChange: vi.fn(() =>
                 Promise.reject(

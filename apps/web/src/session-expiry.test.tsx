@@ -12,10 +12,9 @@ import type { ReactTestRoot } from './test/react-root';
 import { anItem } from './test/builders/item-builder';
 import { labels } from './labels';
 
-// Ce que voit une personne dont la session se termine pendant qu elle
-// travaille (US-27). L API renouvelle toute seule ce qui peut l etre, donc un
-// 401 qui arrive jusqu au navigateur est definitif : il ne reste qu a le dire
-// et a cesser d appeler.
+// What a person sees when their session ends while they work (US-27). The API renews by itself
+// whatever can be renewed, so a 401 that reaches the browser is final: all that remains is to say
+// so and stop calling.
 
 const COMPTE: AccountDto = { id: '5b1f0f4a-9d3f-4d0e-9e2a-6c0f5a3b1d77', email: 'ada@example.com' };
 const ITEM = anItem({ id: '1c99b4ae-b7b8-49e7-885e-b2d976c1fe19', name: 'Premier item' });
@@ -59,16 +58,16 @@ function notificationsApi(): NotificationsApi {
     };
 }
 
-// La suppression d un item est l action la plus courte qui parle a l API.
+// Removing an item is the shortest action that talks to the API.
 //
-// Cible par le nom accessible et non par .button-danger : depuis #152 la page
-// porte aussi la suppression d un projet, qui vient avant dans le document.
+// Targeted by its accessible name and not by .button-danger: since #152 the page also carries the
+// removal of a project, which comes earlier in the document.
 async function agirSurUnItem(): Promise<void> {
     await click(getElement<HTMLButtonElement>(`[aria-label="${labels.removeItem(ITEM.name ?? labels.unnamedItem)}"]`));
     await flushTimers();
 }
 
-// use-notifications relit le compte toutes les deux secondes.
+// use-notifications reads the count again every two seconds.
 const RELECTURE_MS = 2_000;
 const TROIS_RELECTURES_MS = 3 * RELECTURE_MS;
 
@@ -81,9 +80,8 @@ async function avancer(millisecondes: number): Promise<void> {
 beforeEach(() => {
     testRoot = createReactTestRoot();
     startAt('projects');
-    // La suppression d un item demande confirmation depuis #176. jsdom
-    // n implemente pas confirm, qui rend alors undefined : l action serait
-    // abandonnee et le 401 attendu n arriverait jamais.
+    // Removing an item asks for confirmation since #176. jsdom does not implement confirm, which
+    // then returns undefined: the action would be abandoned and the expected 401 would never come.
     vi.stubGlobal('confirm', vi.fn(() => true));
 });
 
@@ -92,8 +90,8 @@ afterEach(async () => {
     vi.useRealTimers();
 });
 
-describe('session qui expire pendant l usage', () => {
-    it('ramene a l ecran de connexion en disant que la session a expire', async () => {
+describe('session expiring during use', () => {
+    it('brings back the sign-in screen saying the session has expired', async () => {
         const api = itemsApi({
             deleteItem: vi.fn(() => Promise.reject(new ApiError(401, 'session expiree'))),
         });
@@ -107,14 +105,13 @@ describe('session qui expire pendant l usage', () => {
         expect(getElement<HTMLElement>('.auth-notice').textContent).toBe(labels.sessionExpired);
     });
 
-    // Critere de l issue #28 : pas de cascade d erreurs. Le compte de
-    // notifications se relit toutes les deux secondes ; une session finie doit
-    // arreter cette relecture, pas la laisser frapper une API qui repondra 401
-    // indefiniment.
+    // Criterion of issue #28: no cascade of errors. The notification count is read again every two
+    // seconds; an ended session must stop that reading, not let it hit an API that will answer 401
+    // for ever.
     //
-    // L horloge est simulee : avec la vraie, aucun intervalle ne se declenche
-    // pendant un test, et l assertion passerait meme si rien ne l arretait.
-    it('cesse de relire le compte de notifications des que la session est finie', async () => {
+    // The clock is simulated: with the real one, no interval fires during a test, and the assertion
+    // would pass even if nothing stopped it.
+    it('stops reading the notification count again as soon as the session is over', async () => {
         vi.useFakeTimers();
         const notifications = notificationsApi();
         const api = itemsApi({
@@ -132,15 +129,15 @@ describe('session qui expire pendant l usage', () => {
         await click(getElement<HTMLButtonElement>(`[aria-label="${labels.removeItem(ITEM.name ?? labels.unnamedItem)}"]`));
         await avancer(TROIS_RELECTURES_MS);
 
-        // Une relecture a bien lieu tant que la session dure, sinon l assertion
-        // suivante ne vaudrait rien.
+        // A reading does happen while the session lasts, otherwise the next assertion would be
+        // worth nothing.
         expect(pendantLaSession).toBeGreaterThan(1);
         expect(vi.mocked(notifications.unreadCount).mock.calls).toHaveLength(pendantLaSession);
     });
 
-    // Le premier passage n a jamais eu de session : il n y a rien a expliquer,
-    // et annoncer une expiration a un visiteur qui arrive serait faux.
-    it('n annonce aucune expiration a un visiteur qui n a jamais eu de session', async () => {
+    // The first visit never had a session: there is nothing to explain, and announcing an expiry to
+    // an arriving visitor would be false.
+    it('announces no expiry to a visitor who never had a session', async () => {
         const auth = authApi();
         auth.currentAccount = vi.fn(async () => null);
 

@@ -97,8 +97,8 @@ describe('RequestResetForm', () => {
             `button:${labels.backToSignIn}`,
         ]);
 
-        // Puis que tabuler visite bien cet ordre-la, et pas seulement que le
-        // DOM le declare : les deux peuvent diverger.
+        // Then that tabbing does visit that order, and not only that the DOM declares it: the two
+        // can diverge.
         const visited: string[] = [];
         for (let step = 0; step < expected.length; step += 1) {
             const reached = await tab();

@@ -18,9 +18,9 @@ const ACCOUNT: AccountDto = {
     id: '5b1f0f4a-9d3f-4d0e-9e2a-6c0f5a3b1d77',
     email: 'ada@example.com',
 };
-// Le document que l API sert. L assertion porte sur l objet lui-meme et non sur
-// son contenu : ce que promet la page est de remettre ce qu elle a recu, sans le
-// relire ni le reserialiser.
+// The document the API serves. The assertion is on the object itself and not on its content: what
+// the page promises is to hand over what it received, without reading it back or serialising it
+// again.
 const DOCUMENT_EXPORTE = new Blob(['{"exportedAt":"2026-09-08T12:00:00.000Z"}'], {
     type: 'application/json',
 });
@@ -45,13 +45,12 @@ function createAuth(): AuthApi {
         register: vi.fn(),
         signIn: vi.fn(),
         currentAccount: vi.fn(async () => ACCOUNT),
-        // Aucun scenario de cette section ne reinitialise de mot de passe. Les
-        // doubles sont fournis quand meme, parce que AuthApi les exige : les
-        // omettre laisserait passer un appel inattendu au lieu de le signaler.
+        // No scenario of this section resets a password. The doubles are provided anyway, because
+        // AuthApi requires them: leaving them out would let an unexpected call through instead of
+        // reporting it.
         requestPasswordReset: vi.fn(),
         resetPassword: vi.fn(),
-        // Personne ne se deconnecte dans cette section : meme raison que
-        // ci-dessus.
+        // Nobody signs out in this section: same reason as above.
         signOut: vi.fn(),
     };
 }
@@ -73,8 +72,8 @@ function createProjects(): ProjectsApi {
     };
 }
 
-// Fourni pour la meme raison que createAuth : aucun scenario de cette section ne
-// change d identifiant, et un double qui refuse signale un appel inattendu.
+// Provided for the same reason as createAuth: no scenario of this section changes a credential, and
+// a refusing double reports an unexpected call.
 function createCredentials(): CredentialsApi {
     return {
         changePassword: vi.fn(),
@@ -84,9 +83,8 @@ function createCredentials(): CredentialsApi {
 }
 
 async function afficher(account: AccountApi, save: SaveFile = vi.fn()): Promise<void> {
-    // apps/web/index.html les porte ; le document vierge de jsdom, non. Sans
-    // eux, le controle axe signalerait deux manques du bac a sable plutot que
-    // de la page.
+    // apps/web/index.html carries them; jsdom's blank document does not. Without them, the axe
+    // check would report two gaps of the sandbox rather than of the page.
     document.documentElement.lang = 'en';
     document.title = 'Todo list | Legacy 22';
 
@@ -103,9 +101,9 @@ async function afficher(account: AccountApi, save: SaveFile = vi.fn()): Promise<
     );
 }
 
-// Les boutons sont trouves par leur libelle et non par une classe : c est le mot
-// que la personne lit, et une classe partagee avec un autre bouton rendrait
-// l assertion muette le jour ou elle designerait le mauvais.
+// The buttons are found by their label and not by a class: it is the word the person reads, and a
+// class shared with another button would make the assertion silent the day it pointed at the wrong
+// one.
 function bouton(libelle: string): HTMLButtonElement {
     const trouve = [...document.querySelectorAll('button')].find(
         (candidat) => candidat.textContent?.trim() === libelle,
@@ -130,24 +128,23 @@ afterEach(async () => {
     await testRoot.unmount();
 });
 
-describe('section des donnees personnelles', () => {
-    // La section vit dans l ecran deja verifie par todo-page.test.tsx, mais elle
-    // y ajoute un formulaire, un champ et une mise en garde : le controle est
-    // relance ici sur l ecran complet plutot que suppose acquis.
-    it('ne presente aucune violation WCAG A ou AA detectable automatiquement', async () => {
+describe('personal data section', () => {
+    // The section lives in the screen already checked by todo-page.test.tsx, but it adds a form, a
+    // field and a warning to it: the check is run again here on the whole screen rather than
+    // assumed.
+    it('has no automatically detectable WCAG A or AA violation', async () => {
         await afficher(createAccount());
 
         const resultats = await axe.run(document, {
             runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21aa'] },
-            // axe documente que cette regle ne donne pas de resultat fiable
-            // sous jsdom.
+            // axe documents that this rule gives no reliable result under jsdom.
             rules: { 'color-contrast': { enabled: false } },
         });
 
         expect(resultats.violations.map((violation) => violation.id)).toEqual([]);
     });
 
-    it('enonce ce que la suppression fait perdre, avant de la proposer', async () => {
+    it('states what the deletion loses, before offering it', async () => {
         await afficher(createAccount());
 
         const pertes = getElement('.delete-account-losses').textContent ?? '';
@@ -173,7 +170,7 @@ describe('section des donnees personnelles', () => {
     });
 
     describe('export', () => {
-        it('remet a la personne le document servi par l API', async () => {
+        it('hands the person the document served by the API', async () => {
             const save = vi.fn();
             await afficher(createAccount(), save);
 
@@ -182,7 +179,7 @@ describe('section des donnees personnelles', () => {
             expect(save).toHaveBeenCalledWith(DOCUMENT_EXPORTE, labels.exportFilename);
         });
 
-        it('signale un export que l API refuse de servir', async () => {
+        it('reports an export the API refuses to serve', async () => {
             const save = vi.fn();
             const account = createAccount({
                 exportPersonalData: vi.fn(() => Promise.reject(new ApiError(500, 'panne'))),
@@ -196,8 +193,8 @@ describe('section des donnees personnelles', () => {
         });
     });
 
-    describe('suppression du compte', () => {
-        it('refuse une confirmation vide sans rien demander a l API', async () => {
+    describe('account deletion', () => {
+        it('refuses an empty confirmation without asking the API anything', async () => {
             const account = createAccount();
             await afficher(account);
 
@@ -209,9 +206,9 @@ describe('section des donnees personnelles', () => {
             expect(account.deleteAccount).not.toHaveBeenCalled();
         });
 
-        // Le clic seul ne suffit pas : la confirmation doit designer le compte,
-        // sinon l action est irreversible pour un geste qui ne l a pas voulue.
-        it('refuse une adresse qui n est pas celle du compte', async () => {
+        // The click alone is not enough: the confirmation must designate the account, otherwise the
+        // action is irreversible for a gesture that did not intend it.
+        it('refuses an address that is not the account\'s', async () => {
             const account = createAccount();
             await afficher(account);
 
@@ -223,7 +220,7 @@ describe('section des donnees personnelles', () => {
             expect(account.deleteAccount).not.toHaveBeenCalled();
         });
 
-        it('accepte l adresse du compte quelle que soit sa casse', async () => {
+        it('accepts the account\'s address whatever its case', async () => {
             const account = createAccount();
             await afficher(account);
 
@@ -234,9 +231,9 @@ describe('section des donnees personnelles', () => {
             });
         });
 
-        // La suppression deconnecte immediatement : l ecran d items disparait et
-        // le formulaire de connexion le remplace, sans rechargement.
-        it('ramene a l ecran de connexion une fois le compte supprime', async () => {
+        // Deletion signs out immediately: the items screen disappears and the sign-in form replaces
+        // it, without a reload.
+        it('brings back the sign-in screen once the account is deleted', async () => {
             await afficher(createAccount());
 
             await confirmerSuppression(ACCOUNT.email);
@@ -245,7 +242,7 @@ describe('section des donnees personnelles', () => {
             expect(document.querySelector('form.delete-account')).toBeNull();
         });
 
-        it('garde la personne connectee quand la suppression echoue', async () => {
+        it('keeps the person signed in when the deletion fails', async () => {
             const account = createAccount({
                 deleteAccount: vi.fn(() => Promise.reject(new ApiError(500, 'panne'))),
             });

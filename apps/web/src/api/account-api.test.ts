@@ -33,10 +33,9 @@ afterEach(() => {
 });
 
 describe('accountApi.exportPersonalData', () => {
-    // Le document n est pas relu ici : la page le remet tel quel a la personne,
-    // et le parser pour le reserialiser sauvegarderait autre chose que ce que
-    // l API a servi.
-    it('rend le corps servi sans le relire', async () => {
+    // The document is not read back here: the page hands it to the person as it is, and parsing it
+    // to serialise it again would save something other than what the API served.
+    it('returns the served body without reading it back', async () => {
         const served = new Blob([EXPORT_BODY], { type: 'application/json' });
         const response = new Response(null, {
             headers: { 'Content-Type': 'application/json' },
@@ -49,7 +48,7 @@ describe('accountApi.exportPersonalData', () => {
         expect(document).toBe(served);
     });
 
-    it('reprend le detail du serveur quand l export est refuse', async () => {
+    it('takes the server\'s detail when the export is refused', async () => {
         stubFetch(problem('This account no longer exists.', 404));
 
         await expect(accountApi.exportPersonalData()).rejects.toEqual(
@@ -57,7 +56,7 @@ describe('accountApi.exportPersonalData', () => {
         );
     });
 
-    it('retombe sur son propre message quand la reponse n en porte pas', async () => {
+    it('falls back on its own message when the response carries none', async () => {
         stubFetch(new Response('pas du json', { status: 500 }));
 
         await expect(accountApi.exportPersonalData()).rejects.toEqual(
@@ -67,7 +66,7 @@ describe('accountApi.exportPersonalData', () => {
 });
 
 describe('accountApi.deleteAccount', () => {
-    it('envoie la confirmation dans le corps d une requete DELETE', async () => {
+    it('sends the confirmation in the body of a DELETE request', async () => {
         const fetchMock = stubFetch(new Response(null, { status: 204 }));
 
         await accountApi.deleteAccount({ confirmation: ADRESSE });
@@ -78,9 +77,9 @@ describe('accountApi.deleteAccount', () => {
         expect(init.body).toBe(JSON.stringify({ confirmation: ADRESSE }));
     });
 
-    // Le refus de confirmation est le seul que la personne doit pouvoir lire mot
-    // pour mot : il dit laquelle des deux adresses ne correspondait pas.
-    it('reprend le detail du serveur quand la confirmation est refusee', async () => {
+    // The confirmation refusal is the only one the person must be able to read word for word: it
+    // says which of the two addresses did not match.
+    it('takes the server\'s detail when the confirmation is refused', async () => {
         stubFetch(problem('Deleting the account requires confirming its email address.', 422));
 
         await expect(accountApi.deleteAccount({ confirmation: ADRESSE })).rejects.toEqual(
@@ -88,7 +87,7 @@ describe('accountApi.deleteAccount', () => {
         );
     });
 
-    it('retombe sur son propre message quand la reponse n en porte pas', async () => {
+    it('falls back on its own message when the response carries none', async () => {
         stubFetch(new Response('', { status: 503 }));
 
         await expect(accountApi.deleteAccount({ confirmation: ADRESSE })).rejects.toEqual(

@@ -43,7 +43,7 @@ const auth: AuthApi = {
     currentAccount: vi.fn(async () => ACCOUNT),
     requestPasswordReset: vi.fn(async () => undefined),
     resetPassword: vi.fn(async () => undefined),
-    // Requis par AuthApi depuis #174 ; non exerce ici.
+    // Required by AuthApi since #174; not exercised here.
     signOut: vi.fn(async () => undefined),
 };
 

@@ -51,8 +51,8 @@ function analyser(nom: string): Faute | undefined {
     }
 }
 
-describe('les feuilles de style', () => {
-    it('sont analysables par l analyseur qui les compile', () => {
+describe('the style sheets', () => {
+    it('can be parsed by the parser that compiles them', () => {
         const fautes = feuilles()
             .map(analyser)
             .filter((faute): faute is Faute => faute !== undefined);
@@ -63,7 +63,7 @@ describe('les feuilles de style', () => {
         expect(fautes).toEqual([]);
     });
 
-    it('sont assez nombreuses pour que le test ci-dessus prouve quelque chose', () => {
+    it('are numerous enough for the test above to prove something', () => {
         // The reader depends on a directory layout that could change. An empty
         // list of files would pass the assertion above without reading a thing.
         expect(feuilles().length).toBeGreaterThan(5);
