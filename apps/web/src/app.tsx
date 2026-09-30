@@ -182,14 +182,13 @@ function SignedInApp({
 
     return (
         <ProjectMembersContext.Provider value={assignees.members}>
-            <SessionBanner
-                email={email}
-                unread={unread}
-                isSigningOut={isSigningOut}
-                onSignOut={onSignOut}
-            />
-            <NotificationsPanel api={apis.notifications} members={apis.members} onJoined={projects.showJoined} />
             <TodoPage
+                session={
+                    <>
+                        <SessionBanner email={email} unread={unread} isSigningOut={isSigningOut} onSignOut={onSignOut} />
+                        <NotificationsPanel api={apis.notifications} members={apis.members} onJoined={projects.showJoined} />
+                    </>
+                }
                 {...itemsSectionProps(state)}
                 view={view}
                 onNavigate={navigate}

@@ -1,7 +1,11 @@
 .notifications-panel {
-    max-width: calc(1600px + 2 * var(--space-8));
-    margin: 0 auto var(--space-8);
-    padding-inline: var(--space-8);
+    margin: 0;
+}
+
+/* Inside the session card since issue 456: the quiet button's margin is for
+   the sign-in page, where it separates a link from the form above it. */
+.notifications-panel > .button-quiet {
+    margin-top: 0;
 }
 
 .notifications-panel h2 {
@@ -69,11 +73,5 @@
 @media (max-width: 620px) {
     .notification-row {
         grid-auto-flow: row;
-    }
-}
-
-@media (max-width: 620px) {
-    .notifications-panel {
-        padding-inline: var(--space-6);
     }
 }

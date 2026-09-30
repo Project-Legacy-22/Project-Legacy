@@ -60,17 +60,12 @@
     background: #e9f6f3;
 }
 
-/* Same column and inset as the header below it (issue 446), so the left edges
-   of the banner, the notifications and the header line up. It used to start
-   at the very edge of the window, 24 px left of everything else. */
 .session-banner {
     display: flex;
-    max-width: calc(1600px + 2 * var(--space-8));
     align-items: center;
     justify-content: space-between;
     gap: var(--space-5);
-    margin: 0 auto var(--space-6);
-    padding-inline: var(--space-8);
+    margin: 0 0 var(--space-4);
 }
 
 .session-banner p {
@@ -82,6 +77,7 @@
 /* Compte de notifications, dans le bandeau de session. Discret : il signale un
    effet, il ne reclame pas d action. */
 .notification-badge {
+    display: inline-block;
     margin-left: var(--space-5);
     padding: var(--space-1) var(--space-4);
     border-radius: 999px;
@@ -89,6 +85,8 @@
     background: #e9f6f3;
     font-size: var(--font-size-sm);
     font-weight: 700;
+    /* A pill split over two lines reads as two badges. */
+    white-space: nowrap;
 }
 
 /* Consent (US-37). The box and its label sit on one line so the label is the
@@ -200,10 +198,4 @@
 
 .session-banner .button-quiet {
     margin-top: 0;
-}
-
-@media (max-width: 620px) {
-    .session-banner {
-        padding-inline: var(--space-6);
-    }
 }
