@@ -17,7 +17,7 @@ import {
     waitFor,
 } from './test/react-root';
 import type { ReactTestRoot } from './test/react-root';
-import { createAttentionApi } from './test/app-fixture';
+import { createAttentionApi, startAt } from './test/app-fixture';
 
 const ACCOUNT = {
     id: '5b1f0f4a-9d3f-4d0e-9e2a-6c0f5a3b1d77',
@@ -98,6 +98,7 @@ async function render(api: ItemsApi): Promise<void> {
 
 beforeEach(() => {
     root = createReactTestRoot();
+    startAt('projects');
 });
 
 afterEach(async () => {

@@ -5,7 +5,7 @@ import type { ItemDto, ItemsApi, ItemStatus } from './api/items-api';
 import { ApiError } from './api/items-api';
 import { App } from './app';
 import { labels } from './labels';
-import { createApi, createAuth, createProjectsApi, itemPage } from './test/app-fixture';
+import { createApi, createAuth, createProjectsApi, itemPage, startAt } from './test/app-fixture';
 import { anItem } from './test/builders/item-builder';
 import {
     click,
@@ -100,6 +100,7 @@ beforeEach(() => {
     document.documentElement.lang = 'en';
     document.title = 'Board | Legacy 22';
     root = createReactTestRoot();
+    startAt('projects');
 });
 
 afterEach(async () => {

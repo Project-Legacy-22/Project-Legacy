@@ -24,7 +24,7 @@ export function CredentialsSection({
         <section className="panel" aria-labelledby="credentials-heading">
             <div className="section-heading">
                 <p className="section-kicker">{labels.credentialsKicker}</p>
-                <h2 id="credentials-heading">{labels.credentialsTitle}</h2>
+                <h2 id="credentials-heading" tabIndex={-1}>{labels.credentialsTitle}</h2>
             </div>
             <p className="panel-intro">{labels.credentialsIntro}</p>
             <ChangeEmailForm isSubmitting={isSubmitting} onSubmit={onChangeEmail} />

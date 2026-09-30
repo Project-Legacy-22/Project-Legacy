@@ -32,6 +32,8 @@ export const CONTRAST_PAIRS: readonly ContrastPair[] = [
     { foreground: '--text-on-brand', background: '--surface-brand', requirement: 'text', where: 'header title' },
     { foreground: '--text-on-brand-soft', background: '--surface-brand', requirement: 'text', where: 'header eyebrow' },
     { foreground: '--text-on-brand-muted', background: '--surface-brand', requirement: 'text', where: 'header introduction' },
+    { foreground: '--text-on-brand', background: '--surface-brand', requirement: 'text', where: 'navigation link' },
+    { foreground: '--text-brand', background: '--surface-brand-soft', requirement: 'text', where: 'navigation link of the open view' },
 
     // Texte sur les surfaces d'etat
     { foreground: '--text-secondary', background: '--surface-muted', requirement: 'text', where: 'loading and empty-state messages' },
@@ -57,6 +59,7 @@ export const CONTRAST_PAIRS: readonly ContrastPair[] = [
     { foreground: '--border-danger', background: '--surface-card', requirement: 'ui', where: 'outline of the danger button' },
     { foreground: '--action-primary', background: '--surface-card', requirement: 'ui', where: 'border of a task in progress' },
     { foreground: '--action-primary', background: '--surface-brand-soft', requirement: 'ui', where: 'selected project border and indicator' },
+    { foreground: '--text-on-brand-soft', background: '--surface-brand', requirement: 'ui', where: 'outline of a navigation link' },
 ];
 
 // The tokens no pair verifies, and why. Each entry is a decision, not an

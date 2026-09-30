@@ -206,7 +206,7 @@ export function ProjectsSection(props: ProjectsSectionProps) {
         >
             <div className="section-heading">
                 <p className="section-kicker">{labels.projectsKicker}</p>
-                <h2 id="projects-heading">{labels.projectsTitle}</h2>
+                <h2 id="projects-heading" tabIndex={-1}>{labels.projectsTitle}</h2>
             </div>
             <ProjectsContent {...props} />
             {props.feedback.status !== 'idle' && (

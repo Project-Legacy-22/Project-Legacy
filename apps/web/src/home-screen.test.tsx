@@ -7,7 +7,7 @@ import { ApiError } from './api/items-api';
 import type { ProjectDto } from './api/projects-api';
 import { App } from './app';
 import { labels } from './labels';
-import { createApi, createAuth, createProjectsApi, itemPage } from './test/app-fixture';
+import { createApi, createAuth, createProjectsApi, itemPage, startAt } from './test/app-fixture';
 import { anAttention, anAttentionItem } from './test/builders/attention-builder';
 import { anItem } from './test/builders/item-builder';
 import { click, createReactTestRoot, flushTimers, getElement, tabbables, waitFor } from './test/react-root';
@@ -55,14 +55,15 @@ afterEach(async () => {
 });
 
 describe('home screen', () => {
-    it('vient en premier apres la connexion, avant la liste des projets', async () => {
+    it('est la vue ouverte apres la connexion, seule dans le contenu principal', async () => {
         await renderApp({ listAttention: async () => anAttention() });
 
         const sections = [...document.querySelectorAll('main > section')].map((section) =>
             section.getAttribute('aria-labelledby'),
         );
 
-        expect(sections.slice(0, 2)).toEqual(['home-heading', 'projects-heading']);
+        expect(sections).toEqual(['home-heading']);
+        expect(getElement('.view-nav [aria-current="page"]').textContent).toBe(labels.viewName('home'));
     });
 
     it('montre les taches de chaque groupe avec le projet ou elles vivent', async () => {
@@ -84,11 +85,12 @@ describe('home screen', () => {
         const attention = anAttention({ workload: 'open', overdue: { items: [anAttentionItem({ ...LATE, projectName: SECOND.name })], hasMore: false } });
         await renderApp({ listAttention: async () => attention }, createApi({ listItems }));
         const row = rowNamed('File the report');
+        expect(tabbables()).toContain(row);
 
         await click(row);
         await waitFor(() => document.activeElement?.getAttribute('data-move-item-id') === LATE.id);
 
-        expect(tabbables()).toContain(row);
+        expect(getElement('.view-nav [aria-current="page"]').textContent).toBe(labels.viewName('projects'));
         expect(getElement('#items-heading').textContent).toContain(SECOND.name);
         expect(document.activeElement?.getAttribute('data-move-item-id')).toBe(LATE.id);
     });
@@ -119,13 +121,14 @@ describe('home screen', () => {
         expect(homeText()).toContain(labels.attentionEmpty('all_done'));
     });
 
-    it('recharge ce qui demande attention apres une tache terminee plus bas', async () => {
+    it('recharge ce qui demande attention apres une tache terminee dans son projet', async () => {
         const listAttention = vi.fn<AttentionApi['listAttention']>(async () => anAttention({ workload: 'open' }));
         const item = anItem({ projectId: FIRST.id, name: 'Water the plants' });
         const items = createApi({
             listItems: async () => itemPage([item]),
             moveItem: async () => ({ ...item, status: 'done', version: 2 }),
         });
+        startAt('projects');
         await renderApp({ listAttention }, items);
         const callsBefore = listAttention.mock.calls.length;
 

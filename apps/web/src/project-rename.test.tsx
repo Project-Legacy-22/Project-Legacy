@@ -6,7 +6,14 @@ import { ApiError } from './api/items-api';
 import type { ProjectDto, ProjectsApi } from './api/projects-api';
 import { App } from './app';
 import { labels } from './labels';
-import { createApi, createAttentionApi, createAuth, createMembersApi, createProjectsApi } from './test/app-fixture';
+import {
+    createApi,
+    createAttentionApi,
+    createAuth,
+    createMembersApi,
+    createProjectsApi,
+    startAt,
+} from './test/app-fixture';
 import { deferred } from './test/deferred';
 import { anAttention } from './test/builders/attention-builder';
 import {
@@ -63,6 +70,8 @@ beforeEach(() => {
     document.documentElement.lang = 'en';
     document.title = 'Legacy';
     root = createReactTestRoot();
+    // Projects are listed in their own view since #446.
+    startAt('projects');
 });
 
 afterEach(async () => {

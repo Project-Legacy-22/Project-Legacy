@@ -28,6 +28,7 @@ import {
     firstItem,
     itemPage,
     secondItem,
+    startAt,
 } from './test/app-fixture';
 import { labels } from './labels';
 
@@ -75,6 +76,7 @@ async function fillSignInForm(email: string, password: string): Promise<void> {
 
 beforeEach(() => {
     testRoot = createReactTestRoot();
+    startAt('projects');
 });
 
 afterEach(async () => {

@@ -16,11 +16,8 @@ import { notificationsApi } from './api/notifications-api';
 import { projectsApi } from './api/projects-api';
 import type { ProjectDto, ProjectsApi } from './api/projects-api';
 import type { NotificationsApi } from './api/notifications-api';
-import { AccountSections } from './components/account-sections';
 import type { CredentialsControls } from './components/account-sections';
 import { AuthPage } from './components/auth-page';
-import { HomeSection } from './components/home-section';
-import { MembersSection } from './components/members-section';
 import { ProjectMembersContext } from './components/project-members-context';
 import { DeepLinkPages, useDeepLinkToken } from './components/deep-link-pages';
 import { NotificationsPanel } from './components/notifications-panel';
@@ -40,6 +37,8 @@ import { useProjectAssignees } from './hooks/use-project-assignees';
 import { useProjects } from './hooks/use-projects';
 import { usePersonalData } from './hooks/use-personal-data';
 import { useSession } from './hooks/use-session';
+import { useView } from './hooks/use-view';
+import { viewNodes } from './signed-in-views';
 import type { SubmitResult } from './hooks/use-session';
 import { saveFile } from './save-file';
 import type { SaveFile } from './save-file';
@@ -173,6 +172,7 @@ function SignedInApp({
     onDeleted,
     onSignOut,
 }: SignedInAppProps) {
+    const { view, navigate } = useView();
     const projects = useProjects(apis.projects, apis.members);
     const attention = useAttention(apis.attention);
     const state = useProjectItems(apis.api, projects, attention.reload);
@@ -189,28 +189,20 @@ function SignedInApp({
 
     return (
         <ProjectMembersContext.Provider value={assignees.members}>
-            <SessionBanner
-                email={email}
-                unread={unread}
-                isSigningOut={isSigningOut}
-                onSignOut={onSignOut}
-            />
-            <NotificationsPanel api={apis.notifications} members={apis.members} onJoined={projects.showJoined} />
             <TodoPage
+                session={
+                    <>
+                        <SessionBanner email={email} unread={unread} isSigningOut={isSigningOut} onSignOut={onSignOut} />
+                        <NotificationsPanel api={apis.notifications} members={apis.members} onJoined={projects.showJoined} />
+                    </>
+                }
                 {...itemsSectionProps(state)}
+                view={view}
+                onNavigate={navigate}
                 selectedProject={projects.selectedProject}
                 projects={projectSectionProps(projects, attention.reload)}
-                home={<HomeSection {...attention} onOpen={openFromHome} />}
-                members={projects.selectedProject !== null && (
-                    <MembersSection api={apis.members} project={projects.selectedProject} currentEmail={email} onRemoved={onMemberRemoved} />
-                )}
-            >
-                <AccountSections
-                    email={email}
-                    credentials={credentials}
-                    personalData={personalData}
-                />
-            </TodoPage>
+                {...viewNodes({ apis, email, credentials, personalData, projects, attention, openFromHome, navigate, onMemberRemoved })}
+            />
         </ProjectMembersContext.Provider>
     );
 }

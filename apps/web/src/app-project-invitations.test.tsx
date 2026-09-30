@@ -13,8 +13,10 @@ import {
     createCredentialsApi,
     createMembersApi,
     createProjectsApi,
+    openView,
+    startAt,
 } from './test/app-fixture';
-import { click, createReactTestRoot, flushTimers, getElement, setInputValue, submitForm } from './test/react-root';
+import { createReactTestRoot, flushTimers, getElement, setInputValue, submitForm } from './test/react-root';
 import type { ReactTestRoot } from './test/react-root';
 
 // #420: one or several people are invited from the project creation form, and
@@ -52,6 +54,7 @@ function politeText(): string {
 
 beforeEach(() => {
     testRoot = createReactTestRoot();
+    startAt('projects');
 });
 
 afterEach(async () => {
@@ -133,8 +136,7 @@ describe('inviting several people from the members panel', () => {
             return 'invited' as const;
         });
         await renderApp(createProjectsApi(), createMembersApi({ invite }));
-        await click(getElement<HTMLButtonElement>('.members-panel button[aria-controls="members-content"]'));
-        await flushTimers();
+        await openView('members');
 
         await setInputValue(getElement<HTMLInputElement>('#invite-email'), 'ada@example.com, nobody@example.com');
         await submitForm(getElement<HTMLFormElement>('.members-panel form'));

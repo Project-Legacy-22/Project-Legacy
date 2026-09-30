@@ -15,6 +15,9 @@ export function createReactTestRoot(): ReactTestRoot {
     });
 
     document.body.replaceChildren();
+    // jsdom keeps one address per file, and the view is read from it (#446):
+    // without this, a test that navigated would open the next one elsewhere.
+    window.history.replaceState(null, '', '/');
     const container = document.createElement('div');
     document.body.append(container);
     const root: Root = createRoot(container);

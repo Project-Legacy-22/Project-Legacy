@@ -20,6 +20,7 @@ import {
     tabbables,
 } from './test/react-root';
 import type { ReactTestRoot } from './test/react-root';
+import { viewHref } from './hooks/use-view';
 
 // The end-to-end keyboard path US-14 asks for, screen by screen: the sign-in
 // screen, the registration screen, the board, a move, and signing out.
@@ -177,7 +178,7 @@ describe('the keyboard journey, screen by screen', () => {
     // whether the address existed or not, so it cannot be used to find out who
     // has an account. The journey therefore has two steps here, not one, and
     // the second must be reachable from the first without a pointer.
-    it('registers, then signs in, and lands on the board', async () => {
+    it('registers, then signs in, and lands on the home view', async () => {
         const auth = journeyAuth();
         await root.render(
             <App api={createApi(tasks([]))} auth={auth} projects={createProjectsApi()} />,
@@ -208,10 +209,10 @@ describe('the keyboard journey, screen by screen', () => {
 
         expect(auth.signIn).toHaveBeenCalledOnce();
         expect(document.querySelector('form.auth-form')).toBeNull();
-        expect(document.querySelector('.kanban-board')).not.toBeNull();
+        expect(document.querySelector('#home-heading')).not.toBeNull();
     });
 
-    it('adds a task, then moves it across the board, with every control reachable', async () => {
+    it('opens the projects view, adds a task, then moves it across the board', async () => {
         signedIn = true;
         const moved = { ...TASK, status: 'doing' as const, version: 2 };
         const api = createApi({
@@ -220,6 +221,14 @@ describe('the keyboard journey, screen by screen', () => {
         });
         await root.render(<App api={api} auth={journeyAuth()} projects={createProjectsApi()} />);
         await flushTimers();
+
+        // The view changes from the keyboard, and focus lands on its heading,
+        // which is how a screen reader hears that it changed (#446).
+        const projectsLink = getElement<HTMLAnchorElement>(`.view-nav a[href="${viewHref('projects')}"]`);
+        expect(await reach(projectsLink, focusOrder())).toBeGreaterThan(0);
+        await click(projectsLink);
+        await flushTimers();
+        expect(document.activeElement?.id).toBe('projects-heading');
 
         const addField = getElement<HTMLInputElement>('.add-form input[type="text"]');
         expect(await reach(addField, focusOrder())).toBeGreaterThan(0);
