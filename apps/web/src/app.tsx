@@ -14,7 +14,7 @@ import { membersApi } from './api/members-api';
 import type { MembersApi } from './api/members-api';
 import { notificationsApi } from './api/notifications-api';
 import { projectsApi } from './api/projects-api';
-import type { ProjectsApi } from './api/projects-api';
+import type { ProjectDto, ProjectsApi } from './api/projects-api';
 import type { NotificationsApi } from './api/notifications-api';
 import { AccountSections } from './components/account-sections';
 import type { CredentialsControls } from './components/account-sections';
@@ -136,7 +136,9 @@ function itemsSectionProps(state: ReturnType<typeof useProjectItems>) {
     };
 }
 
-function projectSectionProps(projects: ReturnType<typeof useProjects>) {
+// A rename also reads the home screen again: it names projects as they were
+// when it was read.
+function projectSectionProps(projects: ReturnType<typeof useProjects>, reloadHome: () => void) {
     return {
         projects: projects.projects,
         selectedProjectId: projects.selectedProjectId,
@@ -149,6 +151,11 @@ function projectSectionProps(projects: ReturnType<typeof useProjects>) {
         onSelect: projects.selectProject,
         onAdd: projects.addProject,
         onRemove: projects.removeProject,
+        onRename: async (project: ProjectDto, name: string) => {
+            const result = await projects.renameProject(project, name);
+            if (result.status === 'success') reloadHome();
+            return result;
+        },
         onLoadMore: projects.loadMore,
         onRetry: projects.retry,
     };
@@ -192,7 +199,7 @@ function SignedInApp({
             <TodoPage
                 {...itemsSectionProps(state)}
                 selectedProject={projects.selectedProject}
-                projects={projectSectionProps(projects)}
+                projects={projectSectionProps(projects, attention.reload)}
                 home={<HomeSection {...attention} onOpen={openFromHome} />}
                 members={projects.selectedProject !== null && (
                     <MembersSection api={apis.members} project={projects.selectedProject} currentEmail={email} onRemoved={onMemberRemoved} />

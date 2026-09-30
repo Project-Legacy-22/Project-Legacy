@@ -12,7 +12,7 @@ export interface ProjectFormProps {
     onAdd: (name: string, invitees: readonly string[]) => Promise<AddProjectResult>;
 }
 
-function nameRefusal(name: string): string | null {
+export function projectNameRefusal(name: string): string | null {
     if (CreateProjectBody.safeParse({ name }).success) return null;
     return name.trim().length === 0 ? labels.projectNameRequired : labels.projectNameTooLong(MAX_PROJECT_NAME_LENGTH);
 }
@@ -57,7 +57,7 @@ function useProjectForm(onAdd: ProjectFormProps['onAdd']) {
 
     const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        const refusals = { name: nameRefusal(fields.name), invitees: inviteesRefusal(fields.invitees) };
+        const refusals = { name: projectNameRefusal(fields.name), invitees: inviteesRefusal(fields.invitees) };
         fields.setError(refusals.name);
         fields.setInviteesError(refusals.invitees);
         if (refusals.name !== null || refusals.invitees !== null) {

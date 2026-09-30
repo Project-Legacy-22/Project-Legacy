@@ -1,6 +1,6 @@
-// Wording of the projects section: creation, listing and removal. Kept apart
-// from labels.ts, which is at its line ceiling, and spread into it like the
-// other label modules.
+// Wording of the projects section: creation, listing, removal and renaming
+// (#463). Kept apart from labels.ts, which is at its line ceiling, and spread
+// into it like the other label modules.
 export const projectLabels = {
     projectsKicker: 'Workspace',
     projectsTitle: 'Projects',
@@ -46,4 +46,20 @@ export const projectLabels = {
         const items = `${itemCount} ${itemCount === 1 ? 'item' : 'items'}`;
         return `Remove ${name}? ${items} will be permanently deleted, along with any previously removed items.`;
     },
+
+    // Renaming (#463)
+    rename: 'Rename',
+    renameProject(name: string): string {
+        return `Rename project: ${name}`;
+    },
+    projectRenameLabel(name: string): string {
+        return `New name for ${name}`;
+    },
+    saveProjectName: 'Save name',
+    savingProjectName: 'Saving…',
+    cancelRename: 'Cancel',
+    projectRenamed(previous: string, next: string): string {
+        return `${previous} is now named ${next}.`;
+    },
+    renameProjectFailed: 'Unable to rename this project.',
 } as const;

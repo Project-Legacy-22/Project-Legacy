@@ -33,6 +33,7 @@ export function useProjects(api: ProjectsApi, members: MembersApi) {
         selectProject: query.setSelectedProjectId,
         addProject: actions.add,
         removeProject: actions.remove,
+        renameProject: actions.rename,
         adjustSelectedItemCount: actions.adjustItemCount,
         loadMore: query.loadMore,
         retry: query.retry,

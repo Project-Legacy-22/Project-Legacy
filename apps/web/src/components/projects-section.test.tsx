@@ -32,6 +32,7 @@ function props(overrides: Partial<ProjectsSectionProps> = {}): ProjectsSectionPr
             status: 'success',
         })),
         onRemove: vi.fn(async () => true),
+        onRename: vi.fn(async (): Promise<AddProjectResult> => ({ status: 'success' })),
         onLoadMore: vi.fn(),
         onRetry: vi.fn(),
         ...overrides,

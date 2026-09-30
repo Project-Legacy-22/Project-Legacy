@@ -59,6 +59,7 @@ function pageProps(overrides: Partial<TodoPageProps> = {}): TodoPageProps {
                 status: 'success',
             })),
             onRemove: vi.fn(async () => true),
+            onRename: vi.fn(async (): Promise<AddProjectResult> => ({ status: 'success' })),
             onLoadMore: vi.fn(),
             onRetry: vi.fn(),
         },
@@ -188,7 +189,7 @@ describe('TodoPage accessibility', () => {
     it('offers an explicit remediation for a legacy item without a name', async () => {
         await renderPage({ items: [{ ...firstItem, name: null }] });
 
-        const toggle = getElement<HTMLButtonElement>('.button-secondary');
+        const toggle = getElement<HTMLButtonElement>('.todo-item .button-secondary');
         expect(toggle.disabled).toBe(true);
         expect(document.body.textContent).toContain(labels.unnamedItemRemediation);
     });
