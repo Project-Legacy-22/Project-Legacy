@@ -19,7 +19,7 @@ import type { RealAccount } from './support.js';
 // A notification is seeded through the same RPC the worker calls
 // (record_item_created_notification), with the service-role key: spinning up
 // the real broker and worker process to prove the event flow itself creates a
-// notification is what event-consumer.test.ts and the demonstration flow
+// notification is what event-consumer.test.ts and event-flow.integration.test.ts
 // already cover, and duplicating it here would only make this suite slower.
 const MOT_DE_PASSE = 'IntegrationTest2026';
 
