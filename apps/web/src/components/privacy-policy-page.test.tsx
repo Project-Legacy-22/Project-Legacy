@@ -6,9 +6,9 @@ import type { ReactTestRoot } from '../test/react-root';
 import { PROCESSORS } from './policy-processors';
 import { PrivacyPolicyPage } from './privacy-policy-page';
 
-// La page publique que quelqu un lit avant de decider s il cree un compte. Elle
-// n avait aucun test, et elle porte desormais un tableau -- du balisage ou une
-// en-tete mal associee rend la lecture au lecteur d ecran incomprehensible.
+// The public page someone reads before deciding whether to create an account. It had no test, and
+// it now carries a table -- a markup or a badly associated header makes reading it with a screen
+// reader incomprehensible.
 
 let root: ReactTestRoot;
 
@@ -23,19 +23,19 @@ afterEach(async () => {
 });
 
 describe('PrivacyPolicyPage', () => {
-    it('n a aucune violation WCAG A ou AA detectable', async () => {
+    it('has no detectable WCAG A or AA violation', async () => {
         await root.render(<PrivacyPolicyPage onBack={vi.fn()} />);
 
         const results = await axe.run(document, {
             runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21aa'] },
-            // axe documente que cette regle ne donne pas de resultat fiable en jsdom.
+            // axe documents that this rule gives no reliable result in jsdom.
             rules: { 'color-contrast': { enabled: false } },
         });
 
         expect(results.violations).toEqual([]);
     });
 
-    it('nomme chaque sous-traitant, ou il se trouve et qui y accede', async () => {
+    it('names each processor, where it is and who accesses it', async () => {
         await root.render(<PrivacyPolicyPage onBack={vi.fn()} />);
 
         const tableau = getElement<HTMLTableElement>('.policy-processors');
@@ -48,9 +48,9 @@ describe('PrivacyPolicyPage', () => {
         }
     });
 
-    // Sans `scope`, un lecteur d ecran ne sait pas quelle cellule appartient a
-    // quelle colonne : le tableau devient une liste de mots.
-    it('associe chaque en-tete a sa colonne ou a sa ligne', async () => {
+    // Without `scope`, a screen reader does not know which cell belongs to which column: the table
+    // becomes a list of words.
+    it('associates each header with its column or its row', async () => {
         await root.render(<PrivacyPolicyPage onBack={vi.fn()} />);
 
         const colonnes = [...document.querySelectorAll('.policy-processors thead th')];
@@ -62,7 +62,7 @@ describe('PrivacyPolicyPage', () => {
         expect(lignes.every(th => th.getAttribute('scope') === 'row')).toBe(true);
     });
 
-    it('dit qu aucune donnee ne sort de l Union, et sous quelle juridiction', async () => {
+    it('says that no data leaves the Union, and under which jurisdiction', async () => {
         await root.render(<PrivacyPolicyPage onBack={vi.fn()} />);
 
         const texte = getElement<HTMLElement>('.policy-page').textContent ?? '';

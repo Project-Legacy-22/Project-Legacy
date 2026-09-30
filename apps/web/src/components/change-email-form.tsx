@@ -30,6 +30,8 @@ export function ChangeEmailForm({ isSubmitting, onSubmit }: ChangeEmailFormProps
 
     function handleSubmit(event: FormEvent<HTMLFormElement>): void {
         event.preventDefault();
+        // Enter in the field submits too: the guard is here, not on the button.
+        if (isSubmitting) return;
 
         const found = localError(newEmail);
         setError(found);
@@ -49,9 +51,9 @@ export function ChangeEmailForm({ isSubmitting, onSubmit }: ChangeEmailFormProps
                 onChange={setNewEmail}
                 error={error}
                 errorId={`${prefix}-email-error`}
-                disabled={isSubmitting}
+                readOnly={isSubmitting}
             />
-            <button className="button button-primary" type="submit" disabled={isSubmitting}>
+            <button className="button button-primary" type="submit" aria-disabled={isSubmitting}>
                 {isSubmitting ? labels.changingEmail : labels.changeEmailSubmit}
             </button>
             <FormOutcome outcome={outcome} />

@@ -17,6 +17,7 @@ export const LEVELS = {
         // real service, only git and these patterns.
         'test/*.test.ts',
         'apps/api/src/after-write.test.ts',
+        'apps/api/src/event-correlation.test.ts',
         'apps/api/src/item-use-cases.test.ts',
         'apps/api/src/project-use-cases.test.ts',
         'apps/api/src/config.test.ts',
@@ -44,6 +45,7 @@ export const LEVELS = {
         // at and what it answers when the shell is missing.
         'apps/api/src/http/app-shell.test.ts',
         'apps/api/src/http/metrics.test.ts',
+        'apps/api/src/http/health.test.ts',
     ],
 
     // Components mounted in jsdom, queried through src/test/react-root.tsx.

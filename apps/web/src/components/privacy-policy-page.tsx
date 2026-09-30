@@ -1,5 +1,6 @@
 import { PRIVACY_POLICY_VERSION } from '@legacy/contracts';
 
+import { useDocumentTitle } from '../hooks/use-document-title';
 import { labels } from '../labels';
 import { ProcessorsTable } from './policy-processors';
 
@@ -16,6 +17,7 @@ export interface PrivacyPolicyPageProps {
 // footer, which US-37 asks for: the reader has to be able to consult it before
 // deciding, not after.
 export function PrivacyPolicyPage({ onBack }: PrivacyPolicyPageProps) {
+    useDocumentTitle(labels.privacyPolicyTitle);
     return (
         <main className="policy-page" id="main-content">
             <h1>{labels.privacyPolicyTitle}</h1>

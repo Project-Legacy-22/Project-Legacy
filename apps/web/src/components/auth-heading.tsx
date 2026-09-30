@@ -1,5 +1,6 @@
 import type { RefObject } from 'react';
 
+import { useDocumentTitle } from '../hooks/use-document-title';
 import { labels } from '../labels';
 import type { AuthMode } from './auth-form';
 
@@ -36,6 +37,8 @@ function intro(screen: Screen): string {
 // sentence that introduces it. Kept together because the three are read in that
 // order and only make sense in it.
 export function AuthHeading({ screen, notice, titleRef }: AuthHeadingProps) {
+    useDocumentTitle(title(screen));
+
     return (
         <>
             <h1 ref={titleRef} tabIndex={-1}>

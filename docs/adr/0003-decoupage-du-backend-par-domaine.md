@@ -1,79 +1,77 @@
-# ADR-0003 — Découpage du backend par domaine, en couches à l'intérieur
+# ADR-0003 — Backend split by domain, in layers inside each domain
 
-- **Statut** : Accepté
-- **Date** : 2026-09-02
-- **Décideurs** : équipe complète, réunion de lancement
-- **Issue liée** : #2
+- **Status**: Accepted
+- **Date**: 2026-09-02
+- **Deciders**: whole team, kickoff meeting
+- **Related issue**: #2
 
-## Contexte
+## Context
 
-Le code hérité n'a aucune couche métier : les gestionnaires Express appellent directement la
-persistance (`DET-01`), et le pilote de base est choisi par effet de bord au chargement du
-module (`DET-02`). Aucune règle n'est testable sans HTTP ni base de données.
+The legacy code has no business layer: the Express handlers call persistence directly (`DET-01`),
+and the database driver is chosen as a side effect when the module loads (`DET-02`). No rule can
+be tested without HTTP or a database.
 
-Six personnes travaillent en parallèle sur le même dépôt pendant trois sprints. La question
-n'est donc pas seulement « quel découpage est propre » mais « quel découpage évite six
-personnes dans les mêmes fichiers ».
+Six people work in parallel on the same repository for three sprints. The question is therefore
+not only "which split is clean" but "which split keeps six people out of the same files".
 
-## Options considérées
+## Options considered
 
-### Option A — Par domaine, en couches à l'intérieur de chaque domaine
-- Avantages : chaque domaine est autonome ; les frontières sont vérifiables
-  automatiquement ; un module a un propriétaire identifiable.
-- Inconvénients : plus de fichiers, plus d'imports, plus de cérémonie pour un cas simple.
+### Option A — By domain, in layers inside each domain
+- Pros: each domain is autonomous; the boundaries can be checked automatically; a module has an
+  identifiable owner.
+- Cons: more files, more imports, more ceremony for a simple case.
 
-### Option B — Par couche uniquement (`controllers/`, `services/`, `models/`)
-- Avantages : familier, immédiat à comprendre.
-- Inconvénients : tout le monde édite les trois mêmes dossiers. Les conflits sont garantis à
-  six, et le couplage du legacy est reproduit à l'identique, une couche plus haut.
+### Option B — By layer only (`controllers/`, `services/`, `models/`)
+- Pros: familiar, immediately understood.
+- Cons: everybody edits the same three folders. Conflicts are guaranteed with six people, and
+  the coupling of the legacy is reproduced identically, one layer higher.
 
-### Option C — Plat, comme le legacy
-- Écarté : c'est la dette `DET-01` elle-même.
+### Option C — Flat, like the legacy
+- Discarded: it is debt `DET-01` itself.
 
-## Décision
+## Decision
 
-Nous retenons **l'option A — découpage par domaine**, style hexagonal allégé : le domaine
-n'importe rien, expose des ports, et les adaptateurs (HTTP, base, bus) sont branchés à la
-composition root.
+We choose **option A — split by domain**, in a lightweight hexagonal style: the domain imports
+nothing, exposes ports, and the adapters (HTTP, database, bus) are plugged in at the composition
+root.
 
-Parce que :
+Because:
 
-1. À six, un découpage horizontal fait converger tout le monde vers les mêmes trois
-   dossiers. Le découpage par domaine est ce qui rend l'ownership par module possible, donc
-   ce qui évite les conflits — c'est un choix d'organisation autant que d'architecture.
-2. La règle « `domain/` n'importe rien » est vérifiable par script, donc elle tient sans
-   dépendre de la vigilance en revue.
-3. Un domaine isolé se teste sans HTTP ni base : c'est la condition pour que les tests
-   portent sur un comportement et non sur une séquence d'appels, ce que le legacy ne
-   permettait pas (`DET-14`).
+1. With six people, a horizontal split makes everybody converge on the same three folders. The
+   split by domain is what makes ownership per module possible, hence what avoids conflicts — it
+   is an organisational choice as much as an architectural one.
+2. The rule "`domain/` imports nothing" can be checked by a script, so it holds without relying
+   on vigilance at review.
+3. An isolated domain is tested without HTTP or a database: this is the condition for tests to
+   cover a behaviour rather than a sequence of calls, which the legacy did not allow (`DET-14`).
 
-## Conséquences
+## Consequences
 
-**Positives**
-- Un domaine ne communique avec un autre que par événement ou par port, jamais par import
-  direct.
-- Chaque adaptateur est remplaçable sans toucher au métier — ce qui rend réversibles les
-  ADR-0005 et ADR-0007.
+**Positive**
+- A domain communicates with another only through an event or a port, never through a direct
+  import.
+- Each adapter can be replaced without touching the business code — which makes ADR-0005 and
+  ADR-0007 reversible.
 
-**Négatives / dette acceptée**
-- Plus de fichiers et d'indirection qu'un CRUD ne le justifierait pris isolément.
-- Un développeur pressé trouvera le chemin le plus court en important directement un
-  adaptateur : la vérification automatique est ce qui l'en empêche, pas la convention.
+**Negative / accepted debt**
+- More files and indirection than a CRUD would justify on its own.
+- A developer in a hurry will find the shortest path by importing an adapter directly: the
+  automatic check is what prevents it, not the convention.
 
-**Ce que ça impose au reste du projet**
-- `packages/contracts` est le seul contrat public entre domaines.
-- `.github/CODEOWNERS` suit le découpage : un module, un propriétaire.
-- Toute nouvelle communication entre domaines se déclare comme un événement ou un port, et
-  se discute — elle ne s'ajoute pas par un import.
+**What it imposes on the rest of the project**
+- `packages/contracts` is the only public contract between domains.
+- `.github/CODEOWNERS` follows the split: one module, one owner.
+- Any new communication between domains is declared as an event or a port, and is discussed — it
+  is not added through an import.
 
-## Comment on saura qu'on s'est trompé
+## How we will know we were wrong
 
-Si un domaine devient un fourre-tout dont trois personnes modifient les mêmes fichiers à
-chaque sprint, la frontière est mal placée : on scinde ce domaine. Revenir à un découpage
-par couche ramènerait le problème partout au lieu de le corriger à un endroit.
+If a domain becomes a catch-all whose files three people modify in every sprint, the boundary is
+misplaced: we split that domain. Going back to a split by layer would bring the problem back
+everywhere instead of fixing it in one place.
 
-## Références
+## References
 
-- `docs/backlog.md`, décision `D-04`
-- `docs/audit-legacy.md`, dettes `DET-01`, `DET-02`, `DET-14` (livrées par `SP-00`, PR #107)
-- Standards d'équipe, `standards/01-architecture.md`
+- `docs/backlog.md`, decision `D-04`
+- `docs/audit-legacy.md`, debts `DET-01`, `DET-02`, `DET-14` (delivered by `SP-00`, PR #107)
+- Team standards, `standards/01-architecture.md`

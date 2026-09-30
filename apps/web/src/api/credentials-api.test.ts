@@ -35,7 +35,7 @@ afterEach(() => {
 });
 
 describe('credentialsApi.changePassword', () => {
-    it('envoie les deux mots de passe dans le corps, jamais l URL', async () => {
+    it('sends both passwords in the body, never the URL', async () => {
         const fetchMock = stubFetch(response(null, 204));
 
         await credentialsApi.changePassword({
@@ -52,9 +52,8 @@ describe('credentialsApi.changePassword', () => {
         });
     });
 
-    // Le detail du serveur est utile ici : il porte sur ce que la personne
-    // vient de taper.
-    it('remonte le detail du serveur', async () => {
+    // The server's detail is useful here: it is about what the person just typed.
+    it('raises the server\'s detail', async () => {
         stubFetch(problem(403, 'The current password is incorrect.'));
 
         await expect(
@@ -64,7 +63,7 @@ describe('credentialsApi.changePassword', () => {
 });
 
 describe('credentialsApi.changeEmail', () => {
-    it('envoie la nouvelle adresse dans le corps', async () => {
+    it('sends the new address in the body', async () => {
         const fetchMock = stubFetch(response(null, 202));
 
         await credentialsApi.changeEmail({ newEmail: 'neuf@example.com' });
@@ -75,9 +74,9 @@ describe('credentialsApi.changeEmail', () => {
         expect(body).toEqual({ newEmail: 'neuf@example.com' });
     });
 
-    // Le critere central : le formulaire ne doit pas devenir un oracle. Meme si
-    // le serveur envoyait un detail, le client le remplace par un message fixe.
-    it('ne remonte jamais le detail du serveur', async () => {
+    // The central criterion: the form must not become an oracle. Even if the server sent a detail,
+    // the client replaces it with a fixed message.
+    it('never raises the server\'s detail', async () => {
         stubFetch(problem(429, 'Address bob@example.com already registered.'));
 
         await expect(credentialsApi.changeEmail({ newEmail: 'bob@example.com' })).rejects.toEqual(
@@ -87,7 +86,7 @@ describe('credentialsApi.changeEmail', () => {
 });
 
 describe('credentialsApi.confirmEmailChange', () => {
-    it('envoie le jeton dans le corps, jamais l URL', async () => {
+    it('sends the token in the body, never the URL', async () => {
         const fetchMock = stubFetch(response(null, 204));
 
         await credentialsApi.confirmEmailChange({ token: 'jeton-de-confirmation' });
@@ -98,7 +97,7 @@ describe('credentialsApi.confirmEmailChange', () => {
         expect(body).toEqual({ token: 'jeton-de-confirmation' });
     });
 
-    it('remonte le detail du serveur sur un lien invalide', async () => {
+    it('raises the server\'s detail on an invalid link', async () => {
         stubFetch(problem(400, 'This confirmation link is invalid or has expired.'));
 
         await expect(credentialsApi.confirmEmailChange({ token: 'perime' })).rejects.toEqual(

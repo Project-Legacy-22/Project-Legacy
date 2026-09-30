@@ -8,8 +8,8 @@ code and cannot drift from it. An issue is not done until its page exists and is
 
 Format: `docs/features/_template.md`. File name: `<issue-number>-<slug>.md`.
 
-These pages are written in English. The rest of the repository documentation, including the
-architecture decision records and the event catalogue, is in French.
+These pages are written in English, like the rest of the repository documentation
+(ADR-0022).
 
 ## Scope
 
@@ -34,6 +34,8 @@ the acceptance criteria: it describes the feature as it now behaves, in the pres
 | [#30](30-api-hardening.md) | API security hardening | Quality |
 | [#32](32-edit-complete-delete-task.md) | Edit, complete and delete an item | Tasks |
 | [#37](37-account-credentials.md) | Change my email address and my password | Auth |
+| [#41](41-logs-without-personal-data.md) | Logs without superfluous personal data | GDPR |
+| [#42](42-small-screens.md) | Usable on a small screen | A11y |
 | [#48](48-logout.md) | Sign out | Auth |
 | [#49](49-view-states.md) | Coherent loading, empty and error states | A11y |
 | [#50](50-reorder-task.md) | Reorder tasks within a Kanban column | Tasks |
@@ -41,3 +43,7 @@ the acceptance criteria: it describes the feature as it now behaves, in the pres
 | [#354](354-remove-project-member.md) | Remove a project member without deleting their tasks | Projects |
 | [#384](384-failure-messages.md) | What a failed request says, by cause | Quality |
 | [#401](401-project-invitations.md) | Invite one or several people into a project, from its creation (#420); they accept or decline | Projects |
+| [#421](421-drop-item-assignee-column.md) | Drop the single assignee column | Tasks |
+| [#426](426-export-accounts.md) | Take the accounts along when leaving Supabase | GDPR |
+| [#446](446-signed-in-views.md) | One signed-in view at a time, with a navigation and an address per view | A11y |
+| [#461](461-rename-project.md) | Rename a project | Projects |

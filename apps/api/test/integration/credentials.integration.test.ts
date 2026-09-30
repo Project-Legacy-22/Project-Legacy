@@ -32,7 +32,7 @@ describe('PUT /auth/me/password (integration)', () => {
         await app.stop();
     });
 
-    it('revoque les autres sessions, garde la courante, et pose le nouveau mot de passe', async () => {
+    it('revokes the other sessions, keeps the current one, and sets the new password', async () => {
         const email = `integration-credentials-${randomUUID()}@example.com`;
         await app.useCases.auth.registerAccount(email, ANCIEN, PRIVACY_POLICY_VERSION);
 
@@ -83,7 +83,7 @@ describe('PUT /auth/me/password (integration)', () => {
         expect(avecAncien.error).not.toBeNull();
     });
 
-    it('rejette un mot de passe actuel faux', async () => {
+    it('rejects a wrong current password', async () => {
         const email = `integration-credentials-${randomUUID()}@example.com`;
         await app.useCases.auth.registerAccount(email, ANCIEN, PRIVACY_POLICY_VERSION);
 

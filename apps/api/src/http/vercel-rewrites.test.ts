@@ -83,8 +83,8 @@ function reecritures(): readonly { source: string; motif: RegExp }[] {
     });
 }
 
-describe('les reecritures de vercel.json et les routes de l API', () => {
-    it('rendent joignable chaque route que l application sert', () => {
+describe('the rewrites of vercel.json and the API routes', () => {
+    it('make every route the application serves reachable', () => {
         const motifs = reecritures();
 
         const injoignables = cheminsServis(application())
@@ -94,7 +94,7 @@ describe('les reecritures de vercel.json et les routes de l API', () => {
         expect(injoignables).toEqual([]);
     });
 
-    it('ne declarent aucune reecriture que rien ne sert', () => {
+    it('declare no rewrite that nothing serves', () => {
         // A dead entry is not harmless: it says a path is served when it is
         // not, so the next person reads the file and concludes the platform
         // side is done. /items sat there for a week after its routes moved
@@ -109,7 +109,7 @@ describe('les reecritures de vercel.json et les routes de l API', () => {
         expect(mortes).toEqual([]);
     });
 
-    it('portent sur un ensemble non vide, sans quoi les deux tests ci-dessus passeraient pour rien', () => {
+    it('cover a non-empty set, without which the two tests above would pass for nothing', () => {
         // Both readers depend on a shape either file could lose: a renamed key
         // in vercel.json, a change in how Express exposes its stack. Two empty
         // sets compare equal and prove nothing.

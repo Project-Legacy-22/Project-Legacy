@@ -35,16 +35,16 @@ afterEach(() => {
 });
 
 describe('authApi.signIn', () => {
-    it('renvoie le compte du serveur', async () => {
+    it('returns the server\'s account', async () => {
         stubFetch(response(ACCOUNT));
 
         await expect(authApi.signIn(CREDENTIALS)).resolves.toEqual(ACCOUNT);
     });
 
-    // Le critere de US-11b : le message ne doit pas permettre de distinguer une
-    // adresse inconnue d un mot de passe faux. Le serveur s en garde deja ; le
-    // client ne doit pas defaire ce travail en relayant un detail plus precis.
-    it('remplace le detail du serveur par un message unique', async () => {
+    // The US-11b criterion: the message must not tell an unknown address from a wrong password. The
+    // server already guards against it; the client must not undo that work by passing on a more
+    // precise detail.
+    it('replaces the server\'s detail with a single message', async () => {
         stubFetch(
             response(
                 {
@@ -64,10 +64,10 @@ describe('authApi.signIn', () => {
         );
     });
 
-    // Mesure sur le deploiement : GoTrue a repondu Gateway Timeout, l API a rendu
-    // 500, et l ecran disait « verifiez l adresse et le mot de passe ». Les deux
-    // etaient justes. Un refus et une panne ne sont pas la meme reponse.
-    it('distingue une panne du serveur d un refus d identifiants', async () => {
+    // Measured on the deployment: GoTrue answered Gateway Timeout, the API returned 500, and the
+    // screen said "check the address and the password". Both were right. A refusal and an outage
+    // are not the same answer.
+    it('tells a server outage from a credentials refusal', async () => {
         stubFetch(
             response(
                 {
@@ -87,13 +87,13 @@ describe('authApi.signIn', () => {
         );
     });
 
-    it('signale une reponse illisible plutot que de la propager', async () => {
+    it('reports an unreadable response rather than propagating it', async () => {
         stubFetch(response({ id: 42 }));
 
         await expect(authApi.signIn(CREDENTIALS)).rejects.toMatchObject({ status: 502 });
     });
 
-    it('n envoie le mot de passe que dans le corps de la requete', async () => {
+    it('sends the password only in the request body', async () => {
         const fetchMock = stubFetch(response(ACCOUNT));
 
         await authApi.signIn(CREDENTIALS);
@@ -106,13 +106,13 @@ describe('authApi.signIn', () => {
 });
 
 describe('authApi.register', () => {
-    it('aboutit sur une reponse sans corps', async () => {
+    it('succeeds on a response without a body', async () => {
         stubFetch(new Response(null, { status: 201 }));
 
         await expect(authApi.register(REGISTRATION)).resolves.toBeUndefined();
     });
 
-    it('remonte le detail du serveur quand la creation echoue', async () => {
+    it('raises the server\'s detail when the creation fails', async () => {
         stubFetch(
             response(
                 {
@@ -132,7 +132,7 @@ describe('authApi.register', () => {
         );
     });
 
-    it('retombe sur un message generique quand le corps n est pas exploitable', async () => {
+    it('falls back on a generic message when the body is not usable', async () => {
         stubFetch(new Response('pas du json', { status: 500 }));
 
         await expect(authApi.register(REGISTRATION)).rejects.toEqual(
@@ -142,15 +142,15 @@ describe('authApi.register', () => {
 });
 
 describe('authApi.requestPasswordReset', () => {
-    it('aboutit sur une reponse acceptee sans corps', async () => {
+    it('succeeds on an accepted response without a body', async () => {
         stubFetch(new Response(null, { status: 202 }));
 
         await expect(authApi.requestPasswordReset({ email: 'ada@example.com' })).resolves.toBeUndefined();
     });
 
-    // Le critere de US-28 : la reponse ne doit pas reveler si l adresse a un
-    // compte. Le client ne relaie donc jamais le detail du serveur ici.
-    it('leve un message generique, jamais le detail du serveur', async () => {
+    // The US-28 criterion: the response must not reveal whether the address has an account. The
+    // client therefore never passes on the server's detail here.
+    it('throws a generic message, never the server\'s detail', async () => {
         stubFetch(
             response(
                 {
@@ -170,7 +170,7 @@ describe('authApi.requestPasswordReset', () => {
         );
     });
 
-    it('n envoie l adresse que dans le corps', async () => {
+    it('sends the address only in the body', async () => {
         const fetchMock = stubFetch(new Response(null, { status: 202 }));
 
         await authApi.requestPasswordReset({ email: 'ada@example.com' });
@@ -185,15 +185,15 @@ describe('authApi.requestPasswordReset', () => {
 describe('authApi.resetPassword', () => {
     const BODY = { token: 'un-jeton-de-recuperation', password: 'NouveauMotDePasse2' };
 
-    it('aboutit sur une reponse sans corps', async () => {
+    it('succeeds on a response without a body', async () => {
         stubFetch(new Response(null, { status: 204 }));
 
         await expect(authApi.resetPassword(BODY)).resolves.toBeUndefined();
     });
 
-    // Ici le detail est utile : "ce lien a expire" est exactement ce que la
-    // personne sur l ecran de reinitialisation a besoin de lire.
-    it('remonte le detail du serveur quand le lien est invalide', async () => {
+    // Here the detail is useful: "this link has expired" is exactly what the person on the reset
+    // screen needs to read.
+    it('raises the server\'s detail when the link is invalid', async () => {
         stubFetch(
             response(
                 {
@@ -213,7 +213,7 @@ describe('authApi.resetPassword', () => {
         );
     });
 
-    it('retombe sur un message generique quand le corps n est pas exploitable', async () => {
+    it('falls back on a generic message when the body is not usable', async () => {
         stubFetch(new Response('pas du json', { status: 500 }));
 
         await expect(authApi.resetPassword(BODY)).rejects.toEqual(
@@ -221,7 +221,7 @@ describe('authApi.resetPassword', () => {
         );
     });
 
-    it('n envoie ni le jeton ni le mot de passe dans l URL', async () => {
+    it('sends neither the token nor the password in the URL', async () => {
         const fetchMock = stubFetch(new Response(null, { status: 204 }));
 
         await authApi.resetPassword(BODY);
@@ -236,19 +236,19 @@ describe('authApi.resetPassword', () => {
 });
 
 describe('authApi.signOut', () => {
-    it('aboutit sur une reponse sans corps', async () => {
+    it('succeeds on a response without a body', async () => {
         stubFetch(new Response(null, { status: 204 }));
 
         await expect(authApi.signOut()).resolves.toBeUndefined();
     });
 
-    it('leve quand le serveur refuse la requete', async () => {
+    it('throws when the server refuses the request', async () => {
         stubFetch(new Response(null, { status: 500 }));
 
         await expect(authApi.signOut()).rejects.toEqual(new ApiError(500, labels.signOutFailed));
     });
 
-    it('poste sur /auth/logout', async () => {
+    it('posts to /auth/logout', async () => {
         const fetchMock = stubFetch(new Response(null, { status: 204 }));
 
         await authApi.signOut();
@@ -260,22 +260,21 @@ describe('authApi.signOut', () => {
 });
 
 describe('authApi.currentAccount', () => {
-    it('renvoie le compte quand la session est valide', async () => {
+    it('returns the account when the session is valid', async () => {
         stubFetch(response(ACCOUNT));
 
         await expect(authApi.currentAccount(new AbortController().signal)).resolves.toEqual(ACCOUNT);
     });
 
-    // Arriver sans session est le cas ordinaire d une premiere visite, pas une
-    // panne : le client le distingue d une erreur pour que l interface montre
-    // le formulaire au lieu d un message d echec.
-    it('renvoie null sans session, plutot que de lever', async () => {
+    // Arriving without a session is the ordinary case of a first visit, not an outage: the client
+    // tells it from an error so that the interface shows the form instead of a failure message.
+    it('returns null without a session, rather than throwing', async () => {
         stubFetch(new Response(null, { status: 401 }));
 
         await expect(authApi.currentAccount(new AbortController().signal)).resolves.toBeNull();
     });
 
-    it('leve quand le serveur echoue pour une autre raison', async () => {
+    it('throws when the server fails for another reason', async () => {
         stubFetch(new Response(null, { status: 503 }));
 
         await expect(authApi.currentAccount(new AbortController().signal)).rejects.toEqual(

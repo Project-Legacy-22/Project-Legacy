@@ -37,8 +37,8 @@ export interface RedisSettings {
 // process is gone before the next request. Every command therefore opens the
 // connection if it has to, and the shared promise keeps two concurrent commands
 // from both calling connect -- node-redis rejects the second.
-// Le client n est vu que par ce dont l ouverture a besoin : l instanciation
-// generique de createClient ne se laisse pas nommer sous exactOptionalPropertyTypes.
+// The client is only seen through what opening it needs: the generic
+// instantiation of createClient cannot be named under exactOptionalPropertyTypes.
 export function opener(client: {
     isOpen: boolean;
     connect: () => Promise<unknown>;

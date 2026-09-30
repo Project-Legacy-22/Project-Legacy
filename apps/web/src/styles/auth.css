@@ -1,36 +1,34 @@
-/* Ecrans d authentification (US-11b). Meme vocabulaire visuel que le reste :
-   les champs, les etiquettes et les messages reutilisent .form-field,
-   .field-help et .field-error de controls.css. Seule la mise en page de la
-   page et les deux messages de resultat sont propres a cet ecran. */
+/* Authentication screens (US-11b). Same visual vocabulary as the rest: fields, labels and messages
+   reuse .form-field, .field-help and .field-error from controls.css. Only the page layout and the
+   two result messages belong to this screen. */
 
 .auth-page {
     width: min(100% - 32px, 26rem);
-    margin: 48px auto;
+    margin: var(--space-10) auto;
 }
 
-/* La raison pour laquelle cet ecran est revenu : une session terminee. Meme
-   traitement que les messages de resultat, dans la couleur du texte courant --
-   ce n est pas une erreur commise par la personne. */
+/* Why this screen came back: an ended session. Same treatment as the result messages, in the
+   colour of the body text -- it is not a mistake the person made. */
 .auth-notice {
-    margin: 0 0 20px;
+    margin: 0 0 var(--space-7);
     color: #465568;
     font-weight: 700;
     line-height: 1.45;
 }
 
 .auth-intro {
-    margin: 0 0 24px;
+    margin: 0 0 var(--space-8);
     color: #465568;
     line-height: 1.5;
 }
 
 .auth-form {
     display: grid;
-    gap: 18px;
+    gap: var(--space-7);
 }
 
-/* Meme traitement que .field-error, mais pour un echec qui porte sur la
-   soumission entiere et non sur un champ. */
+/* Same treatment as .field-error, but for a failure of the whole submission rather than of a
+   field. */
 .form-error,
 .form-success {
     margin: 0;
@@ -46,10 +44,10 @@
     color: #184f49;
 }
 
-/* Bascule entre connexion et inscription : une action secondaire, qui ne doit
-   pas concurrencer visuellement le bouton de soumission. */
+/* Switch between sign-in and registration: a secondary action, which must not compete visually
+   with the submit button. */
 .button-quiet {
-    margin-top: 20px;
+    margin-top: var(--space-7);
     border-color: transparent;
     color: #184f49;
     background: transparent;
@@ -64,102 +62,107 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    margin: 0 0 16px;
+    gap: var(--space-5);
+    margin: 0 0 var(--space-4);
 }
 
 .session-banner p {
     margin: 0;
     color: #465568;
-    font-size: 0.9375rem;
+    font-size: var(--font-size-md);
 }
 
-/* Compte de notifications, dans le bandeau de session. Discret : il signale un
-   effet, il ne reclame pas d action. */
+/* Notification count, in the session banner. Discreet: it reports an effect, it does not call for
+   an action. */
 .notification-badge {
-    margin-left: 12px;
-    padding: 2px 10px;
+    display: inline-block;
+    margin-left: var(--space-5);
+    padding: var(--space-1) var(--space-4);
     border-radius: 999px;
     color: #184f49;
     background: #e9f6f3;
-    font-size: 0.8125rem;
+    font-size: var(--font-size-sm);
     font-weight: 700;
+    /* A pill split over two lines reads as two badges. */
+    white-space: nowrap;
 }
 
 /* Consent (US-37). The box and its label sit on one line so the label is the
    click target the checkbox deserves; the policy link and the error go below,
    where a screen reader meets them after the choice they qualify. */
 .consent-field {
-    margin-top: 4px;
+    margin-top: var(--space-2);
 }
 
 .consent-line {
     display: flex;
     align-items: flex-start;
-    gap: 10px;
+    gap: var(--space-4);
 }
 
 .consent-line input {
     width: auto;
     min-height: 0;
-    margin-top: 3px;
+    margin-top: var(--space-1);
     flex: none;
 }
 
+/* The box and its label form one touch target. On one line the label was 21 px
+   tall and its target overlapped the policy link just below it. */
 .consent-line label {
+    min-height: 44px;
     margin-bottom: 0;
     font-weight: 600;
 }
 
 .consent-policy-link {
-    margin-top: 6px;
+    margin-top: var(--space-3);
     padding-left: 0;
 }
 
 .site-footer {
-    /* Alignee sur .main-content : un pied de page plus etroit que le contenu
-       au-dessus se lit comme une erreur de mise en page. */
+    /* Aligned on .main-content: a footer narrower than the content above reads as a layout
+       mistake. */
     width: min(1600px, 100% - 32px);
-    margin: 32px auto 24px;
-    padding-top: 16px;
+    margin: var(--space-9) auto var(--space-8);
+    padding-top: var(--space-6);
     border-top: 1px solid var(--border-rule);
 }
 
 .policy-page {
-    /* La page suit la fenetre, comme .main-content, et la prose garde sa mesure
-       juste en dessous. Le plafond global de 46rem faisait l inverse : il
-       serrait la table des sous-traitants -- quatre colonnes de texte dans
-       736 px -- et le defilement horizontal de cette table compensait un
-       manque de place au lieu que la place soit donnee. */
+    /* The page follows the window, like .main-content, and the prose keeps its measure just below.
+       The global 46rem ceiling did the opposite: it squeezed the processors table -- four columns
+       of text in 736 px -- and that table's horizontal scrolling made up for a lack of room
+       instead of the room being given. */
     width: min(1600px, 100% - 32px);
-    margin: 48px auto;
+    margin: var(--space-10) auto;
     line-height: 1.6;
 }
 
-/* Le meme raisonnement que .panel p dans layout.css : une ligne de 1500 px ne
-   se lit plus. Le conteneur s elargit, la ligne non. */
+/* The same reasoning as .panel p in layout.css: a 1500 px line can no longer be read. The
+   container widens, the line does not. */
 .policy-page p,
 .policy-page li {
     max-width: 80ch;
 }
 
 .policy-page h2 {
-    margin-top: 28px;
+    margin-top: var(--space-9);
 }
 
 .policy-page ul {
-    padding-left: 22px;
+    padding-left: var(--space-8);
 }
 
 .policy-page li {
-    margin-bottom: 6px;
+    margin-bottom: var(--space-3);
 }
 
-/* Quatre colonnes de prose ne tiennent pas sur un telephone : le tableau defile
-   dans son propre conteneur plutot que de pousser la page. */
+/* Four columns of prose do not fit on a phone: the table scrolls in its own container rather than
+   pushing the page. */
 .policy-processors-scroll {
     overflow-x: auto;
-    margin: 12px 0 20px;
+    margin: var(--space-5) 0 var(--space-7);
 }
 
 .policy-processors {
@@ -170,7 +173,7 @@
 
 .policy-processors th,
 .policy-processors td {
-    padding: 10px 12px;
+    padding: var(--space-4) var(--space-5);
     border: 1px solid #c4ced8;
     text-align: left;
     vertical-align: top;
@@ -187,7 +190,7 @@
 .policy-version {
     margin-top: 0;
     color: var(--text-muted);
-    font-size: 0.9375rem;
+    font-size: var(--font-size-md);
 }
 
 .session-banner .button-quiet {

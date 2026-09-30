@@ -15,6 +15,8 @@ import { credentialsRouter } from './routes/credentials.js';
 import { itemsRouter } from './routes/items.js';
 import { notificationsRouter } from './routes/notifications.js';
 import { metricsRouter, observeRequests } from './metrics.js';
+import { healthRouter } from './health.js';
+import type { HealthProbes } from './health.js';
 import { relayRouter } from './routes/relay.js';
 import { projectsRouter } from './routes/projects.js';
 import { translateErrors } from './error-middleware.js';
@@ -54,14 +56,11 @@ const CREDENTIALS_WINDOW_MS = 5 * 60 * 1000;
 const EMAIL_CHANGES_PER_ADDRESS = 3;
 const EMAIL_CHANGE_WINDOW_MS = 60 * 60 * 1000;
 
-// Read once at startup, not per request: the deep link for the recovery email
-// needs the app shell, and a route that hits the file system on every call
-// would be one more thing to rate-limit for no reason. Absent in development,
-// where Vite serves this path.
-// Une coquille introuvable disparaissait en silence : la route du lien profond
-// n etait pas montee, la requete tombait dans la garde de session, et la
-// personne qui suivait un lien de reinitialisation recevait un 401 parlant
-// d une session dont elle n avait pas besoin (#232).
+// Read once at startup, not per request: the deep link for the recovery email needs the app shell,
+// and a route that hits the file system on every call would be one more thing to rate-limit for no
+// reason. Absent in development, where Vite serves this path. A shell that could not be found used
+// to disappear silently: the deep link route was not mounted, the request fell into the session
+// guard, and the person following a reset link got a 401 about a session they did not need (#232).
 function readAppShell(staticDir: string, logger: Logger): string | undefined {
     const file = path.join(staticDir, 'index.html');
 
@@ -73,15 +72,13 @@ function readAppShell(staticDir: string, logger: Logger): string | undefined {
     }
 }
 
-// Le lien de reinitialisation et celui de changement d adresse sont ouverts
-// directement par le navigateur : la coquille doit etre servie pour que le front
-// recupere le jeton.
+// The reset link and the address change link are opened directly by the browser: the shell must be
+// served so that the front can pick up the token.
 //
-// Monte dans tous les cas, et repond 503 quand la coquille manque : c est ce qui
-// distingue une coquille manquante d une session manquante (#232). Conditionne a
-// la coquille, la route disparaissait et la requete tombait dans la garde de
-// session -- quelqu un qui suivait un lien de reinitialisation s entendait dire
-// qu une session etait requise pour changer le mot de passe qu il avait oublie.
+// Mounted in every case, and answers 503 when the shell is missing: that is what tells a missing
+// shell from a missing session (#232). When it depended on the shell, the route disappeared and the
+// request fell into the session guard -- someone following a reset link was told a session was
+// required to change the password they had forgotten.
 function shellHandler(appShell: string | undefined): RequestHandler {
     return (_req, res) => {
         if (appShell === undefined) {
@@ -103,6 +100,7 @@ function shellHandler(appShell: string | undefined): RequestHandler {
 // that they belong together.
 export interface Observability {
     logger: Logger;
+    health?: HealthProbes;
     // Absent, the server runs without measuring: a test suite has no reason to
     // build an adapter in order to check a route.
     metrics?: Metrics;
@@ -124,7 +122,7 @@ function mountObservability(app: Express, metrics: Metrics | undefined, secret: 
 export function createServer(
     config: Config,
     useCases: AppUseCases,
-    { logger, metrics }: Observability,
+    { logger, metrics, health }: Observability,
 ): Express {
     const app = express();
     const appShell = readAppShell(config.staticDir, logger);
@@ -147,6 +145,7 @@ export function createServer(
     app.use(cors(config.webOrigin));
     app.use(express.json({ limit: MAX_BODY_SIZE }));
     app.use(logRequests(logger));
+    app.use(healthRouter(health));
     app.use(express.static(config.staticDir));
 
     app.use(
@@ -178,8 +177,7 @@ export function createServer(
         }),
     );
 
-    // Les liens profonds des e-mails d authentification, ouverts directement par
-    // le navigateur.
+    // The deep links of the authentication emails, opened directly by the browser.
     const serveShell = shellHandler(appShell);
     app.get('/reset-password', serveShell);
     app.get('/confirm-email-change', serveShell);
@@ -192,8 +190,8 @@ export function createServer(
     // holds no state, and building it per router would only multiply closures.
     const session = requireAccount(useCases.auth, config.secureCookies);
 
-    // Monte avant les routes gardees par la session : ce middleware s applique
-    // a tout ce qui le suit, et l appelant ici est un workflow sans session.
+    // Mounted before the routes guarded by the session: this middleware applies to everything after
+    // it, and the caller here is a workflow without a session.
     if (config.relaySecret !== undefined) {
         app.use(relayRouter(useCases.notifications, config.relaySecret));
     }

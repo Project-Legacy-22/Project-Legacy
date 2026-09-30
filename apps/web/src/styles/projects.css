@@ -2,8 +2,8 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: end;
-    gap: 14px;
-    margin-bottom: 22px;
+    gap: var(--space-6);
+    margin-bottom: var(--space-8);
 }
 
 /* The creation form holds a name and its invitations (issue 420): both fields and
@@ -14,7 +14,7 @@
 
 .projects-list {
     display: grid;
-    gap: 10px;
+    gap: var(--space-4);
     margin: 0;
     padding: 0;
     list-style: none;
@@ -22,8 +22,8 @@
 
 .project-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 10px;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: var(--space-4);
 }
 
 .project-select {
@@ -32,8 +32,8 @@
     min-height: 48px;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
-    padding: 10px 14px;
+    gap: var(--space-6);
+    padding: var(--space-4) var(--space-6);
     border: 2px solid var(--border-input);
     border-radius: 8px;
     color: var(--text-body);
@@ -61,41 +61,55 @@
 .project-count {
     flex: 0 0 auto;
     color: var(--text-muted);
-    font-size: 0.8125rem;
+    font-size: var(--font-size-sm);
     font-weight: 700;
 }
 
-.project-remove {
+.project-remove,
+.project-rename {
     align-self: stretch;
+}
+
+/* The rename form opens under the row it belongs to, across its full width. */
+.project-rename-form {
+    display: grid;
+    grid-column: 1 / -1;
+    gap: var(--space-4);
+}
+
+.project-rename-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
 }
 
 .member-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto auto;
     align-items: center;
-    gap: 10px;
+    gap: var(--space-4);
     min-height: 48px;
-    padding: 6px 14px;
+    padding: var(--space-3) var(--space-6);
     border: 1px solid var(--border-input);
     border-radius: 8px;
     background: var(--surface-card);
 }
 
 .members-panel > .button {
-    margin-bottom: 18px;
+    margin-bottom: var(--space-7);
 }
 
 .members-panel .action-error {
-    margin: 18px 0 0;
+    margin: var(--space-7) 0 0;
 }
 
 .project-pagination {
-    margin-top: 18px;
+    margin-top: var(--space-7);
 }
 
 .projects-panel .action-error,
 .projects-panel .action-success {
-    margin: 18px 0 0;
+    margin: var(--space-7) 0 0;
 }
 
 @media (max-width: 620px) {
@@ -107,7 +121,8 @@
     }
 
     .project-form .button,
-    .project-remove {
+    .project-remove,
+    .project-rename {
         width: 100%;
     }
 }

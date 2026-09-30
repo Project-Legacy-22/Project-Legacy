@@ -14,6 +14,7 @@ import {
     InviteMemberBody,
     ItemDto,
     ItemPageDto,
+    HealthResponse,
     ListItemsQuery,
     ListNotificationsQuery,
     ListProjectsQuery,
@@ -30,6 +31,7 @@ import {
     ProjectMemberListDto,
     ProjectPageDto,
     RegisterAccountBody,
+    RenameProjectBody,
     ReorderItemBody,
     RequestPasswordResetBody,
     ResetPasswordBody,
@@ -59,6 +61,7 @@ export interface Operation {
     // Refusals this route produces on its own, beyond those every route of its
     // access level can answer (see the builder).
     errors?: readonly number[];
+    errorResponses?: Readonly<Partial<Record<number, { description: string; schema: z.ZodType }>>>;
 }
 
 const noContent = (description: string) => ({ status: 204, description });
@@ -81,6 +84,7 @@ const AUTH: readonly Operation[] = [
 const PROJECTS: readonly Operation[] = [
     { method: 'get', path: '/projects', tag: 'Projects', summary: 'The projects of the caller, a page at a time', access: 'session', query: ListProjectsQuery, success: json(ProjectPageDto) },
     { method: 'post', path: '/projects', tag: 'Projects', summary: 'Create a project owned by the caller', access: 'session', body: CreateProjectBody, success: json(ProjectDto) },
+    { method: 'patch', path: '/projects/:projectId', tag: 'Projects', summary: 'Rename a project the caller owns', access: 'session', params: ProjectIdParams, body: RenameProjectBody, success: json(ProjectDto), errors: [404] },
     { method: 'delete', path: '/projects/:projectId', tag: 'Projects', summary: 'Delete a project the caller owns', access: 'session', params: ProjectIdParams, success: { status: 200, description: 'Deleted' }, errors: [404] },
     { method: 'get', path: '/projects/:projectId/members', tag: 'Projects', summary: 'Who is in a project, and with which role', access: 'session', params: ProjectIdParams, success: json(ProjectMemberListDto), errors: [404] },
     { method: 'delete', path: '/projects/:projectId/members/:userId', tag: 'Projects', summary: 'Remove a member; their tasks stay in the project', access: 'session', params: ProjectMemberIdParams, success: noContent('Removed'), errors: [403, 404, 409] },
@@ -107,7 +111,9 @@ const NOTIFICATIONS: readonly Operation[] = [
 ];
 
 const OPERATIONS_ROUTES: readonly Operation[] = [
+    { method: 'get', path: '/health', tag: 'Operations', summary: 'Readiness of the database and event broker', access: 'public', success: json(HealthResponse, 'Both dependencies responded'), errorResponses: { 503: { description: 'At least one dependency did not respond', schema: HealthResponse } } },
     { method: 'post', path: '/internal/relay', tag: 'Operations', summary: 'Run one delivery pass of the event outbox', access: 'relay', success: { status: 200, description: 'What the pass published, consumed and failed' } },
+    { method: 'post', path: '/internal/purge', tag: 'Operations', summary: 'Run one pass of the retention purge', access: 'relay', success: { status: 200, description: 'Rows deleted per treatment; no personal data' } },
     { method: 'get', path: '/internal/state', tag: 'Operations', summary: 'The current gauges as one JSON row, for a live dashboard', access: 'relay', success: { status: 200, description: 'Gauge name to value; no personal data' } },
     { method: 'get', path: '/internal/metrics', tag: 'Operations', summary: 'Metrics in the Prometheus text format', access: 'relay', success: { status: 200, description: 'Prometheus exposition format', contentType: 'text/plain' } },
 ];

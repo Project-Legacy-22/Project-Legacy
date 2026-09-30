@@ -1,9 +1,8 @@
-# Publication du rapport de couverture sur GitHub Pages, a chaque integration
-# sur dev.
+# Publication of the coverage report on GitHub Pages, on every integration into dev.
 #
-# Le rapport existe deja en artefact, mais un artefact se telecharge et se
-# dezippe. Publie, il s ouvre d un clic et se cite en revue. La documentation
-# d API d EN-44 (#45) est publiee sur le meme site, sous /api/.
+# The report already exists as an artifact, but an artifact has to be downloaded and unzipped.
+# Published, it opens in one click and can be cited in review. The API documentation of EN-44 (#45)
+# is published on the same site, under /api/.
 
 name: pages
 
@@ -15,8 +14,8 @@ on:
 permissions:
   contents: read
 
-# Une seule publication a la fois, sans annuler celle en cours : interrompre un
-# deploiement Pages laisse le site dans un etat indetermine.
+# One publication at a time, without cancelling the one in progress: interrupting a Pages deployment
+# leaves the site in an undetermined state.
 concurrency:
   group: pages
   cancel-in-progress: false
@@ -60,10 +59,9 @@ jobs:
           HTML
           mv coverage/index-site.html coverage/accueil.html
 
-      # Le document versionne, pas une generation faite ici : les tests viennent
-      # de verifier qu il est exactement celui que le code produit. Redoc est
-      # epingle et son empreinte verifiee par le navigateur, un changement
-      # silencieux sur le CDN ne s executerait pas.
+      # The versioned document, not a generation made here: the tests have just checked that it is
+      # exactly the one the code produces. Redoc is pinned and its hash checked by the browser, so a
+      # silent change on the CDN would not run.
       - name: Ajouter la documentation d API
         run: |
           set -euo pipefail
@@ -96,4 +94,4 @@ jobs:
       url: ${{ steps.deploiement.outputs.page_url }}
     steps:
       - id: deploiement
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

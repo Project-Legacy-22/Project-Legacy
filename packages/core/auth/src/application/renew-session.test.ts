@@ -8,9 +8,8 @@ import { makeSignIn } from './sign-in.js';
 const ADRESSE = 'alice@example.com';
 const MOT_DE_PASSE = 'MotDePasse2026';
 const HEURE_MS = 60 * 60 * 1000;
-// L intervalle de reprise du fournisseur est de dix secondes
-// (supabase/config.toml). Au-dela, un jeton deja echange est un jeton qui
-// circule en deux endroits.
+// The provider's reuse interval is ten seconds (supabase/config.toml). Beyond it, a token already
+// exchanged is a token circulating in two places.
 const APRES_L_INTERVALLE_MS = 11_000;
 const COMPTE = { id: 'account-1', email: ADRESSE };
 
@@ -22,7 +21,7 @@ function provider(now?: () => number) {
 }
 
 describe('renewSession', () => {
-    it('rend une session utilisable quand le jeton d acces a expire', async () => {
+    it('returns a usable session when the access token has expired', async () => {
         let instant = 1_000_000;
         const fournisseur = provider(() => instant);
         const ouverte = await makeSignIn(fournisseur)(ADRESSE, MOT_DE_PASSE);
@@ -36,17 +35,16 @@ describe('renewSession', () => {
         ).resolves.toEqual(COMPTE);
     });
 
-    it('ne renouvelle rien derriere un jeton que personne n a emis', async () => {
+    it('renews nothing behind a token nobody issued', async () => {
         const renouvelee = await makeRenewSession(provider())('jeton-invente');
 
         expect(renouvelee).toBeUndefined();
     });
 
-    // Le critere de l issue #28 : la rotation decrite par l ADR-0008 est
-    // verifiee, pas supposee. Un jeton deja echange qui revient apres
-    // l intervalle de reprise est un jeton qui circule en deux endroits ; la
-    // session se termine et ce qu elle avait ouvert cesse de valoir.
-    it('termine la session et revoque ses jetons quand un jeton deja echange revient trop tard', async () => {
+    // The criterion of issue #28: the rotation described by ADR-0008 is checked, not assumed. A
+    // token already exchanged that comes back after the reuse interval is a token circulating in
+    // two places; the session ends and what it had opened stops being valid.
+    it('ends the session and revokes its tokens when an exchanged token comes back too late', async () => {
         let instant = 1_000_000;
         const fournisseur = provider(() => instant);
         const renewSession = makeRenewSession(fournisseur);
@@ -63,10 +61,9 @@ describe('renewSession', () => {
         await expect(renewSession(renouvelee?.refreshToken ?? '')).resolves.toBeUndefined();
     });
 
-    // Deux requetes parties ensemble presentent le meme jeton. Les refuser
-    // toutes les deux, ou en refuser une, ferait de la concurrence ordinaire
-    // une deconnexion.
-    it('sert deux echanges concurrents du meme jeton avec la meme session', async () => {
+    // Two requests sent together present the same token. Refusing both, or one of them, would turn
+    // ordinary concurrency into a sign-out.
+    it('serves two concurrent exchanges of the same token with the same session', async () => {
         const fournisseur = provider();
         const renewSession = makeRenewSession(fournisseur);
         const ouverte = await makeSignIn(fournisseur)(ADRESSE, MOT_DE_PASSE);

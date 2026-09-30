@@ -13,7 +13,7 @@ export const homeLabels = {
     attentionOverdueEmpty: 'Nothing overdue.',
     attentionDueSoonEmpty: 'Nothing due today or tomorrow.',
     attentionHighPriorityEmpty: 'No other high-priority task.',
-    attentionHasMore: 'More in the projects below.',
+    attentionHasMore: 'More in their projects.',
     showTasks: 'Show my tasks',
     attentionEmpty(workload: Workload): string {
         switch (workload) {

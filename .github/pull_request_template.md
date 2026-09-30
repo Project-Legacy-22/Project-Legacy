@@ -1,38 +1,38 @@
-## Contexte
+## Context
 
-Pourquoi ce changement. Une ou deux phrases.
+Why this change. One or two sentences.
 
-## Ce qui change
+## What changes
 
 - 
 - 
 
-## Issue liée
+## Related issue
 
 Closes #
 
-## Comment tester
+## How to test
 
 1. 
 2. 
 
 ## Impacts
 
-- **API** : aucune / ajout rétrocompatible / rupture (détailler)
-- **Base de données** : aucune / migration ajoutée (réversible ? )
-- **Événements** : aucun / nouvel événement / modification (nouvelle version ? )
-- **Dépendances** : aucune / ajout (nom, raison, licence, poids)
-- **RGPD** : aucune donnée personnelle touchée / détailler
-- **Accessibilité** : sans objet / vérifié au clavier et au contraste
+- **API**: none / backward-compatible addition / breaking change (detail)
+- **Database**: none / migration added (reversible?)
+- **Events**: none / new event / change (new version?)
+- **Dependencies**: none / addition (name, reason, licence, weight)
+- **GDPR**: no personal data affected / detail
+- **Accessibility**: not applicable / checked with the keyboard and for contrast
 
 ## Checklist
 
-- [ ] `tk verify` est vert
-- [ ] Cette PR cible `dev` (une PR vers `main` est une livraison, ouverte par `tk release`)
-- [ ] Branche rebasée sur `origin/dev`
-- [ ] Tests couvrant la logique métier ajoutée
-- [ ] Tous les critères d'acceptation de l'issue sont couverts
-- [ ] Diff relu par moi-même, aucun code mort ni `console.log`
-- [ ] Aucun secret, aucune donnée personnelle dans les logs ou les événements
-- [ ] Documentation mise à jour (README / ADR / OpenAPI)
-- [ ] Moins de 400 lignes de diff, ou justification ci-dessus
+- [ ] `tk verify` is green
+- [ ] This PR targets `dev` (a PR to `main` is a release, opened by `tk release`)
+- [ ] Branch rebased on `origin/dev`
+- [ ] Tests covering the business logic added
+- [ ] Every acceptance criterion of the issue is covered
+- [ ] Diff reviewed by myself, no dead code and no `console.log`
+- [ ] No secret, no personal data in the logs or the events
+- [ ] Documentation updated (README / ADR / OpenAPI)
+- [ ] Fewer than 400 lines of diff, or a justification above

@@ -1,125 +1,121 @@
-# Etats de chargement, vide et erreur coherents
+# Consistent loading, empty and error states
 
 - **Issue**: #49
 - **Epic**: A11y
 - **Delivered**: 2026-09-11
-- **Decisions that apply**: ADR-0006 (Vite et React), ADR-0011 (anglais pour le code)
+- **Decisions that apply**: ADR-0006 (Vite and React), ADR-0011 (English for the code)
 
-## Ce que ca fait
+## What it does
 
-Les quatre vues de l'application traversent les memes trois etats -- en cours de chargement, sans
-donnee, en echec -- et les rendent maintenant de la meme facon. Une personne qui ne voit pas
-l'ecran entend la meme chose sur les quatre ; une personne qui tombe sur un echec y trouve
-toujours un moyen de reessayer ; un etat vide dit ce qui manque et, quand c'est possible, offre
-l'action qui le remplit.
+The four views of the application go through the same three states -- loading, without data,
+failed -- and now render them the same way. A person who cannot see the screen hears the same thing
+on all four; a person who runs into a failure always finds a way to try again there; an empty state
+says what is missing and, when possible, offers the action that fills it.
 
-Hors perimetre : le resultat d'une action (succes ou echec d'un envoi de formulaire), qui est un
-autre sujet et reste porte par `action-feedback.tsx` et `form-outcome.tsx`. Cette issue parle de
-l'etat d'une vue, pas du compte rendu d'un geste.
+Out of scope: the result of an action (success or failure of a form submission), which is another
+subject and remains carried by `action-feedback.tsx` and `form-outcome.tsx`. This issue is about
+the state of a view, not the report of an action.
 
-## Ce qui existait avant
+## What existed before
 
-Sept rendus improvises pour trois etats, et aucun accord entre eux.
+Seven improvised renderings for three states, and no agreement between them.
 
-| Vue | Chargement | Vide | Echec |
+| View | Loading | Empty | Failure |
 |---|---|---|---|
-| Taches | ligne `role="status"` | ligne de texte, aucune action | encart avec reprise |
-| Projets | ligne `role="status"` | ligne de texte, aucune action | encart avec reprise |
-| Notifications | ligne `role="status"` | ligne de texte, aucune action | encart **sans aucune sortie** |
-| Verification de session | `<p role="status">` **hors de tout repere** | sans objet | `<p role="alert">`, **sans sortie** |
+| Tasks | `role="status"` line | line of text, no action | panel with retry |
+| Projects | `role="status"` line | line of text, no action | panel with retry |
+| Notifications | `role="status"` line | line of text, no action | panel **with no way out** |
+| Session check | `<p role="status">` **outside any landmark** | not applicable | `<p role="alert">`, **with no way out** |
 
-Les deux cas sans sortie sont ceux qui comptent. Le panneau de notifications en echec ne pouvait
-etre relance qu'en le refermant et le rouvrant, ce que rien n'indiquait. L'ecran de verification de
-session en echec ne laissait qu'un rechargement de page, et c'est le moins visible des quatre :
-il n'apparait que quand l'API est injoignable, c'est-a-dire precisement quand quelqu'un a besoin
-qu'on lui dise quoi faire.
+The two cases without a way out are the ones that matter. The notification panel in failure could
+only be restarted by closing and reopening it, which nothing indicated. The session check screen in
+failure only left a page reload, and it is the least visible of the four: it only appears when the
+API is unreachable, that is precisely when somebody needs to be told what to do.
 
 ## Surface
 
-| Ecran | Etat porte par |
+| Screen | State carried by |
 |---|---|
-| Liste des taches | `components/items-content.tsx` |
-| Panneau de projets | `components/projects-section.tsx` |
-| Panneau de notifications | `components/notifications-panel-content.tsx` |
-| Verification de session | `components/session-check-screen.tsx` |
+| Task list | `components/items-content.tsx` |
+| Projects panel | `components/projects-section.tsx` |
+| Notifications panel | `components/notifications-panel-content.tsx` |
+| Session check | `components/session-check-screen.tsx` |
 
-Le composant partage est `components/view-state.tsx`. Il rend un fragment et non un conteneur :
-l'etat d'une vue appartient a la region qui la contient, et chaque appelant porte `aria-busy` sur
-son propre `<section>`. Un seul porteur, sur l'element qu'un lecteur d'ecran annonce deja --
-le mettre sur la ligne de texte dirait que le texte est occupe, pas que le panneau l'est.
+The shared component is `components/view-state.tsx`. It renders a fragment and not a container: the
+state of a view belongs to the region that contains it, and each caller carries `aria-busy` on its
+own `<section>`. A single carrier, on the element a screen reader already announces -- putting it
+on the line of text would say that the text is busy, not that the panel is.
 
-## Les quatre cas, et pourquoi
+## The four cases, and why
 
-| Etat | Ce qui est rendu | Raison |
+| State | What is rendered | Reason |
 |---|---|---|
-| chargement, rien encore | la ligne seule | annoncer un etat vide alors que la reponse est en route dirait qu'il n'y a rien, ce qui n'est pas encore su |
-| chargement, donnee deja la | la ligne et la donnee | un rafraichissement ne doit pas vider ce que quelqu'un est en train de lire |
-| pret, rien | l'etat vide, avec l'action qui le remplit | un etat vide sans issue est l'un des deux defauts que l'issue nomme |
-| pret, donnee | la donnee | |
+| loading, nothing yet | the line alone | announcing an empty state while the response is on its way would say there is nothing, which is not known yet |
+| loading, data already there | the line and the data | a refresh must not empty what somebody is reading |
+| ready, nothing | the empty state, with the action that fills it | an empty state with no way out is one of the two defects the issue names |
+| ready, data | the data | |
 
-Une exception nommee : `keepsChildrenWhenEmpty`. Le tableau Kanban garde ses trois colonnes quand
-il ne porte aucune tache, parce que les colonnes sont le flux de travail et non la donnee, et
-chaque colonne dit pour elle-meme qu'elle est vide. Une liste, elle, disparait : rendre un `<ul>`
-vide a cote du message le dirait deux fois.
+One named exception: `keepsChildrenWhenEmpty`. The Kanban board keeps its three columns when it
+carries no task, because the columns are the workflow and not the data, and each column says for
+itself that it is empty. A list, on the other hand, disappears: rendering an empty `<ul>` next to
+the message would say it twice.
 
-## L'action qui remplit un etat vide
+## The action that fills an empty state
 
-Le type l'exige, par une union : une vue offre soit une `action`, soit une raison ecrite dans
-`unfillable`. Laisser l'action de cote n'est pas possible, ce qui evite qu'un oubli passe pour un
-choix.
+The type requires it, through a union: a view offers either an `action`, or a reason written in
+`unfillable`. Leaving the action out is not possible, which prevents an oversight from passing for a
+choice.
 
-| Vue | Action | Raison quand il n'y en a pas |
+| View | Action | Reason when there is none |
 |---|---|---|
-| Taches | « Add item », qui place le curseur dans `#item-name` | |
-| Projets | « Create project », qui place le curseur dans `#project-name` | |
-| Notifications | aucune | la liste ne se remplit que quand quelqu'un agit sur une tache : rien sur cet ecran ne la remplit |
+| Tasks | "Add item", which places the cursor in `#item-name` | |
+| Projects | "Create project", which places the cursor in `#project-name` | |
+| Notifications | none | the list only fills when somebody acts on a task: nothing on this screen fills it |
 
-L'action pose le focus dans le champ, elle ne fait pas defiler jusqu'a lui : quelqu'un qui ne voit
-pas le panneau recoit le curseur la ou la tache s'ecrit.
+The action sets the focus in the field, it does not scroll to it: somebody who cannot see the panel
+receives the cursor where the task is written.
 
-## Accessibilite
+## Accessibility
 
-Le chargement s'annonce par `role="status"`, une region live polie : elle annonce sans interrompre
-et ne prend pas le focus. L'echec s'annonce par `role="alert"`, parce qu'il interrompt ce que la
-personne avait demande et qu'elle a une decision a prendre.
+Loading is announced through `role="status"`, a polite live region: it announces without
+interrupting and does not take the focus. Failure is announced through `role="alert"`, because it
+interrupts what the person had asked for and they have a decision to take.
 
-Le focus ne bouge qu'a un seul endroit, et sur un geste volontaire : apres un clic sur « Try
-again » dans la liste des taches, le bouton disparait avec l'encart, donc le focus est pose sur le
-titre de la region qu'on vient de redemander. Aucun changement d'etat ne deplace le focus de
-lui-meme.
+The focus only moves in one place, and on a deliberate action: after a click on "Try again" in the
+task list, the button disappears with the panel, so the focus is set on the heading of the region
+that was just requested again. No state change moves the focus by itself.
 
-`prefers-reduced-motion` est deja respecte globalement : `styles/foundation.css` ramene toutes les
-durees de transition a 0,01 ms sous cette preference, et `styles/motion.test.ts` le verifie. Aucune
-animation n'a ete ajoutee ici.
+`prefers-reduced-motion` is already respected globally: `styles/foundation.css` brings every
+transition duration down to 0.01 ms under this preference, and `styles/motion.test.ts` checks it. No
+animation was added here.
 
-L'ecran de verification de session est desormais un `<main>` avec un `<h1>` et l'`id`
-`main-content` que visent les liens d'evitement des autres pages. Il reprend la colonne centree de
-`.auth-page` plutot qu'une regle presque identique a elle.
+The session check screen is now a `<main>` with an `<h1>` and the `main-content` `id` that the skip
+links of the other pages target. It reuses the centred column of `.auth-page` rather than a rule
+almost identical to it.
 
-## Donnees personnelles
+## Personal data
 
-Aucune. Les messages d'echec sont ceux que les modules `api/` ont ecrits ; le composant n'y ajoute
-rien -- ni code de statut, ni pile, ni identifiant de requete -- et un test le verifie.
+None. The failure messages are the ones the `api/` modules wrote; the component adds nothing to
+them -- no status code, no stack, no request identifier -- and a test checks it.
 
-## Comment verifier
+## How to check
 
 ```
 npm run typecheck && npm run lint && npm test
 ```
 
-- `components/view-state.test.tsx` : les quatre cas, l'action qui remplit, l'absence d'action
-  justifiee, la reprise appelee, l'absence de detail technique, et `axe` sur les trois etats.
+- `components/view-state.test.tsx`: the four cases, the action that fills, the justified absence of
+  an action, the retry called, the absence of technical detail, and `axe` on the three states.
 - `components/projects-section.test.tsx`, `components/todo-page.test.tsx`,
-  `app-notifications-panel.test.tsx` : `aria-busy` expose sur la region et retire quand la vue est
-  prete. Rien ne le verifiait avant, sur aucune des trois.
-- `app-notifications-panel.test.tsx` et `app.test.tsx` : la reprise **relance la requete**, et pas
-  seulement affiche un bouton. Les deux comptent les appels au faux.
+  `app-notifications-panel.test.tsx`: `aria-busy` exposed on the region and removed when the view is
+  ready. Nothing checked it before, on any of the three.
+- `app-notifications-panel.test.tsx` and `app.test.tsx`: the retry **runs the request again**, and
+  does not only display a button. Both count the calls to the fake.
 
-## Limites connues
+## Known limits
 
-Le compte rendu d'action reste separe : `action-feedback.tsx` et `form-outcome.tsx` disent ce
-qu'est devenu un envoi de formulaire, ce qui n'est pas l'etat d'une vue. Les unifier est un autre
-sujet.
+The action report remains separate: `action-feedback.tsx` and `form-outcome.tsx` say what became of
+a form submission, which is not the state of a view. Unifying them is another subject.
 
-La section des donnees personnelles n'a pas d'etat de chargement : elle n'affiche aucune liste,
-seulement deux actions. Il n'y avait donc rien a migrer.
+The personal data section has no loading state: it displays no list, only two actions. There was
+therefore nothing to migrate.

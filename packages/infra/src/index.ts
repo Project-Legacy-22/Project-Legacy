@@ -13,8 +13,8 @@ export { createSupabaseMembershipRepository } from './supabase-membership-reposi
 export { createSupabaseInvitationRepository } from './supabase-invitation-repository.js';
 export { createLogger } from './logger.js';
 
-// La chaine evenementielle de US-10 : le relais vide l outbox vers le broker,
-// le worker consomme et produit la notification.
+// The event chain of US-10: the relay empties the outbox into the broker, the worker consumes and
+// produces the notification.
 export { createSupabaseOutboxStore } from './outbox-store.js';
 export type { OutboxStore } from './outbox-store.js';
 export { createRedisEventBus, EVENT_QUEUE } from './redis-event-bus.js';
@@ -22,17 +22,20 @@ export type { EventBus, RedisSettings } from './redis-event-bus.js';
 export { createSupabaseNotificationStore } from './notification-store.js';
 export type { NotificationStore } from './notification-store.js';
 export { relayOnce } from './outbox-relay.js';
+export { startRelay } from './relay-scheduler.js';
 export type { RelayDependencies } from './outbox-relay.js';
 export { consume } from './event-consumer.js';
 export { deliverPending } from './delivery-pass.js';
 export type { DeliveryPassDependencies, DeliveryPassResult } from './delivery-pass.js';
+export { createSupabaseRetentionStore, purgeExpired } from './retention-store.js';
+export type { RetentionStore } from './retention-store.js';
 export type { ConsumeDependencies, ConsumeOutcome } from './event-consumer.js';
 export { createPrometheusMetrics } from './prometheus-metrics.js';
 export type { MetricsOptions } from './prometheus-metrics.js';
 
-// Les valeurs lues a l instant de la mesure, seule forme correcte sur une
-// cible sans processus persistant.
+// Values read at measurement time, the only correct form on a target without a persistent process.
 export { createBuildStateReading } from './build-state-reading.js';
 export type { BuildIdentity } from './build-state-reading.js';
 export { createBusStateReadings } from './bus-state-readings.js';
 export { createSupabaseStateReadings } from './supabase-state-readings.js';
+export { createHealthProbes } from './health-probes.js';

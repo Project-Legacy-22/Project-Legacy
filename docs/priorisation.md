@@ -1,118 +1,123 @@
-# Priorisation : où en sont les « Must »
+# Prioritisation: where the "Must" items stand
 
-Le compte rendu de la défense intermédiaire demande de vérifier que les fonctionnalités classées
-« Must » restent prioritaires, et en particulier « qu'un critère secondaire lié au déploiement ne
-passe pas avant un besoin classé Must ».
+The record of the intermediate defense asks to check that the features classified "Must" remain the
+priority, and in particular "that a secondary criterion related to deployment does not come before
+a need classified Must".
 
-Ce document croise le classement du backlog avec l'état réel des issues. Mesure du 15 septembre
-2026, reproductible : le classement vient de `backlog-v2.md`, l'état de `gh issue list`.
+This document crosses the classification of the backlog with the real state of the issues.
+Measurement of 15 September 2026, reproducible: the classification comes from `backlog-v2.md`, the
+state from `gh issue list`.
 
-**Mise à jour du 24 septembre 2026 : les 25 Must sont livrés.** Les trois Enablers de fin de
-projet que la mesure ci-dessous laissait ouverts ont été fermés ce jour-là : la documentation
-d'API (#45, PR #389), le README (#46, PR #390) et le scénario de démonstration (#47, PR #391). Le
-déploiement continu complet, classé Could, n'a toujours pas été commencé. Le reste du document
-garde la mesure du 15 septembre.
+**Update of 24 September 2026: the 25 Must items are delivered.** The three end-of-project Enablers
+that the measurement below left open were closed that day: the API documentation (#45, PR #389),
+the README (#46, PR #390) and the demonstration scenario (#47, PR #391). Complete continuous
+deployment, classified Could, has still not been started. The rest of the document keeps the
+measurement of 15 September.
 
-## Le classement, en chiffres
+**Update of 30 September 2026: 26 Must items, all delivered.** Checking the backlog against section
+6.1 of the subject found a gap no item carried: projects could be created, listed and deleted, but
+not updated. US-60, "Rename a project", was added as a Must item (#461) and delivered by #464 and
+#465. The final state of the whole scope, Could items included, is in section 6 of
+[backlog.md](backlog.md).
 
-48 éléments classés : **25 Must**, 16 Should, 7 Could.
+## The classification, in figures
 
-## Les 25 « Must »
+48 items classified: **25 Must**, 16 Should, 7 Could.
 
-Vingt-et-un sont livrés et leur issue est fermée :
+## The 25 "Must" items
 
-| Code | Élément | Issue |
+Twenty-one are delivered and their issue is closed:
+
+| Code | Item | Issue |
 |---|---|---|
-| SP-00 | Audit du legacy et inventaire de la dette | #1 |
-| SP-01 | ADR de la stack et de l'architecture cible | #2 |
-| EN-02 | Conventions Git, protection de `main`, templates | #3 |
-| EN-24 | Board, backlog et traces agiles tenus à jour | #25 |
-| EN-03 | Environnement complet démarré en une commande | #4 |
-| EN-30 | Configuration par variables d'environnement | #31 |
-| EN-04 | Backend restructuré en couches et typé | #5 |
-| EN-05 | Chaîne de build front et socle d'accessibilité | #6 |
-| EN-09 | Modèle de données et migrations versionnées | #10 |
-| EN-06 | Tests et lint exécutables en local | #7 |
-| EN-07 | Intégration continue sur chaque pull request | #8 |
-| EN-08 | Image Docker publiée à chaque merge sur `main` | #9 |
-| US-10 | Workflow événementiel démontrable de bout en bout | #11 |
-| US-11 | Créer un compte et me connecter | #12 |
-| US-12 | Créer et consulter mes tâches | #13 |
-| US-31 | Modifier, terminer et supprimer une tâche | #32 |
-| US-16 | Regrouper mes tâches par projet | #17 |
-| US-15 | Déplacer une tâche entre les colonnes du Kanban | #16 |
-| US-47 | Me déconnecter | #48 |
-| US-36 | Modifier mon e-mail et mon mot de passe | #37 |
-| US-37 | Politique de confidentialité et consentement | #38 |
-| US-13 | Exporter et supprimer mes données personnelles | #14 |
+| SP-00 | Audit of the legacy and inventory of the debt | #1 |
+| SP-01 | ADRs of the stack and of the target architecture | #2 |
+| EN-02 | Git conventions, protection of `main`, templates | #3 |
+| EN-24 | Board, backlog and agile traces kept up to date | #25 |
+| EN-03 | Complete environment started with one command | #4 |
+| EN-30 | Configuration through environment variables | #31 |
+| EN-04 | Backend restructured in layers and typed | #5 |
+| EN-05 | Front-end build chain and accessibility foundation | #6 |
+| EN-09 | Data model and versioned migrations | #10 |
+| EN-06 | Tests and lint runnable locally | #7 |
+| EN-07 | Continuous integration on every pull request | #8 |
+| EN-08 | Docker image published on every merge into `main` | #9 |
+| US-10 | Event-driven workflow demonstrable end to end | #11 |
+| US-11 | Create an account and sign in | #12 |
+| US-12 | Create and view my tasks | #13 |
+| US-31 | Edit, complete and delete a task | #32 |
+| US-16 | Group my tasks by project | #17 |
+| US-15 | Move a task between the columns of the Kanban | #16 |
+| US-47 | Sign out | #48 |
+| US-36 | Change my email and my password | #37 |
+| US-37 | Privacy policy and consent | #38 |
+| US-13 | Export and delete my personal data | #14 |
 
-Aucune User Story classée « Must » n'est ouverte. **Les trois qui restent sont des Enablers de
-fin de projet**, et leur objet est précisément de venir en dernier :
+No User Story classified "Must" is open. **The three that remain are end-of-project Enablers**, and
+their purpose is precisely to come last:
 
-| Code | Élément | Issue | Pourquoi ouvert |
+| Code | Item | Issue | Why open |
 |---|---|---|---|
-| EN-44 | Documentation d'API publiée | #45 | décrit une API qui a bougé jusqu'au sprint 3 |
-| EN-45 | README et parcours d'onboarding complets | #46 | décrit un dépôt qui a bougé jusqu'au sprint 3 |
-| EN-46 | Préparation de la démonstration finale | #47 | la démonstration finale n'a pas eu lieu |
+| EN-44 | Published API documentation | #45 | describes an API that kept moving until sprint 3 |
+| EN-45 | Complete README and onboarding journey | #46 | describes a repository that kept moving until sprint 3 |
+| EN-46 | Preparation of the final demonstration | #47 | the final demonstration has not taken place |
 
-Un quatrième point mérite d'être nommé pour ne pas être compté deux fois : **#269** est ouverte et
-porte le code `US-36`, mais la story elle-même (#37) est livrée. #269 est une dette de cohérence —
-intégrer US-36 aux motifs d'interface arrivés depuis — et non le besoin.
+A fourth point deserves to be named so as not to be counted twice: **#269** is open and carries the
+code `US-36`, but the story itself (#37) is delivered. #269 is a consistency debt — integrating
+US-36 into the interface patterns that arrived since — and not the need.
 
-## La question du déploiement, chiffrée
+## The deployment question, in figures
 
-C'est la crainte explicite du professeur. Le classement y répond :
+It is the explicit concern of the teacher. The classification answers it:
 
-| Code | Élément | MoSCoW | État |
+| Code | Item | MoSCoW | State |
 |---|---|---|---|
-| EN-08 | Image Docker publiée à chaque merge sur `main` | **Must** | fermé, mais voir ci-dessous |
-| EN-42 | Observabilité : healthcheck et logs structurés | Should | ouvert (#43) |
-| EN-22 | **Déploiement continu complet** | **Could** | ouvert (#23), non commencé |
+| EN-08 | Docker image published on every merge into `main` | **Must** | closed, but see below |
+| EN-42 | Observability: health check and structured logs | Should | open (#43) |
+| EN-22 | **Complete continuous deployment** | **Could** | open (#23), not started |
 
-Le seul travail de déploiement livré est **EN-08, lui-même classé Must**. Le « déploiement continu
-complet » est classé **Could**, vaut 8 points, et n'a pas été commencé : il n'est donc pas passé
-devant quoi que ce soit.
+The only deployment work delivered is **EN-08, itself classified Must**. "Complete continuous
+deployment" is classified **Could**, is worth 8 points, and has not been started: it has therefore
+not come before anything.
 
-Aucun élément Should ou Could n'a été livré au détriment d'un Must, et c'est vérifiable autrement
-que par une affirmation : tous les Must sauf les trois Enablers terminaux étaient fermés le
-15 septembre, et ces trois-là le sont depuis le 24.
+No Should or Could item was delivered at the expense of a Must, and this can be checked otherwise
+than by a claim: every Must except the three terminal Enablers was closed on 15 September, and those
+three have been closed since the 24th.
 
-### Une exception à assumer, et elle ne va pas dans le sens redouté
+### An exception to own, and it does not go in the feared direction
 
-La supervision — Prometheus comme format, Grafana Cloud comme plateforme, ADR-0016 — **n'est pas
-un élément du backlog**. Elle a été faite parce que la défense intermédiaire l'a demandée
-explicitement (action 7 : « Choisir une plateforme de monitoring et rédiger l'ADR correspondant »).
-Elle se lit donc comme une réponse à la revue, pas comme une priorité que l'équipe se serait
-donnée à la place d'un besoin.
+Monitoring — Prometheus as the format, Grafana Cloud as the platform, ADR-0016 — **is not a backlog
+item**. It was done because the intermediate defense explicitly asked for it (action 7: "Choose a
+monitoring platform and write the corresponding ADR"). It therefore reads as an answer to the
+review, not as a priority the team would have given itself instead of a need.
 
-Il faut l'assumer comme telle : du temps a été dépensé hors backlog, sur demande du client.
+It must be owned as such: time was spent outside the backlog, at the request of the client.
 
-## Le vrai défaut trouvé par cette vérification
+## The real defect found by this check
 
-Il n'est pas celui qu'on cherchait, et il est plus gênant.
+It is not the one we were looking for, and it is more troublesome.
 
-**EN-08 est un Must fermé dont l'effet a disparu.** L'image Docker et la release datent du
-3 septembre. Le workflow `image` a échoué sur le push du 11 septembre, à l'étape SonarCloud, et
-l'étape de publication a été sautée. Personne ne l'a vu, parce que l'issue était fermée et le
-board vert.
+**EN-08 is a closed Must whose effect has disappeared.** The Docker image and the release date from
+3 September. The `image` workflow failed on the push of 11 September, at the SonarCloud step, and
+the publication step was skipped. Nobody saw it, because the issue was closed and the board green.
 
-La cause, le détail et ce qui débloque sont dans **#315**. Le point à retenir ici est de méthode :
-**un board vert ne prouve pas qu'un artefact existe.** Une issue fermée dit qu'un travail a été
-fait une fois, pas qu'il produit encore son effet.
+The cause, the detail and what unblocks it are in **#315**. The point to remember here is one of
+method: **a green board does not prove that an artefact exists.** A closed issue says that a piece
+of work was done once, not that it still produces its effect.
 
-C'est la seule inversion de priorité réelle de ce projet, et elle est dans l'autre sens que celui
-que la revue redoutait : ce n'est pas un critère secondaire qui a pris la place d'un Must, c'est un
-Must qui a cessé de fonctionner sans bruit.
+It is the only real priority inversion of this project, and it goes the other way from what the
+review feared: it is not a secondary criterion that took the place of a Must, it is a Must that
+stopped working without a sound.
 
-## Comment refaire cette mesure
+## How to redo this measurement
 
 ```bash
-# le classement, dans le backlog de l'equipe
+# the classification, in the backlog of the team
 grep -E "\| (Must|Should|Could)" backlog-v2.md
 
-# l'etat
+# the state
 gh issue list --state all --limit 400 --json number,title,state
 ```
 
-Croiser sur le code (`US-11`, `EN-08`) présent dans les titres d'issues. Le tableau ci-dessus est
-le résultat de ce croisement, pas une lecture à l'œil.
+Cross them on the code (`US-11`, `EN-08`) present in the issue titles. The table above is the result
+of that crossing, not a reading by eye.

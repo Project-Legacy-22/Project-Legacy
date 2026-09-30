@@ -8,7 +8,7 @@ const ACCOUNT_ID = 'account-1';
 const OTHER_ACCOUNT_ID = 'account-2';
 
 describe('countUnreadNotifications', () => {
-    it('compte les non lues du compte demande, sans les autres', async () => {
+    it('counts the unread notifications of the requested account, without the others', async () => {
         const repository = inMemoryNotificationRepository([
             aNotification({ id: 'notif-1', userId: ACCOUNT_ID, readAt: null }),
             aNotification({ id: 'notif-2', userId: ACCOUNT_ID, readAt: '2026-09-10T11:00:00.000Z' }),
@@ -19,7 +19,7 @@ describe('countUnreadNotifications', () => {
         await expect(countUnreadNotifications(ACCOUNT_ID)).resolves.toBe(1);
     });
 
-    it('renvoie zero quand il n y a rien a lire', async () => {
+    it('returns zero when there is nothing to read', async () => {
         const countUnreadNotifications = makeCountUnreadNotifications(inMemoryNotificationRepository());
 
         await expect(countUnreadNotifications(ACCOUNT_ID)).resolves.toBe(0);

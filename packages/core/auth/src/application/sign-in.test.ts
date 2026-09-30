@@ -14,7 +14,7 @@ function providerAvecCompte() {
 }
 
 describe('signIn', () => {
-    it('ouvre une session portant l identite du compte', async () => {
+    it('opens a session carrying the identity of the account', async () => {
         const signIn = makeSignIn(providerAvecCompte());
 
         const session = await signIn(ADRESSE, MOT_DE_PASSE);
@@ -23,7 +23,7 @@ describe('signIn', () => {
         expect(session.accessToken).toEqual(expect.any(String));
     });
 
-    it('accepte une adresse saisie avec une casse differente', async () => {
+    it('accepts an address typed with a different case', async () => {
         const signIn = makeSignIn(providerAvecCompte());
 
         const session = await signIn('  ALICE@Example.com ', MOT_DE_PASSE);
@@ -31,9 +31,9 @@ describe('signIn', () => {
         expect(session.account.email).toBe(ADRESSE);
     });
 
-    // Le meme refus dans les deux cas : distinguer les deux reviendrait a
-    // publier la liste des adresses inscrites.
-    it('refuse un mot de passe faux et une adresse inconnue de facon indiscernable', async () => {
+    // The same refusal in both cases: telling them apart would publish the list of registered
+    // addresses.
+    it('refuses a wrong password and an unknown address indistinguishably', async () => {
         const signIn = makeSignIn(providerAvecCompte());
 
         const motDePasseFaux = await signIn(ADRESSE, 'MauvaisMotDePasse1').catch(
@@ -48,12 +48,11 @@ describe('signIn', () => {
         expect((motDePasseFaux as Error).message).toBe((adresseInconnue as Error).message);
     });
 
-    // Le refus couvre plus qu un mot de passe faux : une adresse dont la
-    // confirmation n a jamais ete suivie est refusee aussi, et l adaptateur les
-    // rend indiscernables. Le message ne doit donc pas affirmer que le mot de
-    // passe est faux -- ca envoyait cette personne reinitialiser un mot de passe
-    // qui fonctionne -- et doit nommer une issue de secours.
-    it('ne pretend pas savoir laquelle des deux moities est fausse', async () => {
+    // The refusal covers more than a wrong password: an address whose confirmation was never
+    // followed is refused too, and the adapter makes them indistinguishable. The message must
+    // therefore not claim that the password is wrong -- that sent this person to reset a password
+    // that works -- and must name a way out.
+    it('does not claim to know which of the two halves is wrong', async () => {
         const signIn = makeSignIn(providerAvecCompte());
 
         const refus = await signIn(ADRESSE, 'MauvaisMotDePasse1').catch((error: unknown) => error);
@@ -63,7 +62,7 @@ describe('signIn', () => {
         expect(message).toMatch(/reset your password/iu);
     });
 
-    it('ne renvoie jamais le mot de passe dans la session', async () => {
+    it('never returns the password in the session', async () => {
         const signIn = makeSignIn(providerAvecCompte());
 
         const session = await signIn(ADRESSE, MOT_DE_PASSE);

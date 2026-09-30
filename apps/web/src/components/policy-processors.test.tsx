@@ -26,13 +26,13 @@ const DECLARED_BY: Record<string, string> = {
     'adapter.ts': 'Supabase',
     'notification-store.ts': 'Supabase',
     'outbox-store.ts': 'Supabase',
+    'retention-store.ts': 'Supabase',
     'supabase-identity-provider.ts': 'Supabase',
     'supabase-item-repository.ts': 'Supabase',
     'supabase-personal-data-store.ts': 'Supabase',
     'supabase-project-repository.ts': 'Supabase',
-    // Meme base, meme sous-traitant : les appartenances ont leur propre port
-    // parce que project_memberships n a pas de politique de lecture des autres
-    // membres, pas parce qu elles sortent ailleurs.
+    // Same database, same processor: memberships have their own port because project_memberships
+    // has no policy for reading the other members, not because they go elsewhere.
     'supabase-membership-repository.ts': 'Supabase',
     'supabase-invitation-repository.ts': 'Supabase',
     // Same database again: a read of items across the caller's projects

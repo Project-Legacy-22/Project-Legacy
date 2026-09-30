@@ -23,7 +23,7 @@ function idsOf(group: { entries: { item: Item }[] }): string[] {
 }
 
 describe('listAttention', () => {
-    it('repartit les taches ouvertes de la personne entre retard, echeance proche et priorite', async () => {
+    it('sorts the person\'s open tasks into overdue, due soon and priority', async () => {
         const listAttention = listAttentionOver([
             anItem({ id: 'late', projectId: ADA_PROJECT.id, dueDate: '2026-09-20' }),
             anItem({ id: 'tomorrow', projectId: ADA_PROJECT.id, dueDate: '2026-09-24' }),
@@ -40,7 +40,7 @@ describe('listAttention', () => {
         ]);
     });
 
-    it('ne montre rien d un projet dont la personne n est pas membre', async () => {
+    it('shows nothing of a project the person is not a member of', async () => {
         const listAttention = listAttentionOver([
             anItem({ id: 'mine', projectId: ADA_PROJECT.id, dueDate: '2026-09-20' }),
             anItem({ id: 'theirs', projectId: ALAN_PROJECT.id, dueDate: '2026-09-20' }),
@@ -48,12 +48,12 @@ describe('listAttention', () => {
 
         const attention = await listAttention(ADA, TODAY);
 
-        // La sienne presente autant que l autre absente : un filtre qui ne
-        // renverrait rien passerait sinon ce test.
+        // Theirs present as much as the other absent: otherwise a filter that returned nothing
+        // would pass this test.
         expect(idsOf(attention.overdue)).toEqual(['mine']);
     });
 
-    it('montre les taches d un projet partage, creees par un autre membre, avec le nom du projet', async () => {
+    it('shows the tasks of a shared project created by another member, with the project name', async () => {
         const listAttention = listAttentionOver([
             anItem({ id: 'by-alan', projectId: SHARED_PROJECT.id, ownerId: ALAN, priority: 'high' }),
         ]);
@@ -65,7 +65,7 @@ describe('listAttention', () => {
         ]);
     });
 
-    it('borne chaque groupe et dit qu il en reste', async () => {
+    it('bounds each group and says that more remain', async () => {
         const late = Array.from({ length: ATTENTION_GROUP_LIMIT + 1 }, (_, index) =>
             anItem({ id: `late-${String(index).padStart(2, '0')}`, projectId: ADA_PROJECT.id, dueDate: '2026-09-01' }),
         );
@@ -77,13 +77,13 @@ describe('listAttention', () => {
         expect(attention.overdue.hasMore).toBe(true);
     });
 
-    it('dit qu il n y a rien quand la personne n a aucune tache', async () => {
+    it('says there is nothing when the person has no task', async () => {
         const listAttention = listAttentionOver([anItem({ projectId: ALAN_PROJECT.id, dueDate: '2026-09-01' })]);
 
         await expect(listAttention(ADA, TODAY)).resolves.toMatchObject({ workload: 'none' });
     });
 
-    it('dit que tout est termine quand toutes ses taches le sont', async () => {
+    it('says everything is done when all their tasks are', async () => {
         const listAttention = listAttentionOver([
             anItem({ id: 'a', projectId: ADA_PROJECT.id, status: 'done', dueDate: '2026-09-01' }),
             anItem({ id: 'b', projectId: SHARED_PROJECT.id, status: 'done', priority: 'high' }),
@@ -92,7 +92,7 @@ describe('listAttention', () => {
         await expect(listAttention(ADA, TODAY)).resolves.toMatchObject({ workload: 'all_done' });
     });
 
-    it('distingue du travail ouvert mais rien d urgent de l absence de travail', async () => {
+    it('tells open work with nothing urgent apart from no work at all', async () => {
         const listAttention = listAttentionOver([anItem({ projectId: ADA_PROJECT.id, dueDate: '2026-10-15' })]);
 
         const attention = await listAttention(ADA, TODAY);
@@ -105,7 +105,7 @@ describe('listAttention', () => {
         });
     });
 
-    it('refuse un jour qui n existe pas dans le calendrier', async () => {
+    it('refuses a day that does not exist in the calendar', async () => {
         const listAttention = listAttentionOver([]);
 
         await expect(listAttention(ADA, '2026-02-30')).rejects.toBeInstanceOf(InvalidAttentionDate);

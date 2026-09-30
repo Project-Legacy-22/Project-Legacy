@@ -69,13 +69,13 @@ describe('attention API (integration)', () => {
         await Promise.all(harnesses.splice(0).map((harness) => harness.close()));
     });
 
-    it('dit qu un compte neuf n a encore rien', async () => {
+    it('says that a new account has nothing yet', async () => {
         const ada = await aPerson();
 
         await expect(attentionOf(ada)).resolves.toMatchObject({ workload: 'none' });
     });
 
-    it('classe les taches ouvertes par groupe, sans les terminees ni les lointaines', async () => {
+    it('sorts the open tasks by group, without the finished or distant ones', async () => {
         const ada = await aPerson();
         await add(ada, { name: 'hier', dueDate: '2026-09-22' });
         await add(ada, { name: 'aujourd hui', dueDate: TODAY });
@@ -95,7 +95,7 @@ describe('attention API (integration)', () => {
         expect(body.workload).toBe('open');
     });
 
-    it('dit que tout est termine quand la seule tache l est', async () => {
+    it('says everything is done when the only task is', async () => {
         const ada = await aPerson();
         const done = await add(ada, { name: 'terminee', dueDate: '2026-09-01' });
         await ada.as.request(
@@ -106,7 +106,7 @@ describe('attention API (integration)', () => {
         await expect(attentionOf(ada)).resolves.toMatchObject({ workload: 'all_done' });
     });
 
-    it('ne montre a une personne aucune tache d un projet dont elle n est pas membre', async () => {
+    it('shows a person no task of a project they are not a member of', async () => {
         const [ada, alan] = await Promise.all([aPerson(), aPerson()]);
         await add(ada, { name: 'celle d ada', dueDate: '2026-09-01' });
         await add(alan, { name: 'celle d alan', dueDate: '2026-09-01' });
@@ -119,7 +119,7 @@ describe('attention API (integration)', () => {
         ]);
     });
 
-    it('montre les taches d un projet partage, avec le nom de ce projet', async () => {
+    it('shows the tasks of a shared project, with the name of that project', async () => {
         const [ada, alan] = await Promise.all([aPerson(), aPerson()]);
         await add(alan, { name: 'celle d alan', dueDate: '2026-09-01' });
         const config = integrationConfig();

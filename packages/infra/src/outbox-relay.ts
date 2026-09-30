@@ -32,6 +32,7 @@ export async function relayOnce({
         try {
             await bus.publish(event);
             published.push(event.id);
+            logger.info({ eventId: event.id }, 'event published');
         } catch (error) {
             // Stop at the first failure rather than skipping ahead: the events
             // after this one are more recent, and delivering them first would

@@ -243,7 +243,9 @@ async function save(client: ItemClient, item: Item, event: DomainEvent): Promise
     // that role, so the application check must not be removed.
     const { error } = await client.rpc('create_item_with_event', {
         p_item_id: item.id,
-        p_user_id: item.ownerId,
+        // event.payload.ownerId, not item.ownerId: the item's own field is
+        // nullable (US-13, #425), the event's is not -- see itemCreated.
+        p_user_id: event.payload.ownerId,
         p_project_id: item.projectId,
         p_name: item.name,
         p_priority: item.priority,

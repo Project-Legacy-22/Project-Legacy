@@ -12,12 +12,15 @@ import {
     createSupabaseOutboxStore,
     createSupabasePersonalDataStore,
     createSupabaseProjectRepository,
+    createSupabaseRetentionStore,
     createBuildStateReading,
     createBusStateReadings,
     createPrometheusMetrics,
     createSupabaseStateReadings,
+    createHealthProbes,
+    startRelay,
     deliverPending,
-    relayOnce,
+    purgeExpired,
 } from '@legacy/infra';
 import type {
     DeliveryPassResult,
@@ -25,9 +28,9 @@ import type {
     ItemStore,
     NotificationStore,
     OutboxStore,
-    RelayDependencies,
 } from '@legacy/infra';
-import type { Logger, Metrics, StateReading } from '@legacy/contracts';
+import type { Logger, Metrics, PurgeResult, StateReading } from '@legacy/contracts';
+import type { HealthProbes } from './http/health.js';
 import {
     makeChangeEmail,
     makeChangePassword,
@@ -62,6 +65,7 @@ import {
     makeListProjectMembers,
     makeListProjects,
     makeRemoveProject,
+    makeRenameProject,
     makeRemoveProjectMember,
     makeInviteProjectMember,
     makeListInvitations,
@@ -69,6 +73,7 @@ import {
 } from '@legacy/core-projects';
 
 import { afterWrite } from './after-write.js';
+import { correlateInvitationEvents, correlateItemEvents } from './event-correlation.js';
 import type { Config } from './config.js';
 
 export interface ItemUseCases {
@@ -105,6 +110,7 @@ export interface ProjectUseCases {
     listProjects: ReturnType<typeof makeListProjects>;
     addProject: ReturnType<typeof makeAddProject>;
     removeProject: ReturnType<typeof makeRemoveProject>;
+    renameProject: ReturnType<typeof makeRenameProject>;
     listProjectMembers: ReturnType<typeof makeListProjectMembers>;
     removeProjectMember: ReturnType<typeof makeRemoveProjectMember>;
     inviteProjectMember: ReturnType<typeof makeInviteProjectMember>;
@@ -116,10 +122,12 @@ export interface NotificationUseCases {
     listNotifications: ReturnType<typeof makeListNotifications>;
     markNotificationRead: ReturnType<typeof makeMarkNotificationRead>;
     countUnread: ReturnType<typeof makeCountUnreadNotifications>;
-    // Une passe de livraison, demandee au lieu d etre planifiee. Sur une cible
-    // sans processus long, personne ne fait tourner le relais : la route qui
-    // lit les notifications et le workflow planifie l appellent.
+    // A delivery pass, requested instead of scheduled. On a target without a long-running process,
+    // nobody runs the relay: the route that reads the notifications and the scheduled workflow call
+    // it.
     deliverPending: () => Promise<DeliveryPassResult>;
+    // The retention purge (US-39), triggered like the pass above.
+    purgeExpired: () => Promise<PurgeResult>;
 }
 
 // Its own group: it reads items across projects through its own port, and
@@ -137,16 +145,12 @@ export interface AppUseCases {
     notifications: NotificationUseCases;
 }
 
-// How often the relay drains the outbox. Short enough that the effect looks
-// immediate in a demonstration, long enough not to hammer the database while
-// nothing happens.
-const RELAY_INTERVAL_MS = 1_000;
-
 export interface Application {
     useCases: AppUseCases;
     logger: Logger;
     // Built here because this layer is the only one that reaches an adapter.
     metrics: Metrics;
+    health: HealthProbes;
     start(): Promise<void>;
     stop(): Promise<void>;
 }
@@ -157,13 +161,13 @@ interface Adapters {
     identity: ReturnType<typeof createSupabaseIdentityProvider>;
     personalData: ReturnType<typeof createSupabasePersonalDataStore>;
     projects: ReturnType<typeof createSupabaseProjectRepository>;
-    // Les appartenances ont leur propre port : project_memberships n a pas de
-    // politique de lecture des autres membres, donc c est le cas d usage qui
-    // decide qui peut lire la liste.
+    // Memberships have their own port: project_memberships has no policy for reading the other
+    // members, so the use case decides who may read the list.
     memberships: ReturnType<typeof createSupabaseMembershipRepository>;
     invitations: ReturnType<typeof createSupabaseInvitationRepository>;
     outbox: OutboxStore;
     notifications: NotificationStore;
+    retention: ReturnType<typeof createSupabaseRetentionStore>;
     // Absent when no broker is configured. Serving HTTP does not need one; the
     // relay does, and start() is where that is enforced.
     bus: EventBus | undefined;
@@ -205,41 +209,16 @@ function createAdapters(config: Config): Adapters {
         invitations: createSupabaseInvitationRepository(supabase),
         outbox: createSupabaseOutboxStore(supabase),
         notifications: createSupabaseNotificationStore(supabase),
+        retention: createSupabaseRetentionStore(supabase),
         bus,
         stateReadings: [
-            // En premier parce qu elle ne depend de rien : elle repond meme
-            // quand la base et le courtier se taisent, ce qui en fait la
-            // seule qui puisse dire quel deploiement s est tu.
+            // First because it depends on nothing: it answers even when the database and the broker
+            // are silent, which makes it the only one that can tell which deployment went silent.
             createBuildStateReading(config.deployment),
             ...createSupabaseStateReadings(supabase),
             ...(bus === undefined ? [] : createBusStateReadings(bus)),
         ],
     };
-}
-
-// A pass that outlives its interval must not have a second one start behind it:
-// both would read the same unpublished rows and publish them twice, in an order
-// neither controls. The flag makes the tick skip instead, and the skipped work
-// is still there on the next one.
-function startRelay(dependencies: RelayDependencies): NodeJS.Timeout {
-    let relaying = false;
-
-    const timer = setInterval(() => {
-        if (relaying) return;
-        relaying = true;
-
-        void relayOnce(dependencies)
-            .catch((err: unknown) => {
-                dependencies.logger.warn({ err }, 'relay pass failed, will retry');
-            })
-            .finally(() => {
-                relaying = false;
-            });
-    }, RELAY_INTERVAL_MS);
-
-    // Does not hold the process open on its own.
-    timer.unref();
-    return timer;
 }
 
 // Assembled apart from compose, which stays a list of what is wired to what:
@@ -263,8 +242,8 @@ function authUseCases(
     };
 }
 
-// Rien a livrer quand aucun courtier n est configure : servir du HTTP n en
-// demande pas, et la passe doit alors ne rien faire plutot que d echouer.
+// Nothing to deliver when no broker is configured: serving HTTP does not need one, and the pass
+// must then do nothing rather than fail.
 function makeDeliverPending(dependencies: {
     outbox: OutboxStore;
     bus: EventBus | undefined;
@@ -278,25 +257,26 @@ function makeDeliverPending(dependencies: {
     return () => deliverPending({ ...dependencies, bus });
 }
 
-// La creation d une tache et l invitation sont les producteurs d evenement : le
-// declencheur de livraison vit au plus pres du fait ecrit. Voir after-write.ts.
+// Creating a task and inviting are the event producers: the delivery trigger lives as close as
+// possible to the written fact. See after-write.ts.
 export function itemUseCases(
-    // Un depot, pas un store : ces cas d usage n ouvrent ni ne ferment rien.
+    // A repository, not a store: these use cases open and close nothing.
     store: ItemRepository,
     deliver: () => Promise<unknown>,
     logger: Logger,
 ): ItemUseCases {
+    const correlatedStore = correlateItemEvents(store, logger);
     return {
-        listItems: makeListItems(store),
+        listItems: makeListItems(correlatedStore),
         addItem: afterWrite(
-            makeAddItem({ repository: store, newId: uuid, now: () => new Date() }),
+            makeAddItem({ repository: correlatedStore, newId: uuid, now: () => new Date() }),
             deliver,
             logger,
         ),
-        changeItem: makeChangeItem(store),
-        moveItem: makeMoveItem(store),
-        reorderItem: makeReorderItem(store),
-        removeItem: makeRemoveItem(store),
+        changeItem: makeChangeItem(correlatedStore),
+        moveItem: makeMoveItem(correlatedStore),
+        reorderItem: makeReorderItem(correlatedStore),
+        removeItem: makeRemoveItem(correlatedStore),
     };
 }
 
@@ -309,14 +289,16 @@ export function projectUseCases(
     deliver: () => Promise<unknown>,
     logger: Logger,
 ): ProjectUseCases {
+    const correlatedInvitations = correlateInvitationEvents(invitations, logger);
     return {
         listProjects: makeListProjects(projects),
         addProject: makeAddProject({ repository: projects, newId: uuid }),
         removeProject: makeRemoveProject(projects),
+        renameProject: makeRenameProject(projects),
         listProjectMembers: makeListProjectMembers(memberships),
         removeProjectMember: makeRemoveProjectMember(memberships),
         inviteProjectMember: afterWrite(
-            makeInviteProjectMember({ repository: invitations, newId: uuid, now: () => new Date() }),
+            makeInviteProjectMember({ repository: correlatedInvitations, newId: uuid, now: () => new Date() }),
             deliver,
             logger,
         ),
@@ -327,11 +309,15 @@ export function projectUseCases(
 
 export function compose(config: Config): Application {
     const adapters = createAdapters(config);
-    const { store, attention, identity, personalData, outbox, notifications, bus } = adapters;
+    const { store, attention, identity, personalData, outbox, notifications, retention, bus } = adapters;
     const { stateReadings } = adapters;
     const logger = createLogger(config.logLevel);
     const deliver = makeDeliverPending({ outbox, bus, notifications, logger });
     const metrics = createPrometheusMetrics({ readings: stateReadings, logger });
+    const health = createHealthProbes(
+        { url: config.supabaseUrl, serviceRoleKey: config.supabaseServiceRoleKey },
+        bus,
+    );
     const compromisedPasswords = createHibpPasswordRegistry({ logger });
 
     // The relay lives with the writer, not with the consumer: it reads a table
@@ -343,6 +329,7 @@ export function compose(config: Config): Application {
     return {
         logger,
         metrics,
+        health,
         useCases: {
             items: itemUseCases(store, deliver, logger),
             attention: { listAttention: makeListAttention(attention) },
@@ -360,6 +347,7 @@ export function compose(config: Config): Application {
                 markNotificationRead: makeMarkNotificationRead(notifications),
                 countUnread: makeCountUnreadNotifications(notifications),
                 deliverPending: deliver,
+                purgeExpired: () => purgeExpired(retention, logger),
             },
         },
         // start() no longer creates the schema -- that is what migrations are

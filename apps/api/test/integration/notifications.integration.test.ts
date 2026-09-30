@@ -19,7 +19,7 @@ import type { RealAccount } from './support.js';
 // A notification is seeded through the same RPC the worker calls
 // (record_item_created_notification), with the service-role key: spinning up
 // the real broker and worker process to prove the event flow itself creates a
-// notification is what event-consumer.test.ts and the demonstration flow
+// notification is what event-consumer.test.ts and event-flow.integration.test.ts
 // already cover, and duplicating it here would only make this suite slower.
 const MOT_DE_PASSE = 'IntegrationTest2026';
 
@@ -64,9 +64,8 @@ describe('notifications API (integration)', () => {
         asOwner = await serveAs(app, owner.cookie);
         asIntruder = await serveAs(app, intruder.cookie);
 
-        // Les items s adressent par leur projet depuis US-16 : sur /items le
-        // serveur rend la coquille de l application, et la lecture JSON echoue
-        // sur un document HTML.
+        // Items are addressed through their project since US-16: on /items the server returns the
+        // application shell, and reading JSON fails on an HTML document.
         const created = await asOwner.request(
             `/projects/${owner.projectId}/items`,
             json('POST', { name: 'Depot integration' }),
@@ -80,14 +79,14 @@ describe('notifications API (integration)', () => {
         await app.stop();
     });
 
-    describe('isolation entre comptes', () => {
+    describe('isolation between accounts', () => {
         let notificationId: string;
 
         beforeAll(async () => {
             notificationId = await seedNotification(owner.id, itemId);
         });
 
-        it('le proprietaire voit sa notification dans la liste', async () => {
+        it('the owner sees their notification in the list', async () => {
             const page = (await (await asOwner.request('/notifications')).json()) as {
                 notifications: { id: string }[];
             };
@@ -95,13 +94,11 @@ describe('notifications API (integration)', () => {
             expect(page.notifications.map(n => n.id)).toContain(notificationId);
         });
 
-        // Le garde qui manquait, et la raison pour laquelle #344 a atteint la
-        // production : la route construit son DTO par affectation, pas par
-        // parse, donc TypeScript est satisfait pendant que la chaine porte une
-        // forme que le client refuse. Seul le navigateur validait cette
-        // reponse, et il n est dans aucune suite. Ici la base est reelle, donc
-        // les dates sont celles que PostgreSQL rend vraiment.
-        it('rend une page que le contrat accepte, dates comprises', async () => {
+        // The missing guard, and the reason #344 reached production: the route builds its DTO by
+        // assignment, not by parse, so TypeScript is satisfied while the string carries a shape the
+        // client refuses. Only the browser validated this response, and it is in no suite. Here the
+        // database is real, so the dates are the ones PostgreSQL actually returns.
+        it('returns a page the contract accepts, dates included', async () => {
             const body = await (await asOwner.request('/notifications')).json();
 
             const lu = NotificationPageDto.safeParse(body);
@@ -111,7 +108,7 @@ describe('notifications API (integration)', () => {
             ).toEqual([]);
         });
 
-        it('un autre compte ne voit pas cette notification dans sa liste', async () => {
+        it('another account does not see this notification in its list', async () => {
             const page = (await (await asIntruder.request('/notifications')).json()) as {
                 notifications: { id: string }[];
             };
@@ -119,7 +116,7 @@ describe('notifications API (integration)', () => {
             expect(page.notifications.map(n => n.id)).not.toContain(notificationId);
         });
 
-        it('le proprietaire peut la marquer comme lue', async () => {
+        it('the owner can mark it as read', async () => {
             const response = await asOwner.request(`/notifications/${notificationId}/read`, {
                 method: 'PATCH',
             });
@@ -132,9 +129,9 @@ describe('notifications API (integration)', () => {
             expect(page.notifications.find(n => n.id === notificationId)?.readAt).not.toBeNull();
         });
 
-        // Meme reponse qu une notification inexistante : voir notifications.test.ts
-        // pour la meme regle deja exercee contre une doublure.
-        it('un autre compte ne peut pas la marquer comme lue', async () => {
+        // Same answer as a notification that does not exist: see notifications.test.ts for the same
+        // rule already exercised against a double.
+        it('another account cannot mark it as read', async () => {
             const response = await asIntruder.request(`/notifications/${notificationId}/read`, {
                 method: 'PATCH',
             });
@@ -143,7 +140,7 @@ describe('notifications API (integration)', () => {
         });
     });
 
-    it('le compte de non lues ne compte que celles du compte de la session', async () => {
+    it('the unread count only counts those of the session\'s account', async () => {
         await seedNotification(owner.id, itemId);
 
         const [ownerCount, intruderCount] = await Promise.all([

@@ -15,9 +15,8 @@ import type { ReactTestRoot } from '../test/react-root';
 import { AuthPage } from './auth-page';
 import type { AuthPageProps } from './auth-page';
 
-// Les ecrans d authentification n avaient aucun fichier de test, donc aucune
-// passe axe : la porte d entree de l application etait le seul ecran livre
-// qu aucun controle d accessibilite ne touchait (#181).
+// The authentication screens had no test file, hence no axe pass: the application's front door was
+// the only delivered screen that no accessibility check touched (#181).
 
 let root: ReactTestRoot;
 
@@ -36,7 +35,7 @@ function props(overrides: Partial<AuthPageProps> = {}): AuthPageProps {
 async function axeViolations(): Promise<readonly { id: string }[]> {
     const results = await axe.run(document, {
         runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21aa'] },
-        // axe documente que cette regle ne donne pas de resultat fiable en jsdom.
+        // axe documents that this rule gives no reliable result in jsdom.
         rules: { 'color-contrast': { enabled: false } },
     });
 
@@ -44,8 +43,8 @@ async function axeViolations(): Promise<readonly { id: string }[]> {
 }
 
 beforeEach(() => {
-    // Chaque suite les pose a la main : jsdom ne charge pas le document reel, et
-    // sans eux axe signale une page sans langue ni titre.
+    // Each suite sets them by hand: jsdom does not load the real document, and without them axe
+    // reports a page without a language or a title.
     document.documentElement.lang = 'en';
     document.title = 'Sign in | Legacy 22';
     root = createReactTestRoot();
@@ -56,13 +55,13 @@ afterEach(async () => {
 });
 
 describe('AuthPage', () => {
-    it('n a aucune violation WCAG A ou AA detectable a la connexion', async () => {
+    it('has no detectable WCAG A or AA violation at sign-in', async () => {
         await root.render(<AuthPage {...props()} />);
 
         expect(await axeViolations()).toEqual([]);
     });
 
-    it('n en a aucune a la creation de compte', async () => {
+    it('has none at account creation', async () => {
         await root.render(<AuthPage {...props()} />);
         const bascule = [...document.querySelectorAll('button')].find(
             b => b.textContent === labels.switchToRegister,
@@ -74,14 +73,14 @@ describe('AuthPage', () => {
         expect(await axeViolations()).toEqual([]);
     });
 
-    it('n en a aucune quand une session vient de finir', async () => {
+    it('has none when a session has just ended', async () => {
         await root.render(<AuthPage {...props({ notice: labels.sessionExpired })} />);
 
         expect(await axeViolations()).toEqual([]);
     });
 
-    // Le critere de US-14a : un parcours au clavier seul sur chaque ecran livre.
-    it('se parcourt au clavier dans l ordre du document', async () => {
+    // The US-14a criterion: a keyboard-only journey on every delivered screen.
+    it('is walked with the keyboard in document order', async () => {
         await root.render(<AuthPage {...props()} />);
 
         const ordre = focusOrder();
@@ -91,7 +90,7 @@ describe('AuthPage', () => {
         expect(ordre.at(-1)).toContain(labels.forgotPasswordLink);
     });
 
-    it('atteint chaque champ et chaque bouton par Tab, sans piege', async () => {
+    it('reaches every field and every button with Tab, without a trap', async () => {
         await root.render(<AuthPage {...props()} />);
 
         const attendu = focusOrder();
@@ -103,12 +102,11 @@ describe('AuthPage', () => {
             atteints.push(`${suivant.tagName.toLowerCase()}:${suivant.getAttribute('aria-label') ?? ''}`);
         }
 
-        // Autant d arrets que d elements focalisables : aucun n est saute, et
-        // aucun ne retient le focus.
+        // As many stops as focusable elements: none is skipped, and none holds the focus.
         expect(atteints).toHaveLength(attendu.length);
     });
 
-    it('envoie le formulaire depuis le clavier et annonce le refus', async () => {
+    it('submits the form from the keyboard and announces the refusal', async () => {
         const onSignIn = vi.fn(async () => ({ status: 'error' as const, message: labels.signInRejected }));
         await root.render(<AuthPage {...props({ onSignIn })} />);
 

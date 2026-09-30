@@ -1,12 +1,12 @@
-# Sprint 2 — Revue
+# Sprint 2 — Review
 
-- **Date** : vendredi 11 septembre 2026
-- **Scrum Master** : Arthur Gasmi · **Product Owner** : Victor Briez
-- **Présents** : Arthur Dos Santos, Arthur Gasmi, Arthur Guyetand, Aurélien Pochart, Seïf Soltane, Victor Briez
+- **Date**: Friday 11 September 2026
+- **Scrum Master**: Arthur Gasmi · **Product Owner**: Victor Briez
+- **Present**: Arthur Dos Santos, Arthur Gasmi, Arthur Guyetand, Aurélien Pochart, Seïf Soltane, Victor Briez
 
-## Ce que chacun a livré
+## What each person delivered
 
-| Membre | Fait |
+| Member | Done |
 |---|---|
 | Arthur Dos Santos | EN-48, US-14 |
 | Arthur Gasmi | US-13, US-27 |
@@ -15,16 +15,16 @@
 | Seïf Soltane | EN-38, US-37 |
 | Victor Briez | US-36, US-28, EN-29 |
 
-## User stories prévues mais non commencées ou non terminées
+## User stories planned but not started or not finished
 
-Aucune : tout a été fait.
+None: everything was done.
 
-## Ajustements de priorité pour le sprint suivant
+## Priority adjustments for the next sprint
 
-De nouvelles issues ont été créées pour corriger des bugs ; celles qui ne sont pas finies le jour
-de la revue sont reportées au sprint 3.
+New issues were created to fix bugs; those not finished on the day of the review are carried over
+to sprint 3.
 
-## Retour du Product Owner
+## Feedback of the Product Owner
 
-Plan respecté. Quelques issues ont été ajoutées pour peaufiner au sprint 3 ; l'équipe a tenu les
-délais du sprint 2.
+Plan respected. A few issues were added for polishing in sprint 3; the team met the deadlines of
+sprint 2.

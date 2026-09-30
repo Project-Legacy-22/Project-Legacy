@@ -1,7 +1,7 @@
--- #401 : l invitation, sa reponse et sa notification.
+-- #401: the invitation, its answer and its notification.
 --
--- Verifie ici plutot qu au niveau integration pour la meme raison que les blocs
--- d appartenance : le `rollback` garantit qu aucune ligne d outbox ne survit.
+-- Checked here rather than at the integration level for the same reason as the membership blocks:
+-- the `rollback` guarantees that no outbox row survives.
 begin;
 
 do $$
@@ -44,8 +44,8 @@ begin
     raise exception 'l evenement de l invitation manque';
   end if;
 
-  -- Deux invitations en attente pour la meme personne ne coexistent pas, et
-  -- la seconde n annonce rien.
+  -- Two pending invitations for the same person do not coexist, and the second one announces
+  -- nothing.
   issue := public.invite_member_with_event(
     seconde, projet, invitee, proprietaire, event_deux, 'invitation.created.v1', now(),
     jsonb_build_object('invitationId', seconde, 'projectId', projet, 'inviteeId', invitee, 'invitedBy', proprietaire)
@@ -74,7 +74,7 @@ begin
     raise exception 'la notification d invitation ne porte pas ce qu elle doit porter';
   end if;
 
-  -- Une autre personne ne repond pas a l invitation : elle n existe pas pour elle.
+  -- Another person does not answer the invitation: it does not exist for them.
   if public.respond_to_invitation(invitation, intrus, true) <> 'not_found' then
     raise exception 'un autre compte a pu repondre a l invitation';
   end if;
@@ -92,7 +92,7 @@ begin
     raise exception 'une invitation traitee a pu etre traitee une seconde fois';
   end if;
 
-  -- Inviter un membre ne cree rien.
+  -- Inviting a member creates nothing.
   if public.invite_member_with_event(
     troisieme, projet, invitee, proprietaire, event_trois, 'invitation.created.v1', now(), '{}'::jsonb
   ) <> 'already_member' then
@@ -138,6 +138,60 @@ begin
   end if;
 
   raise notice 'invitation decline assertions passed';
+end $$;
+
+rollback;
+
+-- Erasing the inviting person must take away neither the invitation nor the notification it
+-- produced for the invited person (#425), as long as the project itself survives -- which a real
+-- second member guarantees here, so as not to confuse this rule with the deletion, already
+-- intended, of a project whose author was its only member.
+begin;
+
+do $$
+declare
+  proprietaire uuid := '00000000-0000-7000-8000-0000000000a6';
+  reste        uuid := '00000000-0000-7000-8000-0000000000a7';
+  invitee      uuid := '00000000-0000-7000-8000-0000000000a8';
+  projet       uuid;
+  invitation   uuid := '00000000-0000-7000-8000-0000000000b5';
+  evenement    uuid := '00000000-0000-7000-8000-0000000000c5';
+begin
+  insert into auth.users (id, email)
+  values (proprietaire, 'erase-inviter@localhost'),
+         (reste, 'erase-remaining-member@localhost'),
+         (invitee, 'erase-invitee@localhost');
+
+  select project_id into projet
+  from public.project_memberships
+  where user_id = proprietaire and role = 'owner'
+  limit 1;
+
+  insert into public.project_memberships (project_id, user_id, role)
+  values (projet, reste, 'member');
+
+  perform public.invite_member_with_event(
+    invitation, projet, invitee, proprietaire, evenement,
+    'invitation.created.v1', now(),
+    jsonb_build_object('invitationId', invitation, 'projectId', projet, 'inviteeId', invitee, 'invitedBy', proprietaire)
+  );
+  perform public.record_invitation_notification(evenement, invitee, projet, invitation);
+
+  perform public.erase_account(proprietaire);
+
+  if not exists (select 1 from public.projects where id = projet) then
+    raise exception 'erasing the inviter deleted a project that still has a member';
+  end if;
+  if not exists (
+    select 1 from public.project_invitations where id = invitation and invited_by is null
+  ) then
+    raise exception 'erasing the inviter did not clear invited_by on the invitation';
+  end if;
+  if not exists (select 1 from public.notifications where invitation_id = invitation) then
+    raise exception 'erasing the inviter deleted the notification it had produced';
+  end if;
+
+  raise notice 'invitation erasure assertions passed';
 end $$;
 
 rollback;

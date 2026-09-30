@@ -1,47 +1,47 @@
 ---
 name: User Story
-about: Une fonctionnalité vue de l'utilisateur
-title: "US-NN — <titre court>"
+about: A feature as seen by the user
+title: "US-NN — <short title>"
 labels: user-story
 ---
 
-## Récit
+## Story
 
-**En tant que** <rôle>
-**je veux** <capacité>
-**afin de** <bénéfice>
+**As a** <role>
+**I want** <capability>
+**so that** <benefit>
 
-## Critères d'acceptation
+## Acceptance criteria
 
-- [ ] **Étant donné** <état initial> **quand** <action> **alors** <résultat observable>
-- [ ] **Étant donné** ... **quand** ... **alors** ...
-- [ ] Cas d'erreur : **étant donné** ... **quand** ... **alors** ...
+- [ ] **Given** <initial state> **when** <action> **then** <observable result>
+- [ ] **Given** ... **when** ... **then** ...
+- [ ] Error case: **given** ... **when** ... **then** ...
 
-## Tâches techniques
+## Technical tasks
 
 - [ ] 
 - [ ] 
-- [ ] Tests unitaires
+- [ ] Unit tests
 - [ ] Documentation
 
-## Dépendances
+## Dependencies
 
-Bloquée par : #
-Bloque : #
+Blocked by: #
+Blocks: #
 
 ## Impacts
 
-- **RGPD** : (données collectées, base légale, durée — ou « aucun »)
-- **Accessibilité** : (navigation clavier, annonces, contraste — ou « aucun »)
-- **Événements** : (événement publié / consommé — ou « aucun »)
+- **GDPR**: (data collected, legal basis, duration — or "none")
+- **Accessibility**: (keyboard navigation, announcements, contrast — or "none")
+- **Events**: (event published / consumed — or "none")
 
-## Estimation
+## Estimate
 
-Points : 1 · 2 · 3 · 5 · 8   MoSCoW : Must · Should · Could
+Points: 1 · 2 · 3 · 5 · 8   MoSCoW: Must · Should · Could
 
 ## Definition of Ready
 
-- [ ] Critères d'acceptation testables
-- [ ] Aucune question ouverte restante
-- [ ] Dépendances mergées sur `main`
-- [ ] Estimée par l'équipe
+- [ ] Testable acceptance criteria
+- [ ] No open question left
+- [ ] Dependencies merged into `main`
+- [ ] Estimated by the team

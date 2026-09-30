@@ -5,7 +5,7 @@
   #420 invites one or several people at once, including when creating a project
 - **Epic**: Projects
 - **Delivered**: 2026-09-24
-- **Decisions that apply**: ADR-0001, ADR-0003, ADR-0005, ADR-0007, ADR-0013
+- **Decisions that apply**: ADR-0001, ADR-0003, ADR-0005, ADR-0007, ADR-0013, ADR-0021
 
 ## What it does
 
@@ -96,7 +96,10 @@ are registered. It requires a session, and the per-account budget bounds it.
 The invitation links two accounts and a project, by identifier. The address typed by the
 owner is neither stored, logged nor placed in the event. The inviter's address is shown to
 the person invited, read on demand from `public.users`. An invitation is deleted with its
-project or with either account. See `T-10` in `docs/gdpr/registre.md`.
+project or with the invitee's account. Erasing the inviter's account (#425, ADR-0021) only
+breaks the link to it: the invitation and the notification it produced stay for the person
+invited, with `invited_by` set to null rather than an address that no longer exists. See
+`T-10` in `docs/gdpr/registre.md`.
 
 ## How to verify
 
@@ -112,9 +115,9 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/check-schema.sql
 
 The schema check includes `check-project-invitations.sql`, which exercises inviting,
 duplicates, idempotent notification, answers by another account, acceptance, a second
-answer and refusal inside a rolled-back transaction. The integration test goes through
-the real API, database and event flow: invite, deliver, read the notification, accept,
-see the project.
+answer, refusal and erasing the inviter of a project that keeps another member, inside
+rolled-back transactions. The integration test goes through the real API, database and
+event flow: invite, deliver, read the notification, accept, see the project.
 
 ## Known limits
 

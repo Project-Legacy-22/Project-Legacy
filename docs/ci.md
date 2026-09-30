@@ -1,146 +1,193 @@
-# La chaîne d'intégration continue
+# The continuous integration pipeline
 
-Ce que GitHub Actions exécute, quand, et ce qui empêche une pull request d'être intégrée. État au
-12 septembre 2026 ; chaque affirmation se vérifie dans `.github/workflows/`.
+What GitHub Actions runs, when, and what prevents a pull request from being integrated. State as of
+12 September 2026; every statement can be checked in `.github/workflows/`.
 
-## Les sept campagnes
+## The eight workflows
 
-| Campagne | Déclenchée par | Ce qu'elle fait |
+| Workflow | Triggered by | What it does |
 |---|---|---|
-| `ci` | chaque pull request, chaque push sur `dev`, et appelée par `image` | les neuf vérifications détaillées ci-dessous |
-| `codeql` | pull request, push, et une fois par semaine | analyse statique de sécurité de GitHub |
-| `guard-branches` | chaque push | refuse un commit qui n'a pas l'origine attendue |
-| `image` | push sur `main` | rejoue `ci`, puis publie l'image sur GHCR et crée la release |
-| `migrations` | chaque exécution verte de `ci` sur `dev`, ou à la main | applique à la base hébergée les migrations qu'elle n'a pas encore |
-| `pages` | push sur `dev` | publie le rapport de couverture sur GitHub Pages |
-| `relais` | en continu, relancé par lui-même ; le cron de cinq minutes ne sert qu'à redémarrer la chaîne | une passe de livraison de l'outbox toutes les trente secondes pendant 345 minutes, les mesures sommées vers Grafana Cloud toutes les dix passes (ADR-0020) |
+| `ci` | every pull request, every push on `dev`, and called by `image` | the nine checks detailed below |
+| `codeql` | pull request, push, and once a week | GitHub static security analysis |
+| `guard-branches` | every push | refuses a commit that does not have the expected origin |
+| `image` | push on `main` | replays `ci`, then publishes the image on GHCR and creates the release |
+| `migrations` | every green `ci` run on `dev`, or by hand | applies to the hosted database the migrations it does not have yet |
+| `purge` | once a day at 03:17 UTC, or by hand | one pass of the retention purge on the deployment (US-39): durations of the register of processing activities, result in the summary of the run |
+| `pages` | push on `dev` | publishes the coverage report on GitHub Pages |
+| `relais` | continuously, restarted by itself; the five-minute cron only serves to restart the chain | one delivery pass of the outbox every thirty seconds for 345 minutes, the measurements summed to Grafana Cloud every ten passes (ADR-0020) |
 
-## Les neuf vérifications de `ci`
+## The nine checks of `ci`
 
-| Job | Ce qu'il vérifie | Ce qu'il attrape |
+The job names are those displayed in the checks of a pull request.
+
+| Job | What it checks | What it catches |
 |---|---|---|
-| Types et style | `tsc --build`, `scripts/check-layers.mjs`, ESLint | un type faux, un import qui traverse une frontière de couche, un plafond de lignes ou de complexité franchi |
-| Tests et couverture | `npm test` avec la couverture agrégée | une régression de comportement, une couverture sous les seuils : 70 % pour les lignes, les instructions et les fonctions, 60 % pour les branches |
-| Tests d'intégration | la pile Supabase locale, migrations appliquées | ce que seule une vraie base montre : politiques de ligne, transactions, révocation de session |
-| Qualite (SonarCloud) | analyse et **attente du verdict du gate** | duplication, complexité, sécurité, couverture vue par l'outil |
-| Audit des dépendances | `npm audit --audit-level=high` | une vulnérabilité haute ou critique dans une dépendance ; une modérée ne bloque pas |
-| Build | `npm run build` | ce que les tests ne voient pas : une feuille de style invalide, un bundle qui ne se construit pas |
-| Image Docker | construction de l'image sans publication | un Dockerfile cassé, avant qu'une livraison ne le découvre |
-| Migrations et schéma | rejoue toutes les migrations sur une base neuve | une migration qui ne s'applique pas dans l'ordre |
-| Migration de données | **à la livraison seulement** : trois moteurs en conteneurs, les deux sens rejoués | une reprise ou une sortie qui ne marche plus, donc une réversibilité devenue théorique |
+| `Types et style` | `tsc --build`, `scripts/check-layers.mjs`, ESLint | a wrong type, an import that crosses a layer boundary, a line count or complexity ceiling exceeded |
+| `Tests et couverture` | `npm test` with aggregated coverage | a behaviour regression, a coverage below the thresholds: 70 % for lines, statements and functions, 60 % for branches |
+| `Tests d integration` | the local Supabase stack, migrations applied | what only a real database shows: row policies, transactions, session revocation |
+| `Qualite (SonarCloud)` | analysis and **wait for the verdict of the gate** | duplication, complexity, security, coverage as seen by the tool |
+| `Audit des dependances` | `npm audit --audit-level=high` | a high or critical vulnerability in a dependency; a moderate one does not block |
+| `Build` | `npm run build` | what the tests do not see: an invalid stylesheet, a bundle that does not build |
+| `Image Docker` | building the image without publishing it | a broken Dockerfile, before a release discovers it |
+| `Migrations et schema` | replays every migration on a new database | a migration that does not apply in order |
+| `Migration de donnees` | **at release only**: three engines in containers, both directions replayed | an import or an export that no longer works, hence a reversibility that has become theoretical |
 
-Le dernier job ne tourne pas sur chaque pull request : sa condition est
-`github.base_ref == 'main' || github.ref == 'refs/heads/main'`, donc la pull request de livraison
-et le push qui la suit. Démarrer trois moteurs pour vérifier un code qui change rarement coûterait
-une minute et demie à chaque relecture ; une livraison, en revanche, est exactement le moment où la
-réversibilité doit être prouvée. `npm run test:migration` rejoue la même suite en local.
+The last job does not run on every pull request: its condition is
+`github.base_ref == 'main' || github.ref == 'refs/heads/main'`, so the release pull request and the
+push that follows it. Starting three engines to check code that rarely changes would cost a minute
+and a half on every review; a release, on the other hand, is exactly the moment when reversibility
+must be proven. `npm run test:migration` replays the same suite locally.
 
-## Ce qui bloque une intégration
+## What blocks an integration
 
-La protection de branche de `dev` exige trois choses, et elles sont vérifiables par l'API :
+The branch protection of `dev` requires three things, and they can be checked through the API:
 
-- **une approbation** d'une autre personne ;
-- **le contexte `Qualite (SonarCloud)` au vert** — le seul contexte requis, et c'est délibéré : il attend le verdict du gate, donc il englobe ce que les autres mesurent ;
-- **toutes les conversations de relecture résolues**.
+- **an approval** from another person;
+- **the `Qualite (SonarCloud)` context green** — the only required context, and it is deliberate: it waits for the verdict of the gate, so it encompasses what the others measure;
+- **every review conversation resolved**.
 
-`enforce_admins` est actif : la règle s'applique aussi à qui administre le dépôt. `main` a la même
-exigence d'approbation.
+`enforce_admins` is active: the rule also applies to whoever administers the repository. `main`
+has the same approval requirement.
 
-Deux conséquences que l'équipe a rencontrées, et qu'il vaut mieux connaître :
+Two consequences the team ran into, and that are better known in advance:
 
-Un contrôle requis qui **saute** n'est pas satisfait pour GitHub. C'est pourquoi le job SonarCloud
-saute son *étape* d'analyse plutôt que le job entier quand elle n'a pas lieu d'être — sur une pull
-request de Dependabot, dont le magasin de secrets refuse le jeton, et sur un push vers `main`, où
-l'offre gratuite n'analyse pas une seconde branche.
+A required check that is **skipped** is not satisfied for GitHub. This is why the SonarCloud job
+skips its analysis *step* rather than the whole job when it has no reason to run — on a Dependabot
+pull request, whose secret store refuses the token, and on a push to `main`, where the free plan
+does not analyse a second branch.
 
-Un workflow appelé par un autre ne reçoit **aucun secret** sans `secrets: inherit`. Sans cette
-ligne, `image` faisait tourner `ci` avec un jeton SonarCloud vide, l'analyse échouait, et la
-publication d'image était sautée sans que personne comprenne pourquoi.
+A workflow called by another receives **no secret** without `secrets: inherit`. Without that line,
+`image` ran `ci` with an empty SonarCloud token, the analysis failed, and the image publication was
+skipped without anyone understanding why.
 
-## Le chemin d'une modification
+## The path of a change
 
 ```
-branche de travail  ──pull request──▶  dev  ──tk release──▶  main
-      │                                 │                      │
-      ci + codeql                    ci + pages          image : ci, puis GHCR + release
+work branch  ──pull request──▶  dev  ──tk release──▶  main
+      │                          │                      │
+      ci + codeql             ci + pages          image: ci, then GHCR + release
 ```
 
-`main` n'est jamais atteint par un merge de branche de travail : seule une livraison depuis `dev` y
-va, et elle se fait par un commit de merge afin que les deux branches ne divergent pas alors que
-leur contenu est identique.
+`main` is never reached by merging a work branch: only a release from `dev` goes there, and it is
+done through a merge commit so that the two branches do not diverge while their content is
+identical.
 
-## Où le code tourne, et comment il y arrive
+## Where the code runs, and how it gets there
 
-Les Actions vérifient et publient une image ; elles ne déploient pas. Le déploiement est fait par
-Vercel, branché sur le dépôt.
+The Actions check and publish an image; they do not deploy. Deployment is done by Vercel, connected
+to the repository.
 
 | | |
 |---|---|
-| Production | la branche `main` |
-| Prévisualisation | `dev` et chaque pull request, à leur propre adresse |
-| Région d'exécution | `cdg1`, Paris |
-| Construction | `npm run build`, sortie `apps/api/dist/static`, cadre `vite` |
+| Production | the `main` branch |
+| Preview | `dev` and every pull request, at their own address |
+| Runtime region | `cdg1`, Paris |
+| Build | `npm run build`, output `apps/api/dist/static`, framework `vite` |
 
-Un déploiement de prévisualisation par pull request est ce qui permet de relire un changement
-d'interface sans l'installer : l'adresse apparaît dans les contrôles de la pull request, à côté des
-neuf vérifications.
+A preview deployment per pull request is what makes it possible to review an interface change
+without installing it: the address appears in the checks of the pull request, next to the nine
+checks.
 
-**Ce que `vercel.json` décide.** Les chemins `/auth/*`, `/projects*`, `/notifications*` et
-`/internal/*` sont routés vers la fonction ; tout le reste est servi par le front. Une route montée
-par l'application mais absente de cette liste répondrait un 404 de Vercel, sans jamais atteindre le
-code — et `apps/api/src/http/vercel-rewrites.test.ts` compare les deux listes dans les deux sens
-pour que cela ne puisse pas arriver en silence.
+**What `vercel.json` decides.** The paths `/auth/*`, `/projects*`, `/notifications*` and
+`/internal/*` are routed to the function; everything else is served by the front end. A route
+mounted by the application but missing from this list would answer a Vercel 404, without ever
+reaching the code — and `apps/api/src/http/vercel-rewrites.test.ts` compares both lists in both
+directions so that this cannot happen silently.
 
-**L'image GHCR est un second artefact, pas le chemin de production.** Elle est publiée par le
-workflow `image` à chaque livraison sur `main`, pour qu'une exécution hors Vercel soit possible.
-La production, elle, est servie par Vercel.
+**The GHCR image is a second artefact, not the production path.** It is published by the `image`
+workflow on every release on `main`, so that running outside Vercel is possible. Production, for
+its part, is served by Vercel.
 
-**État au 15 septembre 2026**, mesuré par l'API Vercel et par l'historique des workflows :
+## Health check and event correlation
 
-- la production sert le commit `3deb3cb`, déployé le 11 septembre depuis `main` — la livraison
-  #235. Tout ce que `dev` a reçu depuis n'existe qu'en prévisualisation ;
-- l'image GHCR et la release, elles, datent du **3 septembre**. Le workflow `image` a échoué sur
-  le push du 11 septembre, à l'étape SonarCloud, et l'étape de publication a donc été sautée.
+`GET /health` is public and requires no session. It queries the database through a read without
+content of the `users` table, and Redis through the depth of the event queue. Both probes have a
+three-second limit and run in parallel. The response is 200 when both services respond, 503
+otherwise. It only contains `status` (`ready` or `unavailable`) and `dependencies.database` /
+`dependencies.broker` (`up` or `down`): no internal address, version, account data or raw error.
+The `Cache-Control: no-store` header prevents an old state from being taken for the current one.
 
-Les deux artefacts ne sont donc pas au même niveau, et c'est écrit ici plutôt que supposé : un
-document qui laisserait croire que l'image suit la production serait faux.
+On Vercel, `/health` is rewritten to the API function like the other routes. On a deployment of the
+Docker image, `docker inspect --format '{{json .State.Health}}' <container>` shows the result of the
+`HEALTHCHECK`. To see which dependency no longer responds, call `GET /health` on the URL of the
+deployment; no key is needed. The image also serves the worker, which serves no HTTP: if it is
+started with the worker command, use `--no-healthcheck` and supervise the worker process
+separately. A 503 does not expose the raw cause; look for it in the API logs and in the protected
+measurements under `/internal`.
 
-## Migrations de la base hébergée
+Correlation between HTTP and event does not change the contract of the envelope. After the atomic
+write of a task or an invitation and of its event, the producer logs `traceId` and `eventId`
+together. The log of the HTTP request carries the same `traceId`; the relay and the consumer carry
+`eventId`. First search for the `traceId` of an HTTP error, then for its `eventId` in the logs of
+the relay and of the worker. An event not created (invitation already pending or write refused)
+produces no `event recorded` line. No task content, email address or event payload is logged.
 
-La production et les prévisualisations partagent un seul projet Supabase hébergé. Le 23 septembre
-2026, six migrations mergées sur `dev` n'y avaient jamais été appliquées : le code de #382 lisait
-`items.position`, absente, et les prévisualisations répondaient 500 sur la liste des tâches. Elles
-ont été appliquées à la main après sauvegarde ; le workflow `migrations` fait désormais ce travail
-(#385).
+**State as of 15 September 2026**, measured through the Vercel API and the workflow history:
 
-**Quand.** Après chaque exécution **verte** de `ci` sur `dev`, sur le commit que `ci` a vérifié, et
-jamais sur un commit arrivé entre-temps. `ci` a déjà rejoué toutes les migrations sur une base
-vide : ce qui arrive ici s'est donc appliqué une fois ailleurs. Sans migration nouvelle, le dry-run
-ne liste rien et l'application ne fait rien. Un déclenchement manuel (`workflow_dispatch`) reste
-possible. Deux exécutions ne se chevauchent jamais : elles se suivent.
+- production serves commit `3deb3cb`, deployed on 11 September from `main` — release #235.
+  Everything `dev` has received since only exists in preview;
+- the GHCR image and the release, for their part, date from **3 September**. The `image` workflow
+  failed on the push of 11 September, at the SonarCloud step, and the publication step was
+  therefore skipped.
 
-**Ce qui part** est listé dans le résumé de l'exécution avant d'être appliqué.
+The two artefacts are therefore not at the same level, and it is written here rather than assumed:
+a document that let one believe the image follows production would be wrong.
 
-**La règle qui en découle : une migration est additive.** La base étant partagée, une migration
-atteint la production dès son merge sur `dev`, alors que la production tourne encore le code de la
-dernière livraison. Elle doit donc être compatible avec ce code : ajouter une colonne avec une
-valeur par défaut, une table, une fonction, ou redéfinir une fonction sans changer sa signature. Un
-renommage, une suppression ou un changement de signature se fait en deux temps : la migration qui
-ajoute, livrée ; puis, après la livraison du code qui ne lit plus l'ancien, celle qui retire.
+## Migrations of the hosted database
 
-**Configuration**, dans les réglages du dépôt :
+Production and the previews share a single hosted Supabase project. On 23 September 2026, six
+migrations merged into `dev` had never been applied to it: the code of #382 read `items.position`,
+which was missing, and the previews answered 500 on the task list. They were applied by hand after
+a backup; the `migrations` workflow now does this work (#385).
 
-| Nom | Nature | Contenu |
+**When.** After every **green** `ci` run on `dev`, on the commit `ci` checked, and never on a commit
+that arrived in the meantime. `ci` has already replayed every migration on an empty database: what
+arrives here has therefore been applied once elsewhere. Without a new migration, the dry run lists
+nothing and the application does nothing. A manual trigger (`workflow_dispatch`) remains possible.
+Two runs never overlap: they follow each other.
+
+**What goes out** is listed in the summary of the run before being applied.
+
+**The resulting rule: a migration is additive.** The database being shared, a migration reaches
+production as soon as it is merged into `dev`, while production still runs the code of the last
+release. It must therefore be compatible with that code: add a column with a default value, a
+table, a function, or redefine a function without changing its signature. A rename, a removal or a
+signature change happens in two steps: the migration that adds, released; then, after the release
+of the code that no longer reads the old one, the one that removes.
+
+**Configuration**, in the settings of the repository:
+
+| Name | Kind | Content |
 |---|---|---|
-| `SUPABASE_ACCESS_TOKEN` | secret | jeton d'accès Supabase d'un compte membre de l'organisation du projet, créé pour cet usage |
-| `SUPABASE_DB_PASSWORD` | secret, facultatif | mot de passe de la base du projet hébergé ; sans lui, la CLI ouvre un rôle de connexion temporaire avec le jeton (#392) |
-| `SUPABASE_PROJECT_REF` | variable | identifiant du projet hébergé, visible dans son URL |
+| `SUPABASE_ACCESS_TOKEN` | secret | Supabase access token of an account member of the organisation of the project, created for this use |
+| `SUPABASE_DB_PASSWORD` | secret, optional | database password of the hosted project; without it, the CLI opens a temporary login role with the token (#392) |
+| `SUPABASE_PROJECT_REF` | variable | identifier of the hosted project, visible in its URL |
 
-Tant que le jeton ou l'identifiant du projet manque, le workflow échoue à sa première étape en nommant ce qui manque : une
-application qui ne se fait pas doit se voir, pas passer pour une base à jour. La CLI lit le jeton
-et le mot de passe dans l'environnement ; ni l'un ni l'autre ne passe en argument de commande.
+As long as the token or the project identifier is missing, the workflow fails at its first step and
+names what is missing: an application that does not happen must be seen, not pass for an
+up-to-date database. The CLI reads the token and the password from the environment; neither is
+passed as a command argument.
 
-## Références
+## Retention purge
+
+**When.** The `purge` workflow runs once a day, at 03:17 UTC, and can be started by hand
+(`workflow_dispatch`). The GitHub scheduler is sometimes hours late; the durations are counted in
+days, so that delay changes nothing. Two runs do not overlap.
+
+**What it does.** A `POST /internal/purge` call on `RELAY_URL`, with `RELAY_SECRET`, the same
+settings as the relay. The route runs `public.purge_expired_data`, which deletes the notifications
+and the processed events older than ninety days and the events published more than seven days ago.
+An event never published is never deleted. The durations are decided in `docs/gdpr/registre.md`.
+
+**Where to read the result.** In the summary of each run of the `purge` workflow, Actions tab: the
+date and, per processing activity, the number of rows deleted. The API logs carry the same
+information, one `retention purge` line per processing activity. Neither contains personal data.
+
+**When it fails.** If `RELAY_URL` or `RELAY_SECRET` is missing, or if the route does not answer
+200, the run fails and says so: a purge that does not happen must be seen. The next one resumes
+where this one stopped, since a pass does not depend on the previous one.
+
+## References
 
 - `.github/workflows/`, `sonar-project.properties`, `vercel.json`
-- ADR-0009 (SonarCloud comme outil de quality gate), ADR-0015 (GHCR comme registre)
+- ADR-0009 (SonarCloud as the quality gate tool), ADR-0015 (GHCR as the registry)

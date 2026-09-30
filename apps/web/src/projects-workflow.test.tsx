@@ -16,6 +16,7 @@ import {
     waitFor,
 } from './test/react-root';
 import type { ReactTestRoot } from './test/react-root';
+import { startAt } from './test/app-fixture';
 
 const ACCOUNT: AccountDto = {
     id: '5b1f0f4a-9d3f-4d0e-9e2a-6c0f5a3b1d77',
@@ -42,7 +43,7 @@ const auth: AuthApi = {
     currentAccount: vi.fn(async () => ACCOUNT),
     requestPasswordReset: vi.fn(async () => undefined),
     resetPassword: vi.fn(async () => undefined),
-    // Requis par AuthApi depuis #174 ; non exerce ici.
+    // Required by AuthApi since #174; not exercised here.
     signOut: vi.fn(async () => undefined),
 };
 
@@ -63,6 +64,7 @@ function projectsApi(overrides: Partial<ProjectsApi> = {}): ProjectsApi {
         listProjects: vi.fn(async () => ({ projects: [FIRST], nextCursor: null })),
         createProject: vi.fn(async () => SECOND),
         deleteProject: vi.fn(async () => undefined),
+        renameProject: vi.fn(),
         ...overrides,
     };
 }
@@ -77,6 +79,7 @@ function projectButton(name: string): HTMLButtonElement {
 
 beforeEach(() => {
     root = createReactTestRoot();
+    startAt('projects');
 });
 
 afterEach(async () => {

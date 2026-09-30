@@ -3,7 +3,7 @@
 - **Issue**: #14
 - **Epic**: GDPR
 - **Delivered**: 2026-09-08
-- **Decisions that apply**: ADR-0004, ADR-0005, ADR-0007, ADR-0008
+- **Decisions that apply**: ADR-0004, ADR-0005, ADR-0007, ADR-0008, ADR-0021
 
 ## What it does
 
@@ -45,7 +45,7 @@ rows, plus projects and items that would otherwise have no member left.
 | `users` | yes | yes | `id` |
 | `projects` | yes, when the caller is a member | yes, only when no other member remains | the caller's membership |
 | `project_memberships` | yes, caller's rows only | yes, by cascade | `user_id` |
-| `items` | yes, with `projectId` included | yes, by cascade | `user_id` and `project_id` |
+| `items` | yes, with `projectId` included | only in a project where no other member remains; otherwise `user_id` is set to null | `user_id` and `project_id` |
 | `notifications` | yes | yes, by cascade | `user_id` |
 | `outbox` | no | yes | `payload ->> 'ownerId'` |
 | `processed_events` | no | yes | the events the account produced |
@@ -69,11 +69,15 @@ the function to the backend service role. Both migrations are irreversible, whic
 of the feature. Their headers say so instead of offering a rollback that would not restore
 anything.
 
-Keeping a shared project does not keep the departing account's items: deleting its `users`
-row cascades to every item that account created, including items other members were using.
-Items created by the remaining members survive. The deletion form explicitly warns the
-account holder that other members will lose access to their items in shared projects;
-no notification is sent to those other members by this feature.
+Migration `20260925090000_preserve_shared_project_items_on_erasure` (ADR-0021) changes what
+happens to a shared project's items. `items.user_id` is nullable with `on delete set null`
+instead of `on delete cascade`: erasing an account breaks the link from an item to its creator
+but no longer removes the item, so the other members of a shared project keep what they were
+using. If the erased account was the sole owner of a project that still has other members, the
+longest-standing remaining member becomes its owner, so the project is never left without one.
+Access to the item was already governed entirely by `project_memberships`, not by `user_id`, so
+nullifying it changes nothing about who can read or write the item. No notification is sent to
+the other members; the change is visible only through the item staying where it was.
 
 Credentials and sessions live in `auth.users` and are removed through the GoTrue admin
 endpoint, not by deleting that row: deleting it directly would leave GoTrue's own session and
@@ -114,8 +118,8 @@ the document is what a person receives.
   announced through the existing polite live region, which stays silent until something
   happens.
 - The whole flow is reachable and operable by keyboard; there is no pointer-only control.
-- The warning names project memberships, projects where the account is the last member,
-  and the loss of the account's items for other members of shared projects.
+- The warning names project memberships and projects where the account is the last member,
+  and separately states that items in a shared project stay for the other members.
 - `autocomplete` is off on the confirmation field. Letting the browser fill it would supply
   the proof of intent the field exists to obtain.
 - Checked by `axe-core` over the full signed-in screen in
@@ -160,6 +164,11 @@ The tests that cover it:
 - `scripts/check-schema.sql`: `erase_account` against a real database, with a last-member
   project that must disappear, a shared project and bystander that must survive, and a second
   call that must be a no-op.
+- `apps/api/test/integration/account-erasure.integration.test.ts`: against the real API and
+  database, an item survives its creator's erasure with `user_id` set to null, a sole owner is
+  replaced by the longest-standing remaining member, a last-member project still disappears, no
+  row anywhere still names the erased account, and a notification produced by the erased
+  account is kept for the person it was for.
 
 By hand, with the stack running: sign in, add an item, download the export and open it, then
 delete the account with the wrong address (refused on the field), then with the right one.

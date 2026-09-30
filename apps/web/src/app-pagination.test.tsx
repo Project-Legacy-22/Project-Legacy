@@ -10,6 +10,7 @@ import { labels } from './labels';
 import { anItem } from './test/builders/item-builder';
 import { click, createReactTestRoot, flushTimers, getElement, waitFor } from './test/react-root';
 import type { ReactTestRoot } from './test/react-root';
+import { startAt } from './test/app-fixture';
 
 const ACCOUNT = {
     id: 'account',
@@ -55,10 +56,12 @@ const projects: ProjectsApi = {
     })),
     createProject: vi.fn(),
     deleteProject: vi.fn(),
+    renameProject: vi.fn(),
 };
 
 beforeEach(() => {
     testRoot = createReactTestRoot();
+    startAt('projects');
 });
 
 afterEach(async () => {

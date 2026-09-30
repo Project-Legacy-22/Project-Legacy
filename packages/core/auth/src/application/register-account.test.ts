@@ -11,7 +11,7 @@ const ADRESSE = 'alice@example.com';
 const MOT_DE_PASSE = 'MotDePasse2026';
 
 describe('registerAccount', () => {
-    it('cree un compte utilisable ensuite pour se connecter', async () => {
+    it('creates an account that can then be used to sign in', async () => {
         const provider = inMemoryIdentityProvider();
         const registerAccount = makeRegisterAccount(provider);
         const signIn = makeSignIn(provider);
@@ -22,10 +22,10 @@ describe('registerAccount', () => {
         expect(session.account.email).toBe(ADRESSE);
     });
 
-    // Le critere central de US-11 : la creation de compte ne doit pas permettre
-    // de savoir si une adresse est deja prise. Les deux appels doivent donc etre
-    // indiscernables du point de vue de l appelant.
-    it('repond de la meme facon sur une adresse libre et sur une adresse deja prise', async () => {
+    // The central criterion of US-11: creating an account must not reveal whether an address is
+    // already taken. Both calls must therefore be indistinguishable from the caller's point of
+    // view.
+    it('answers the same way for a free address and an address already taken', async () => {
         const provider = inMemoryIdentityProvider();
         const registerAccount = makeRegisterAccount(provider);
 
@@ -35,7 +35,7 @@ describe('registerAccount', () => {
         expect(seconde).toEqual(premiere);
     });
 
-    it('ne remplace pas le mot de passe d un compte existant', async () => {
+    it('does not replace the password of an existing account', async () => {
         const provider = inMemoryIdentityProvider();
         const registerAccount = makeRegisterAccount(provider);
         const signIn = makeSignIn(provider);
@@ -47,7 +47,7 @@ describe('registerAccount', () => {
         await expect(signIn(ADRESSE, MOT_DE_PASSE)).resolves.toBeDefined();
     });
 
-    it('enregistre l adresse sous sa forme canonique', async () => {
+    it('stores the address in its canonical form', async () => {
         const provider = inMemoryIdentityProvider();
         const registerAccount = makeRegisterAccount(provider);
         const signIn = makeSignIn(provider);
@@ -57,7 +57,7 @@ describe('registerAccount', () => {
         await expect(signIn(ADRESSE, MOT_DE_PASSE)).resolves.toBeDefined();
     });
 
-    it('refuse un mot de passe trop faible sans rien creer', async () => {
+    it('refuses a password that is too weak without creating anything', async () => {
         const provider = inMemoryIdentityProvider();
         const registerAccount = makeRegisterAccount(provider);
         const signIn = makeSignIn(provider);
@@ -66,7 +66,7 @@ describe('registerAccount', () => {
         await expect(signIn(ADRESSE, 'court1A')).rejects.toThrow();
     });
 
-    it('refuse une adresse invalide sans rien creer', async () => {
+    it('refuses an invalid address without creating anything', async () => {
         const provider = inMemoryIdentityProvider();
         const registerAccount = makeRegisterAccount(provider);
 

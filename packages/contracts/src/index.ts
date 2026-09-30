@@ -48,6 +48,7 @@ export {
     ProjectItemIdParams,
     ProjectMemberIdParams,
     CreateProjectBody,
+    RenameProjectBody,
     ListProjectsQuery,
     ProjectRole,
     ProjectDto,
@@ -59,6 +60,7 @@ export {
     MAX_PROJECT_PAGE_SIZE,
 } from './projects.js';
 export { AttentionQuery, AttentionItemDto, AttentionGroupDto, Workload, AttentionDto } from './attention.js';
+export { PurgeResult } from './retention.js';
 export {
     ITEM_CREATED_V1,
     ItemCreatedV1,
@@ -80,6 +82,8 @@ export {
     PendingInvitationListDto,
 } from './invitations.js';
 export { ProblemDetails } from './problem-details.js';
+export { HealthResponse } from './health.js';
+export type { HealthResponseDto } from './health.js';
 export { ServiceUnavailable } from './service-unavailable.js';
 export type { Unavailability } from './service-unavailable.js';
 export type { Logger } from './logger.js';

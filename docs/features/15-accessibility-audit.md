@@ -199,6 +199,12 @@ of the four whose disabling protected nothing, since it guards no field. The thr
 second submission there is a change to the submit handler and not only to an attribute, and
 whether the fields become `readOnly` or stay editable is a decision rather than a detail.
 
+**Closed by #368.** The three forms now keep every control in the tab order while their call
+runs: the fields become `readOnly` and the submit buttons `aria-disabled`. `readOnly` was chosen
+over leaving the fields editable because the value sent must be the value on screen when the
+answer arrives. Each submit handler refuses a second submission, so `Enter` from a field is
+covered as well as the button. `account-forms-in-flight.test.tsx` guards both properties.
+
 ## One finding the issue overstated
 
 #181 lists "no skip link on the authentication screens" among the gaps. **It is not a failure.**
@@ -256,7 +262,7 @@ npx vitest run apps/web/src/components/reset-password-page.test.tsx
 This page audits; it does not fix. Gaps 3, 4 and 8 belong to #49, gaps 1, 2 and 7 to the
 remediation half of #181, gap 5 waits on #152, and gap 6 has its own issue. The Kanban and the
 full keyboard path are #182, the account walk is #246, and what that walk found is gap 9,
-half closed by #246 and half owned by #368.
+closed by #246 for the export and by #368 for the three forms.
 
 ## The Kanban half, measured on 2026-09-13 (#182)
 
@@ -372,10 +378,11 @@ property in the form this rung can see: the control is still in `tabbables()` wh
 in flight, and a second activation does not reach the API. Verified by putting `disabled` back:
 two tests turn red.
 
-The same pattern remains in the three account forms and is #368. It is not fixed here because
-refusing a second submission on a form is a change to its submit handler — `Enter` in a field
-submits without going through the button — and because whether a field should become `readOnly`
-or stay editable while a call is in flight is a decision, not an attribute swap.
+The same pattern remained in the three account forms. It was left to #368 because refusing a
+second submission on a form is a change to its submit handler — `Enter` in a field submits
+without going through the button — and because whether a field should become `readOnly` or stay
+editable while a call is in flight is a decision, not an attribute swap. #368 has since closed
+it; see gap 9.
 
 ## Email address change confirmation, measured on 2026-09-18 (#245)
 

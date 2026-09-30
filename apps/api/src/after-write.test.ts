@@ -4,7 +4,7 @@ import { recordingLogger } from '../../../packages/contracts/test/fakes/recordin
 import { afterWrite } from './after-write.js';
 
 describe('afterWrite', () => {
-    it('rend ce que l ecriture a rendu, apres avoir livre', async () => {
+    it('returns what the write returned, after delivering', async () => {
         const ordre: string[] = [];
         const write = vi.fn(async (nom: string) => {
             ordre.push(`ecrit ${nom}`);
@@ -20,10 +20,10 @@ describe('afterWrite', () => {
         expect(ordre).toEqual(['ecrit une tache', 'livre']);
     });
 
-    // Le fait est deja ecrit et l outbox le retient : le balai planifie s en
-    // occupera. Faire echouer la creation pour un courtier qui a cligne serait
-    // perdre l ecriture pour sauver la notification.
-    it('n echoue pas l ecriture quand la livraison echoue', async () => {
+    // The fact is already written and the outbox holds it: the scheduled sweep will take care of
+    // it. Failing the creation for a broker that blinked would lose the write to save the
+    // notification.
+    it('does not fail the write when the delivery fails', async () => {
         const logger = recordingLogger();
         const run = afterWrite(
             async () => 'ecrit',
@@ -35,7 +35,7 @@ describe('afterWrite', () => {
         expect(logger.lines.some(line => line.level === 'warn')).toBe(true);
     });
 
-    it('ne livre pas quand l ecriture a echoue', async () => {
+    it('does not deliver when the write failed', async () => {
         const deliver = vi.fn(async () => undefined);
         const run = afterWrite(() => Promise.reject(new Error('refus')), deliver, recordingLogger());
 

@@ -18,8 +18,8 @@ interface AddItemFormState {
     handlePriorityChange: (priority: ItemPriority) => void;
     handleDueDateChange: (dueDate: string) => void;
     handleAssigneesChange: (assigneeIds: readonly string[]) => void;
-    // Le DOM ignore la valeur renvoyee par un gestionnaire de soumission :
-    // la declarer void plutot que Promise<void> dit la verite a l appelant.
+    // The DOM ignores the value a submit handler returns: declaring it void rather than
+    // Promise<void> tells the caller the truth.
     handleSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }
 

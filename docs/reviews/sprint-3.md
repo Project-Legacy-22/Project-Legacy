@@ -1,53 +1,54 @@
-# Sprint 3 — Revue
+# Sprint 3 — Review
 
-- **Date** : vendredi 25 septembre 2026
-- **Scrum Master** : Arthur Guyetand · **Product Owner** : Victor Briez
-- **Présents** : Arthur Dos Santos, Arthur Gasmi, Arthur Guyetand, Aurélien Pochart, Seïf Soltane, Victor Briez
+- **Date**: Friday 25 September 2026
+- **Scrum Master**: Arthur Guyetand · **Product Owner**: Victor Briez
+- **Present**: Arthur Dos Santos, Arthur Gasmi, Arthur Guyetand, Aurélien Pochart, Seïf Soltane, Victor Briez
 
-Préparée le 24 septembre 2026 à partir du board et des pull requests fusionnées ; les sections
-« Démonstration » et « Retour du Product Owner » se remplissent en séance.
+Prepared on 24 September 2026 from the board and the merged pull requests; the sections
+"Demonstration" and "Feedback of the Product Owner" are filled in during the session.
 
-## Ce que chacun a livré
+## What each person delivered
 
-| Membre | Livré pendant le sprint |
+| Member | Delivered during the sprint |
 |---|---|
-| Arthur Dos Santos | supervision et sauvegarde des données, notification à l'ajout d'un membre, gestion des erreurs ; documentation d'API, README et démonstration (#45 à #47) |
-| Arthur Gasmi | parcours clavier de l'écran du compte et corrections qu'il a révélées (#246) ; divulgation des adresses entre membres (#352) et interface sur petit écran (#42) en cours |
-| Arthur Guyetand | retrait d'un membre sans perte de propriété du projet (#354), réordonnancement d'une tâche dans sa colonne (US-49, #50) ; écran des membres (#351) en cours ; animation du sprint en Scrum Master |
-| Aurélien Pochart | audit d'accessibilité de l'écran de confirmation d'adresse (#245) ; correction du scan de traces (#371) et notifications explicites (US-59, #349) en cours |
-| Seïf Soltane | stabilité des contrôles d'accessibilité automatiques, dont les échecs intermittents ont été mesurés puis corrigés (#356) ; diagnostic de la publication d'image bloquée depuis le 3 septembre (#315) |
-| Victor Briez | écran d'accueil personnalisé (US-20, #21), recherche et filtres (US-32, #33), jeu de données de démonstration (EN-43, #44) ; coordination du partage de projet (US-33) |
+| Arthur Dos Santos | monitoring and backup of the data, notification when a member is added, error handling; API documentation, README and demonstration (#45 to #47) |
+| Arthur Gasmi | keyboard journey of the account screen and the fixes it revealed (#246); disclosure of addresses between members (#352) and interface on a small screen (#42) in progress |
+| Arthur Guyetand | removing a member without losing the ownership of the project (#354), reordering a task within its column (US-49, #50); members screen (#351) in progress; running the sprint as Scrum Master |
+| Aurélien Pochart | accessibility audit of the address confirmation screen (#245); fix of the trace scan (#371) and explicit notifications (US-59, #349) in progress |
+| Seïf Soltane | stability of the automatic accessibility checks, whose intermittent failures were measured then fixed (#356); diagnosis of the image publication blocked since 3 September (#315) |
+| Victor Briez | personalised home screen (US-20, #21), search and filters (US-32, #33), demonstration dataset (EN-43, #44); coordination of project sharing (US-33) |
 
-## Les issues engagées au planning
+## The issues committed at the planning
 
-| Issue | Intitulé | État au 24 septembre |
+| Issue | Title | State as of 24 September |
 |---|---|---|
-| #44 | EN-43 - Jeu de données de démonstration | livré |
-| #21 | US-20 - Écran d'accueil personnalisé | livré |
-| #33 | US-32 - Rechercher et filtrer mes tâches | livré |
-| #34 | US-33 - Partage d'un projet entre utilisateurs | en cours : #354 livré, #351, #352 et #353 en cours |
-| #348 | US-58 - Attribuer une tâche à un membre du projet | non commencée, dépend de US-33 |
-| #351 | Écran des membres d'un projet | en cours |
-| #354 | Retirer un membre d'un projet | livré |
-| #50 | US-49 - Réordonner une tâche dans une colonne | livré |
-| #246 | Parcours clavier sur les écrans livrés avant le Kanban | livré |
-| #352 | Déclarer la divulgation des adresses entre membres | en cours |
-| #42 | US-41 - Interface utilisable sur petit écran | en cours |
+| #44 | EN-43 - Demonstration dataset | delivered |
+| #21 | US-20 - Personalised home screen | delivered |
+| #33 | US-32 - Search and filter my tasks | delivered |
+| #34 | US-33 - Sharing a project between users | in progress: #354 delivered, #351, #352 and #353 in progress |
+| #348 | US-58 - Assign a task to a member of the project | not started, depends on US-33 |
+| #351 | Members screen of a project | in progress |
+| #354 | Remove a member from a project | delivered |
+| #50 | US-49 - Reorder a task within a column | delivered |
+| #246 | Keyboard journeys on the screens delivered before the Kanban | delivered |
+| #352 | Declare the disclosure of addresses between members | in progress |
+| #42 | US-41 - Interface usable on a small screen | in progress |
 
-Hors planning, livrés pendant le sprint : les trois Must de fin de projet (documentation d'API,
-README, démonstration, #45 à #47), la réponse aux retours de la soutenance intermédiaire, et deux
-correctifs de fiabilité découverts en cours de route (#383, #385).
+Outside the planning, delivered during the sprint: the three end-of-project Must items (API
+documentation, README, demonstration, #45 to #47), the answer to the feedback of the intermediate
+defense, and two reliability fixes discovered along the way (#383, #385).
 
-## Ce qui reste, et ce qui est proposé
+## What remains, and what is proposed
 
-- US-33 et US-58 : terminer, ou reporter explicitement, décision du Product Owner en séance.
-- Livraison de `dev` vers `main` avant la démonstration : la production sert encore le code du
-  15 septembre.
+- US-33 and US-58: finish, or postpone explicitly, decision of the Product Owner during the
+  session.
+- Release of `dev` to `main` before the demonstration: production still serves the code of
+  15 September.
 
-## Démonstration
+## Demonstration
 
-À renseigner en séance.
+To be filled in during the session.
 
-## Retour du Product Owner
+## Feedback of the Product Owner
 
-À renseigner en séance.
+To be filled in during the session.

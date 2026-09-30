@@ -1,9 +1,9 @@
-# Dependabot surveille les dependances et ouvre une pull request quand une mise
-# a jour est disponible ou qu une faille est publiee. Repond au point npm audit
-# de la Definition of Done et prepare EN-29.
+# Dependabot watches the dependencies and opens a pull request when an update is available or a
+# vulnerability is published. It answers the npm audit point of the Definition of Done and prepares
+# EN-29.
 #
-# Les mises a jour sont groupees : six pull requests separees pour six montees
-# de version de developpement noieraient le board sans rien apporter.
+# Updates are grouped: six separate pull requests for six development version bumps would flood the
+# board without bringing anything.
 
 version: 2
 updates:
@@ -15,8 +15,7 @@ updates:
       time: '06:00'
       timezone: Europe/Paris
     open-pull-requests-limit: 5
-    # La cible est dev, comme toute contribution : main ne recoit que des
-    # livraisons.
+    # The target is dev, like every contribution: main only receives deliveries.
     target-branch: dev
     commit-message:
       prefix: 'chore(deps)'
@@ -28,8 +27,8 @@ updates:
       developpement:
         dependency-type: development
         update-types: [minor, patch]
-    # Une montee majeure change le contrat : elle merite sa propre pull request
-    # et sa propre relecture, jamais un groupe.
+    # A major bump changes the contract: it deserves its own pull request and its own review, never
+    # a group.
     ignore:
       - dependency-name: '*'
         update-types: ['version-update:semver-major']

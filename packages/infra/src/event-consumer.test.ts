@@ -20,17 +20,16 @@ const EVENT: DomainEvent = {
 interface Notification {
     eventId: string;
     userId: string;
-    // L une ou l autre, jamais les deux : la contrainte notifications_kind_chk
-    // refuse une ligne qui nommerait une tache et un projet.
+    // One or the other, never both: the notifications_kind_chk constraint refuses a row that would
+    // name a task and a project.
     itemId?: string;
     projectId?: string;
     invitationId?: string;
 }
 
-// Un vrai magasin en memoire, avec la meme regle d unicite que la base : la
-// cle est l identifiant de l evenement. Un mock qui renverrait simplement
-// `false` au second appel prouverait que le test sait compter, pas que le
-// systeme est idempotent.
+// A real in-memory store, with the same uniqueness rule as the database: the key is the event
+// identifier. A mock that simply returned `false` on the second call would prove that the test can
+// count, not that the system is idempotent.
 function fakeNotifications(): NotificationStore & { created: Notification[] } {
     const created: Notification[] = [];
     const handled = new Set<string>();
@@ -43,9 +42,8 @@ function fakeNotifications(): NotificationStore & { created: Notification[] } {
             created.push({ eventId, userId, itemId });
             return Promise.resolve(true);
         },
-        // Le meme ensemble `handled`, deliberement : processed_events porte une
-        // ligne par evenement, quel que soit le genre de la notification. Deux
-        // ensembles separes laisseraient passer un rejeu croise.
+        // The same `handled` set, on purpose: processed_events holds one row per event, whatever
+        // the kind of the notification. Two separate sets would let a cross replay through.
         notifyMemberAdded: (eventId, userId, projectId) => {
             if (handled.has(eventId)) return Promise.resolve(false);
             handled.add(eventId);
@@ -68,7 +66,7 @@ function fakeNotifications(): NotificationStore & { created: Notification[] } {
 }
 
 describe('consume', () => {
-    it('produit une notification pour le proprietaire de l item', async () => {
+    it('produces a notification for the owner of the item', async () => {
         const notifications = fakeNotifications();
 
         const outcome = await consume(EVENT, { notifications, logger: recordingLogger() });
@@ -80,10 +78,9 @@ describe('consume', () => {
         expect(await notifications.countUnread(OWNER_ID)).toBe(1);
     });
 
-    // Le critere de US-10 : rejouer deux fois le meme evenement laisse le
-    // systeme dans le meme etat. Le relais republie ce qu il n a pas pu marquer,
-    // donc une double livraison n est pas une hypothese d ecole.
-    it('laisse le meme etat quand le meme evenement est rejoue', async () => {
+    // The US-10 criterion: replaying the same event twice leaves the system in the same state. The
+    // relay republishes what it could not mark, so a double delivery is not a textbook hypothesis.
+    it('leaves the same state when the same event is replayed', async () => {
         const notifications = fakeNotifications();
         const logger = recordingLogger();
 
@@ -96,7 +93,7 @@ describe('consume', () => {
         expect(await notifications.countUnread(OWNER_ID)).toBe(1);
     });
 
-    it('traite deux evenements distincts comme deux faits', async () => {
+    it('treats two distinct events as two facts', async () => {
         const notifications = fakeNotifications();
         const other: DomainEvent = { ...EVENT, id: '01931f3a-0000-7000-8000-000000000009' };
 
@@ -106,7 +103,7 @@ describe('consume', () => {
         expect(notifications.created).toHaveLength(2);
     });
 
-    it('ne journalise que des identifiants', async () => {
+    it('logs identifiers only', async () => {
         const notifications = fakeNotifications();
         const logger = recordingLogger();
 
@@ -129,8 +126,8 @@ const EVENT_APPARTENANCE: DomainEvent = {
     payload: { projectId: PROJET_ID, memberId: MEMBRE_ID, addedBy: AJOUTE_PAR },
 };
 
-describe('consume, une appartenance creee', () => {
-    it('notifie la personne ajoutee, et elle seule', async () => {
+describe('consume, a membership created', () => {
+    it('notifies the person added, and only them', async () => {
         const notifications = fakeNotifications();
 
         const outcome = await consume(EVENT_APPARTENANCE, {
@@ -142,12 +139,12 @@ describe('consume, une appartenance creee', () => {
         expect(notifications.created).toEqual([
             { eventId: EVENT_APPARTENANCE.id, userId: MEMBRE_ID, projectId: PROJET_ID },
         ]);
-        // Celle qui ajoute sait ce qu elle vient de faire : la lui annoncer
-        // serait du bruit, et une notification de plus a effacer.
+        // The person who adds knows what they just did: announcing it to them would be noise, and
+        // one more notification to clear.
         expect(notifications.created.map(n => n.userId)).not.toContain(AJOUTE_PAR);
     });
 
-    it('ne notifie pas deux fois a la redelivrance', async () => {
+    it('does not notify twice on redelivery', async () => {
         const notifications = fakeNotifications();
 
         await consume(EVENT_APPARTENANCE, { notifications, logger: recordingLogger() });
@@ -160,10 +157,9 @@ describe('consume, une appartenance creee', () => {
         expect(notifications.created).toHaveLength(1);
     });
 
-    // La propriete qu on oublie : processed_events porte une ligne par
-    // evenement, pas une par genre. Deux registres separes laisseraient un
-    // rejeu croise produire deux effets pour un seul identifiant.
-    it('partage le registre des evenements traites avec les autres genres', async () => {
+    // The property one forgets: processed_events holds one row per event, not one per kind. Two
+    // separate registers would let a cross replay produce two effects for a single identifier.
+    it('shares the register of processed events with the other kinds', async () => {
         const notifications = fakeNotifications();
         const memeIdentifiant: DomainEvent = { ...EVENT_APPARTENANCE, id: EVENT.id };
 
@@ -178,12 +174,11 @@ describe('consume, une appartenance creee', () => {
     });
 });
 
-// Les deux ecritures du consommateur -- la reservation et la notification --
-// sont desormais faites par une seule fonction de base de donnees. Le faux
-// ci-dessous se comporte comme elle : ou les deux existent, ou aucune. Un faux
-// qui les separerait laisserait passer le defaut que la revue a trouve.
-describe('consume, atomicite de l effet', () => {
-    it('ne marque pas un evenement traite quand la notification n a pas pu etre creee', async () => {
+// The two writes of the consumer -- the reservation and the notification -- are now made by a
+// single database function. The fake below behaves like it: either both exist, or neither. A fake
+// that separated them would let through the defect the review found.
+describe('consume, atomicity of the effect', () => {
+    it('does not mark an event processed when the notification could not be created', async () => {
         const notifications: NotificationStore = {
             notifyItemCreated: () => Promise.reject(new Error('notifications: notify failed')),
             notifyMemberAdded: () => Promise.reject(new Error('notifications: notify failed')),
@@ -198,10 +193,10 @@ describe('consume, atomicite de l effet', () => {
         ).rejects.toThrow(/notify failed/);
     });
 
-    // Consequence directe : une redelivraison apres un echec doit encore avoir
-    // du travail. Si la reservation avait survecu a l echec, celle-ci
-    // repondrait "deja traite" et l effet serait perdu pour toujours.
-    it('applique l effet a la redelivraison qui suit un echec', async () => {
+    // Direct consequence: a redelivery after a failure must still have work to do. If the
+    // reservation had survived the failure, this one would answer "already processed" and the
+    // effect would be lost for good.
+    it('applies the effect on the redelivery that follows a failure', async () => {
         const store = fakeNotifications();
         let failNext = true;
         const flaky: NotificationStore = {

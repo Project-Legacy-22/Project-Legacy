@@ -73,7 +73,6 @@ export type Database = {
       }
       items: {
         Row: {
-          assignee_id: string | null
           created_at: string
           due_date: string | null
           id: string
@@ -84,11 +83,10 @@ export type Database = {
           project_id: string
           status: Database["public"]["Enums"]["item_status"]
           updated_at: string
-          user_id: string
+          user_id: string | null
           version: number
         }
         Insert: {
-          assignee_id?: string | null
           created_at?: string
           due_date?: string | null
           id?: string
@@ -99,11 +97,10 @@ export type Database = {
           project_id: string
           status?: Database["public"]["Enums"]["item_status"]
           updated_at?: string
-          user_id: string
+          user_id?: string | null
           version?: number
         }
         Update: {
-          assignee_id?: string | null
           created_at?: string
           due_date?: string | null
           id?: string
@@ -114,17 +111,10 @@ export type Database = {
           project_id?: string
           status?: Database["public"]["Enums"]["item_status"]
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
           version?: number
         }
         Relationships: [
-          {
-            foreignKeyName: "items_assignee_membership_fkey"
-            columns: ["project_id", "assignee_id"]
-            isOneToOne: false
-            referencedRelation: "project_memberships"
-            referencedColumns: ["project_id", "user_id"]
-          },
           {
             foreignKeyName: "items_project_id_fkey"
             columns: ["project_id"]
@@ -263,7 +253,7 @@ export type Database = {
           answered_at: string | null
           created_at: string
           id: string
-          invited_by: string
+          invited_by: string | null
           invitee_id: string
           project_id: string
           status: string
@@ -272,7 +262,7 @@ export type Database = {
           answered_at?: string | null
           created_at?: string
           id: string
-          invited_by: string
+          invited_by?: string | null
           invitee_id: string
           project_id: string
           status: string
@@ -281,7 +271,7 @@ export type Database = {
           answered_at?: string | null
           created_at?: string
           id?: string
-          invited_by?: string
+          invited_by?: string | null
           invitee_id?: string
           project_id?: string
           status?: string
@@ -449,6 +439,13 @@ export type Database = {
         Args: { p_account_id: string; p_id: string }
         Returns: boolean
       }
+      purge_expired_data: {
+        Args: { p_now?: string }
+        Returns: {
+          deleted: number
+          treatment: string
+        }[]
+      }
       record_invitation_notification: {
         Args: {
           p_event_id: string
@@ -494,7 +491,6 @@ export type Database = {
           p_project_id: string
         }
         Returns: {
-          assignee_id: string | null
           created_at: string
           due_date: string | null
           id: string
@@ -505,7 +501,7 @@ export type Database = {
           project_id: string
           status: Database["public"]["Enums"]["item_status"]
           updated_at: string
-          user_id: string
+          user_id: string | null
           version: number
         }
         SetofOptions: {

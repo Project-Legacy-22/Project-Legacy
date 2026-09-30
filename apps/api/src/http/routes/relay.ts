@@ -31,19 +31,21 @@ function matches(presented: string, expected: string): boolean {
 export function relayRouter(useCases: NotificationUseCases, secret: string): Router {
     const router = Router();
 
-    const trigger: RequestHandler = (req, res, next) => {
+    const guarded = (run: () => Promise<object>): RequestHandler => (req, res, next) => {
         if (!matches(presentedSecret(req), secret)) {
             res.status(403).send({ type: 'forbidden', title: 'Forbidden', status: 403 });
             return;
         }
 
-        useCases
-            .deliverPending()
+        run()
             .then(result => res.send(result))
             .catch(next);
     };
 
-    router.post('/internal/relay', trigger);
+    router.post('/internal/relay', guarded(() => useCases.deliverPending()));
+    // The daily retention purge (US-39), behind the same secret: the caller is
+    // a scheduled workflow too, and a second secret would guard nothing more.
+    router.post('/internal/purge', guarded(() => useCases.purgeExpired()));
 
     return router;
 }

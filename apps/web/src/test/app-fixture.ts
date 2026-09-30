@@ -4,6 +4,9 @@ import type { CredentialsApi } from '../api/credentials-api';
 import type { ItemDto, ItemPageDto, ItemsApi } from '../api/items-api';
 import type { MembersApi } from '../api/members-api';
 import type { ProjectsApi } from '../api/projects-api';
+import { viewHref } from '../hooks/use-view';
+import type { View } from '../hooks/use-view';
+import { click, flushTimers, getElement } from './react-root';
 import { anAttention } from './builders/attention-builder';
 import { anItem } from './builders/item-builder';
 
@@ -80,6 +83,7 @@ export function createProjectsApi(overrides: Partial<ProjectsApi> = {}): Project
         }),
         createProject: async () => PROJECT,
         deleteProject: async () => undefined,
+        renameProject: async (_projectId, { name }) => ({ ...PROJECT, name }),
         ...overrides,
     };
 }
@@ -105,4 +109,16 @@ export function createMembersApi(overrides: Partial<MembersApi> = {}): MembersAp
         answerInvitation: async () => undefined,
         ...overrides,
     };
+}
+
+// Opens the application on a view, as a link or a reload would (#446). Called
+// after createReactTestRoot, which puts every test back on the home address.
+export function startAt(view: View): void {
+    window.history.replaceState(null, '', viewHref(view));
+}
+
+// Follows the navigation link, as a person would.
+export async function openView(view: View): Promise<void> {
+    await click(getElement<HTMLAnchorElement>(`.view-nav a[href="${viewHref(view)}"]`));
+    await flushTimers();
 }

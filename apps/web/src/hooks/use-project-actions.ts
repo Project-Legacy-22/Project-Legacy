@@ -79,6 +79,23 @@ async function removeProject(context: ActionContext, project: ProjectDto): Promi
     }
 }
 
+// The field of the rename form shows a refusal, as the creation form does; the
+// section announces the success.
+async function renameProject(context: ActionContext, project: ProjectDto, name: string): Promise<AddProjectResult> {
+    context.setPendingProjectId(project.id);
+    context.setFeedback({ status: 'idle' });
+    try {
+        const renamed = await context.api.renameProject(project.id, { name });
+        context.setProjects((current) => current.map((candidate) => (candidate.id === renamed.id ? renamed : candidate)));
+        context.setFeedback({ status: 'success', message: labels.projectRenamed(project.name, renamed.name) });
+        return { status: 'success' };
+    } catch (error) {
+        return { status: 'error', message: projectErrorMessage(error, labels.renameProjectFailed) };
+    } finally {
+        context.setPendingProjectId(null);
+    }
+}
+
 interface ProjectActionDependencies {
     api: ProjectsApi;
     members: MembersApi;
@@ -97,6 +114,10 @@ export function useProjectActions(dependencies: ProjectActionDependencies) {
         [context],
     );
     const remove = useCallback((project: ProjectDto) => removeProject(context, project), [context]);
+    const rename = useCallback(
+        (project: ProjectDto, name: string) => renameProject(context, project, name),
+        [context],
+    );
     const adjustItemCount = useCallback(
         (change: number) => {
             dependencies.setProjects((current) =>
@@ -110,5 +131,5 @@ export function useProjectActions(dependencies: ProjectActionDependencies) {
         [dependencies],
     );
 
-    return { feedback, isAdding, pendingProjectId, add, remove, adjustItemCount };
+    return { feedback, isAdding, pendingProjectId, add, remove, rename, adjustItemCount };
 }

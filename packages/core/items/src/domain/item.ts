@@ -26,12 +26,12 @@ export interface Item {
     // in the domain prevents an implicit Date conversion from shifting it.
     dueDate: string | null;
     projectId: string;
-    // Every item belongs to a user. The application is single-user for now
-    // (D-20), so this is always the system account, but the column is mandatory
-    // from day one so authentication (US-11) and erasure (US-13) do not force a
-    // model change later. A plain string, like `id`: branded id types are a
-    // separate cleanup, not this change.
-    ownerId: string;
+    // Who created the item, or null once that account has been erased. A
+    // shared project's tasks outlive their creator's account (US-13, #425):
+    // erasure breaks this link rather than removing the row, so nothing here
+    // may assume it is always set. A plain string, like `id`: branded id
+    // types are a separate cleanup, not this change.
+    ownerId: string | null;
     // Who the task is for (US-58, #419): members of its project, possibly
     // none. Never the creator by default: ownerId says who created it, and
     // the two are different facts.
@@ -172,7 +172,7 @@ export function rehydrateItem(row: {
     priority: ItemPriority;
     dueDate: string | null;
     projectId: string;
-    ownerId: string;
+    ownerId: string | null;
     assigneeIds: readonly string[];
 }): Item {
     return {

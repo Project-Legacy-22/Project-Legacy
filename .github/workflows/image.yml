@@ -1,17 +1,14 @@
-# Publication de l image sur GitHub Container Registry, a chaque livraison sur
-# main.
+# Publication of the image to GitHub Container Registry, on every delivery to main.
 #
-# Les verifications ne sont pas reecrites ici : le workflow ci est appele tel
-# quel. Une image ne peut donc pas etre publiee sans elles, par construction et
-# non par convention.
+# The checks are not rewritten here: the ci workflow is called as it is. An image therefore cannot
+# be published without them, by construction and not by convention.
 
 name: image
 
 on:
   push:
     branches: [main]
-  # Permet de republier une image sans nouveau commit, par exemple apres une
-  # correction du registre.
+  # Makes it possible to republish an image without a new commit, for instance after a registry fix.
   workflow_dispatch:
 
 permissions:
@@ -25,15 +22,14 @@ jobs:
   verifier:
     name: Verifications
     uses: ./.github/workflows/ci.yml
-    # Un workflow appele ne recoit aucun secret du workflow appelant sans cette
-    # ligne, et l analyse SonarCloud en lit un. Sans elle, le scanner recoit un
-    # jeton vide, repond « Not authorized or project not found » et fait echouer
-    # la campagne : la livraison du 10 septembre n a donc publie ni image ni
-    # release. Le symptome ne se voyait pas sur une pull request, ou ci.yml
-    # s execute comme workflow a part entiere et accede aux secrets du depot.
+    # A called workflow receives no secret from the calling workflow without this line, and the
+    # SonarCloud analysis reads one. Without it, the scanner receives an empty token, answers "Not
+    # authorized or project not found" and fails the run: the delivery of 10 September therefore
+    # published neither an image nor a release. The symptom did not show on a pull request, where
+    # ci.yml runs as a workflow in its own right and has access to the repository's secrets.
     #
-    # inherit plutot qu un passage nomme : ci.yml en lira d autres, et une liste
-    # nominative reintroduirait le meme oubli au prochain secret ajoute.
+    # inherit rather than a named passing: ci.yml will read others, and a named list would bring
+    # back the same oversight with the next secret added.
     secrets: inherit
 
   publier:
@@ -42,7 +38,7 @@ jobs:
     timeout-minutes: 20
     needs: verifier
     permissions:
-      # write, et non read : la publication cree aussi une release.
+      # write, and not read: the publication also creates a release.
       contents: write
       packages: write
       # Necessaires a l attestation de provenance.
@@ -60,9 +56,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Les etiquettes OCI rattachent l image a sa source, sa licence et sa
-      # date de construction. Le tag sha-<court> est celui qu on cite en revue :
-      # il remonte au commit exact.
+      # The OCI labels link the image to its source, its licence and its build date. The sha-<short>
+      # tag is the one cited in review: it leads back to the exact commit.
       - name: Calculer les tags et les etiquettes
         id: meta
         uses: docker/metadata-action@v6
@@ -83,16 +78,14 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # Le cache est partage avec le job image de ci : l image a deja ete
-          # construite sur la pull request, seules les couches modifiees sont
-          # reconstruites ici.
+          # The cache is shared with the image job of ci: the image was already built on the pull
+          # request, only the changed layers are rebuilt here.
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # Rattache l image au commit et au workflow qui l ont produite, de facon
-      # verifiable. Sa disponibilite depend de l offre du compte : son echec ne
-      # doit pas empecher une publication par ailleurs valide, mais il est
-      # visible dans l execution et suivi par l issue #92.
+      # Links the image to the commit and the workflow that produced it, in a verifiable way. Its
+      # availability depends on the account's plan: its failure must not prevent an otherwise valid
+      # publication, but it is visible in the run and tracked by issue #92.
       - name: Attester la provenance
         continue-on-error: true
         uses: actions/attest-build-provenance@v4
@@ -101,8 +94,8 @@ jobs:
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
 
-      # Une release par livraison : elle donne un point de reference cite en
-      # revue, et ses notes listent les items livres sans travail manuel.
+      # One release per delivery: it gives a reference point cited in review, and its notes list the
+      # delivered items without manual work.
       - name: Publier la release
         env:
           GH_TOKEN: ${{ github.token }}

@@ -32,7 +32,7 @@ declare
   -- Written by the sign-up form in the real flow; PRIVACY_POLICY_VERSION in
   -- packages/contracts/src/auth.ts. The mirroring trigger records it as the
   -- account's consent.
-  policy_version   constant text := '2026-09-12';
+  policy_version   constant text := '2026-09-25';
   camille_default  uuid;
   hugo_default     uuid;
   account          record;

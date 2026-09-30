@@ -7,7 +7,7 @@ import { ApiError } from './api/items-api';
 import type { ProjectDto } from './api/projects-api';
 import { App } from './app';
 import { labels } from './labels';
-import { createApi, createAuth, createProjectsApi, itemPage } from './test/app-fixture';
+import { createApi, createAuth, createProjectsApi, itemPage, startAt } from './test/app-fixture';
 import { anAttention, anAttentionItem } from './test/builders/attention-builder';
 import { anItem } from './test/builders/item-builder';
 import { click, createReactTestRoot, flushTimers, getElement, tabbables, waitFor } from './test/react-root';
@@ -55,17 +55,18 @@ afterEach(async () => {
 });
 
 describe('home screen', () => {
-    it('vient en premier apres la connexion, avant la liste des projets', async () => {
+    it('is the view opened after sign-in, alone in the main content', async () => {
         await renderApp({ listAttention: async () => anAttention() });
 
         const sections = [...document.querySelectorAll('main > section')].map((section) =>
             section.getAttribute('aria-labelledby'),
         );
 
-        expect(sections.slice(0, 2)).toEqual(['home-heading', 'projects-heading']);
+        expect(sections).toEqual(['home-heading']);
+        expect(getElement('.view-nav [aria-current="page"]').textContent).toBe(labels.viewName('home'));
     });
 
-    it('montre les taches de chaque groupe avec le projet ou elles vivent', async () => {
+    it('shows the tasks of each group with the project they live in', async () => {
         const attention = anAttention({
             workload: 'open',
             overdue: { items: [anAttentionItem({ ...LATE, projectName: SECOND.name })], hasMore: true },
@@ -77,23 +78,24 @@ describe('home screen', () => {
         expect(homeText()).toContain(labels.attentionHasMore);
     });
 
-    it('ouvre la tache dans son projet et y porte le focus', async () => {
+    it('opens the task in its project and moves the focus to it', async () => {
         const listItems = vi.fn<ItemsApi['listItems']>(async (projectId) =>
             itemPage(projectId === SECOND.id ? [LATE] : []),
         );
         const attention = anAttention({ workload: 'open', overdue: { items: [anAttentionItem({ ...LATE, projectName: SECOND.name })], hasMore: false } });
         await renderApp({ listAttention: async () => attention }, createApi({ listItems }));
         const row = rowNamed('File the report');
+        expect(tabbables()).toContain(row);
 
         await click(row);
         await waitFor(() => document.activeElement?.getAttribute('data-move-item-id') === LATE.id);
 
-        expect(tabbables()).toContain(row);
+        expect(getElement('.view-nav [aria-current="page"]').textContent).toBe(labels.viewName('projects'));
         expect(getElement('#items-heading').textContent).toContain(SECOND.name);
         expect(document.activeElement?.getAttribute('data-move-item-id')).toBe(LATE.id);
     });
 
-    it('distingue un compte sans tache d un compte ou tout est termine', async () => {
+    it('tells an account without tasks from an account where everything is done', async () => {
         await renderApp({ listAttention: async () => anAttention({ workload: 'none' }) });
         const nothingYet = homeText();
         await root.unmount();
@@ -105,7 +107,7 @@ describe('home screen', () => {
         expect(homeText()).toContain(labels.attentionEmpty('all_done'));
     });
 
-    it('signale un echec et recharge a la demande', async () => {
+    it('reports a failure and reloads on request', async () => {
         const listAttention = vi
             .fn<AttentionApi['listAttention']>()
             .mockRejectedValueOnce(new ApiError(500, labels.loadAttentionFailed))
@@ -119,13 +121,14 @@ describe('home screen', () => {
         expect(homeText()).toContain(labels.attentionEmpty('all_done'));
     });
 
-    it('recharge ce qui demande attention apres une tache terminee plus bas', async () => {
+    it('reloads what needs attention after a task is completed in its project', async () => {
         const listAttention = vi.fn<AttentionApi['listAttention']>(async () => anAttention({ workload: 'open' }));
         const item = anItem({ projectId: FIRST.id, name: 'Water the plants' });
         const items = createApi({
             listItems: async () => itemPage([item]),
             moveItem: async () => ({ ...item, status: 'done', version: 2 }),
         });
+        startAt('projects');
         await renderApp({ listAttention }, items);
         const callsBefore = listAttention.mock.calls.length;
 
@@ -136,7 +139,7 @@ describe('home screen', () => {
         expect(listAttention.mock.calls.length).toBeGreaterThan(callsBefore);
     });
 
-    it('ne presente aucune violation axe avec des groupes remplis', async () => {
+    it('has no axe violation with filled groups', async () => {
         const attention = anAttention({ workload: 'open', highPriority: { items: [anAttentionItem({ priority: 'high' })], hasMore: false } });
         await renderApp({ listAttention: async () => attention });
 

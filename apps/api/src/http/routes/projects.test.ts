@@ -14,6 +14,7 @@ import {
     makeListProjectMembers,
     makeListProjects,
     makeRemoveProject,
+    makeRenameProject,
 } from '@legacy/core-projects';
 import type { Project } from '@legacy/core-projects';
 
@@ -27,7 +28,7 @@ import type {
     InMemoryProjectRepository,
     ProjectMembership,
 } from '../../../../../packages/core/projects/test/fakes/in-memory-project-repository.js';
-import { ProjectMemberListDto } from '@legacy/contracts';
+import { ProjectDto, ProjectMemberListDto } from '@legacy/contracts';
 
 import type { AppUseCases } from '../../composition-root.js';
 import { recordingLogger } from '../../../../../packages/contracts/test/fakes/recording-logger.js';
@@ -46,9 +47,9 @@ const ADRESSE = 'alice@example.com';
 const MOT_DE_PASSE = 'MotDePasse2026';
 const AUTRE_ADRESSE = 'bob@example.com';
 
-// Le projet partage de ces cas : la titulaire de la session, proprietaire, et
-// un second membre. OTHER_PROJECT_ID n appartient qu a l autre compte, ce qui
-// donne le cas du projet existant dont on n est pas membre.
+// The shared project of these cases: the session holder, as owner, and a second member.
+// OTHER_PROJECT_ID only belongs to the other account, which gives the case of an existing project
+// one is not a member of.
 const APPARTENANCES = [
     { projectId: PROJECT_ID, userId: ACCOUNT_ID, email: ADRESSE, role: 'owner' as const },
     { projectId: PROJECT_ID, userId: OTHER_ACCOUNT_ID, email: AUTRE_ADRESSE, role: 'member' as const },
@@ -72,6 +73,7 @@ function useCasesOver(
                 newId: () => PROJECT_ID,
             }),
             removeProject: makeRemoveProject(projects),
+            renameProject: makeRenameProject(projects),
             listProjectMembers: makeListProjectMembers(
                 inMemoryMembershipRepository(APPARTENANCES),
             ),
@@ -252,11 +254,54 @@ describe('projects API', () => {
         expect(repository.projects.has(PROJECT_ID)).toBe(true);
     });
 
-    // La divulgation assumee de US-33 : les membres d un projet voient
-    // l adresse des autres. Il n existe en revanche aucune route qui liste ou
-    // cherche des comptes -- l entree unique est un identifiant de projet.
+    describe('PATCH /projects/:projectId', () => {
+        const OWNED = { id: PROJECT_ID, name: 'Mine', role: 'owner' as const, itemCount: 3 };
+
+        beforeEach(async () => {
+            await harness.close();
+            await serve(
+                [OWNED, { id: OTHER_PROJECT_ID, name: 'Theirs', role: 'owner', itemCount: 0 }],
+                [
+                    { projectId: PROJECT_ID, userId: ACCOUNT_ID, role: 'owner' },
+                    { projectId: OTHER_PROJECT_ID, userId: ACCOUNT_ID, role: 'member' },
+                    { projectId: OTHER_PROJECT_ID, userId: OTHER_ACCOUNT_ID, role: 'owner' },
+                ],
+            );
+        });
+
+        it('renames a project the caller owns and returns it in the contract shape', async () => {
+            const response = await harness.request(`/projects/${PROJECT_ID}`, json('PATCH', { name: ' Roadmap ' }));
+
+            const body: unknown = await response.json();
+            expect([response.status, ProjectDto.safeParse(body).success]).toEqual([200, true]);
+            expect(body).toEqual({ ...OWNED, name: 'Roadmap' });
+            expect(repository.projects.get(PROJECT_ID)?.name).toBe('Roadmap');
+        });
+
+        it('answers a member who does not own the project like an unknown project', async () => {
+            const denied = await harness.request(`/projects/${OTHER_PROJECT_ID}`, json('PATCH', { name: 'Taken' }));
+            const unknown = await harness.request(`/projects/${UNKNOWN_PROJECT_ID}`, json('PATCH', { name: 'Taken' }));
+
+            expect([denied.status, unknown.status]).toEqual([404, 404]);
+            expect(repository.projects.get(OTHER_PROJECT_ID)?.name).toBe('Theirs');
+        });
+
+        it.each([
+            ['an empty name', { name: '   ' }],
+            ['a name over the limit', { name: 'x'.repeat(256) }],
+            ['a missing name', {}],
+        ])('rejects %s and keeps the project unchanged', async (_case, body) => {
+            const response = await harness.request(`/projects/${PROJECT_ID}`, json('PATCH', body));
+
+            expect(response.status).toBe(400);
+            expect(repository.projects.get(PROJECT_ID)?.name).toBe('Mine');
+        });
+    });
+
+    // The disclosure US-33 accepts: the members of a project see the others' addresses. There is,
+    // however, no route that lists or searches accounts -- the only entry is a project identifier.
     describe('GET /projects/:projectId/members', () => {
-        it('rend la liste, proprietaires en tete', async () => {
+        it('returns the list, owners first', async () => {
             const response = await harness.request(`/projects/${PROJECT_ID}/members`);
 
             expect(response.status).toBe(200);
@@ -269,9 +314,9 @@ describe('projects API', () => {
             });
         });
 
-        // La lecon de #344 : la route construisait son DTO par affectation, et
-        // seul le navigateur validait la reponse. On la valide ici.
-        it('rend une reponse que le contrat accepte', async () => {
+        // The lesson of #344: the route built its DTO by assignment, and only the browser validated
+        // the response. It is validated here.
+        it('returns a response the contract accepts', async () => {
             const body = await (await harness.request(`/projects/${PROJECT_ID}/members`)).json();
 
             const lu = ProjectMemberListDto.safeParse(body);
@@ -281,15 +326,14 @@ describe('projects API', () => {
             ).toEqual([]);
         });
 
-        // 404 et non 403 : un 403 confirmerait que le projet existe a qui
-        // devine des identifiants.
-        it('repond comme un projet inexistant quand on n en est pas membre', async () => {
+        // 404 and not 403: a 403 would confirm the project exists to whoever guesses identifiers.
+        it('answers like an absent project when the caller is not a member', async () => {
             const response = await harness.request(`/projects/${OTHER_PROJECT_ID}/members`);
 
             expect(response.status).toBe(404);
         });
 
-        it('repond de meme pour un projet que personne ne possede', async () => {
+        it('answers the same for a project nobody owns', async () => {
             const response = await harness.request(`/projects/${UNKNOWN_PROJECT_ID}/members`);
 
             expect(response.status).toBe(404);

@@ -73,7 +73,7 @@ function appUseCases(authenticate?: IdentityProvider['authenticate']): AppUseCas
     });
 }
 
-describe('durcissement de l API', () => {
+describe('API hardening', () => {
     let harness: Harness;
 
     async function serve(
@@ -87,8 +87,8 @@ describe('durcissement de l API', () => {
 
     afterEach(() => harness.close());
 
-    describe('en-tetes de securite', () => {
-        it('pose une politique de securite du contenu restrictive sur chaque reponse', async () => {
+    describe('security headers', () => {
+        it('sets a restrictive content security policy on every response', async () => {
             await serve();
 
             const response = await harness.request('/');
@@ -99,7 +99,7 @@ describe('durcissement de l API', () => {
             expect(csp).toContain("object-src 'none'");
         });
 
-        it('interdit au navigateur de deviner le type de contenu', async () => {
+        it('forbids the browser from guessing the content type', async () => {
             await serve();
 
             const response = await harness.request('/');
@@ -107,7 +107,7 @@ describe('durcissement de l API', () => {
             expect(response.headers.get('x-content-type-options')).toBe('nosniff');
         });
 
-        it('n annonce pas le serveur applicatif', async () => {
+        it('does not announce the application server', async () => {
             await serve();
 
             const response = await harness.request('/');
@@ -117,7 +117,7 @@ describe('durcissement de l API', () => {
     });
 
     describe('CORS', () => {
-        it('renvoie l origine du front telle quelle, jamais un joker', async () => {
+        it('returns the front origin as it is, never a wildcard', async () => {
             await serve();
 
             const response = await harness.request('/auth/me', { headers: { Origin: ORIGIN } });
@@ -126,7 +126,7 @@ describe('durcissement de l API', () => {
             expect(response.headers.get('access-control-allow-credentials')).toBe('true');
         });
 
-        it('n autorise aucune autre origine', async () => {
+        it('allows no other origin', async () => {
             await serve();
 
             const response = await harness.request('/auth/me', {
@@ -136,7 +136,7 @@ describe('durcissement de l API', () => {
             expect(response.headers.get('access-control-allow-origin')).toBeNull();
         });
 
-        it('repond au prevol sans le laisser atteindre une route', async () => {
+        it('answers the preflight without letting it reach a route', async () => {
             await serve();
 
             const autorise = await harness.request('/auth/login', {
@@ -155,8 +155,8 @@ describe('durcissement de l API', () => {
         });
     });
 
-    describe('borne sur la taille du corps', () => {
-        it('refuse un corps trop gros par un 413 explicite, sans incident', async () => {
+    describe('bound on the body size', () => {
+        it('refuses a body that is too large with an explicit 413, without an incident', async () => {
             await serve();
 
             const oversized = { email: ADRESSE, password: 'x'.repeat(20_000) };
@@ -168,7 +168,7 @@ describe('durcissement de l API', () => {
             expect(harness.logger.lines.map(line => line.level)).not.toContain('error');
         });
 
-        it('refuse un corps JSON malforme par un 400, pas un 500', async () => {
+        it('refuses a malformed JSON body with a 400, not a 500', async () => {
             await serve();
 
             const response = await harness.request('/auth/login', {
@@ -184,8 +184,8 @@ describe('durcissement de l API', () => {
         });
     });
 
-    describe('non-divulgation dans les erreurs', () => {
-        it('reduit une panne interne a un message generique, la cause restant au journal', async () => {
+    describe('non-disclosure in errors', () => {
+        it('reduces an internal failure to a generic message, the cause staying in the log', async () => {
             const sqlLeak = () =>
                 Promise.reject(new Error('relation "accounts" does not exist: SELECT id FROM accounts'));
             await serve({}, sqlLeak);
@@ -230,10 +230,10 @@ describe('durcissement de l API', () => {
         });
     });
 
-    describe('confiance proxy et cle du limiteur de debit', () => {
-        // Onze essais depassent le budget d authentification (dix). Chaque essai
-        // porte l adresse transmise voulue ; le contenu de la requete importe
-        // peu, seul son client compte pour le limiteur.
+    describe('proxy trust and rate limiter key', () => {
+        // Eleven attempts exceed the authentication budget (ten). Each attempt carries the
+        // forwarded address wanted; the content of the request hardly matters, only its client
+        // counts for the limiter.
         function badLogins(forwardedFor: (attempt: number) => string): Promise<Response>[] {
             return Array.from({ length: 11 }, (_unused, attempt) =>
                 harness.request('/auth/login', {
@@ -249,7 +249,7 @@ describe('durcissement de l API', () => {
         const oneClient = (): string => '203.0.113.7';
         const oneClientEach = (attempt: number): string => `198.51.100.${String(attempt + 1)}`;
 
-        it('limite une meme adresse transmise quand un proxy est declare', async () => {
+        it('limits a same forwarded address when a proxy is declared', async () => {
             await serve({ trustProxy: 1 });
 
             const responses = await Promise.all(badLogins(oneClient));
@@ -268,7 +268,7 @@ describe('durcissement de l API', () => {
             expect(retryAfter).toBeLessThanOrEqual(5 * 60);
         });
 
-        it('ne confond pas des adresses transmises distinctes quand un proxy est declare', async () => {
+        it('does not confuse distinct forwarded addresses when a proxy is declared', async () => {
             await serve({ trustProxy: 1 });
 
             const responses = await Promise.all(badLogins(oneClientEach));
@@ -276,7 +276,7 @@ describe('durcissement de l API', () => {
             expect(responses.filter(response => response.status === 429)).toHaveLength(0);
         });
 
-        it('ignore l adresse transmise et retombe sur la connexion quand aucun proxy n est declare', async () => {
+        it('ignores the forwarded address and falls back to the connection when no proxy is declared', async () => {
             await serve({ trustProxy: 0 });
 
             const responses = await Promise.all(badLogins(oneClientEach));

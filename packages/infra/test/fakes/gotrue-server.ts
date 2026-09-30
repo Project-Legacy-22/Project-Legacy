@@ -40,9 +40,8 @@ export const SESSION = {
     user: UTILISATEUR,
 };
 
-// Les routes de GoTrue que l adaptateur appelle. Le serveur ignore la chaine de
-// requete, donc les deux echanges de /token -- mot de passe et rafraichissement
-// -- passent par la meme cle.
+// The GoTrue routes the adapter calls. The server ignores the query string, so both /token
+// exchanges -- password and refresh -- go through the same key.
 export const SIGNUP = 'POST /auth/v1/signup';
 export const TOKEN = 'POST /auth/v1/token';
 export const USER = 'GET /auth/v1/user';

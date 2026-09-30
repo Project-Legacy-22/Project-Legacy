@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 
 import { PASSWORD_POLICY } from '@legacy/contracts';
 
+import { useDocumentTitle } from '../hooks/use-document-title';
 import { labels } from '../labels';
 import { AuthField } from './auth-field';
 import { FormOutcome } from './form-outcome';
@@ -70,6 +71,7 @@ function NewPasswordForm({ isSubmitting, onSubmit }: { isSubmitting: boolean; on
 // needs to land here. The links out are full page loads, which also drop any
 // now-revoked cookie this browser still holds.
 export function ResetPasswordPage({ token, isSubmitting, onSubmit }: ResetPasswordPageProps) {
+    useDocumentTitle(labels.resetPasswordTitle);
     const [done, setDone] = useState(false);
 
     async function submit(password: string): Promise<SubmitResult> {

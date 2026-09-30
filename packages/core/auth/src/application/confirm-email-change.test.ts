@@ -11,7 +11,7 @@ const MOT_DE_PASSE = 'MotDePasse2026';
 const NEUVE = 'alice.neuf@example.com';
 
 describe('confirmEmailChange', () => {
-    it('bascule l identifiant vers la nouvelle adresse', async () => {
+    it('switches the identifier to the new address', async () => {
         const provider = inMemoryIdentityProvider([
             { id: 'account-1', email: ADRESSE, password: MOT_DE_PASSE },
         ]);
@@ -31,7 +31,7 @@ describe('confirmEmailChange', () => {
         await expect(makeSignIn(provider)(ADRESSE, MOT_DE_PASSE)).rejects.toThrow();
     });
 
-    it('traduit un jeton rejete en lien de confirmation invalide', async () => {
+    it('translates a rejected token into an invalid confirmation link', async () => {
         const confirmEmailChange = makeConfirmEmailChange({
             ...inMemoryIdentityProvider(),
             confirmEmailChange: () => Promise.resolve('token-rejected'),
@@ -40,7 +40,7 @@ describe('confirmEmailChange', () => {
         await expect(confirmEmailChange('jeton-perime')).rejects.toBeInstanceOf(InvalidEmailChangeToken);
     });
 
-    it('ne laisse pas le jeton dans le message d erreur', async () => {
+    it('keeps the token out of the error message', async () => {
         const confirmEmailChange = makeConfirmEmailChange({
             ...inMemoryIdentityProvider(),
             confirmEmailChange: () => Promise.resolve('token-rejected'),

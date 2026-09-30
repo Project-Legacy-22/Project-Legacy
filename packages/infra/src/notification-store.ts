@@ -34,11 +34,10 @@ export interface NotificationStore extends NotificationRepository {
     // processed_events, not by reading first and writing after: two workers
     // racing would both pass that read.
     notifyItemCreated(eventId: string, userId: string, itemId: string): Promise<boolean>;
-    // Meme contrat, meme idempotence : la cle est l identifiant de
-    // l evenement, et processed_events n en porte qu une ligne quel que
-    // soit le genre de la notification.
+    // Same contract, same idempotence: the key is the event identifier, and processed_events holds
+    // a single row for it whatever the kind of the notification.
     notifyMemberAdded(eventId: string, userId: string, projectId: string): Promise<boolean>;
-    // La personne invitee (#401), meme contrat et meme idempotence.
+    // The person invited (#401), same contract and same idempotence.
     notifyInvited(invitation: InvitedNotification): Promise<boolean>;
 }
 
@@ -167,7 +166,7 @@ export function createSupabaseNotificationStore(settings: SupabaseSettings): Not
         },
 
         async notifyMemberAdded(eventId, userId, projectId) {
-            // Une seule requete, pour la meme raison que ci-dessus.
+            // A single request, for the same reason as above.
             const { data, error } = await client.rpc('record_member_added_notification', {
                 p_event_id: eventId,
                 p_user_id: userId,

@@ -1,10 +1,8 @@
-# Image de production : l API Express et le front construit, servis sur le meme
-# port. Vite ecrit son bundle dans la sortie de l API, il n y a donc qu un seul
-# artefact a publier.
+# Production image: the Express API and the built front, served on the same port. Vite writes its
+# bundle into the API output, so there is only one artifact to publish.
 #
-# Trois etapes. Les dependances de production sont installees separement de
-# celles de developpement : l image finale ne recoit que les premieres, sans
-# avoir a desinstaller quoi que ce soit ensuite.
+# Three stages. The production dependencies are installed separately from the development ones: the
+# final image only receives the former, without having to uninstall anything afterwards.
 
 ARG NODE_VERSION=22.12
 
@@ -12,8 +10,8 @@ ARG NODE_VERSION=22.12
 FROM node:${NODE_VERSION}-alpine AS deps
 WORKDIR /app
 
-# Les manifestes sont copies avant le reste du code : tant qu ils ne changent
-# pas, Docker reutilise la couche d installation, qui est de loin la plus longue.
+# The manifests are copied before the rest of the code: as long as they do not change, Docker reuses
+# the install layer, which is by far the longest.
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
@@ -46,18 +44,17 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# L image tourne sans privilege. node:alpine fournit deja l utilisateur `node`.
+# The image runs without privileges. node:alpine already provides the `node` user.
 USER node
 
-# Seuls la sortie compilee et les manifestes traversent. Copier `packages`
-# entier ferait entrer les sources TypeScript et les tests dans l image
-# publiee : inutiles a l execution, et autant de surface en plus.
+# Only the compiled output and the manifests go through. Copying the whole of `packages` would bring
+# the TypeScript sources and the tests into the published image: useless at run time, and that much
+# more surface.
 COPY --chown=node:node --from=deps /app/node_modules ./node_modules
 COPY --chown=node:node --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --chown=node:node --from=builder /app/apps/api/package.json ./apps/api/
-# Le consommateur d evenements voyage dans la meme image que l API : un seul
-# artefact a publier et a versionner, deux commandes pour le demarrer. Sans lui,
-# l image contient un producteur dont personne ne vide la file.
+# The event consumer travels in the same image as the API: a single artifact to publish and version,
+# two commands to start it. Without it, the image contains a producer whose queue nobody empties.
 COPY --chown=node:node --from=builder /app/apps/worker/dist ./apps/worker/dist
 COPY --chown=node:node --from=builder /app/apps/worker/package.json ./apps/worker/
 COPY --chown=node:node --from=builder /app/packages/contracts/dist ./packages/contracts/dist
@@ -68,12 +65,15 @@ COPY --chown=node:node --from=builder /app/packages/infra/dist ./packages/infra/
 COPY --chown=node:node --from=builder /app/packages/infra/package.json ./packages/infra/
 COPY --chown=node:node package.json ./
 
-# Documente le port ecoute ; le port reel se configure par l environnement.
+# Documents the listening port; the real port is configured through the environment.
 EXPOSE 3000
 
-# L API par defaut. Le worker se lance depuis la meme image en remplacant la
-# commande :
-#   docker run --entrypoint node <image> apps/worker/dist/index.js
-# Deux processus distincts, ce que l ADR-0007 demande, sans deuxieme image a
-# construire et a garder synchronisee.
+# Node is already in the image. An HTTP 503 means a dependency failed, not a
+# healthy process; no additional probe binary or secret is needed.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD node -e "fetch('http://127.0.0.1:' + (process.env.PORT || '3000') + '/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+
+# The API by default. The worker starts from the same image by replacing the command: `docker run
+# --entrypoint node <image> apps/worker/dist/index.js`. Two separate processes, as ADR-0007 asks,
+# without a second image to build and keep in sync.
 CMD ["node", "apps/api/dist/index.js"]

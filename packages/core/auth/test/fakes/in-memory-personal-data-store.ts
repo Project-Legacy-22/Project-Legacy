@@ -108,8 +108,8 @@ export function inMemoryPersonalDataStore(seed: SeededAccount[] = []): InMemoryP
                 (entry) =>
                     entry.ownerId !== accountId &&
                     !produced.has(entry.row.eventId) &&
-                    // Une notification sans tache n est liee a aucune tache
-                    // supprimee : ce filtre ne la concerne pas.
+                    // A notification without a task is linked to no deleted task: this filter does
+                    // not concern it.
                     !(entry.row.itemId !== null && removedItemIds.has(entry.row.itemId)),
             );
             outbox = outbox.filter((entry) => entry.ownerId !== accountId);

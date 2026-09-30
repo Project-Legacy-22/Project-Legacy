@@ -25,12 +25,13 @@ export const InvitationIdParams = z.object({
 // Who invites and into what, for the person invited. The inviter's address is
 // shown because an invitation from an unnamed sender cannot be judged; it is
 // the only address that crosses to someone outside the project, and the GDPR
-// register says so.
+// register says so. It is null once the inviter's account has been erased
+// (#425): the invitation itself is kept, the address is not.
 export const PendingInvitationDto = z.object({
     id: z.uuid(),
     projectId: z.uuid(),
     projectName: z.string(),
-    invitedByEmail: z.string(),
+    invitedByEmail: z.string().nullable(),
     createdAt: z.iso.datetime(),
 });
 

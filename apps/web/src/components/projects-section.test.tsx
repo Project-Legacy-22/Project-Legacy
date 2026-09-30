@@ -32,6 +32,7 @@ function props(overrides: Partial<ProjectsSectionProps> = {}): ProjectsSectionPr
             status: 'success',
         })),
         onRemove: vi.fn(async () => true),
+        onRename: vi.fn(async (): Promise<AddProjectResult> => ({ status: 'success' })),
         onLoadMore: vi.fn(),
         onRetry: vi.fn(),
         ...overrides,
@@ -61,10 +62,9 @@ describe('ProjectsSection', () => {
         expect(results.violations.map((violation) => violation.id)).toEqual([]);
     });
 
-    // Le critere de EN-48 : le chargement s expose sur la region, pas seulement
-    // par une ligne de texte. Rien ne le verifiait, ni ici ni sur les deux
-    // autres panneaux qui le portaient deja.
-    it('expose le chargement sur la region, et pas seulement en texte', async () => {
+    // The EN-48 criterion: loading is exposed on the region, not only by a line of text. Nothing
+    // checked it, neither here nor on the two other panels that already carried it.
+    it('exposes loading on the region, and not only as text', async () => {
         await root.render(<ProjectsSection {...props({ loadState: { status: 'loading' } })} />);
         expect(getElement<HTMLElement>('.projects-panel').getAttribute('aria-busy')).toBe('true');
 

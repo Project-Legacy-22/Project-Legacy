@@ -153,7 +153,7 @@ function enumTypes(dialect: Dialect): string[] {
     );
 }
 
-function createTable(table: Table, dialect: Dialect): string {
+export function createTable(table: Table, dialect: Dialect): string {
     const lines = [
         ...table.columns.map(column => columnLine(table, column, dialect)),
         ...keyLines(table, dialect),

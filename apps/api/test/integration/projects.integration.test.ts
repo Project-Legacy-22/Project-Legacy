@@ -29,7 +29,7 @@ describe('projects API (integration)', () => {
         await app.stop();
     });
 
-    it('sert le projet par defaut cree avec le compte', async () => {
+    it('serves the default project created with the account', async () => {
         const response = await asOwner.request('/projects');
         const page = (await response.json()) as {
             projects: { id: string; role: string }[];
@@ -39,7 +39,7 @@ describe('projects API (integration)', () => {
         expect(page.projects).toContainEqual(expect.objectContaining({ id: owner.projectId, role: 'owner' }));
     });
 
-    it('cree un projet et son appartenance proprietaire', async () => {
+    it('creates a project and its owner membership', async () => {
         const creation = await asOwner.request('/projects', json('POST', { name: 'Integration roadmap' }));
         const project = (await creation.json()) as { id: string; role: string };
         const page = (await (await asOwner.request('/projects')).json()) as {
@@ -51,7 +51,7 @@ describe('projects API (integration)', () => {
         expect(page.projects.map((candidate) => candidate.id)).toContain(project.id);
     });
 
-    it('cache un projet a un non-membre et refuse sa suppression', async () => {
+    it('hides a project from a non-member and refuses its deletion', async () => {
         const creation = await asOwner.request('/projects', json('POST', { name: 'Private integration project' }));
         const project = (await creation.json()) as { id: string };
 
@@ -70,7 +70,7 @@ describe('projects API (integration)', () => {
         expect(ownerList.projects.map((candidate) => candidate.id)).toContain(project.id);
     });
 
-    it('supprime un projet possede et ses items', async () => {
+    it('deletes an owned project and its items', async () => {
         const creation = await asOwner.request('/projects', json('POST', { name: 'Disposable integration project' }));
         const project = (await creation.json()) as { id: string };
         await asOwner.request(`/projects/${project.id}/items`, json('POST', { name: 'Deleted by project cascade' }));
@@ -82,5 +82,35 @@ describe('projects API (integration)', () => {
 
         expect(deletion.status).toBe(200);
         expect(itemsAfter.status).toBe(404);
+    });
+
+    it('renames an owned project and serves the new name in the list', async () => {
+        const creation = await asOwner.request('/projects', json('POST', { name: 'Before renaming' }));
+        const project = (await creation.json()) as { id: string };
+        await asOwner.request(`/projects/${project.id}/items`, json('POST', { name: 'Kept through renaming' }));
+
+        const renaming = await asOwner.request(`/projects/${project.id}`, json('PATCH', { name: ' After renaming ' }));
+        const page = (await (await asOwner.request('/projects')).json()) as {
+            projects: { id: string; name: string; itemCount: number }[];
+        };
+
+        expect(renaming.status).toBe(200);
+        expect(page.projects.find((candidate) => candidate.id === project.id)).toMatchObject({
+            name: 'After renaming',
+            itemCount: 1,
+        });
+    });
+
+    it('answers a non-member renaming like an unknown project and keeps the name', async () => {
+        const creation = await asOwner.request('/projects', json('POST', { name: 'Not theirs to rename' }));
+        const project = (await creation.json()) as { id: string };
+
+        const denied = await asIntruder.request(`/projects/${project.id}`, json('PATCH', { name: 'Taken over' }));
+        const page = (await (await asOwner.request('/projects')).json()) as {
+            projects: { id: string; name: string }[];
+        };
+
+        expect(denied.status).toBe(404);
+        expect(page.projects.find((candidate) => candidate.id === project.id)?.name).toBe('Not theirs to rename');
     });
 });

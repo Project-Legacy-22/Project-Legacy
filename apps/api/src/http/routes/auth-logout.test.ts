@@ -89,7 +89,7 @@ describe('POST /auth/logout', () => {
     beforeEach(() => serve());
     afterEach(() => harness.close());
 
-    it('revoque la session : le jeton ne rouvre plus /auth/me', async () => {
+    it('revokes the session: the token no longer opens /auth/me', async () => {
         const cookie = await seSeConnecter();
         expect((await harness.request('/auth/me', { headers: { Cookie: cookie } })).status).toBe(200);
 
@@ -102,7 +102,7 @@ describe('POST /auth/logout', () => {
         expect((await harness.request('/auth/me', { headers: { Cookie: cookie } })).status).toBe(401);
     });
 
-    it('efface le cookie avec les memes attributs qu a la connexion', async () => {
+    it('clears the cookie with the same attributes as at sign-in', async () => {
         const cookie = await seSeConnecter();
 
         const deconnexion = await harness.request('/auth/logout', {
@@ -114,14 +114,14 @@ describe('POST /auth/logout', () => {
         expect(efface).toContain('HttpOnly');
         expect(efface).toContain('SameSite=Lax');
         expect(efface).toContain('Path=/');
-        // Un cookie efface porte une date d expiration passee plutot qu un
-        // Max-Age positif : c est ce qui dit au navigateur de l oublier.
+        // A cleared cookie carries an expiry date in the past rather than a positive Max-Age: that
+        // is what tells the browser to forget it.
         expect(efface.toLowerCase()).toContain('expires=');
     });
 
-    // Critere bloquant : rien ne doit distinguer "avait une session" de "n en
-    // avait pas". Statut et corps sont compares, pas seulement l un des deux.
-    it('repond a l identique avec et sans session valide', async () => {
+    // Blocking criterion: nothing must tell "had a session" from "had none". Status and body are
+    // compared, not just one of them.
+    it('answers identically with and without a valid session', async () => {
         const cookie = await seSeConnecter();
 
         const avecSession = await harness.request('/auth/logout', {
@@ -141,7 +141,7 @@ describe('POST /auth/logout', () => {
         expect(await jetonInvente.text()).toBe(await avecSession.text());
     });
 
-    it('ne journalise pas le jeton de session', async () => {
+    it('does not log the session token', async () => {
         const cookie = await seSeConnecter();
 
         await harness.request('/auth/logout', { method: 'POST', headers: { Cookie: cookie } });

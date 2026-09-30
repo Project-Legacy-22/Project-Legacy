@@ -1,101 +1,98 @@
-# ADR-0010 — Récupération de compte par e-mail, via Supabase Auth
+# ADR-0010 — Account recovery by email, through Supabase Auth
 
-- **Statut** : Accepté
-- **Date** : 2026-09-08
-- **Décideurs** : équipe, planning de US-28
-- **Issue liée** : #29
+- **Status**: Accepted
+- **Date**: 2026-09-08
+- **Deciders**: team, planning of US-28
+- **Related issue**: #29
 
-## Contexte
+## Context
 
-US-28 demande qu'un utilisateur ayant oublié son mot de passe puisse le réinitialiser. Le
-backlog rattachait cet item à US-18 (notifications dans l'application), mais une récupération
-de mot de passe doit atteindre quelqu'un qui, par définition, ne peut plus se connecter :
-elle passe donc nécessairement hors de l'application. La note de l'issue #29 le prévoyait
-explicitement : « seul item susceptible d'imposer un canal e-mail ; la décision peut être
-prise à son planning ».
+US-28 asks that a user who forgot their password can reset it. The backlog attached this item to
+US-18 (in-app notifications), but a password recovery must reach someone who, by definition, can
+no longer sign in: it therefore necessarily goes outside the application. The note of issue #29
+explicitly anticipated it: "the only item likely to require an email channel; the decision can
+be taken at its planning".
 
-L'ADR-0008 confie déjà à Supabase Auth (GoTrue) les identifiants, le hachage, les sessions et
-la *password recovery*. GoTrue émet nativement un e-mail de récupération. La pile Supabase
-locale (ADR-0004) tourne en développement et en CI. Aucun fournisseur SMTP de production
-n'est provisionné à ce jour, et la décision D-14 sur le canal de notification n'était pas
-tranchée.
+ADR-0008 already entrusts Supabase Auth (GoTrue) with the credentials, the hashing, the sessions
+and the *password recovery*. GoTrue natively sends a recovery email. The local Supabase stack
+(ADR-0004) runs in development and in CI. No production SMTP provider is provisioned to date, and
+decision D-14 on the notification channel was not decided.
 
-## Options considérées
+## Options considered
 
-### Option A — E-mail émis par GoTrue, capturé localement par le mail-catcher de la pile Supabase
-- Avantages : natif, aucun code d'envoi à écrire, aligné sur l'ADR-0008 ; l'échange du jeton
-  se fait entièrement côté serveur (`verifyOtp` sur le hash du jeton) ; le mail-catcher local
-  rend le flux vérifiable sur un dépôt fraîchement cloné sans rien envoyer.
-- Inconvénients : dépend d'un SMTP de production à fournir au déploiement ; la délivrabilité
-  échappe à notre contrôle ; la protection « mot de passe compromis » de Supabase est
-  réservée au plan Pro, donc indisponible en local.
-- Coût de mise en œuvre : brancher deux méthodes sur le port `IdentityProvider` et les tester.
+### Option A — Email sent by GoTrue, captured locally by the mail catcher of the Supabase stack
+- Pros: native, no sending code to write, aligned with ADR-0008; the token exchange happens
+  entirely on the server side (`verifyOtp` on the token hash); the local mail catcher makes the
+  flow verifiable on a freshly cloned repository without sending anything.
+- Cons: depends on a production SMTP to be provided at deployment; deliverability is outside our
+  control; the "compromised password" protection of Supabase is reserved for the Pro plan, hence
+  unavailable locally.
+- Implementation cost: plug two methods into the `IdentityProvider` port and test them.
 
-### Option B — Notification dans l'application (US-18)
-- Avantages : aucun canal externe, aucun secret supplémentaire.
-- Inconvénients : **inutilisable pour ce cas** — l'utilisateur ne peut pas se connecter pour
-  lire la notification. Écartée pour cette seule raison.
+### Option B — In-app notification (US-18)
+- Pros: no external channel, no additional secret.
+- Cons: **unusable for this case** — the user cannot sign in to read the notification. Discarded
+  for that reason alone.
 
-### Option C — Canal tiers (SMS, lien magique via un service externe)
-- Avantages : indépendant de l'e-mail.
-- Inconvénients : nouvelle dépendance, nouveau secret, coût d'apprentissage, et collecte
-  d'une donnée personnelle de plus (le numéro de téléphone), contraire à la minimisation
-  affichée par l'ADR-0001 et le standard RGPD.
+### Option C — Third-party channel (SMS, magic link through an external service)
+- Pros: independent of email.
+- Cons: new dependency, new secret, learning cost, and collection of one more piece of personal
+  data (the phone number), contrary to the minimisation stated by ADR-0001 and the GDPR
+  standard.
 
-## Décision
+## Decision
 
-Nous retenons **l'option A**.
+We choose **option A**.
 
-Parce que :
+Because:
 
-1. C'est le seul canal utilisable quand l'utilisateur est précisément dehors.
-2. GoTrue le fournit déjà : US-28 se réduit à brancher le mécanisme et à **tester son
-   comportement**, comme US-11 et US-27 sous l'ADR-0008, au lieu de l'écrire.
-3. Le mail-catcher local rend la démonstration reproductible sur un checkout neuf sans
-   configurer ni solliciter un vrai serveur d'envoi.
+1. It is the only usable channel when the user is precisely locked out.
+2. GoTrue already provides it: US-28 comes down to plugging in the mechanism and **testing its
+   behaviour**, like US-11 and US-27 under ADR-0008, instead of writing it.
+3. The local mail catcher makes the demonstration reproducible on a fresh checkout without
+   configuring or calling a real mail server.
 
-L'échange du jeton est fait **côté serveur** : le gabarit de courriel `recovery` émet le hash
-du jeton en paramètre de requête sur notre propre chemin (`/reset-password`), une route API
-l'échange contre une session (`verifyOtp`), pose le nouveau mot de passe (`updateUser`) puis
-révoque toutes les sessions du compte (`signOut` global). Aucun jeton n'atteint le
-navigateur, et la discipline du cookie `httpOnly` d'US-11 est préservée.
+The token exchange is done **on the server side**: the `recovery` email template sends the token
+hash as a query parameter on our own path (`/reset-password`), an API route exchanges it for a
+session (`verifyOtp`), sets the new password (`updateUser`) then revokes every session of the
+account (global `signOut`). No token reaches the browser, and the `httpOnly` cookie discipline of
+US-11 is preserved.
 
-## Conséquences
+## Consequences
 
-**Positives**
-- Le jeton de récupération est à usage unique et expire, nativement (`otp_expiry`).
-- La révocation de toutes les sessions à la réinitialisation est explicite et vérifiée par
-  un test, indépendamment de la version de GoTrue.
-- Aucune table, aucune migration : le modèle de données n'est pas touché.
+**Positive**
+- The recovery token is single-use and expires, natively (`otp_expiry`).
+- The revocation of every session at reset is explicit and checked by a test, independently of
+  the GoTrue version.
+- No table, no migration: the data model is not touched.
 
-**Négatives / dette acceptée**
-- Un serveur SMTP de production doit être configuré au déploiement
-  (`[auth.email.smtp]` dans `supabase/config.toml`, identifiants par variables
-  d'environnement). Différé et suivi, hors périmètre de US-28.
-- La vérification « mot de passe compromis » exigée par le standard qualité n'est pas
-  fournie par Supabase en dehors du plan Pro : l'application porte sa propre vérification
-  contre l'API *range* de Have I Been Pwned (k-anonymat, mode ouvert sur panne du service).
-- Un JWT d'accès reste valide jusqu'à son expiration (une heure au plus) après la révocation
-  des sessions : dette déjà reconnue par l'ADR-0008.
+**Negative / accepted debt**
+- A production SMTP server must be configured at deployment (`[auth.email.smtp]` in
+  `supabase/config.toml`, credentials through environment variables). Deferred and tracked,
+  outside the scope of US-28.
+- The "compromised password" check required by the quality standard is not provided by Supabase
+  outside the Pro plan: the application carries its own check against the *range* API of Have I
+  Been Pwned (k-anonymity, fail-open when the service is down).
+- An access JWT remains valid until it expires (one hour at most) after the sessions are revoked:
+  a debt already acknowledged by ADR-0008.
 
-**Ce que ça impose au reste du projet**
-- `site_url` en développement pointe sur l'origine réellement servie (Vite), et un
-  déploiement l'écrase par son origine publique.
-- Un gabarit de courriel `recovery` personnalisé émet le hash du jeton sur notre chemin.
-- L'API sert la coquille de l'application sur `/reset-password` : c'est le premier lien
-  profond que le produit expose.
+**What it imposes on the rest of the project**
+- `site_url` in development points to the origin actually served (Vite), and a deployment
+  overrides it with its public origin.
+- A custom `recovery` email template sends the token hash to our path.
+- The API serves the application shell on `/reset-password`: it is the first deep link the
+  product exposes.
 
-## Comment on saura qu'on s'est trompé
+## How we will know we were wrong
 
-Un taux de rebond élevé des courriers de récupération en production, ou une exigence du sujet
-imposant une équivalence temporelle stricte des réponses que le modèle de GoTrue ne permet
-pas de garantir. Dans ce cas : ajouter un plancher de temps constant dans le cas d'usage, ou
-écrire l'envoi nous-mêmes en gardant Supabase pour les données (le repli déjà décrit par
-l'ADR-0008).
+A high bounce rate of the recovery emails in production, or a requirement of the subject imposing
+a strict timing equivalence of the responses that the GoTrue model cannot guarantee. In that
+case: add a constant-time floor in the use case, or write the sending ourselves while keeping
+Supabase for the data (the fallback already described by ADR-0008).
 
-## Références
+## References
 
-- Issue #29 (US-28) ; ADR-0004, ADR-0008 ; décision `D-14`
+- Issue #29 (US-28); ADR-0004, ADR-0008; decision `D-14`
 - `docs/features/29-password-reset.md`
 - https://supabase.com/docs/guides/auth/passwords
 - https://supabase.com/docs/guides/auth/auth-email-templates

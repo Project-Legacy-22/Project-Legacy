@@ -48,6 +48,7 @@ function unexercised(): AppUseCases {
             listProjects: refusing('listProjects'),
             addProject: refusing('addProject'),
             removeProject: refusing('removeProject'),
+            renameProject: refusing('renameProject'),
             listProjectMembers: refusing('listProjectMembers'),
             removeProjectMember: refusing('removeProjectMember'),
             inviteProjectMember: refusing('inviteProjectMember'),
@@ -62,6 +63,7 @@ function unexercised(): AppUseCases {
             // ask for on the way past, not a use case a suite exercises. A
             // suite that cares about it overrides it.
             deliverPending: () => Promise.resolve({ published: 0, consumed: 0, failed: 0 }),
+            purgeExpired: refusing('purgeExpired'),
         },
     };
 }

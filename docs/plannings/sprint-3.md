@@ -1,95 +1,94 @@
 # Sprint 3 — Planning
 
-- **Date** : jeudi 17 septembre 2026
-- **Sprint** : 3, échéance le vendredi 25 septembre 2026
-- **Présents** : Arthur Dos Santos, Arthur Gasmi, Arthur Guyetand, Aurélien Pochart, Seïf Soltane, Victor Briez
-- **Scrum Master** : Arthur Guyetand
+- **Date**: Thursday 17 September 2026
+- **Sprint**: 3, due on Friday 25 September 2026
+- **Present**: Arthur Dos Santos, Arthur Gasmi, Arthur Guyetand, Aurélien Pochart, Seïf Soltane, Victor Briez
+- **Scrum Master**: Arthur Guyetand
 
-## Bilan du sprint précédent
+## Review of the previous sprint
 
-Toutes les issues prévues pour le sprint précédent ont été terminées.
+Every issue planned for the previous sprint was finished.
 
-Des bugs ont cependant été découverts pendant l'intégration et les tests. Ils doivent être
-qualifiés et priorisés avant d'être ajoutés au sprint 3, afin de ne pas remplacer silencieusement
-les objectifs déjà engagés.
+Bugs were however discovered during integration and testing. They must be qualified and
+prioritised before being added to sprint 3, so as not to silently replace the goals already
+committed.
 
-## Objectif
+## Goal
 
-Finaliser les usages collaboratifs autour des projets et des tâches, améliorer l'utilisation de
-l'application sur les différents écrans et préparer une démonstration fiable avec des données
-reproductibles.
+Finalise the collaborative uses around projects and tasks, improve the use of the application on
+the different screens and prepare a reliable demonstration with reproducible data.
 
-## Issues retenues
+## Issues selected
 
-### Victor Briez — 15 points estimés
+### Victor Briez — 15 points estimated
 
-| Issue | Intitulé | Points | État au planning |
+| Issue | Title | Points | State at planning |
 |---|---|---|---|
-| #44 | EN-43 - Jeu de données de démonstration | 2 | Ready |
-| #21 | US-20 - Écran d'accueil personnalisé | 5 | Ready |
-| #33 | US-32 - Rechercher et filtrer mes tâches | 3 | Ready |
-| #34 | US-33 - Partage d'un projet entre utilisateurs | 5 | Ready |
+| #44 | EN-43 - Demonstration dataset | 2 | Ready |
+| #21 | US-20 - Personalised home screen | 5 | Ready |
+| #33 | US-32 - Search and filter my tasks | 3 | Ready |
+| #34 | US-33 - Sharing a project between users | 5 | Ready |
 
-### Arthur Guyetand — 8 points estimés, deux sous-issues à estimer
+### Arthur Guyetand — 8 points estimated, two sub-issues to estimate
 
-| Issue | Intitulé | Points | État au planning |
+| Issue | Title | Points | State at planning |
 |---|---|---|---|
-| #348 | US-58 - Attribuer une tâche à un membre du projet | 5 | Ready |
-| #351 | Écran des membres d'un projet, sous-issue de US-33 | à estimer | Ready |
-| #354 | Retirer un membre d'un projet, sous-issue de US-33 | à estimer | Ready |
-| #50 | US-49 - Réordonner une tâche à l'intérieur d'une colonne | 3 | Backlog |
+| #348 | US-58 - Assign a task to a member of the project | 5 | Ready |
+| #351 | Members screen of a project, sub-issue of US-33 | to estimate | Ready |
+| #354 | Remove a member from a project, sub-issue of US-33 | to estimate | Ready |
+| #50 | US-49 - Reorder a task within a column | 3 | Backlog |
 
-### Arthur Gasmi — 3 points estimés, deux issues à estimer
+### Arthur Gasmi — 3 points estimated, two issues to estimate
 
-| Issue | Intitulé | Points | État au planning |
+| Issue | Title | Points | State at planning |
 |---|---|---|---|
-| #246 | Parcours clavier sur les écrans livrés avant le Kanban | à estimer | Ready |
-| #352 | Déclarer la divulgation des adresses entre membres, sous-issue de US-33 | à estimer | Ready |
-| #42 | US-41 - Interface utilisable sur petit écran | 3 | Backlog |
+| #246 | Keyboard journeys on the screens delivered before the Kanban | to estimate | Ready |
+| #352 | Declare the disclosure of addresses between members, sub-issue of US-33 | to estimate | Ready |
+| #42 | US-41 - Interface usable on a small screen | 3 | Backlog |
 
-## Charge du sprint
+## Sprint load
 
-Total estimé au planning : 26 points, dont les 5 points de US-33.
+Total estimated at planning: 26 points, including the 5 points of US-33.
 
-Les sous-issues #351, #352 et #354 ne s'ajoutent pas une seconde fois si leurs estimations servent
-uniquement à répartir les 5 points de US-33. L'issue #246 est indépendante : ses points s'ajoutent
-au total après son estimation.
+The sub-issues #351, #352 and #354 are not added a second time if their estimates only serve to
+distribute the 5 points of US-33. Issue #246 is independent: its points are added to the total
+after it is estimated.
 
-## Dépendances
+## Dependencies
 
-- US-58 dépend de US-33 : l'attribution d'une tâche ne peut être finalisée que lorsque la gestion
-  des membres du projet est disponible.
-- #351, #352 et #354 sont des sous-issues de US-33, à coordonner avec l'implémentation portée par
+- US-58 depends on US-33: assigning a task can only be finalised when the management of the members
+  of the project is available.
+- #351, #352 and #354 are sub-issues of US-33, to be coordinated with the implementation carried by
   Victor Briez.
-- US-49 dépend du Kanban existant.
-- US-41 dépend du socle d'accessibilité.
+- US-49 depends on the existing Kanban.
+- US-41 depends on the accessibility foundation.
 
-## Risques identifiés
+## Risks identified
 
-- La charge de trois membres de l'équipe n'est pas encore renseignée.
-- #246, #351, #352 et #354 ne sont pas estimées, et les critères de complétion de #351, #352 et
-  #354 restent à définir.
-- US-41 et US-49 sont assignées mais encore au statut Backlog.
-- Un retard sur le partage de projet bloquera l'attribution des tâches.
-- US-32 et US-49 sont classées Could : premières candidates au retrait si la capacité réelle est
-  insuffisante.
-- Les bugs découverts pendant le sprint précédent peuvent réduire la capacité du sprint.
+- The load of three members of the team is not filled in yet.
+- #246, #351, #352 and #354 are not estimated, and the completion criteria of #351, #352 and #354
+  remain to be defined.
+- US-41 and US-49 are assigned but still in the Backlog status.
+- A delay on project sharing will block the assignment of tasks.
+- US-32 and US-49 are classified Could: first candidates for removal if the real capacity is
+  insufficient.
+- The bugs discovered during the previous sprint can reduce the capacity of the sprint.
 
-## Décisions
+## Decisions
 
-- L'objectif principal est la collaboration autour des projets et des tâches, et la préparation
-  d'une démonstration stable.
-- US-33 est découpée entre plusieurs membres ; Victor Briez conserve la coordination de la user
-  story parente.
-- US-58 ne démarre qu'une fois les éléments nécessaires de US-33 disponibles.
-- Chaque membre ne garde qu'une seule issue en cours à la fois.
-- Une issue ne démarre qu'après validation de ses critères d'acceptation, de son estimation et de
-  ses dépendances.
-- Les éléments Could sont les premiers candidats au retrait si le sprint est surchargé.
-- Un bug découvert pendant le sprint est créé et classé séparément ; il ne remplace une issue
-  engagée qu'après une décision explicite de l'équipe.
+- The main goal is collaboration around projects and tasks, and the preparation of a stable
+  demonstration.
+- US-33 is split between several members; Victor Briez keeps the coordination of the parent user
+  story.
+- US-58 only starts once the necessary parts of US-33 are available.
+- Each member keeps only one issue in progress at a time.
+- An issue only starts after its acceptance criteria, its estimate and its dependencies are
+  validated.
+- The Could items are the first candidates for removal if the sprint is overloaded.
+- A bug discovered during the sprint is created and classified separately; it only replaces a
+  committed issue after an explicit decision of the team.
 
 ## Validation
 
-Le planning reste provisoire tant que les trois affectations manquantes, les estimations et les
-critères de complétion ne sont pas renseignés.
+The planning remains provisional as long as the three missing assignments, the estimates and the
+completion criteria are not filled in.

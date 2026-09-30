@@ -1,15 +1,21 @@
 .notifications-panel {
-    margin: 0 0 24px;
+    margin: 0;
+}
+
+/* Inside the session card since issue 456: the quiet button's margin is for
+   the sign-in page, where it separates a link from the form above it. */
+.notifications-panel > .button-quiet {
+    margin-top: 0;
 }
 
 .notifications-panel h2 {
-    margin: 16px 0 12px;
-    font-size: 1.125rem;
+    margin: var(--space-6) 0 var(--space-5);
+    font-size: var(--font-size-lg);
 }
 
 .notifications-list {
     display: grid;
-    gap: 10px;
+    gap: var(--space-4);
     margin: 0;
     padding: 0;
     list-style: none;
@@ -21,8 +27,8 @@
     grid-auto-columns: auto;
     grid-auto-flow: column;
     align-items: center;
-    gap: 14px;
-    padding: 12px 16px;
+    gap: var(--space-6);
+    padding: var(--space-5) var(--space-6);
     border: 1px solid #c4ced8;
     border-radius: 8px;
     background: #ffffff;
@@ -30,13 +36,13 @@
 
 .notification-row time {
     color: #465568;
-    font-size: 0.8125rem;
+    font-size: var(--font-size-sm);
 }
 
 .notification-status {
-    margin-left: 12px;
+    margin-left: var(--space-5);
     color: #465568;
-    font-size: 0.8125rem;
+    font-size: var(--font-size-sm);
     font-weight: 700;
 }
 
@@ -44,7 +50,7 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-4);
 }
 
 .notification-answer .notification-status {
@@ -54,8 +60,8 @@
 .notifications-pagination {
     display: grid;
     justify-items: center;
-    gap: 10px;
-    margin-top: 16px;
+    gap: var(--space-4);
+    margin-top: var(--space-6);
 }
 
 .notifications-pagination .button[aria-disabled='true'] {

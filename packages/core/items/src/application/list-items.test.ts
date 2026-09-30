@@ -19,7 +19,7 @@ function threeItemsOf(ownerId: string) {
 }
 
 describe('listItems', () => {
-    it('ne renvoie que les items du proprietaire demande', async () => {
+    it('only returns the items of the requested owner', async () => {
         const mine = anItem({
             id: 'item-1',
             projectId: PROJECT_ID,
@@ -34,12 +34,12 @@ describe('listItems', () => {
 
         const page = await listItems(PROJECT_ID, OWNER_ID, FIRST_PAGE);
 
-        // Le sien est present autant que celui de l autre est absent : sans
-        // quoi un filtre qui ne renvoie jamais rien passerait ce test.
+        // Theirs is present as much as the other's is absent: otherwise a filter that never returns
+        // anything would pass this test.
         expect(page.items).toEqual([mine]);
     });
 
-    it('renvoie une page vide quand le depot est vide', async () => {
+    it('returns an empty page when the repository is empty', async () => {
         const listItems = makeListItems(inMemoryItemRepository([], [{ projectId: PROJECT_ID, userId: OWNER_ID }]));
 
         await expect(listItems(PROJECT_ID, OWNER_ID, FIRST_PAGE)).resolves.toEqual({
@@ -48,7 +48,7 @@ describe('listItems', () => {
         });
     });
 
-    it('sert la liste page par page sans repeter ni sauter un item', async () => {
+    it('serves the list page by page without repeating or skipping an item', async () => {
         const listItems = makeListItems(inMemoryItemRepository(threeItemsOf(OWNER_ID)));
 
         const first = await listItems(PROJECT_ID, OWNER_ID, {
@@ -78,7 +78,7 @@ describe('listItems', () => {
         expect(page.items.map((item) => item.id)).toEqual(['item-1', 'item-2', 'item-3', 'item-4']);
     });
 
-    it('permet a un membre de lire les items crees par un autre compte', async () => {
+    it('lets a member read the items created by another account', async () => {
         const shared = anItem({ projectId: PROJECT_ID, ownerId: OTHER_OWNER_ID });
         const repository = inMemoryItemRepository([shared], [{ projectId: PROJECT_ID, userId: OWNER_ID }]);
 
@@ -87,7 +87,7 @@ describe('listItems', () => {
         expect(page.items).toEqual([shared]);
     });
 
-    it('traite un non-membre comme un projet inexistant', async () => {
+    it('treats a non-member like an absent project', async () => {
         const repository = inMemoryItemRepository([anItem({ projectId: PROJECT_ID, ownerId: OTHER_OWNER_ID })]);
 
         await expect(makeListItems(repository)(PROJECT_ID, OWNER_ID, FIRST_PAGE)).rejects.toMatchObject({
@@ -100,7 +100,7 @@ describe('listItems', () => {
         });
     });
 
-    describe('recherche et filtres (US-32)', () => {
+    describe('search and filters (US-32)', () => {
         function seeded() {
             return inMemoryItemRepository([
                 anItem({ id: 'item-1', name: 'Acheter du pain', status: 'todo', priority: 'high', dueDate: '2026-09-20', projectId: PROJECT_ID, ownerId: OWNER_ID }),
@@ -138,7 +138,7 @@ describe('listItems', () => {
             expect(page.items.map((item) => item.id)).toEqual(expected);
         });
 
-        it('distingue absence de resultat et absence de donnee', async () => {
+        it('tells no result from no data', async () => {
             const noData = await makeListItems(inMemoryItemRepository([], [{ projectId: PROJECT_ID, userId: OWNER_ID }]))(
                 PROJECT_ID,
                 OWNER_ID,
@@ -150,7 +150,7 @@ describe('listItems', () => {
             expect(noMatch).toEqual({ items: [], nextCursor: undefined });
         });
 
-        it('pagine sans repeter ni sauter un item quand un filtre reste actif', async () => {
+        it('paginates without repeating or skipping an item while a filter stays active', async () => {
             const listItems = makeListItems(seeded());
             const criteria = { status: 'todo' as const };
 
@@ -162,7 +162,7 @@ describe('listItems', () => {
             expect(second.nextCursor).toBeUndefined();
         });
 
-        it('refuse un curseur emis sous d autres criteres, comme un curseur non emis par l API', async () => {
+        it('refuses a cursor issued under other criteria, like a cursor not issued by the API', async () => {
             const listItems = makeListItems(seeded());
 
             const first = await listItems(PROJECT_ID, OWNER_ID, { limit: 1, cursor: undefined, status: 'todo' });

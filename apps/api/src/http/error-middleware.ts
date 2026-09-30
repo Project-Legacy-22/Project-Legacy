@@ -8,6 +8,7 @@ import type { Logger, ProblemDetails } from '@legacy/contracts';
 import type { ErrorRequestHandler } from 'express';
 
 import { TooManyAttempts } from './rate-limit.js';
+import { accountIdOf } from './session.js';
 import { traceIdOf } from './trace.js';
 
 // The single point where a failure becomes an HTTP response. No route sets an
@@ -94,9 +95,9 @@ function toProblem(error: unknown): Omit<ProblemDetails, 'instance' | 'traceId'>
 }
 
 export function translateErrors(logger: Logger): ErrorRequestHandler {
-    // Express type le premier parametre en `any`. L annoter en `unknown` est
-    // accepte et rend le contrat honnete : rien ne garantit ce qui est passe a
-    // next(), et toProblem le reduit deja explicitement.
+    // Express types the first parameter as `any`. Annotating it as `unknown` is accepted and makes
+    // the contract honest: nothing guarantees what is passed to next(), and toProblem already
+    // narrows it explicitly.
     return (error: unknown, req, res, _next) => {
         const problem: ProblemDetails = {
             ...toProblem(error),
@@ -117,16 +118,26 @@ export function translateErrors(logger: Logger): ErrorRequestHandler {
         // look before anyone opens the stack.
         if (error instanceof ServiceUnavailable) {
             logger.error(
-                { err: error, reason: error.reason, operation: error.operation, traceId: problem.traceId },
+                {
+                    err: error,
+                    reason: error.reason,
+                    operation: error.operation,
+                    traceId: problem.traceId,
+                    accountId: accountIdOf(res),
+                },
                 'dependency unavailable',
             );
         } else if (problem.status >= 500) {
-            logger.error({ err: error, traceId: problem.traceId }, 'unhandled failure');
+            logger.error(
+                { err: error, traceId: problem.traceId, accountId: accountIdOf(res) },
+                'unhandled failure',
+            );
         } else {
             logger.warn({
                 type: problem.type,
                 status: problem.status,
                 traceId: problem.traceId,
+                accountId: accountIdOf(res),
             });
         }
 

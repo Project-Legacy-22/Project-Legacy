@@ -13,26 +13,25 @@ const VALID_EVENT = {
 };
 
 describe('ItemCreatedV1', () => {
-    it('accepte une enveloppe conforme', () => {
+    it('accepts a valid envelope', () => {
         expect(ItemCreatedV1.parse(VALID_EVENT)).toEqual(VALID_EVENT);
     });
 
-    it('porte sa version dans le nom, pour qu un consommateur s abonne a une forme precise', () => {
+    it('carries its version in its name, so that a consumer subscribes to a precise shape', () => {
         expect(ITEM_CREATED_V1).toBe('item.created.v1');
         expect(() => ItemCreatedV1.parse({ ...VALID_EVENT, name: 'item.created' })).toThrow();
     });
 
-    it('refuse une date d occurrence qui n est pas un instant ISO', () => {
+    it('refuses an occurrence date that is not an ISO instant', () => {
         expect(() => ItemCreatedV1.parse({ ...VALID_EVENT, occurredAt: '2026-09-03' })).toThrow();
     });
 });
 
 describe('ItemCreatedV1Payload', () => {
-    // Le critere RGPD de US-10 : un evenement ne transporte que des
-    // identifiants. Le nom de l item est du contenu saisi par l utilisateur ;
-    // s il pouvait passer, il se retrouverait dans le broker et dans les
-    // journaux du consommateur.
-    it('rejette un payload qui transporte le nom de l item', () => {
+    // The GDPR criterion of US-10: an event carries identifiers only. The item name is content
+    // typed by the user; if it could get through, it would end up in the broker and in the
+    // consumer's logs.
+    it('rejects a payload that carries the item name', () => {
         expect(() =>
             ItemCreatedV1Payload.parse({
                 itemId: VALID_EVENT.payload.itemId,
@@ -42,25 +41,23 @@ describe('ItemCreatedV1Payload', () => {
         ).toThrow();
     });
 
-    // Ce que US-13 fait reposer sur la regle ci-dessus : si un payload publie
-    // ne peut porter que des identifiants, alors effacer un compte n a rien a
-    // purger chez un consommateur ni dans le broker. Le test enonce la liste
-    // exacte des champs plutot que de faire confiance a la regle : un champ
-    // ajoute au schema echoue ici, la ou il serait indetectable une fois
-    // l evenement parti.
-    it('ne transporte que des identifiants, donc rien a purger hors de la base', () => {
+    // What US-13 rests on the rule above: if a published payload can only carry identifiers, then
+    // erasing an account has nothing to purge in a consumer or in the broker. The test states the
+    // exact list of fields rather than trusting the rule: a field added to the schema fails here,
+    // where it would be undetectable once the event is gone.
+    it('carries identifiers only, so there is nothing to purge outside the database', () => {
         const payload = ItemCreatedV1Payload.parse(VALID_EVENT.payload);
 
         expect(Object.keys(payload).sort()).toEqual(['itemId', 'ownerId']);
     });
 
-    it('rejette un payload qui transporte l adresse du proprietaire', () => {
+    it('rejects a payload that carries the owner\'s address', () => {
         expect(() =>
             ItemCreatedV1Payload.parse({ ...VALID_EVENT.payload, email: 'alice@example.com' }),
         ).toThrow();
     });
 
-    it('rejette un identifiant qui n est pas un uuid', () => {
+    it('rejects an identifier that is not a uuid', () => {
         expect(() =>
             ItemCreatedV1Payload.parse({
                 itemId: 'not-a-uuid',
@@ -71,11 +68,11 @@ describe('ItemCreatedV1Payload', () => {
 });
 
 describe('DomainEvent', () => {
-    it('resout une enveloppe vers le schema designe par son nom', () => {
+    it('resolves an envelope to the schema its name designates', () => {
         expect(DomainEvent.parse(VALID_EVENT)).toEqual(VALID_EVENT);
     });
 
-    it('rejette un nom d evenement inconnu', () => {
+    it('rejects an unknown event name', () => {
         expect(() => DomainEvent.parse({ ...VALID_EVENT, name: 'item.archived.v1' })).toThrow();
     });
 });

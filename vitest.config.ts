@@ -54,19 +54,16 @@ export default defineConfig({
         // Supabase stack, which npm test must not require on every change.
         coverage: {
             provider: 'v8',
-            // text pour la console, html pour l inspection locale,
-            // json-summary pour le resume publie sur la pull request par la CI,
-            // lcov pour l analyse SonarCloud (EN-17).
+            // text for the console, html for local inspection, json-summary for the summary the CI
+            // publishes on the pull request, lcov for the SonarCloud analysis (EN-17).
             reporter: ['text', 'html', 'json-summary', 'lcov'],
-            // Un seuil ne s active qu une fois franchissable : le rendre
-            // bloquant avant d avoir livre de quoi le franchir arreterait toute
-            // l equipe, y compris les PR qui apportent les tests manquants.
+            // A threshold is only turned on once it can be met: making it blocking before
+            // delivering what it takes to meet it would stop the whole team, including the PRs that
+            // bring the missing tests.
             //
-            // Lignes, declarations et fonctions sont au niveau decide, 70 %.
-            // Les branches sont posees au plancher atteint aujourd hui. Ce
-            // plancher ne peut que monter, jamais descendre : EN-09 a supprime
-            // l adaptateur MySQL, non testable sans serveur, qui les tirait a
-            // 52 %.
+            // Lines, statements and functions are at the decided level, 70 %. Branches are set at
+            // the floor reached today. That floor can only go up, never down: EN-09 removed the
+            // MySQL adapter, untestable without a server, which pulled them down to 52 %.
             thresholds: {
                 lines: 70,
                 statements: 70,
@@ -91,17 +88,15 @@ export default defineConfig({
                 // new code.
                 'apps/api/src/composition-root.ts',
                 'apps/api/src/index.ts',
-                // Le point d entree du worker, pour la meme raison que celui de
-                // l API : il assemble et boucle. Ce qu il decide -- que faire
-                // d un evenement -- vit dans event-consumer.ts, qui est teste.
+                // The worker's entry point, for the same reason as the API's: it assembles and
+                // loops. What it decides -- what to do with an event -- lives in event-consumer.ts,
+                // which is tested.
                 'apps/worker/src/index.ts',
-                // Les commandes de migration de donnees, pour la meme
-                // raison : elles lisent argv, lisent un fichier, en ecrivent
-                // d autres et impriment un compte rendu. Tout ce qu elles decident
-                // -- ce qui est repris, ce qui est refuse, ce qui est rendu --
-                // vit dans import-script.ts, render-schema.ts et render-data.ts,
-                // qui sont testes, et l enchainement complet est eprouve sur
-                // trois moteurs reels par `npm run test:migration`.
+                // The data migration commands, for the same reason: they read argv, read a file,
+                // write others and print a report. Everything they decide -- what is taken over,
+                // what is refused, what is rendered -- lives in import-script.ts, render-schema.ts
+                // and render-data.ts, which are tested, and the whole chain is exercised on three
+                // real engines by `npm run test:migration`.
                 'packages/data-migration/src/import-cli.ts',
                 'packages/data-migration/src/export-cli.ts',
                 'apps/api/src/openapi/write.ts',

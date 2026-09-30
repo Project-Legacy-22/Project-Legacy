@@ -49,8 +49,8 @@ export interface Reference {
     column: string;
     table: string;
     target: string;
-    // Cascade unless said otherwise. An assignee (US-58) is set null instead:
-    // the task outlives the person it was assigned to.
+    // Cascade unless said otherwise. A task's creator (#425) and an
+    // invitation's author are set null instead: the row outlives the account.
     onDelete?: 'set null';
 }
 
@@ -124,7 +124,9 @@ export const TABLES: readonly Table[] = [
             uuid('id'),
             uuid('project_id'),
             uuid('invitee_id'),
-            uuid('invited_by'),
+            // Nullable since #425: an invitation outlives the account that sent
+            // it, the link to it broken rather than the row removed.
+            uuid('invited_by', true),
             // No default, in the database either: MySQL refuses one on a TEXT
             // column, and the function that invites writes `pending` itself.
             text('status'),
@@ -135,7 +137,7 @@ export const TABLES: readonly Table[] = [
         references: [
             { column: 'project_id', table: 'projects', target: 'id' },
             { column: 'invitee_id', table: 'users', target: 'id' },
-            { column: 'invited_by', table: 'users', target: 'id' },
+            { column: 'invited_by', table: 'users', target: 'id', onDelete: 'set null' },
         ],
         unique: [],
     },
@@ -146,7 +148,10 @@ export const TABLES: readonly Table[] = [
         // any way is a copy one stops trusting.
         columns: [
             uuid('id'),
-            uuid('user_id'),
+            // Nullable since #425: a shared project's tasks outlive their
+            // creator's account, the link to it broken rather than the row
+            // removed.
+            uuid('user_id', true),
             text('name'),
             stamped('created_at'),
             stamped('updated_at'),
@@ -170,18 +175,11 @@ export const TABLES: readonly Table[] = [
             // Exported and imported as data. The source generates this UUID
             // when a direct insert omits it; target engines receive the value.
             uuid('position'),
-            uuid('assignee_id', true),
         ],
         primaryKey: ['id'],
-        // Our key on the assignee points at the membership, (project_id,
-        // assignee_id), so that only a member can be assigned. MySQL cannot set
-        // one column of a composite key to null, so the targets get the
-        // account instead: the rule "a member of the project" stays ours, like
-        // the policies and checks that do not cross either.
         references: [
-            { column: 'user_id', table: 'users', target: 'id' },
+            { column: 'user_id', table: 'users', target: 'id', onDelete: 'set null' },
             { column: 'project_id', table: 'projects', target: 'id' },
-            { column: 'assignee_id', table: 'users', target: 'id', onDelete: 'set null' },
         ],
         unique: [['position']],
     },
@@ -190,7 +188,7 @@ export const TABLES: readonly Table[] = [
         // its project and at the membership, so only a member is assigned and
         // leaving the project removes the row. The targets get plain keys to
         // the task, the project and the account: the membership rule stays
-        // ours, like items.assignee_id's above.
+        // ours, like the policies and checks that do not cross either.
         name: 'item_assignees',
         columns: [uuid('item_id'), uuid('project_id'), uuid('user_id')],
         primaryKey: ['item_id', 'user_id'],
@@ -227,25 +225,23 @@ export const TABLES: readonly Table[] = [
         columns: [
             uuid('id'),
             uuid('user_id'),
-            // Nullable depuis que les notifications peuvent nommer un projet.
+            // Nullable since notifications can name a project.
             uuid('item_id', true),
             uuid('event_id'),
             timestamp('read_at', true),
             stamped('created_at'),
             stamped('updated_at'),
-            // En dernier, et pas par gout : PostgreSQL ajoute une colonne a la
-            // fin de la table, et le test de modele compare l ordre autant que
-            // les noms. Les placer au milieu, la ou ils se lisent le mieux,
-            // fait echouer la comparaison contre information_schema.
+            // Last, and not by taste: PostgreSQL adds a column at the end of the table, and the
+            // model test compares the order as well as the names. Placing them in the middle, where
+            // they read best, makes the comparison against information_schema fail.
             //
-            // `kind` et `project_id` sont lies : le genre decide si la ligne
-            // nomme une tache ou un projet, et un `check` refuse une ligne qui
-            // ne nommerait ni l une ni l autre. Cette verification de valeur
-            // reste en PostgreSQL, comme les autres.
+            // `kind` and `project_id` are linked: the kind decides whether the row names a task or
+            // a project, and a `check` refuses a row that would name neither. This value check
+            // stays in PostgreSQL, like the others.
             text('kind'),
             uuid('project_id', true),
-            // #401 : une notification d invitation designe l invitation, pour
-            // que la personne reponde depuis la notification.
+            // #401: an invitation notification designates the invitation, so that the person
+            // answers from the notification.
             uuid('invitation_id', true),
         ],
         primaryKey: ['id'],

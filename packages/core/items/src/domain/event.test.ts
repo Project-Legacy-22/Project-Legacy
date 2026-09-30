@@ -7,7 +7,7 @@ const OWNER_ID = '00000000-0000-7000-8000-000000000001';
 const OCCURRED_AT = new Date('2026-09-03T10:00:00.000Z');
 
 describe('itemCreated', () => {
-    it('annonce l item cree avec l identifiant et l instant fournis', () => {
+    it('announces the created item with the given identifier and instant', () => {
         const item = createItem({
             id: 'item-id',
             name: 'Acheter du lait',
@@ -15,7 +15,9 @@ describe('itemCreated', () => {
             ownerId: OWNER_ID,
         });
 
-        expect(itemCreated('event-id', OCCURRED_AT, item)).toEqual({
+        const event = itemCreated({ eventId: 'event-id', occurredAt: OCCURRED_AT, item, ownerId: OWNER_ID });
+
+        expect(event).toEqual({
             id: 'event-id',
             name: ITEM_CREATED_V1,
             occurredAt: '2026-09-03T10:00:00.000Z',
@@ -23,10 +25,9 @@ describe('itemCreated', () => {
         });
     });
 
-    // Le critere RGPD de US-10. Le nom est du contenu saisi par l utilisateur :
-    // s il entrait dans le payload, il sortirait du perimetre que l export et
-    // l effacement savent atteindre.
-    it('ne transporte pas le nom de l item', () => {
+    // The GDPR criterion of US-10. The name is content typed by the user: if it entered the
+    // payload, it would leave the scope that export and erasure know how to reach.
+    it('does not carry the item name', () => {
         const item = createItem({
             id: 'item-id',
             name: 'Rendez-vous medical',
@@ -34,13 +35,13 @@ describe('itemCreated', () => {
             ownerId: OWNER_ID,
         });
 
-        const event = itemCreated('event-id', OCCURRED_AT, item);
+        const event = itemCreated({ eventId: 'event-id', occurredAt: OCCURRED_AT, item, ownerId: OWNER_ID });
 
         expect(Object.keys(event.payload)).toEqual(['itemId', 'ownerId']);
         expect(JSON.stringify(event)).not.toContain('Rendez-vous medical');
     });
 
-    it('porte un nom versionne, pour qu un consommateur s abonne a une forme precise', () => {
+    it('carries a versioned name, so that a consumer subscribes to a precise shape', () => {
         const item = createItem({
             id: 'item-id',
             name: 'Acheter du lait',
@@ -48,6 +49,8 @@ describe('itemCreated', () => {
             ownerId: OWNER_ID,
         });
 
-        expect(itemCreated('event-id', OCCURRED_AT, item).name).toBe('item.created.v1');
+        const event = itemCreated({ eventId: 'event-id', occurredAt: OCCURRED_AT, item, ownerId: OWNER_ID });
+
+        expect(event.name).toBe('item.created.v1');
     });
 });

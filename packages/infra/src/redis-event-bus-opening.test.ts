@@ -2,13 +2,12 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { opener } from './redis-event-bus.js';
 
-// Le defaut que ceci ferme : une fonction serverless n appelle jamais connect(),
-// donc chaque commande partait sur un client ferme et echouait. La passe de
-// livraison attrapait l erreur, servait ce qui etait stocke, et aucune
-// notification n apparaissait sur le deploiement.
+// The defect this closes: a serverless function never calls connect(), so every command went to a
+// closed client and failed. The delivery pass caught the error, served what was stored, and no
+// notification appeared on the deployment.
 
-describe('l ouverture a la demande du bus', () => {
-    it('ouvre un client ferme', async () => {
+describe('opening the bus on demand', () => {
+    it('opens a closed client', async () => {
         const connect = vi.fn(async () => undefined);
         const ouvrir = opener({ isOpen: false, connect });
 
@@ -17,7 +16,7 @@ describe('l ouverture a la demande du bus', () => {
         expect(connect).toHaveBeenCalledTimes(1);
     });
 
-    it('ne rouvre pas un client deja ouvert', async () => {
+    it('does not reopen a client already open', async () => {
         const connect = vi.fn(async () => undefined);
         const ouvrir = opener({ isOpen: true, connect });
 
@@ -26,9 +25,9 @@ describe('l ouverture a la demande du bus', () => {
         expect(connect).not.toHaveBeenCalled();
     });
 
-    // node-redis rejette un second connect() pendant le premier : deux
-    // commandes concurrentes sur un client ferme doivent partager l attente.
-    it('ne lance qu une ouverture pour deux commandes concurrentes', async () => {
+    // node-redis rejects a second connect() during the first: two concurrent commands on a closed
+    // client must share the wait.
+    it('starts a single opening for two concurrent commands', async () => {
         let liberer: () => void = () => undefined;
         const connect = vi.fn(
             () =>
@@ -46,7 +45,7 @@ describe('l ouverture a la demande du bus', () => {
         expect(connect).toHaveBeenCalledTimes(1);
     });
 
-    it('retente apres un echec, plutot que de rester bloque', async () => {
+    it('retries after a failure, rather than staying stuck', async () => {
         const connect = vi
             .fn<() => Promise<undefined>>()
             .mockRejectedValueOnce(new Error('courtier injoignable'))

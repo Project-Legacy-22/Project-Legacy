@@ -1,49 +1,48 @@
-# Sprint 3 — Rétrospective
+# Sprint 3 — Retrospective
 
-- **Sprint** : 3, du 17 au 25 septembre 2026
-- **Équipe** : Arthur Dos Santos, Arthur Gasmi, Arthur Guyetand, Aurélien Pochart, Seïf Soltane, Victor Briez
-- **Scrum Master** : Arthur Guyetand · **Product Owner** : Victor Briez
+- **Sprint**: 3, from 17 to 25 September 2026
+- **Team**: Arthur Dos Santos, Arthur Gasmi, Arthur Guyetand, Aurélien Pochart, Seïf Soltane, Victor Briez
+- **Scrum Master**: Arthur Guyetand · **Product Owner**: Victor Briez
 
-Préparée le 24 septembre 2026 à partir des traces du sprint ([planning](../plannings/sprint-3.md),
-[daily](../dailies/sprint-3.md), [revue](../reviews/sprint-3.md), historique des pull requests),
-pour la rétrospective du 25 septembre. Les constats et les actions sont à valider et à compléter en
-séance ; les porteurs proposés ci-dessous le sont à raison d'une action par membre.
+Prepared on 24 September 2026 from the traces of the sprint ([planning](../plannings/sprint-3.md),
+[daily](../dailies/sprint-3.md), [review](../reviews/sprint-3.md), history of the pull requests),
+for the retrospective of 25 September. The findings and the actions are to be validated and
+completed during the session; the owners proposed below are proposed at one action per member.
 
-## Ce qui a bien marché
+## What went well
 
-- Tous les éléments classés Must sont livrés : la documentation d'API, le README et le scénario de
-  démonstration ont fermé les trois derniers le 24 septembre.
-- Les Should et Could engagés ont avancé ensemble : écran d'accueil, recherche et filtres, jeu de
-  données de démonstration, réordonnancement dans une colonne, retrait d'un membre, parcours
-  clavier et audits d'accessibilité.
-- Le flux événementiel s'est étendu au-delà des tâches : l'ajout d'un membre produit maintenant sa
-  propre notification.
-- Les retours de la soutenance intermédiaire ont tous reçu une réponse documentée.
-- Chacun des six membres a une contribution fusionnée sur `dev` pendant le sprint.
+- Every item classified Must is delivered: the API documentation, the README and the demonstration
+  scenario closed the last three on 24 September.
+- The Should and Could items committed moved forward together: home screen, search and filters,
+  demonstration dataset, reordering within a column, removing a member, keyboard journeys and
+  accessibility audits.
+- The event flow extended beyond the tasks: adding a member now produces its own notification.
+- The feedback of the intermediate defense all received a documented answer.
+- Each of the six members has a contribution merged into `dev` during the sprint.
 
-## Ce qui a coincé
+## What got stuck
 
-- Le planning est resté provisoire : trois charges non renseignées et plusieurs issues non
-  estimées au démarrage.
-- La user story de partage d'un projet n'est pas terminée ; l'attribution d'une tâche, qui en
-  dépend, n'a pas pu commencer.
-- Les relectures ont été plus longues qu'aux sprints précédents, en particulier pour les pull
-  requests empilées, qui attendaient celle du dessous. Des branches ouvertes en parallèle se sont
-  heurtées sur des fichiers partagés, et les conflits ont été résolus en fin de sprint.
-- Le 23 septembre, des migrations fusionnées n'avaient pas été appliquées à la base hébergée : la
-  liste des tâches répondait 500 sur les prévisualisations. Corrigé le jour même, puis automatisé
-  (#385 ; ajustement #392 en relecture).
-- Aucune livraison vers `main` depuis le 15 septembre : la production n'a pas encore les
-  fonctionnalités du sprint.
-- Un seul daily consigné pendant le sprint.
+- The planning remained provisional: three loads not filled in and several issues not estimated at
+  the start.
+- The user story for sharing a project is not finished; assigning a task, which depends on it,
+  could not start.
+- Reviews took longer than in the previous sprints, in particular for the stacked pull requests,
+  which waited for the one below. Branches opened in parallel collided on shared files, and the
+  conflicts were resolved at the end of the sprint.
+- On 23 September, merged migrations had not been applied to the hosted database: the task list
+  answered 500 on the previews. Fixed the same day, then automated (#385; adjustment #392 in
+  review).
+- No release to `main` since 15 September: production does not have the features of the sprint
+  yet.
+- A single daily recorded during the sprint.
 
-## Actions proposées
+## Proposed actions
 
-| Action | Porteur proposé | Échéance |
+| Action | Proposed owner | Deadline |
 |---|---|---|
-| Livrer `dev` vers `main` et vérifier l'image, la release et le déploiement | Arthur Dos Santos | avant la démonstration |
-| Statuer sur le partage de projet et l'attribution de tâche : terminer ou reporter explicitement | Victor Briez | revue du 25 septembre |
-| Tenir la revue et la rétrospective du 25 septembre et en consigner le compte rendu | Arthur Guyetand | 25 septembre |
-| Rendre `tk verify` vert en corrigeant le faux positif du scan de traces (#371) | Aurélien Pochart | avant la démonstration |
-| Relire le README sur une machine vierge, comme le demande #46 | Arthur Gasmi | avant la démonstration |
-| Répéter la démonstration, chronomètre en main, et éprouver le plan de repli | Seïf Soltane | avant la démonstration |
+| Release `dev` to `main` and check the image, the release and the deployment | Arthur Dos Santos | before the demonstration |
+| Decide on project sharing and task assignment: finish or postpone explicitly | Victor Briez | review of 25 September |
+| Hold the review and the retrospective of 25 September and record the minutes | Arthur Guyetand | 25 September |
+| Make `tk verify` green by fixing the false positive of the trace scan (#371) | Aurélien Pochart | before the demonstration |
+| Review the README on a blank machine, as #46 asks | Arthur Gasmi | before the demonstration |
+| Rehearse the demonstration, stopwatch in hand, and test the fallback plan | Seïf Soltane | before the demonstration |

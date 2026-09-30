@@ -20,9 +20,8 @@ function anEvent(id: string, occurredAt: string): DomainEvent {
     };
 }
 
-// Un faux qui se comporte comme une outbox : ce qui est marque publie ne
-// ressort plus. Un mock qui compte les appels ne dirait pas si le relais
-// republie eternellement le meme evenement.
+// A fake that behaves like an outbox: what is marked published does not come out again. A mock
+// counting calls would not say whether the relay republishes the same event for ever.
 function fakeOutbox(seed: DomainEvent[]): OutboxStore & { pending: DomainEvent[] } {
     const pending = [...seed];
 
@@ -57,19 +56,19 @@ function fakeBus(failOn?: string): EventBus & { published: DomainEvent[] } {
 }
 
 describe('relayOnce', () => {
-    it('publie ce que l outbox contient et ne le represente plus ensuite', async () => {
+    it('publishes what the outbox holds and no longer presents it afterwards', async () => {
         const outbox = fakeOutbox([anEvent('event-1', '2026-09-04T10:00:00.000Z')]);
         const bus = fakeBus();
 
         expect(await relayOnce({ outbox, bus, logger: recordingLogger() })).toBe(1);
         expect(bus.published.map(event => event.id)).toEqual(['event-1']);
 
-        // Deuxieme passage : plus rien a publier, donc aucun doublon.
+        // Second pass: nothing left to publish, so no duplicate.
         expect(await relayOnce({ outbox, bus, logger: recordingLogger() })).toBe(0);
         expect(bus.published).toHaveLength(1);
     });
 
-    it('respecte l ordre des faits', async () => {
+    it('respects the order of the facts', async () => {
         const outbox = fakeOutbox([
             anEvent('event-1', '2026-09-04T10:00:00.000Z'),
             anEvent('event-2', '2026-09-04T10:00:01.000Z'),
@@ -81,9 +80,9 @@ describe('relayOnce', () => {
         expect(bus.published.map(event => event.id)).toEqual(['event-1', 'event-2']);
     });
 
-    // Un evenement non publie doit rester en attente : le perdre serait
-    // definitif, alors qu une double livraison est absorbee par le consommateur.
-    it('garde en attente ce qui n a pas pu partir, et s arrete la', async () => {
+    // An unpublished event must stay pending: losing it would be final, whereas a double delivery
+    // is absorbed by the consumer.
+    it('keeps pending what could not leave, and stops there', async () => {
         const outbox = fakeOutbox([
             anEvent('event-1', '2026-09-04T10:00:00.000Z'),
             anEvent('event-2', '2026-09-04T10:00:01.000Z'),
@@ -93,16 +92,18 @@ describe('relayOnce', () => {
 
         expect(await relayOnce({ outbox, bus, logger: recordingLogger() })).toBe(1);
         expect(bus.published.map(event => event.id)).toEqual(['event-1']);
-        // event-3 n est pas passe devant event-2 : l ordre est preserve.
+        // event-3 did not overtake event-2: the order is preserved.
         expect(outbox.pending.map(event => event.id)).toEqual(['event-2', 'event-3']);
     });
 
-    it('ne journalise jamais le contenu d un evenement', async () => {
+    it('never logs the content of an event', async () => {
         const outbox = fakeOutbox([anEvent('event-1', '2026-09-04T10:00:00.000Z')]);
         const logger = recordingLogger();
 
         await relayOnce({ outbox, bus: fakeBus(), logger });
 
         expect(JSON.stringify(logger.lines)).not.toContain('01931f3a-0000-7000-8000-000000000002');
+        expect(logger.lines.find(line => line.message === 'event published')?.fields)
+            .toEqual({ eventId: 'event-1' });
     });
 });

@@ -63,4 +63,27 @@ describe('projectsApi', () => {
 
         await expect(projectsApi.deleteProject(PROJECT_ID)).rejects.toEqual(new ApiError(404, 'Project not found.'));
     });
+
+    it('renames a project and returns the project the server sends back', async () => {
+        const renamed = { id: PROJECT_ID, name: 'Roadmap', role: 'owner', itemCount: 3 };
+        const fetchMock = vi.fn<typeof fetch>(async () => response(renamed));
+        vi.stubGlobal('fetch', fetchMock);
+
+        await expect(projectsApi.renameProject(PROJECT_ID, { name: 'Roadmap' })).resolves.toEqual(renamed);
+        const [url, init] = fetchMock.mock.calls[0] ?? [];
+        expect([url, init?.method, init?.body]).toEqual([
+            `/projects/${PROJECT_ID}`,
+            'PATCH',
+            JSON.stringify({ name: 'Roadmap' }),
+        ]);
+    });
+
+    it('rejects an invalid project returned after a rename', async () => {
+        vi.stubGlobal('fetch', vi.fn(async () => response({ id: PROJECT_ID })));
+
+        await expect(projectsApi.renameProject(PROJECT_ID, { name: 'Roadmap' })).rejects.toMatchObject({
+            name: 'ApiError',
+            status: 502,
+        });
+    });
 });

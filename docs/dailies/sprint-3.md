@@ -1,17 +1,17 @@
 # Sprint 3 — Dailies
 
-Scrum Master : Arthur Guyetand. Daily à 14 h 30. Seuls les dailies consignés en séance figurent
-ici.
+Scrum Master: Arthur Guyetand. Daily at 2:30 pm. Only the dailies recorded during the session
+appear here.
 
-## Vendredi 18 septembre 2026
+## Friday 18 September 2026
 
-Présents : toute l'équipe. Absents : aucun. Durée réelle : non notée.
+Present: the whole team. Absent: none. Actual duration: not noted.
 
-| Membre | Fait la veille | Prévu | Blocage |
+| Member | Done the day before | Planned | Blocker |
 |---|---|---|---|
-| Arthur Dos Santos | non renseigné | non renseigné | non renseigné |
-| Arthur Gasmi | #246, détail des tickets après le sprint | attente de l'issue de Victor Briez | — |
-| Arthur Guyetand | #354 | — | aucun |
-| Aurélien Pochart | #245 | #371 | aucun |
-| Seïf Soltane | — | N-08, #356 | aucun |
-| Victor Briez | — | US-32 | aucun |
+| Arthur Dos Santos | not filled in | not filled in | not filled in |
+| Arthur Gasmi | #246, detail of the tickets after the sprint | waiting for the issue of Victor Briez | — |
+| Arthur Guyetand | #354 | — | none |
+| Aurélien Pochart | #245 | #371 | none |
+| Seïf Soltane | — | N-08, #356 | none |
+| Victor Briez | — | US-32 | none |

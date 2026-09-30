@@ -28,14 +28,16 @@ begin
     raise exception 'tables without a primary key: %', offending;
   end if;
 
-  -- 2. items.user_id remains mandatory as the creator recorded by the event
-  --    flow. Access control is no longer based on it: project_id is the tenant.
+  -- 2. items.user_id is nullable (US-13, #425): it records the creator for as
+  --    long as that account exists, and is cleared rather than cascaded away
+  --    when the account is erased, so a shared project keeps its items.
+  --    Access control is not based on it: project_id is the tenant.
   if (
     select is_nullable
     from information_schema.columns
     where table_schema = 'public' and table_name = 'items' and column_name = 'user_id'
-  ) <> 'NO' then
-    raise exception 'items.user_id must be NOT NULL';
+  ) <> 'YES' then
+    raise exception 'items.user_id must be nullable';
   end if;
 
   -- 3. items.user_id references users(id).
@@ -459,8 +461,8 @@ begin
 
   insert into public.processed_events (event_id) values (event_cible), (event_temoin);
 
-  -- `kind` est nomme parce qu il n a pas de defaut : une insertion qui
-  -- l oublie doit echouer, et c est ici que ce choix se verifie.
+  -- `kind` is named because it has no default: an insert that forgets it must fail, and this is
+  -- where that choice is checked.
   insert into public.notifications (user_id, item_id, event_id, kind)
   values (cible, item_cible, event_cible, 'item.created'),
          (temoin, item_temoin, event_temoin, 'item.created');
@@ -506,14 +508,13 @@ end $$;
 
 rollback;
 
--- L appartenance et son evenement, ecrits ensemble ou pas du tout.
+-- The membership and its event, written together or not at all.
 --
--- Verifie ici plutot qu au niveau integration, pour une raison qui n est pas de
--- commodite : le `rollback` garantit qu aucune ligne d outbox ne survit a ce
--- test. Une ligne portant `membership.created.v1` bloquerait le relais, qui
--- refuse une ligne hors catalogue -- et le catalogue de packages/contracts ne
--- connaitra ce nom qu avec #359, une fois le consommateur capable de l ecrire
--- en notification.
+-- Checked here rather than at the integration level, for a reason that is not convenience: the
+-- `rollback` guarantees that no outbox row survives this test. A row carrying
+-- `membership.created.v1` would block the relay, which refuses a row outside the catalogue -- and
+-- the catalogue of packages/contracts will only know that name with #359, once the consumer is able
+-- to write it as a notification.
 begin;
 
 do $$
@@ -551,7 +552,7 @@ begin
     raise exception 'l appartenance n a pas ete ecrite';
   end if;
 
-  -- Non publie : c est le relais qui publie, pas la fonction.
+  -- Not published: the relay publishes, not the function.
   if not exists (
     select 1 from public.outbox
     where id = event_un and name = 'membership.created.v1' and published_at is null
@@ -559,7 +560,7 @@ begin
     raise exception 'l evenement manque, ou a ete ecrit comme deja publie';
   end if;
 
-  -- Le proprietaire qui hesite, ou qui double-clique.
+  -- The owner who hesitates, or who double-clicks.
   ajoute := public.add_member_with_event(
     projet, invite, event_deux, 'membership.created.v1', now(),
     jsonb_build_object('projectId', projet, 'memberId', invite, 'addedBy', proprietaire)
@@ -579,8 +580,7 @@ end $$;
 
 rollback;
 
--- La notification de la personne ajoutee : revendication de l evenement et
--- ecriture de l effet, ou ni l une ni l autre.
+-- The notification of the person added: claiming the event and writing the effect, or neither.
 begin;
 
 do $$
@@ -606,8 +606,8 @@ begin
     raise exception 'le premier appel aurait du appliquer l effet';
   end if;
 
-  -- Le genre nomme un projet et aucune tache : c est ce que
-  -- notifications_kind_chk impose, et ce que l interface lira.
+  -- The kind names a project and no task: that is what notifications_kind_chk imposes, and what the
+  -- interface will read.
   if not exists (
     select 1 from public.notifications
     where event_id = event_un
@@ -619,7 +619,7 @@ begin
     raise exception 'la notification d appartenance n a pas ete ecrite comme attendu';
   end if;
 
-  -- Une redelivrance : deja traite, donc aucun effet de plus.
+  -- A redelivery: already processed, so no further effect.
   applique := public.record_member_added_notification(event_un, invite, projet);
 
   if applique then
@@ -641,8 +641,20 @@ rollback;
 -- #401: invitations, their answer and their notification.
 \ir check-project-invitations.sql
 
--- #348: assigning a task to a member of its project.
-\ir check-item-assignee.sql
+-- #421: the single assignee column of #348 is gone, replaced by item_assignees.
+-- A migration that brought it back would split assignments across two places.
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public' and table_name = 'items' and column_name = 'assignee_id'
+  ) then
+    raise exception 'items.assignee_id must not exist: assignments live in item_assignees';
+  end if;
+
+  raise notice 'items.assignee_id absence assertion passed';
+end $$;
 
 -- #419: several assignees per task, from its creation.
 \ir check-item-assignees.sql

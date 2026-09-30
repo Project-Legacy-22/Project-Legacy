@@ -1,56 +1,57 @@
 # Sprint 2 — Planning
 
-- **Date** : lundi 7 septembre 2026
-- **Sprint** : 2, du 7 au 11 septembre 2026
-- **Présents** : Arthur Dos Santos, Arthur Gasmi, Arthur Guyetand, Aurélien Pochart, Seïf Soltane, Victor Briez
-- **Scrum Master** : Arthur Gasmi · **Product Owner** : Victor Briez
+- **Date**: Monday 7 September 2026
+- **Sprint**: 2, from 7 to 11 September 2026
+- **Present**: Arthur Dos Santos, Arthur Gasmi, Arthur Guyetand, Aurélien Pochart, Seïf Soltane, Victor Briez
+- **Scrum Master**: Arthur Gasmi · **Product Owner**: Victor Briez
 
-## Bilan du sprint précédent
+## Review of the previous sprint
 
-- Points complétés contre points prévus : toutes les issues prévues ont été faites.
-- Non terminé : rien.
+- Points completed against points planned: every planned issue was done.
+- Not finished: nothing.
 
-## Objectif
+## Goal
 
-Livrer le cœur fonctionnel du Kanban : gestion complète d'une tâche, regroupement par projet,
-déplacement entre colonnes, et le parcours de compte au-delà de la simple connexion.
+Deliver the functional core of the Kanban: complete management of a task, grouping by project,
+moving between columns, and the account journey beyond simple sign-in.
 
-## User stories retenues
+## User stories selected
 
-| ID | User story | Points | Assigné à |
+| ID | User story | Points | Assigned to |
 |---|---|---|---|
-| US-31 | Modifier, terminer et supprimer une tâche | 3 | Arthur Guyetand |
-| US-16 | Regrouper mes tâches par projet | 5 | à assigner |
-| US-15 | Déplacer une tâche entre les colonnes du Kanban | 8 | Arthur Guyetand |
-| US-47 | Me déconnecter | 2 | Aurélien Pochart |
-| US-36 | Modifier mon e-mail et mon mot de passe | 3 | Victor Briez |
-| US-37 | Politique de confidentialité et consentement | 3 | à assigner |
-| US-13 | Exporter et supprimer mes données personnelles | 5 | Arthur Gasmi |
-| US-27 | Session persistante et expiration propre | 3 | Arthur Gasmi |
-| US-19 | Priorité et échéance sur une tâche | 3 | Arthur Guyetand |
-| US-18 | Être notifié des événements qui me concernent | 5 | Aurélien Pochart |
-| US-28 | Réinitialiser mon mot de passe oublié | 5 | Victor Briez |
-| US-14 | Conformité d'accessibilité et remédiation | 5 | à assigner |
-| EN-48 | États de chargement, vide et erreur cohérents | 3 | à assigner |
-| EN-29 | Durcissement de la sécurité de l'API | 3 | Victor Briez |
-| EN-25 | Tests d'intégration de l'API, autorisation incluse | 5 | Aurélien Pochart |
-| EN-38 | Registre des traitements et minimisation | 2 | à assigner |
+| US-31 | Edit, complete and delete a task | 3 | Arthur Guyetand |
+| US-16 | Group my tasks by project | 5 | to be assigned |
+| US-15 | Move a task between the columns of the Kanban | 8 | Arthur Guyetand |
+| US-47 | Sign out | 2 | Aurélien Pochart |
+| US-36 | Change my email and my password | 3 | Victor Briez |
+| US-37 | Privacy policy and consent | 3 | to be assigned |
+| US-13 | Export and delete my personal data | 5 | Arthur Gasmi |
+| US-27 | Persistent session and clean expiry | 3 | Arthur Gasmi |
+| US-19 | Priority and due date on a task | 3 | Arthur Guyetand |
+| US-18 | Be notified of the events that concern me | 5 | Aurélien Pochart |
+| US-28 | Reset my forgotten password | 5 | Victor Briez |
+| US-14 | Accessibility compliance and remediation | 5 | to be assigned |
+| EN-48 | Consistent loading, empty and error states | 3 | to be assigned |
+| EN-29 | Security hardening of the API | 3 | Victor Briez |
+| EN-25 | API integration tests, authorization included | 5 | Aurélien Pochart |
+| EN-38 | Register of processing activities and minimisation | 2 | to be assigned |
 
-Total des points engagés : 63 points de backlog. Les 29 points de Must (US-31, US-16, US-15,
-US-47, US-36, US-37, US-13) sont le plancher : ils passent avant tout Should.
+Total points committed: 63 backlog points. The 29 Must points (US-31, US-16, US-15, US-47, US-36,
+US-37, US-13) are the floor: they come before any Should.
 
-## Risques identifiés
+## Risks identified
 
-- US-15 vaut 8 points et est bloquée par US-16, qui n'a pas encore de porteur.
-- Cinq items du sprint sont encore sans assigné, dont deux Must.
-- Deux pull requests Dependabot en attente.
+- US-15 is worth 8 points and is blocked by US-16, which has no owner yet.
+- Five items of the sprint still have no assignee, two of them Must.
+- Two Dependabot pull requests pending.
 
-## Décisions
+## Decisions
 
-- Le sprint s'engage sur les 16 items Ready du backlog du sprint 2, dans l'ordre du tableau, Must
-  d'abord.
-- Les cinq items sans assigné sont répartis à un daily proche, selon l'avancement général.
-- Découpage systématique en sous-issues API puis interface, comme sur US-11 et US-12 au sprint 1 :
-  le format a bien fonctionné et garde les pull requests sous 400 lignes.
-- Rythme inchangé, mais le daily passe à 14 h 30. Revue du sprint le vendredi 11 septembre à
-  14 h 30.
+- The sprint commits to the 16 Ready items of the sprint 2 backlog, in the order of the table, Must
+  first.
+- The five items without an assignee are distributed at an upcoming daily, according to overall
+  progress.
+- Systematic split into API then interface sub-issues, as on US-11 and US-12 in sprint 1: the
+  format worked well and keeps pull requests under 400 lines.
+- Rhythm unchanged, but the daily moves to 2:30 pm. Sprint review on Friday 11 September at
+  2:30 pm.

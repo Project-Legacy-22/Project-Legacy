@@ -28,6 +28,7 @@ import {
     firstItem,
     itemPage,
     secondItem,
+    startAt,
 } from './test/app-fixture';
 import { labels } from './labels';
 
@@ -75,6 +76,7 @@ async function fillSignInForm(email: string, password: string): Promise<void> {
 
 beforeEach(() => {
     testRoot = createReactTestRoot();
+    startAt('projects');
 });
 
 afterEach(async () => {
@@ -127,7 +129,7 @@ describe('App item workflow', () => {
 });
 
 describe('App authentication', () => {
-    it('ecarte le visiteur sans session en montrant le formulaire, sans appeler l API des items', async () => {
+    it('keeps a visitor without a session out by showing the form, without calling the items API', async () => {
         const listItems = vi.fn(async () => itemPage());
         const api = createApi({ listItems });
         const auth = createAuth({ currentAccount: vi.fn(async () => null) });
@@ -135,12 +137,12 @@ describe('App authentication', () => {
         await renderApp({ api, auth });
 
         expect(document.querySelector('form.auth-form')).not.toBeNull();
-        // Le garde est cote interface : la requete n est meme pas tentee, au
-        // lieu de compter sur le 401 de l API pour cacher l ecran.
+        // The guard is on the interface side: the request is not even attempted, instead of
+        // counting on the API's 401 to hide the screen.
         expect(listItems).not.toHaveBeenCalled();
     });
 
-    it('enonce le politique de mot de passe avant toute saisie, rattachee au champ', async () => {
+    it('states the password policy before anything is typed, attached to the field', async () => {
         const auth = createAuth({ currentAccount: vi.fn(async () => null) });
         await renderApp({ auth });
 
@@ -153,7 +155,7 @@ describe('App authentication', () => {
         expect(help.textContent).toContain('12');
     });
 
-    it('affiche un message unique qui ne distingue pas l adresse du mot de passe', async () => {
+    it('shows a single message that does not tell the address from the password', async () => {
         const auth = createAuth({
             currentAccount: vi.fn(async () => null),
             signIn: vi.fn(async () => {
@@ -170,7 +172,7 @@ describe('App authentication', () => {
         expect(message.toLowerCase()).not.toContain('inconnu');
     });
 
-    it('atteint l espace de l utilisateur apres une connexion reussie', async () => {
+    it('reaches the user space after a successful sign-in', async () => {
         const auth = createAuth({ currentAccount: vi.fn(async () => null) });
         await renderApp({ auth });
 
@@ -181,7 +183,7 @@ describe('App authentication', () => {
         expect(getElement<HTMLElement>('.session-banner').textContent).toContain(ACCOUNT.email);
     });
 
-    it('associe une etiquette a chaque champ et n annonce aucune erreur avant soumission', async () => {
+    it('gives each field a label and announces no error before submission', async () => {
         const auth = createAuth({ currentAccount: vi.fn(async () => null) });
         await renderApp({ auth });
 
@@ -192,7 +194,7 @@ describe('App authentication', () => {
         expect(document.querySelector('[role="alert"]')).toBeNull();
     });
 
-    it('rattache l erreur au champ concerne et l annonce', async () => {
+    it('attaches the error to the field concerned and announces it', async () => {
         const auth = createAuth({ currentAccount: vi.fn(async () => null) });
         await renderApp({ auth });
 
@@ -207,15 +209,14 @@ describe('App authentication', () => {
 });
 
 describe('App session states', () => {
-    it('attend la reponse du serveur au lieu de montrer le formulaire par defaut', async () => {
+    it('waits for the server\'s answer instead of showing the form by default', async () => {
         const pending = deferred<AccountDto | null>();
         const auth = createAuth({ currentAccount: vi.fn(() => pending.promise) });
 
         await renderApp({ auth });
 
-        // La session est portee par un cookie httpOnly : la page ne peut pas la
-        // lire. Montrer le formulaire pendant la verification le ferait
-        // clignoter a chaque rechargement pour quelqu un de deja connecte.
+        // The session is carried by an httpOnly cookie: the page cannot read it. Showing the form
+        // during the check would make it flash on every reload for someone already signed in.
         expect(document.querySelector('form.auth-form')).toBeNull();
         expect(getElement<HTMLElement>('[role="status"]').textContent).toBe('Checking your session…');
 
@@ -227,7 +228,7 @@ describe('App session states', () => {
         expect(document.querySelector('form.auth-form')).not.toBeNull();
     });
 
-    it('annonce l echec de la verification sans faire croire a une deconnexion', async () => {
+    it('announces that the check failed without suggesting a sign-out', async () => {
         const currentAccount = vi.fn(async () => {
             throw new ApiError(503, 'Unable to check the session.');
         });
@@ -238,8 +239,8 @@ describe('App session states', () => {
         expect(alerte.querySelector('p')?.textContent).toBe('Unable to check the session.');
         expect(document.querySelector('form.auth-form')).toBeNull();
 
-        // L ecran etait un paragraphe nu hors de tout repere, et sa branche
-        // d erreur n avait aucune sortie : seul un rechargement en sortait.
+        // The screen was a bare paragraph outside any landmark, and its error branch had no way
+        // out: only a reload got out of it.
         expect(getElement<HTMLElement>('main.session-check')).not.toBeNull();
         expect(getElement<HTMLElement>('h1#session-check-heading')).not.toBeNull();
 
@@ -249,7 +250,7 @@ describe('App session states', () => {
         expect(currentAccount.mock.calls.length).toBeGreaterThan(appelsAvant);
     });
 
-    it('confirme une inscription sans reveler si l adresse existait deja', async () => {
+    it('confirms a registration without revealing whether the address already existed', async () => {
         const register = vi.fn(async () => undefined);
         const auth = createAuth({
             currentAccount: vi.fn(async () => null),
@@ -270,11 +271,11 @@ describe('App session states', () => {
         expect(register).toHaveBeenCalledOnce();
         const message = getElement<HTMLElement>('.form-success').textContent ?? '';
         expect(message).toContain('If that address was available');
-        // Le mot de passe est vide : l etape suivante est la connexion.
+        // The password is empty: the next step is signing in.
         expect(getElement<HTMLInputElement>('input[type="password"]').value).toBe('');
     });
 
-    it('refuse un mot de passe trop court sans appeler le serveur', async () => {
+    it('refuses a password that is too short without calling the server', async () => {
         const register = vi.fn(async () => undefined);
         const auth = createAuth({
             currentAccount: vi.fn(async () => null),
@@ -344,18 +345,18 @@ describe('App password recovery', () => {
 });
 
 describe('App notifications', () => {
-    it('affiche l effet du flux evenementiel une fois connecte', async () => {
+    it('shows the effect of the event flow once signed in', async () => {
         await renderApp({ notifications: createNotifications(3) });
         await flushTimers();
 
         const badge = getElement<HTMLElement>('.notification-badge');
         expect(badge.textContent).toBe('3 unread notifications');
-        // Annonce sans interrompre : le compte change parce qu un worker a
-        // traite un evenement, pas parce que l utilisateur a agi.
+        // Announced without interrupting: the count changes because a worker processed an event,
+        // not because the user acted.
         expect(badge.getAttribute('role')).toBe('status');
     });
 
-    it('ne demande pas les notifications tant qu il n y a pas de session', async () => {
+    it('does not ask for the notifications while there is no session', async () => {
         const notifications = createNotifications();
         const auth = createAuth({ currentAccount: vi.fn(async () => null) });
 

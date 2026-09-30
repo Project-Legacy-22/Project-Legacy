@@ -152,14 +152,13 @@ describe('serviceRoleClient', () => {
 });
 
 describe('withDeadline', () => {
-    it('rends la main quand le travail repond avant l echeance', async () => {
+    it('returns as soon as the work answers before the deadline', async () => {
         await expect(withDeadline(Promise.resolve('fait'), 1000, 'refresh')).resolves.toBe('fait');
     });
 
-    // Le defaut de #214 : le SDK retente pendant environ 25 secondes sans que
-    // ni la fenetre ni le predicat soient exposes, et la requete HTTP restait
-    // ouverte pendant tout ce temps.
-    it('echoue en nommant l echeance quand le travail ne repond jamais', async () => {
+    // The defect of #214: the SDK retries for about 25 seconds without exposing either the window
+    // or the predicate, and the HTTP request stayed open all that time.
+    it('fails naming the deadline when the work never answers', async () => {
         const jamais = new Promise<never>(() => undefined);
 
         await expect(withDeadline(jamais, 10, 'refresh')).rejects.toThrow(
@@ -167,7 +166,7 @@ describe('withDeadline', () => {
         );
     });
 
-    it('laisse passer l echec du travail plutot que de le convertir en echeance', async () => {
+    it('lets the work\'s failure through rather than turning it into a deadline', async () => {
         const echec = Promise.reject(new Error('le fournisseur a refuse'));
 
         await expect(withDeadline(echec, 1000, 'refresh')).rejects.toThrow('le fournisseur a refuse');
@@ -178,7 +177,7 @@ describe('withDeadline', () => {
 describe('retryingOnOutage', () => {
     const panne = { name: 'AuthRetryableFetchError', message: 'Gateway Timeout' };
 
-    it('retente une panne passagere et rend la seconde reponse', async () => {
+    it('retries a transient outage and returns the second answer', async () => {
         const reponses = [{ error: panne }, { error: null }];
         let appels = 0;
         const call = () => {
@@ -191,9 +190,9 @@ describe('retryingOnOutage', () => {
         expect(appels).toBe(2);
     });
 
-    // Un mot de passe refuse est une reponse, pas une panne : le retenter
-    // doublerait le cout de chaque tentative fausse.
-    it('ne retente pas un refus', async () => {
+    // A refused password is an answer, not an outage: retrying it would double the cost of every
+    // wrong attempt.
+    it('does not retry a refusal', async () => {
         let appels = 0;
         const call = () => {
             appels += 1;
@@ -205,7 +204,7 @@ describe('retryingOnOutage', () => {
         expect(appels).toBe(1);
     });
 
-    it('n appelle qu une fois quand la premiere reponse est bonne', async () => {
+    it('calls only once when the first answer is good', async () => {
         let appels = 0;
         const call = () => {
             appels += 1;
@@ -217,7 +216,7 @@ describe('retryingOnOutage', () => {
         expect(appels).toBe(1);
     });
 
-    it('rend la seconde panne quand la seconde tentative echoue aussi', async () => {
+    it('returns the second outage when the second attempt fails too', async () => {
         const call = () => Promise.resolve({ error: panne });
 
         await expect(retryingOnOutage(call)).resolves.toEqual({ error: panne });

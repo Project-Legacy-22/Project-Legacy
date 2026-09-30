@@ -1,25 +1,22 @@
-// Point d'entree de l'API sur Vercel.
+// Entry point of the API on Vercel.
 //
-// Le front appelle l'API en chemins relatifs pour que le navigateur porte de
-// lui-meme le cookie de session (voir apps/web/vite.config.ts). Servir l'API
-// sur une autre origine mettrait ce cookie hors d'atteinte. La fonction vit
-// donc dans le meme projet que le front, et `vercel.json` y reecrit `/auth` et
-// `/items` : une seule origine vue du navigateur.
+// The front calls the API through relative paths so that the browser carries the session cookie by
+// itself (see apps/web/vite.config.ts). Serving the API from another origin would put that cookie
+// out of reach. The function therefore lives in the same project as the front, and `vercel.json`
+// rewrites `/auth` and `/items` to it: a single origin as the browser sees it.
 //
-// Vercel attend une application Express exportee par defaut. Rien n'est mis en
-// ecoute ici : la plateforme s'en charge, contrairement a apps/api/src/index.ts
-// qui garde son `listen` pour l'execution locale et pour l'image publiee.
+// Vercel expects an Express application exported by default. Nothing listens here: the platform
+// takes care of it, unlike apps/api/src/index.ts, which keeps its `listen` for local runs and for
+// the published image.
 //
-// `application.start()` n'est pas appele. Il faisait un controle de sante de la
-// base, utile a un processus long qui refuse de demarrer mal configure, et une
-// fonction n'a pas ce cycle de vie.
+// `application.start()` is not called. It ran a health check of the database, useful to a
+// long-running process that refuses to start misconfigured, and a function does not have that life
+// cycle.
 //
-// Depuis US-10b il fait aussi demarrer le relais de l'outbox, et cela change la
-// portee de cette absence : sur cette cible, les evenements s'accumulent sans
-// que personne ne les publie, donc aucune notification n'apparait. Une fonction
-// qui se termine avec sa reponse ne peut pas tenir un intervalle de toute
-// facon. Le choix appartient a `D-12`, la cible de deploiement, encore ouverte
-// au backlog ; les options sont listees dans
+// Since US-10b it also starts the outbox relay, and that changes the reach of this absence: on this
+// target, events pile up without anyone publishing them, so no notification appears. A function
+// that ends with its response cannot hold an interval anyway. The choice belongs to `D-12`, the
+// deployment target, still open in the backlog; the options are listed in
 // docs/features/127-event-consumer-and-notifications.md.
 import { compose } from '../apps/api/dist/composition-root.js';
 import { loadConfig } from '../apps/api/dist/config.js';
@@ -31,4 +28,5 @@ const application = compose(config);
 export default createServer(config, application.useCases, {
     logger: application.logger,
     metrics: application.metrics,
+    health: application.health,
 });

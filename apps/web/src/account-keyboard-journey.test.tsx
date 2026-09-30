@@ -4,7 +4,7 @@ import type { AccountApi } from './api/account-api';
 import type { CredentialsApi } from './api/credentials-api';
 import { App } from './app';
 import { labels } from './labels';
-import { ACCOUNT, createApi, createAuth, createCredentialsApi, createProjectsApi } from './test/app-fixture';
+import { ACCOUNT, createApi, createAuth, createCredentialsApi, createProjectsApi, startAt } from './test/app-fixture';
 import { deferred } from './test/deferred';
 import {
     accessibleName,
@@ -132,6 +132,7 @@ function announcement(): string {
 
 beforeEach(() => {
     root = createReactTestRoot();
+    startAt('account');
 });
 
 afterEach(async () => {

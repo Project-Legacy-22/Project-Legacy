@@ -6,6 +6,8 @@ import { itemReorderLabels } from './item-reorder-labels';
 import { itemsFilterLabels } from './items-filter-labels';
 import { itemStatusLabels } from './item-status-labels';
 import { membersLabels } from './members-labels';
+import { projectLabels } from './project-labels';
+import { viewLabels } from './view-labels';
 
 export const labels = {
     // Authentication (US-11b)
@@ -80,9 +82,14 @@ export const labels = {
     deleteAccountTitle: 'Delete my account',
     deleteAccountWarning: 'Deleting your account removes, immediately and for good:',
     deleteAccountLosesAccount: 'your account and the address it is registered with',
-    deleteAccountLosesItems: 'every item you created, including removed items and items in shared projects; other members will lose access to them',
+    deleteAccountLosesItems: 'every item you created in a project where you are the only member, including removed items',
     deleteAccountLosesProjects: 'your project memberships and every project where you are the last member',
     deleteAccountLosesNotifications: 'every notification you received',
+    // Not a loss, so not in the list above: an item survives its creator in a
+    // shared project (#425). Said plainly rather than left for a member to
+    // wonder why a task has no creator any more.
+    deleteAccountKeepsShared:
+        'Items you created in projects you share with others stay for those members; nothing about who created them is kept.',
     deleteAccountNoRecovery:
         'There is no waiting period and no way back. Download your data first if you want to keep it.',
     deleteAccountConfirmationLabel: 'Confirm by typing your email address',
@@ -118,6 +125,7 @@ export const labels = {
     ...homeLabels,
     ...failureLabels,
     ...membersLabels,
+    ...viewLabels,
 
     notificationsFailed: 'Unable to read your notifications.',
     unreadNotifications(count: number): string {
@@ -166,10 +174,10 @@ export const labels = {
     policyWhyBody:
         'Your account and your items exist to provide the service you signed up for. The logs exist to diagnose failures and notice abuse. Nothing here is used for advertising, profiling or resale.',
     policyHowLongTitle: 'How long it is kept',
-    policyHowLongAccount: 'Your account, for as long as it exists. Deleting it erases everything immediately.',
-    policyHowLongItems: 'An item you remove is erased for good after thirty days.',
-    policyHowLongNotifications: 'Notifications are erased after ninety days.',
-    policyHowLongLogs: 'Logs are kept thirty days.',
+    policyHowLongAccount: 'Your account, for as long as it exists. Deleting it erases it, your personal items and your project memberships immediately.',
+    policyHowLongItems: 'An item you remove is erased at once. An item you created in a project you still share with others survives your account, with nothing left to say you created it.',
+    policyHowLongNotifications: 'Notifications are erased after ninety days, by a purge that runs every day.',
+    policyHowLongLogs: 'Logs are kept thirty days at most.',
     policyRecipientsTitle: 'Who else sees it',
     policyRecipientsIntro: 'Four providers process data on our behalf, and nobody else. This is what each one holds, where it holds it, and who can reach it.',
     policyJurisdiction: 'Nothing is stored or processed outside the European Union. Supabase, Vercel and Grafana Labs are United States companies, so a United States authority can compel them to hand over data that never left Europe. We say so rather than leave it implied.',
@@ -182,55 +190,8 @@ export const labels = {
         return `Version ${version}`;
     },
 
-    projectsKicker: 'Workspace',
-    projectsTitle: 'Projects',
-    projectNameLabel: 'Project name',
-    projectNameRequired: 'Enter a project name.',
-    createProject: 'Create project',
-    creatingProject: 'Creating project…',
-    loadingProjects: 'Loading projects…',
-    loadMoreProjects: 'Load more projects',
-    loadingMoreProjects: 'Loading more projects…',
-    retryLoadingMoreProjects: 'Try loading more projects again',
-    allProjectsLoaded: 'All projects loaded',
-    emptyProjects: 'No project yet. Create one to start grouping items.',
-    selectProject: 'Select or create a project first.',
-    invalidProject: 'The server returned an invalid project.',
-    invalidProjectList: 'The server returned an invalid project list.',
-    loadProjectsFailed: 'Unable to load the project list.',
-    loadMoreProjectsFailed: 'Unable to load more projects.',
-    createProjectFailed: 'Unable to create the project.',
-    removeProjectFailed: 'Unable to remove the project.',
-    projectNameHelp(maximumLength: number): string {
-        return `Required. ${maximumLength} characters maximum.`;
-    },
-    projectNameTooLong(maximumLength: number): string {
-        return `Enter no more than ${maximumLength} characters.`;
-    },
-    projectItemCount(count: number): string {
-        return `${count} ${count === 1 ? 'item' : 'items'}`;
-    },
-    projectsLoaded(count: number): string {
-        return `${count} more ${count === 1 ? 'project' : 'projects'} loaded.`;
-    },
-    projectCreated(name: string): string {
-        return `${name} created.`;
-    },
-    projectRemoved(name: string): string {
-        return `${name} removed.`;
-    },
-    removeProject(name: string): string {
-        return `Remove project: ${name}`;
-    },
-    confirmProjectRemoval(name: string, itemCount: number): string {
-        const items = `${itemCount} ${itemCount === 1 ? 'item' : 'items'}`;
-        return `Remove ${name}? ${items} will be permanently deleted, along with any previously removed items.`;
-    },
+    ...projectLabels,
 
-    skipToContent: 'Skip to content',
-    productName: 'Legacy 22',
-    pageTitle: 'Todo list',
-    pageIntro: 'Keep the next useful action visible.',
     newItemKicker: 'New item',
     addSectionTitle: 'Add to the list',
     itemNameLabel: 'Item name',

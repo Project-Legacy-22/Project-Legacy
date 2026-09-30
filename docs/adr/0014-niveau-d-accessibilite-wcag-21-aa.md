@@ -1,64 +1,57 @@
-# ADR-0014 — WCAG 2.1 AA comme niveau visé
+# ADR-0014 — WCAG 2.1 AA as the target level
 
-- **Statut** : Accepté
-- **Date** : 2026-09-11
-- **Décideurs** : équipe, à la revue du sprint 2
-- **Issue liée** : #228, décision `D-15`
+- **Status**: Accepted
+- **Date**: 2026-09-11
+- **Deciders**: team, at the sprint 2 review
+- **Related issue**: #228, decision `D-15`
 
-## Contexte
+## Context
 
-Le niveau d'accessibilité visé conditionne les critères d'acceptation de toutes les histoires
-front. Il n'avait jamais été ratifié, alors que le code l'applique : chaque passe `axe-core` du
-dépôt tourne sur les étiquettes `wcag2a`, `wcag2aa` et `wcag21aa`, et le test de contraste calcule
-la luminance relative avec les seuils WCAG — 4,5:1 pour le texte, 3:1 pour les composants.
+The target accessibility level conditions the acceptance criteria of every front-end story. It
+had never been ratified, while the code applies it: every `axe-core` pass of the repository runs on
+the tags `wcag2a`, `wcag2aa` and `wcag21aa`, and the contrast test computes the relative luminance
+with the WCAG thresholds — 4.5:1 for text, 3:1 for components.
 
-`docs/features/15-accessibility-audit.md` note lui-même `D-15` comme « still unratified » tout en
-s'y conformant. Une exigence appliquée par la CI sans être décidée peut se défaire sans discussion.
+`docs/features/15-accessibility-audit.md` itself notes `D-15` as "still unratified" while
+complying with it. A requirement enforced by the CI without being decided can be undone without
+discussion.
 
-## Options considérées
+## Options considered
 
 ### Option A — WCAG 2.1 AA
-- Avantages : c'est le niveau de référence des obligations légales européennes, et celui que
-  l'outillage vérifie déjà sans configuration supplémentaire.
-- Inconvénients : le contraste et les parcours clavier demandent un travail réel sur chaque écran.
+- Pros: it is the reference level of the European legal obligations, and the one the tooling
+  already checks without additional configuration.
+- Cons: contrast and keyboard journeys require real work on every screen.
 
 ### Option B — WCAG 2.1 A
-- Avantages : moins de critères.
-- Inconvénients : laisse tomber le contraste, qui est le défaut le plus courant et le plus visible.
+- Pros: fewer criteria.
+- Cons: drops contrast, which is the most common and most visible defect.
 
-### Option C — Aucun niveau, au cas par cas
-- Inconvénients : aucun critère d'acceptation vérifiable, et une accessibilité qui dépend du
-  relecteur.
+### Option C — No level, case by case
+- Cons: no verifiable acceptance criterion, and an accessibility that depends on the reviewer.
 
-## Décision
+## Decision
 
-Nous retenons **l'option A**, WCAG 2.1 AA.
+We choose **option A**, WCAG 2.1 AA.
 
-Parce que c'est déjà ce que la CI impose, donc la ratifier ne coûte rien et l'écarter coûterait de
-défaire du travail livré. Et parce que le sujet évalue l'accessibilité : un niveau nommé donne des
-critères vérifiables au lieu d'une appréciation.
+Because it is already what the CI enforces, so ratifying it costs nothing and discarding it would
+mean undoing delivered work. And because the subject assesses accessibility: a named level gives
+verifiable criteria instead of an opinion.
 
-## Conséquences
+## Consequences
 
-**Positives**
-- Toute histoire front hérite de critères d'acceptation vérifiables par `axe` et par le test de
-  contraste.
+**Positive**
+- Every front-end story inherits acceptance criteria verifiable by `axe` and by the contrast test.
 
-**Négatives / dette acceptée**
-- `color-contrast` reste désactivé dans les passes `axe`, jsdom ne résolvant aucune cascade. Le
-  contraste est couvert autrement, par le test qui lit les jetons de couleur.
-- Les écarts relevés et non corrigés sont suivis par des issues datées, pas par des lignes de
-  rapport.
+**Negative / accepted debt**
+- `color-contrast` stays disabled in the `axe` passes, since jsdom resolves no cascade. Contrast
+  is covered in another way, by the test that reads the colour tokens.
+- Deviations found and not corrected are tracked by dated issues, not by report lines.
 
-**Ce que ça impose au reste du projet**
-- Un écran livré sans passe `axe` est un écran non conforme, et se traite comme un défaut.
+**What it imposes on the rest of the project**
+- A screen delivered without an `axe` pass is a non-compliant screen, and is treated as a defect.
 
-## Comment on saura qu'on s'est trompé
+## How we will know we were wrong
 
-Un critère du niveau qui ne peut être vérifié ni par `axe` en jsdom ni par un test sur les jetons,
-et qui exigerait donc un navigateur — le signal qui ferait entrer `EN-26`.
-
-## Références
-
-- `docs/features/15-accessibility-audit.md`
-- `apps/web/src/styles/contrast.test.ts`
+A criterion of the level that can be checked neither by `axe` in jsdom nor by a test on the tokens,
+and that would therefore require a browser — the signal that would bring in `EN-26`.

@@ -10,15 +10,13 @@ export interface MembershipRepository {
     // does not exist, which the use case cannot tell from « the caller is not
     // in it » -- and must not, since both answer the same way.
     membersOf(projectId: string): Promise<Membership[]>;
-    // L appartenance et l evenement qui l annonce sont ecrits ensemble ou pas
-    // du tout. Deux requetes seraient deux transactions, et un echec entre les
-    // deux laisserait soit un membre que personne n a annonce, soit une annonce
-    // sans appartenance -- exactement ce que l outbox existe pour eviter
-    // (ADR-0007).
+    // The membership and the event announcing it are written together or not at all. Two requests
+    // would be two transactions, and a failure between them would leave either a member nobody
+    // announced or an announcement without a membership -- exactly what the outbox exists to
+    // prevent (ADR-0007).
     //
-    // Rend false quand la personne etait deja membre : aucune appartenance
-    // creee, donc aucun evenement emis. Ajouter deux fois ne notifie pas deux
-    // fois.
+    // Returns false when the person was already a member: no membership created, so no event
+    // emitted. Adding twice does not notify twice.
     addWithEvent(
         addition: { projectId: string; memberId: string },
         event: DomainEvent,

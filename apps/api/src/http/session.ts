@@ -108,6 +108,16 @@ export function accountOf(res: Response): Account {
     return account;
 }
 
+// Read by the error middleware, which serves authenticated and anonymous
+// requests alike and so cannot go through accountOf, which refuses when there
+// is no account. A log names the account when there is one and says nothing
+// when there is not -- never its address (EN-40).
+export function accountIdOf(res: Response): string | undefined {
+    const { account } = res.locals as AccountLocals;
+
+    return isAccount(account) ? account.id : undefined;
+}
+
 export function sessionTokensOf(res: Response): SessionTokens {
     const { sessionTokens } = res.locals as AccountLocals;
 
