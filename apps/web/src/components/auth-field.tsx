@@ -16,7 +16,11 @@ export interface AuthFieldProps {
     help?: AuthFieldHelp | undefined;
     error: string | null;
     errorId: string;
-    disabled: boolean;
+    disabled?: boolean;
+    // For a form whose request is in flight. Read-only rather than disabled:
+    // the field keeps its place in the tab order, so the focus is not dropped
+    // to the body, and what was sent cannot be edited under the request (#368).
+    readOnly?: boolean;
 }
 
 // A labelled field whose help and error are both tied to the input. Written
@@ -32,7 +36,8 @@ export function AuthField({
     help,
     error,
     errorId,
-    disabled,
+    disabled = false,
+    readOnly = false,
 }: AuthFieldProps) {
     const describedBy = [help?.id, error === null ? null : errorId]
         .filter(candidate => candidate !== undefined && candidate !== null)
@@ -56,6 +61,7 @@ export function AuthField({
                 aria-invalid={error !== null}
                 aria-describedby={describedBy === '' ? undefined : describedBy}
                 disabled={disabled}
+                readOnly={readOnly}
             />
             {error !== null && (
                 <p id={errorId} className="field-error" role="alert">

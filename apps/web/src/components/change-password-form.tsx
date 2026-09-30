@@ -35,8 +35,7 @@ function validate(currentPassword: string, newPassword: string): FieldErrors {
     };
 }
 
-export function ChangePasswordForm({ isSubmitting, onSubmit }: ChangePasswordFormProps) {
-    const prefix = useId();
+function usePasswordFields({ isSubmitting, onSubmit }: ChangePasswordFormProps) {
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [errors, setErrors] = useState<FieldErrors>(NO_ERRORS);
@@ -47,6 +46,8 @@ export function ChangePasswordForm({ isSubmitting, onSubmit }: ChangePasswordFor
 
     function handleSubmit(event: FormEvent<HTMLFormElement>): void {
         event.preventDefault();
+        // Enter in a field submits too: the guard is here, not on the button.
+        if (isSubmitting) return;
 
         const found = validate(currentPassword, newPassword);
         setErrors(found);
@@ -54,6 +55,14 @@ export function ChangePasswordForm({ isSubmitting, onSubmit }: ChangePasswordFor
             run(() => onSubmit(currentPassword, newPassword));
         }
     }
+
+    return { currentPassword, setCurrentPassword, newPassword, setNewPassword, errors, outcome, handleSubmit };
+}
+
+export function ChangePasswordForm({ isSubmitting, onSubmit }: ChangePasswordFormProps) {
+    const prefix = useId();
+    const { currentPassword, setCurrentPassword, newPassword, setNewPassword, errors, outcome, handleSubmit } =
+        usePasswordFields({ isSubmitting, onSubmit });
 
     return (
         <form className="credentials-form" onSubmit={handleSubmit} noValidate>
@@ -67,7 +76,7 @@ export function ChangePasswordForm({ isSubmitting, onSubmit }: ChangePasswordFor
                 onChange={setCurrentPassword}
                 error={errors.current}
                 errorId={`${prefix}-current-error`}
-                disabled={isSubmitting}
+                readOnly={isSubmitting}
             />
             <AuthField
                 id={`${prefix}-new`}
@@ -79,9 +88,9 @@ export function ChangePasswordForm({ isSubmitting, onSubmit }: ChangePasswordFor
                 help={{ id: `${prefix}-new-help`, text: labels.passwordPolicy(PASSWORD_POLICY) }}
                 error={errors.next}
                 errorId={`${prefix}-new-error`}
-                disabled={isSubmitting}
+                readOnly={isSubmitting}
             />
-            <button className="button button-primary" type="submit" disabled={isSubmitting}>
+            <button className="button button-primary" type="submit" aria-disabled={isSubmitting}>
                 {isSubmitting ? labels.changingPassword : labels.changePasswordSubmit}
             </button>
             <FormOutcome outcome={outcome} />
