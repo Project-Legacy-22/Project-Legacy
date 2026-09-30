@@ -83,4 +83,34 @@ describe('projects API (integration)', () => {
         expect(deletion.status).toBe(200);
         expect(itemsAfter.status).toBe(404);
     });
+
+    it('renames an owned project and serves the new name in the list', async () => {
+        const creation = await asOwner.request('/projects', json('POST', { name: 'Before renaming' }));
+        const project = (await creation.json()) as { id: string };
+        await asOwner.request(`/projects/${project.id}/items`, json('POST', { name: 'Kept through renaming' }));
+
+        const renaming = await asOwner.request(`/projects/${project.id}`, json('PATCH', { name: ' After renaming ' }));
+        const page = (await (await asOwner.request('/projects')).json()) as {
+            projects: { id: string; name: string; itemCount: number }[];
+        };
+
+        expect(renaming.status).toBe(200);
+        expect(page.projects.find((candidate) => candidate.id === project.id)).toMatchObject({
+            name: 'After renaming',
+            itemCount: 1,
+        });
+    });
+
+    it('answers a non-member renaming like an unknown project and keeps the name', async () => {
+        const creation = await asOwner.request('/projects', json('POST', { name: 'Not theirs to rename' }));
+        const project = (await creation.json()) as { id: string };
+
+        const denied = await asIntruder.request(`/projects/${project.id}`, json('PATCH', { name: 'Taken over' }));
+        const page = (await (await asOwner.request('/projects')).json()) as {
+            projects: { id: string; name: string }[];
+        };
+
+        expect(denied.status).toBe(404);
+        expect(page.projects.find((candidate) => candidate.id === project.id)?.name).toBe('Not theirs to rename');
+    });
 });

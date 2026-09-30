@@ -24,6 +24,10 @@ export const CreateProjectBody = z.object({
     name: projectName,
 });
 
+export const RenameProjectBody = z.object({
+    name: projectName,
+});
+
 export const ListProjectsQuery = z.object({
     limit: pageSize.default(DEFAULT_PROJECT_PAGE_SIZE),
     cursor: z.string().min(1).max(CURSOR_MAX_LENGTH).optional(),
@@ -61,6 +65,7 @@ export type ProjectIdParams = z.infer<typeof ProjectIdParams>;
 export type ProjectItemIdParams = z.infer<typeof ProjectItemIdParams>;
 export type ProjectMemberIdParams = z.infer<typeof ProjectMemberIdParams>;
 export type CreateProjectBody = z.infer<typeof CreateProjectBody>;
+export type RenameProjectBody = z.infer<typeof RenameProjectBody>;
 export type ListProjectsQuery = z.infer<typeof ListProjectsQuery>;
 export type ProjectMemberDto = z.infer<typeof ProjectMemberDto>;
 export type ProjectMemberListDto = z.infer<typeof ProjectMemberListDto>;

@@ -1,6 +1,12 @@
 import { Router } from 'express';
 import type { RequestHandler } from 'express';
-import { CreateProjectBody, ListProjectsQuery, ProjectIdParams, ProjectMemberIdParams } from '@legacy/contracts';
+import {
+    CreateProjectBody,
+    ListProjectsQuery,
+    ProjectIdParams,
+    ProjectMemberIdParams,
+    RenameProjectBody,
+} from '@legacy/contracts';
 import type { ProjectDto, ProjectMemberListDto, ProjectPageDto } from '@legacy/contracts';
 import type { Membership, Project, ProjectPage } from '@legacy/core-projects';
 
@@ -42,6 +48,20 @@ function removeMember(useCases: ProjectUseCases): RequestHandler {
             callerId: accountOf(res).id,
         });
         res.status(204).end();
+    };
+}
+
+function renameProject(useCases: ProjectUseCases): RequestHandler {
+    return (req, res, next) => {
+        const params = ProjectIdParams.safeParse(req.params);
+        if (!params.success) return next(params.error);
+        const body = RenameProjectBody.safeParse(req.body);
+        if (!body.success) return next(body.error);
+
+        useCases
+            .renameProject({ projectId: params.data.projectId, ownerId: accountOf(res).id, name: body.data.name })
+            .then((project) => res.send(toProjectDto(project)))
+            .catch(next);
     };
 }
 
@@ -96,6 +116,7 @@ export function projectsRouter(useCases: ProjectUseCases): Router {
     router.get('/projects', list);
     router.get('/projects/:projectId/members', members);
     router.post('/projects', add);
+    router.patch('/projects/:projectId', renameProject(useCases));
     router.delete('/projects/:projectId', remove);
     router.delete('/projects/:projectId/members/:userId', removeMember(useCases));
 

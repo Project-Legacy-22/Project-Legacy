@@ -65,6 +65,7 @@ import {
     makeListProjectMembers,
     makeListProjects,
     makeRemoveProject,
+    makeRenameProject,
     makeRemoveProjectMember,
     makeInviteProjectMember,
     makeListInvitations,
@@ -109,6 +110,7 @@ export interface ProjectUseCases {
     listProjects: ReturnType<typeof makeListProjects>;
     addProject: ReturnType<typeof makeAddProject>;
     removeProject: ReturnType<typeof makeRemoveProject>;
+    renameProject: ReturnType<typeof makeRenameProject>;
     listProjectMembers: ReturnType<typeof makeListProjectMembers>;
     removeProjectMember: ReturnType<typeof makeRemoveProjectMember>;
     inviteProjectMember: ReturnType<typeof makeInviteProjectMember>;
@@ -294,6 +296,7 @@ export function projectUseCases(
         listProjects: makeListProjects(projects),
         addProject: makeAddProject({ repository: projects, newId: uuid }),
         removeProject: makeRemoveProject(projects),
+        renameProject: makeRenameProject(projects),
         listProjectMembers: makeListProjectMembers(memberships),
         removeProjectMember: makeRemoveProjectMember(memberships),
         inviteProjectMember: afterWrite(
