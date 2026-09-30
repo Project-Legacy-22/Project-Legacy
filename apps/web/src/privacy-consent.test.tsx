@@ -64,9 +64,8 @@ describe('App privacy policy and consent', () => {
         return register;
     }
 
-    // Le critere de US-37 : la case n est jamais pre-cochee. Un consentement
-    // pose d avance n en est pas un.
-    it('n arrive jamais pre-cochee', async () => {
+    // The US-37 criterion: the box is never pre-ticked. A consent given in advance is not one.
+    it('never arrives pre-ticked', async () => {
         await openRegisterForm();
 
         const box = getElement<HTMLInputElement>('input[type="checkbox"]');
@@ -74,7 +73,7 @@ describe('App privacy policy and consent', () => {
         expect(box.getAttribute('aria-invalid')).toBe('false');
     });
 
-    it('refuse l inscription sans consentement, sans appeler le serveur', async () => {
+    it('refuses the registration without consent, without calling the server', async () => {
         const register = await openRegisterForm();
         await setInputValue(getElement<HTMLInputElement>('input[type="email"]'), 'ada@example.com');
         await setInputValue(
@@ -89,9 +88,9 @@ describe('App privacy policy and consent', () => {
         expect(box.getAttribute('aria-invalid')).toBe('true');
     });
 
-    // L erreur est rattachee au champ et annoncee : la case est en fin de
-    // formulaire, donc le message peut apparaitre hors du champ de vision.
-    it('rattache l erreur a la case et l annonce', async () => {
+    // The error is attached to the field and announced: the box is at the end of the form, so the
+    // message can appear outside the field of view.
+    it('attaches the error to the box and announces it', async () => {
         await openRegisterForm();
         await submitForm(getElement<HTMLFormElement>('form.auth-form'));
 
@@ -102,14 +101,14 @@ describe('App privacy policy and consent', () => {
         expect(error.getAttribute('aria-live')).toBe('assertive');
     });
 
-    it('associe une etiquette a la case', async () => {
+    it('gives the box a label', async () => {
         await openRegisterForm();
 
         const box = getElement<HTMLInputElement>('input[type="checkbox"]');
         expect(document.querySelector(`label[for="${box.id}"]`)).not.toBeNull();
     });
 
-    it('ouvre la politique depuis le formulaire, sans compte', async () => {
+    it('opens the policy from the form, without an account', async () => {
         await openRegisterForm();
 
         await click(getElement<HTMLButtonElement>('.consent-policy-link'));
@@ -118,7 +117,7 @@ describe('App privacy policy and consent', () => {
         expect(document.querySelector('form.auth-form')).toBeNull();
     });
 
-    it('ouvre la politique depuis le pied de page', async () => {
+    it('opens the policy from the footer', async () => {
         const auth = createAuth({ currentAccount: vi.fn(async () => null) });
         await testRoot.render(
             <App api={createApi()} auth={auth} notifications={createNotifications()} />,

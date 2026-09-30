@@ -9,16 +9,16 @@ const VALID_ENV = {
 };
 
 describe('loadWorkerConfig', () => {
-    it('lit le broker et le magasin que le consommateur alimente', () => {
+    it('reads the broker and the store the consumer feeds', () => {
         const config = loadWorkerConfig(VALID_ENV);
 
         expect(config.redisUrl).toBe(VALID_ENV.REDIS_URL);
         expect(config.supabaseUrl).toBe(VALID_ENV.SUPABASE_URL);
     });
 
-    // Meme exigence que pour l API : un processus mal configure ne demarre pas,
-    // et il dit laquelle des variables lui manque.
-    it('refuse de demarrer sans broker, en nommant la variable', () => {
+    // Same requirement as for the API: a misconfigured process does not start, and it says which
+    // variable it is missing.
+    it('refuses to start without a broker, naming the variable', () => {
         expect(() =>
             loadWorkerConfig({
                 SUPABASE_URL: VALID_ENV.SUPABASE_URL,
@@ -27,15 +27,15 @@ describe('loadWorkerConfig', () => {
         ).toThrow(/REDIS_URL/);
     });
 
-    it('applique une attente bloquante par defaut', () => {
+    it('applies a default blocking wait', () => {
         expect(loadWorkerConfig(VALID_ENV).blockSeconds).toBe(5);
     });
 
-    it('accepte une attente fournie sous forme de chaine', () => {
+    it('accepts a wait given as a string', () => {
         expect(loadWorkerConfig({ ...VALID_ENV, WORKER_BLOCK_SECONDS: '2' }).blockSeconds).toBe(2);
     });
 
-    it('refuse une attente qui n en est pas une', () => {
+    it('refuses a wait that is not one', () => {
         expect(() => loadWorkerConfig({ ...VALID_ENV, WORKER_BLOCK_SECONDS: '0' })).toThrow(
             /WORKER_BLOCK_SECONDS/,
         );

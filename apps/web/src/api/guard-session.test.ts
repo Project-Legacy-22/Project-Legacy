@@ -10,7 +10,7 @@ function clientQuiEchoue(error: Error) {
 }
 
 describe('guardSession', () => {
-    it('signale la fin de session sur un refus 401', async () => {
+    it('reports the end of the session on a 401 refusal', async () => {
         const expire = vi.fn();
         const client = guardSession(clientQuiEchoue(new ApiError(401, 'expiree')), expire);
 
@@ -19,10 +19,9 @@ describe('guardSession', () => {
         expect(expire).toHaveBeenCalledOnce();
     });
 
-    // Une panne du serveur n est pas une session terminee. Confondre les deux
-    // renverrait la personne a l ecran de connexion pour une indisponibilite
-    // d une seconde, en lui faisant perdre ce qu elle etait en train de faire.
-    it('ne signale rien sur une autre erreur', async () => {
+    // A server outage is not an ended session. Confusing the two would send the person back to the
+    // sign-in screen for a one-second unavailability, making them lose what they were doing.
+    it('reports nothing on another error', async () => {
         const expire = vi.fn();
         const client = guardSession(clientQuiEchoue(new ApiError(500, 'panne')), expire);
 
@@ -31,7 +30,7 @@ describe('guardSession', () => {
         expect(expire).not.toHaveBeenCalled();
     });
 
-    it('ne signale rien sur une requete annulee', async () => {
+    it('reports nothing on a cancelled request', async () => {
         const expire = vi.fn();
         const abandon = new DOMException('abandon', 'AbortError');
         const client = guardSession(clientQuiEchoue(abandon), expire);
@@ -41,21 +40,21 @@ describe('guardSession', () => {
         expect(expire).not.toHaveBeenCalled();
     });
 
-    // L appelant garde son erreur : c est lui qui sait quoi en dire a l ecran
-    // qu il occupe, et la fin de session n est pas la seule chose a rapporter.
-    it('laisse l erreur remonter a l appelant', async () => {
+    // The caller keeps its error: it knows what to say about it on the screen it occupies, and the
+    // end of the session is not the only thing to report.
+    it('lets the error reach the caller', async () => {
         const client = guardSession(clientQuiEchoue(new ApiError(401, 'expiree')), vi.fn());
 
         await expect(client.lire()).rejects.toThrow('expiree');
     });
 
-    it('rend le resultat d un appel qui reussit, inchange', async () => {
+    it('returns the result of a successful call, unchanged', async () => {
         const client = guardSession({ lire: () => Promise.resolve(COMPTE) }, vi.fn());
 
         await expect(client.lire()).resolves.toEqual(COMPTE);
     });
 
-    it('transmet les arguments de l appel', async () => {
+    it('passes the call arguments on', async () => {
         const lire = vi.fn(async (id: string) => id);
         const client = guardSession({ lire }, vi.fn());
 

@@ -92,8 +92,8 @@
 }
 
 .todo-item {
-    /* Une seule colonne : la carte vit dans une colonne du Kanban, ou le nom et
-       les actions cote a cote ne tiennent pas. */
+    /* A single column: the card lives in a Kanban column, where the name and the actions side by
+       side do not fit. */
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     align-items: start;
@@ -129,8 +129,8 @@
 }
 
 .item-name {
-    /* break-word et non anywhere : anywhere ramene la largeur minimale a un
-       caractere, et la grille cassait le nom lettre par lettre. */
+    /* break-word and not anywhere: anywhere brings the minimum width down to one character, and
+       the grid broke the name letter by letter. */
     overflow-wrap: break-word;
     margin-bottom: var(--space-2);
     color: #172033;

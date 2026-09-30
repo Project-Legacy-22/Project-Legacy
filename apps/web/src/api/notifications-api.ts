@@ -15,9 +15,9 @@ export interface ListNotificationsRequest {
     cursor?: string;
 }
 
-// L effet observable du flux evenementiel de US-10. Le front ne sait pas qu il
-// existe un broker ni un worker : il lit un compte et une liste, qui evoluent
-// parce qu un composant distinct a consomme l evenement.
+// The observable effect of the US-10 event flow. The front does not know that a broker or a worker
+// exists: it reads a count and a list, which change because a separate component consumed the
+// event.
 export interface NotificationsApi {
     unreadCount: (signal: AbortSignal) => Promise<number>;
     listNotifications: (request: ListNotificationsRequest) => Promise<NotificationPageDto>;

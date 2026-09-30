@@ -1,14 +1,12 @@
-/* La classe intro est celle de l en-tete bleu fonce : sur un panneau blanc son
-   #e5edf4 etait invisible. */
+/* The intro class is the one of the dark blue header: on a white panel its #e5edf4 was invisible. */
 .panel-intro {
     margin-bottom: var(--space-6);
     color: #39495c;
     line-height: 1.6;
 }
 
-/* Section des donnees personnelles (US-13). Elle reutilise .panel,
-   .section-heading, .form-field et .button-danger : rien ici n a besoin d un
-   vocabulaire visuel propre, seule la mise en garde en a un. */
+/* Personal data section (US-13). It reuses .panel, .section-heading, .form-field and
+   .button-danger: nothing here needs a visual vocabulary of its own, only the warning has one. */
 
 .delete-account {
     display: grid;
@@ -36,9 +34,8 @@
     line-height: 1.5;
 }
 
-/* Le seul element de cette section qui doit se lire avant le bouton : il dit
-   qu il n y a ni delai ni retour en arriere. Le contraste reste au-dessus de
-   4.5:1 sur le fond du panneau (US-14). */
+/* The only element of this section that must be read before the button: it says there is neither a
+   delay nor a way back. The contrast stays above 4.5:1 on the panel background (US-14). */
 .delete-account-warning {
     padding: var(--space-5) var(--space-6);
     border: 1px solid #d89a96;

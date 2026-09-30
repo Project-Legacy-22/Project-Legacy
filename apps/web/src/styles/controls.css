@@ -164,9 +164,8 @@ select:disabled {
     margin-bottom: var(--space-5);
 }
 
-/* Seulement quand une action suit : un etat vide qu on ne peut pas remplir
-   n affiche qu un paragraphe, et une marge sous le dernier element ajouterait
-   un blanc que rien ne justifie. */
+/* Only when an action follows: an empty state that cannot be filled shows only a paragraph, and a
+   margin under the last element would add a blank nothing justifies. */
 .empty-message p:not(:last-child) {
     margin-bottom: var(--space-5);
 }

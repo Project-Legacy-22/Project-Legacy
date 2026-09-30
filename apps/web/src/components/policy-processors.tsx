@@ -1,21 +1,19 @@
-// Qui détient quoi, où, et qui peut y accéder.
+// Who holds what, where, and who can access it.
 //
-// Tabulaire, donc pas dans labels.ts : ce fichier porte quatre champs par
-// ligne, et les éclater en vingt libellés plats rendrait impossible de vérifier
-// qu'une ligne est complète. Les en-têtes et le rendu vivent ici pour la même
-// raison -- une colonne dont l'en-tête est ailleurs se renomme à moitié -- et
-// labels.ts est par ailleurs à son plafond de lignes.
+// Tabular, so not in labels.ts: this file carries four fields per row, and splitting them into
+// twenty flat labels would make it impossible to check that a row is complete. The headers and the
+// rendering live here for the same reason -- a column whose header is elsewhere gets half renamed
+// -- and labels.ts is at its line ceiling anyway.
 //
-// Chaque ligne est vérifiable. La région de Supabase se lit par
-// `supabase projects list`, celle de Vercel est déclarée dans `vercel.json`,
-// celle de Grafana dans l'URL de sa source de données Prometheus, celle de la
-// file d'événements dans l'onglet Storage du projet Vercel. Une ligne qui ne se
-// vérifie pas n'a rien à faire ici : c'est une politique, pas une intention.
+// Every row can be checked. The Supabase region is read with `supabase projects list`, the Vercel
+// one is declared in `vercel.json`, the Grafana one in the URL of its Prometheus data source, the
+// event queue one in the Storage tab of the Vercel project. A row that cannot be checked has no
+// place here: it is a policy, not an intention.
 //
-// L'accès est le même partout, et c'est un fait à écrire plutôt qu'à arrondir :
-// les six développeurs de l'équipe ont le même accès à chaque outil. Il n'y a
-// pas de séparation de rôle sur l'accès à l'infrastructure. Annoncer un accès
-// plus restreint qu'il ne l'est tromperait le lecteur dans le sens qui compte.
+// Access is the same everywhere, and it is a fact to write rather than to round off: the six
+// developers of the team have the same access to every tool. There is no separation of roles on
+// infrastructure access. Announcing narrower access than there is would mislead the reader in the
+// direction that matters.
 
 export interface Processor {
     name: string;

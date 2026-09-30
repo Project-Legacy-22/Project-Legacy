@@ -55,7 +55,7 @@ afterEach(async () => {
 });
 
 describe('App sign-out', () => {
-    it('renvoie a l ecran de connexion et y deplace le focus', async () => {
+    it('returns to the sign-in screen and moves the focus there', async () => {
         const signOut = vi.fn(async () => undefined);
         const auth = createAuth({ signOut });
         await testRoot.render(<App api={createApi()} auth={auth} />);
@@ -66,15 +66,13 @@ describe('App sign-out', () => {
         expect(signOut).toHaveBeenCalledOnce();
         expect(document.querySelector('.session-banner')).toBeNull();
         expect(document.querySelector('form.auth-form')).not.toBeNull();
-        // Critere US-47 : le retour a l ecran de connexion deplace le focus
-        // sur le titre.
+        // US-47 criterion: returning to the sign-in screen moves the focus to the heading.
         expect(document.activeElement).toBe(getElement<HTMLHeadingElement>('.auth-page h1'));
     });
 
-    // La deconnexion doit fonctionner sur un poste partage meme si la
-    // revocation cote serveur echoue : le cookie est efface quoi qu il arrive
-    // (voir apps/api/src/http/routes/auth.ts).
-    it('revient a l ecran de connexion meme si la requete echoue', async () => {
+    // Signing out must work on a shared computer even if the revocation on the server fails: the
+    // cookie is cleared whatever happens (see apps/api/src/http/routes/auth.ts).
+    it('returns to the sign-in screen even if the request fails', async () => {
         const auth = createAuth({
             signOut: vi.fn(async () => {
                 throw new ApiError(500, 'panne du fournisseur');

@@ -78,8 +78,8 @@ afterEach(async () => {
     await testRoot.unmount();
 });
 
-describe('section des identifiants (US-36)', () => {
-    it('ne presente aucune violation WCAG A ou AA detectable automatiquement', async () => {
+describe('credentials section (US-36)', () => {
+    it('has no automatically detectable WCAG A or AA violation', async () => {
         await afficher(createCredentials());
 
         const resultats = await axe.run(document, {
@@ -90,7 +90,7 @@ describe('section des identifiants (US-36)', () => {
         expect(resultats.violations.map(violation => violation.id)).toEqual([]);
     });
 
-    it('se place au-dessus de la section de suppression du compte', async () => {
+    it('sits above the account deletion section', async () => {
         await afficher(createCredentials());
 
         const identifiants = getElement('#credentials-heading');
@@ -101,8 +101,8 @@ describe('section des identifiants (US-36)', () => {
         ).not.toBe(0);
     });
 
-    describe('changement de mot de passe', () => {
-        it('exige le mot de passe actuel et transmet les deux', async () => {
+    describe('password change', () => {
+        it('requires the current password and passes both on', async () => {
             const credentials = createCredentials();
             await afficher(credentials);
 
@@ -115,7 +115,7 @@ describe('section des identifiants (US-36)', () => {
             expect(getElement('.form-success').textContent).toBe(labels.passwordChanged);
         });
 
-        it('refuse un mot de passe actuel vide sans appeler l API', async () => {
+        it('refuses an empty current password without calling the API', async () => {
             const credentials = createCredentials();
             await afficher(credentials);
 
@@ -125,7 +125,7 @@ describe('section des identifiants (US-36)', () => {
             expect(credentials.changePassword).not.toHaveBeenCalled();
         });
 
-        it('refuse un nouveau mot de passe trop court sans appeler l API', async () => {
+        it('refuses a new password that is too short without calling the API', async () => {
             const credentials = createCredentials();
             await afficher(credentials);
 
@@ -137,7 +137,7 @@ describe('section des identifiants (US-36)', () => {
             expect(credentials.changePassword).not.toHaveBeenCalled();
         });
 
-        it('affiche la raison du serveur sur un mot de passe actuel refuse', async () => {
+        it('shows the server\'s reason when the current password is refused', async () => {
             const credentials = createCredentials({
                 changePassword: vi.fn(() =>
                     Promise.reject(new ApiError(403, 'The current password is incorrect.')),
@@ -151,8 +151,8 @@ describe('section des identifiants (US-36)', () => {
         });
     });
 
-    describe('changement d adresse', () => {
-        it('transmet la nouvelle adresse et repond de facon neutre', async () => {
+    describe('address change', () => {
+        it('passes the new address on and answers neutrally', async () => {
             const credentials = createCredentials();
             await afficher(credentials);
 
@@ -164,7 +164,7 @@ describe('section des identifiants (US-36)', () => {
             expect(getElement('.form-success').textContent).toBe(labels.emailChangeRequested);
         });
 
-        it('refuse une adresse malformee sans appeler l API', async () => {
+        it('refuses a malformed address without calling the API', async () => {
             const credentials = createCredentials();
             await afficher(credentials);
 
@@ -176,7 +176,7 @@ describe('section des identifiants (US-36)', () => {
             expect(credentials.changeEmail).not.toHaveBeenCalled();
         });
 
-        it('ne change pas l adresse affichee dans le bandeau', async () => {
+        it('does not change the address shown in the banner', async () => {
             const credentials = createCredentials();
             await afficher(credentials);
 

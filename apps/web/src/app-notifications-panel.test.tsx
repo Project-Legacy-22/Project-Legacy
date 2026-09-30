@@ -78,7 +78,7 @@ afterEach(async () => {
 });
 
 describe('App notifications panel', () => {
-    it('est repliee par defaut et ne demande pas la liste', async () => {
+    it('is folded by default and does not ask for the list', async () => {
         const listNotifications = vi.fn(async (): Promise<NotificationPageDto> => ({
             notifications: [],
             nextCursor: null,
@@ -90,7 +90,7 @@ describe('App notifications panel', () => {
         expect(listNotifications).not.toHaveBeenCalled();
     });
 
-    it('demande et affiche la liste a l ouverture', async () => {
+    it('asks for and shows the list when opened', async () => {
         const notifications = createNotifications({
             listNotifications: vi.fn(async (): Promise<NotificationPageDto> => ({
                 notifications: [NOTIFICATION],
@@ -106,7 +106,7 @@ describe('App notifications panel', () => {
         expect(document.querySelector('#notifications-panel-content')).not.toBeNull();
     });
 
-    it('affiche un etat vide quand il n y a rien', async () => {
+    it('shows an empty state when there is nothing', async () => {
         const notifications = createNotifications();
         await testRoot.render(<App api={createApi()} auth={createAuth()} notifications={notifications} />);
 
@@ -116,9 +116,9 @@ describe('App notifications panel', () => {
         expect(document.querySelector('.empty-message')?.textContent).toBe(labels.emptyNotifications);
     });
 
-    it('expose le chargement sur le panneau, et pas seulement en texte', async () => {
-        // Une reponse differee, sans quoi l etat de chargement est deja fini
-        // quand le clic est attendu et ne peut pas etre observe.
+    it('exposes loading on the panel, and not only as text', async () => {
+        // A delayed answer, otherwise the loading state is already over when the click is awaited
+        // and cannot be observed.
         const page = deferred<NotificationPageDto>();
         const notifications = createNotifications({
             listNotifications: vi.fn(() => page.promise),
@@ -134,7 +134,7 @@ describe('App notifications panel', () => {
         expect(getElement<HTMLElement>('.notifications-panel').getAttribute('aria-busy')).toBe('false');
     });
 
-    it('se replie a un second clic, sans redemander la liste', async () => {
+    it('folds on a second click, without asking for the list again', async () => {
         const listNotifications = vi.fn(async (): Promise<NotificationPageDto> => ({
             notifications: [],
             nextCursor: null,
@@ -151,7 +151,7 @@ describe('App notifications panel', () => {
         expect(listNotifications).toHaveBeenCalledOnce();
     });
 
-    it('marque une notification comme lue et retire le bouton', async () => {
+    it('marks a notification as read and removes the button', async () => {
         const markAsRead = vi.fn(async () => undefined);
         const notifications = createNotifications({
             listNotifications: vi.fn(async (): Promise<NotificationPageDto> => ({
@@ -172,7 +172,7 @@ describe('App notifications panel', () => {
         expect(getElement<HTMLElement>('.notification-status').textContent).toBe(labels.notificationRead);
     });
 
-    it('charge la page suivante et l annonce', async () => {
+    it('loads the next page and announces it', async () => {
         const secondNotification: NotificationDto = {
             ...NOTIFICATION,
             id: '33333333-3333-4333-8333-333333333333',
@@ -198,7 +198,7 @@ describe('App notifications panel', () => {
         );
     });
 
-    it('signale un echec de chargement de la liste et relance la requete', async () => {
+    it('reports a failure to load the list and sends the request again', async () => {
         const listNotifications = vi.fn(async () => {
             throw new Error('panne du serveur');
         });
@@ -211,9 +211,8 @@ describe('App notifications panel', () => {
         const alerte = getElement<HTMLElement>('#notifications-panel-content [role="alert"]');
         expect(alerte.querySelector('p')?.textContent).toBe(labels.loadNotificationsFailed);
 
-        // Le critere de EN-48 n est pas qu un bouton existe, c est qu il
-        // relance la requete. Le panneau n en avait aucun : la seule sortie
-        // etait de le refermer et de le rouvrir, ce que rien ne disait.
+        // The EN-48 criterion is not that a button exists, it is that it sends the request again.
+        // The panel had none: the only way out was to close and reopen it, which nothing said.
         const appelsAvant = listNotifications.mock.calls.length;
         await click(getElement<HTMLButtonElement>('[role="alert"] button'));
         await flushTimers();
@@ -221,7 +220,7 @@ describe('App notifications panel', () => {
         expect(listNotifications.mock.calls.length).toBeGreaterThan(appelsAvant);
     });
 
-    it('signale un echec de chargement de la suite, avec un bouton pour ressayer', async () => {
+    it('reports a failure to load more, with a button to try again', async () => {
         const listNotifications = vi
             .fn<NotificationsApi['listNotifications']>()
             .mockResolvedValueOnce({ notifications: [NOTIFICATION], nextCursor: 'a-cursor' })
@@ -242,7 +241,7 @@ describe('App notifications panel', () => {
         );
     });
 
-    it('signale un echec de marquage comme lu, sans retirer le bouton', async () => {
+    it('reports a failure to mark as read, without removing the button', async () => {
         const notifications = createNotifications({
             listNotifications: vi.fn(async (): Promise<NotificationPageDto> => ({
                 notifications: [NOTIFICATION],
@@ -265,7 +264,7 @@ describe('App notifications panel', () => {
         expect(document.querySelector('.notification-row button')).not.toBeNull();
     });
 
-    it('n ajoute pas une page perimee quand le panneau est ferme puis rouvert pendant un chargement de suite', async () => {
+    it('does not add a stale page when the panel is closed and reopened while loading more', async () => {
         const staleNext = deferred<NotificationPageDto>();
         const secondNotification: NotificationDto = {
             ...NOTIFICATION,

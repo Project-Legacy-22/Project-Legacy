@@ -55,7 +55,7 @@ afterEach(async () => {
 });
 
 describe('home screen', () => {
-    it('est la vue ouverte apres la connexion, seule dans le contenu principal', async () => {
+    it('is the view opened after sign-in, alone in the main content', async () => {
         await renderApp({ listAttention: async () => anAttention() });
 
         const sections = [...document.querySelectorAll('main > section')].map((section) =>
@@ -66,7 +66,7 @@ describe('home screen', () => {
         expect(getElement('.view-nav [aria-current="page"]').textContent).toBe(labels.viewName('home'));
     });
 
-    it('montre les taches de chaque groupe avec le projet ou elles vivent', async () => {
+    it('shows the tasks of each group with the project they live in', async () => {
         const attention = anAttention({
             workload: 'open',
             overdue: { items: [anAttentionItem({ ...LATE, projectName: SECOND.name })], hasMore: true },
@@ -78,7 +78,7 @@ describe('home screen', () => {
         expect(homeText()).toContain(labels.attentionHasMore);
     });
 
-    it('ouvre la tache dans son projet et y porte le focus', async () => {
+    it('opens the task in its project and moves the focus to it', async () => {
         const listItems = vi.fn<ItemsApi['listItems']>(async (projectId) =>
             itemPage(projectId === SECOND.id ? [LATE] : []),
         );
@@ -95,7 +95,7 @@ describe('home screen', () => {
         expect(document.activeElement?.getAttribute('data-move-item-id')).toBe(LATE.id);
     });
 
-    it('distingue un compte sans tache d un compte ou tout est termine', async () => {
+    it('tells an account without tasks from an account where everything is done', async () => {
         await renderApp({ listAttention: async () => anAttention({ workload: 'none' }) });
         const nothingYet = homeText();
         await root.unmount();
@@ -107,7 +107,7 @@ describe('home screen', () => {
         expect(homeText()).toContain(labels.attentionEmpty('all_done'));
     });
 
-    it('signale un echec et recharge a la demande', async () => {
+    it('reports a failure and reloads on request', async () => {
         const listAttention = vi
             .fn<AttentionApi['listAttention']>()
             .mockRejectedValueOnce(new ApiError(500, labels.loadAttentionFailed))
@@ -121,7 +121,7 @@ describe('home screen', () => {
         expect(homeText()).toContain(labels.attentionEmpty('all_done'));
     });
 
-    it('recharge ce qui demande attention apres une tache terminee dans son projet', async () => {
+    it('reloads what needs attention after a task is completed in its project', async () => {
         const listAttention = vi.fn<AttentionApi['listAttention']>(async () => anAttention({ workload: 'open' }));
         const item = anItem({ projectId: FIRST.id, name: 'Water the plants' });
         const items = createApi({
@@ -139,7 +139,7 @@ describe('home screen', () => {
         expect(listAttention.mock.calls.length).toBeGreaterThan(callsBefore);
     });
 
-    it('ne presente aucune violation axe avec des groupes remplis', async () => {
+    it('has no axe violation with filled groups', async () => {
         const attention = anAttention({ workload: 'open', highPriority: { items: [anAttentionItem({ priority: 'high' })], hasMore: false } });
         await renderApp({ listAttention: async () => attention });
 
