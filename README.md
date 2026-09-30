@@ -27,6 +27,7 @@ account: those only exist on the local stack.
 
 | Subject | Where |
 |---|---|
+| What the subject expects, and what is delivered | [docs/requirements.md](docs/requirements.md) |
 | Architecture, layers, request flow and event flow | [docs/architecture.md](docs/architecture.md) |
 | Decisions and their reasons | [docs/adr/](docs/adr/README.md) |
 | Event catalogue | [docs/events/catalog.md](docs/events/catalog.md) |
