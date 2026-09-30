@@ -57,6 +57,9 @@ export function DeleteAccountForm({ email, isDeleting, isDisabled, onDelete }: D
 
     function submit(event: FormEvent): void {
         event.preventDefault();
+        // Enter in the field submits too: the guard is here, not on the button,
+        // which stays focusable while an export or the deletion runs (#368).
+        if (isBlocked) return;
         const refused = refusalOf(confirmation, email);
 
         setRefusal(refused);
@@ -85,9 +88,9 @@ export function DeleteAccountForm({ email, isDeleting, isDisabled, onDelete }: D
                 }}
                 error={refusal}
                 errorId={ERROR_ID}
-                disabled={isBlocked}
+                readOnly={isBlocked}
             />
-            <button className="button button-danger" type="submit" disabled={isBlocked}>
+            <button className="button button-danger" type="submit" aria-disabled={isBlocked}>
                 {isDeleting ? labels.deletingAccount : labels.deleteAccount}
             </button>
         </form>
