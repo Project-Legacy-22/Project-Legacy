@@ -63,6 +63,7 @@ function projectsApi(overrides: Partial<ProjectsApi> = {}): ProjectsApi {
         listProjects: vi.fn(async () => ({ projects: [FIRST], nextCursor: null })),
         createProject: vi.fn(async () => SECOND),
         deleteProject: vi.fn(async () => undefined),
+        renameProject: vi.fn(),
         ...overrides,
     };
 }

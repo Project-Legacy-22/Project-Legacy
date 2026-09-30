@@ -69,6 +69,7 @@ function createProjects(): ProjectsApi {
         listProjects: vi.fn(async () => ({ projects: [], nextCursor: null })),
         createProject: vi.fn(),
         deleteProject: vi.fn(),
+    renameProject: vi.fn(),
     };
 }
 
