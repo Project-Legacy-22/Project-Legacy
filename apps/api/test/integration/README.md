@@ -29,6 +29,10 @@ what a double cannot prove: that the pieces work once really connected.
   the service role. It is the only suite that actually exercises what the authentication and
   project migrations set up: the safety net if the service role leaks or if a client queries
   PostgREST directly.
+- `event-flow.integration.test.ts` — the event flow of `US-10`: a task and its event are written
+  in one transaction, so a refused event leaves no task and a refused task leaves no event; and
+  the demonstration flow, a task created over HTTP that becomes a notification its owner reads
+  through the real relay, broker and consumer.
 - `retention-purge.integration.test.ts` — the retention purge (`US-39`): what exceeded its
   duration goes, the rest stays, an event never published is never deleted, a second pass does
   nothing, and the erasure of an account finds its processed events after the purge of its outbox.
