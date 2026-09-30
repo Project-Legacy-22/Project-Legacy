@@ -35,7 +35,9 @@ h1 {
     letter-spacing: -0.04em;
 }
 
-.intro {
+/* Scoped to the header (issue 448): its light colour is meant for the dark
+   surface, and on a white panel it cannot be read. */
+.site-header .intro {
     max-width: 38ch;
     margin-bottom: 0;
     color: #e5edf4;

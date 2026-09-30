@@ -26,7 +26,7 @@ export function CredentialsSection({
                 <p className="section-kicker">{labels.credentialsKicker}</p>
                 <h2 id="credentials-heading">{labels.credentialsTitle}</h2>
             </div>
-            <p className="intro">{labels.credentialsIntro}</p>
+            <p className="panel-intro">{labels.credentialsIntro}</p>
             <ChangeEmailForm isSubmitting={isSubmitting} onSubmit={onChangeEmail} />
             <ChangePasswordForm isSubmitting={isSubmitting} onSubmit={onChangePassword} />
         </section>
