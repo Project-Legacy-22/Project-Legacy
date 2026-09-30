@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from './app';
 import { labels } from './labels';
-import { createApi, createAuth, createProjectsApi, itemPage } from './test/app-fixture';
+import { createApi, createAuth, createProjectsApi, itemPage, startAt } from './test/app-fixture';
 import { anItem } from './test/builders/item-builder';
 import {
     accessibleName,
@@ -63,6 +63,7 @@ beforeEach(() => {
     document.documentElement.lang = 'en';
     document.title = 'Legacy 22';
     root = createReactTestRoot();
+    startAt('projects');
 });
 
 afterEach(async () => {

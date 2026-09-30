@@ -15,6 +15,8 @@ import {
     createProjectsApi,
     firstItem,
     itemPage,
+    openView,
+    startAt,
 } from './test/app-fixture';
 import { click, createReactTestRoot, flushTimers, getElement, setInputValue, submitForm } from './test/react-root';
 import type { ReactTestRoot } from './test/react-root';
@@ -70,6 +72,7 @@ function politeText(): string {
 
 beforeEach(() => {
     testRoot = createReactTestRoot();
+    startAt('projects');
 });
 
 afterEach(async () => {
@@ -187,8 +190,7 @@ describe('after a member leaves', () => {
         const itemReads = listItems.mock.calls.length;
         const memberReads = listMembers.mock.calls.length;
 
-        await click(getElement<HTMLButtonElement>('.members-panel button[aria-controls="members-content"]'));
-        await flushTimers();
+        await openView('members');
         await click(buttonNamed(labels.removeMember(GRACE.email)));
         await flushTimers();
 

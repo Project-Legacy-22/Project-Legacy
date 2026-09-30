@@ -2,7 +2,7 @@ import { act } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from './app';
-import { createProjectsApi } from './test/app-fixture';
+import { createProjectsApi, startAt } from './test/app-fixture';
 import { ApiError } from './api/items-api';
 import type { ItemPageDto, ItemsApi } from './api/items-api';
 import type { AccountDto, AuthApi } from './api/auth-api';
@@ -80,6 +80,7 @@ async function avancer(millisecondes: number): Promise<void> {
 
 beforeEach(() => {
     testRoot = createReactTestRoot();
+    startAt('projects');
     // La suppression d un item demande confirmation depuis #176. jsdom
     // n implemente pas confirm, qui rend alors undefined : l action serait
     // abandonnee et le 401 attendu n arriverait jamais.
