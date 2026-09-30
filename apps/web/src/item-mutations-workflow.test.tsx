@@ -58,6 +58,7 @@ const projects: ProjectsApi = {
     listProjects: vi.fn(async () => ({ projects: [PROJECT], nextCursor: null })),
     createProject: vi.fn(),
     deleteProject: vi.fn(),
+    renameProject: vi.fn(),
 };
 
 let root: ReactTestRoot;

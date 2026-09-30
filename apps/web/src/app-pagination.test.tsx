@@ -55,6 +55,7 @@ const projects: ProjectsApi = {
     })),
     createProject: vi.fn(),
     deleteProject: vi.fn(),
+    renameProject: vi.fn(),
 };
 
 beforeEach(() => {

@@ -22,7 +22,7 @@
 
 .project-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto auto;
     gap: var(--space-4);
 }
 
@@ -65,8 +65,22 @@
     font-weight: 700;
 }
 
-.project-remove {
+.project-remove,
+.project-rename {
     align-self: stretch;
+}
+
+/* The rename form opens under the row it belongs to, across its full width. */
+.project-rename-form {
+    display: grid;
+    grid-column: 1 / -1;
+    gap: var(--space-4);
+}
+
+.project-rename-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
 }
 
 .member-row {
@@ -107,7 +121,8 @@
     }
 
     .project-form .button,
-    .project-remove {
+    .project-remove,
+    .project-rename {
         width: 100%;
     }
 }

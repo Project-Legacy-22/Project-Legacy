@@ -80,6 +80,7 @@ export function createProjectsApi(overrides: Partial<ProjectsApi> = {}): Project
         }),
         createProject: async () => PROJECT,
         deleteProject: async () => undefined,
+        renameProject: async (_projectId, { name }) => ({ ...PROJECT, name }),
         ...overrides,
     };
 }
