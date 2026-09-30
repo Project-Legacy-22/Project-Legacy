@@ -86,6 +86,7 @@ function useProjectPagination(api: ProjectsApi, setProjects: SetProjects) {
 interface InitialPageContext {
     api: ProjectsApi;
     controller: AbortController;
+    preferredProjectId: string | null;
     setProjects: SetProjects;
     setSelectedProjectId: Dispatch<SetStateAction<string | null>>;
     setLoadState: Dispatch<SetStateAction<ProjectsLoadState>>;
@@ -100,9 +101,15 @@ async function loadInitialPage(context: InitialPageContext): Promise<void> {
         if (context.controller.signal.aborted) return;
         context.setProjects(page.projects);
         context.setNextCursor(page.nextCursor);
-        context.setSelectedProjectId((current) =>
-            page.projects.some((project) => project.id === current) ? current : (page.projects[0]?.id ?? null),
-        );
+        context.setSelectedProjectId((current) => {
+            // An accepted invitation must not select a project before the
+            // refreshed list contains it: that briefly renders "no project"
+            // and removes the current task board.
+            if (page.projects.some((project) => project.id === context.preferredProjectId)) {
+                return context.preferredProjectId;
+            }
+            return page.projects.some((project) => project.id === current) ? current : (page.projects[0]?.id ?? null);
+        });
         context.setLoadState({ status: 'ready' });
     } catch (error) {
         if (context.controller.signal.aborted) return;
@@ -119,8 +126,18 @@ export function useProjectsQuery(api: ProjectsApi) {
     const [loadState, setLoadState] = useState<ProjectsLoadState>({
         status: 'loading',
     });
-    const [attempt, setAttempt] = useState(0);
+    const [reload, setReload] = useState<{ version: number; preferredProjectId: string | null }>({
+        version: 0,
+        preferredProjectId: null,
+    });
     const pagination = useProjectPagination(api, setProjects);
+
+    const retry = useCallback(() => {
+        setReload((current) => ({ version: current.version + 1, preferredProjectId: null }));
+    }, []);
+    const reloadAndSelect = useCallback((projectId: string) => {
+        setReload((current) => ({ version: current.version + 1, preferredProjectId: projectId }));
+    }, []);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -129,13 +146,14 @@ export function useProjectsQuery(api: ProjectsApi) {
         void loadInitialPage({
             api,
             controller,
+            preferredProjectId: reload.preferredProjectId,
             setProjects,
             setSelectedProjectId,
             setLoadState,
             setNextCursor: pagination.setNextCursor,
         });
         return () => controller.abort();
-    }, [api, attempt, pagination.reset, pagination.setNextCursor]);
+    }, [api, reload, pagination.reset, pagination.setNextCursor]);
 
     return {
         projects,
@@ -146,6 +164,7 @@ export function useProjectsQuery(api: ProjectsApi) {
         hasNextPage: pagination.hasNextPage,
         paginationState: pagination.state,
         loadMore: pagination.loadMore,
-        retry: () => setAttempt((current) => current + 1),
+        retry,
+        reloadAndSelect,
     };
 }
