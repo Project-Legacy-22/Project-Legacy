@@ -1,4 +1,5 @@
 import type { Logger } from '../../src/logger.js';
+import { refusePersonalData } from './log-hygiene.js';
 
 export interface LoggedLine {
     level: 'info' | 'warn' | 'error' | 'fatal';
@@ -22,6 +23,10 @@ export function recordingLogger(): RecordingLogger {
     const record =
         (level: LoggedLine['level']) =>
         (fields: object, message?: string): void => {
+            // EN-40. Refusing here rather than asserting afterwards means every
+            // test of this repository carries the control, including the ones
+            // written after it, and none of them has to remember to.
+            refusePersonalData(fields, message);
             lines.push({ level, fields, message });
         };
 
