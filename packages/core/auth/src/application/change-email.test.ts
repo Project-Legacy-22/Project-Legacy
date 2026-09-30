@@ -28,7 +28,7 @@ function contexte(seed = [{ id: 'account-1', email: ADRESSE, password: MOT_DE_PA
 }
 
 describe('changeEmail', () => {
-    it('demande une confirmation et ne touche pas encore a l identifiant', async () => {
+    it('asks for a confirmation and does not touch the identifier yet', async () => {
         const { provider, changeEmail, signIn } = contexte();
         const caller = await callerOf(provider);
 
@@ -38,10 +38,10 @@ describe('changeEmail', () => {
         await expect(signIn(ADRESSE, MOT_DE_PASSE)).resolves.toBeDefined();
     });
 
-    // Le critere central : une adresse deja enregistree produit la meme reponse
-    // qu une adresse libre. Le cas d usage ne rend rien, donc les deux appels
-    // sont indiscernables de l exterieur ; ici on verifie qu aucun ne leve.
-    it('repond de la meme facon sur une adresse libre et sur une adresse prise', async () => {
+    // The central criterion: an address already registered gets the same answer as a free one. The
+    // use case returns nothing, so both calls are indistinguishable from outside; here we check
+    // that neither throws.
+    it('answers the same way for a free address and a taken one', async () => {
         const { provider, changeEmail } = contexte([
             { id: 'account-1', email: ADRESSE, password: MOT_DE_PASSE },
             { id: 'account-2', email: 'bob@example.com', password: 'AutreMotDePasse3' },
@@ -60,20 +60,20 @@ describe('changeEmail', () => {
         expect(surPrise).toBe(surLibre);
     });
 
-    it('refuse une adresse qui n en est pas une', async () => {
+    it('refuses an address that is not one', async () => {
         const { provider, changeEmail } = contexte();
         const caller = await callerOf(provider);
 
         await expect(changeEmail(caller, 'pas-une-adresse')).rejects.toBeInstanceOf(InvalidEmailAddress);
     });
 
-    it('canonicalise la nouvelle adresse avant de la transmettre', async () => {
+    it('canonicalises the new address before passing it on', async () => {
         const { provider, changeEmail } = contexte();
         const caller = await callerOf(provider);
 
         await changeEmail(caller, '  Alice.Neuf@Example.COM ');
 
-        // Le fournisseur a recu la forme canonique : confirmer bascule vers elle.
+        // The provider received the canonical form: confirming switches to it.
         await provider.confirmEmailChange(provider.emailChangeTokenFor(ADRESSE) ?? '');
         expect(provider.emailChangeTokenFor(NEUVE)).toBeUndefined();
         await expect(makeSignIn(provider)(NEUVE, MOT_DE_PASSE)).resolves.toBeDefined();

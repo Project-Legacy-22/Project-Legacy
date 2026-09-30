@@ -10,7 +10,7 @@ const OTHER_OWNER_ID = 'owner-2';
 const PROJECT_ID = 'project-1';
 
 describe('removeItem', () => {
-    it('retire un item du depot a la demande de son proprietaire', async () => {
+    it('removes an item from the repository at its owner\'s request', async () => {
         const repository = inMemoryItemRepository([anItem({ id: 'item-1', projectId: PROJECT_ID, ownerId: OWNER_ID })]);
         const removeItem = makeRemoveItem(repository);
 
@@ -19,13 +19,13 @@ describe('removeItem', () => {
         expect(await repository.findByIdForMember('item-1', PROJECT_ID, OWNER_ID)).toBeUndefined();
     });
 
-    it('rejette un item introuvable', async () => {
+    it('rejects an item that cannot be found', async () => {
         const removeItem = makeRemoveItem(inMemoryItemRepository());
 
         await expect(removeItem('missing', PROJECT_ID, OWNER_ID)).rejects.toBeInstanceOf(ItemNotFound);
     });
 
-    it('traite l item d un autre compte comme inexistant et le laisse en place', async () => {
+    it('treats the item of another account as absent and leaves it in place', async () => {
         const theirs = anItem({
             id: 'item-1',
             projectId: PROJECT_ID,

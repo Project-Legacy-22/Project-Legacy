@@ -18,7 +18,7 @@ function exportateurSur(comptes: SeededAccount[]) {
 }
 
 describe('exportPersonalData', () => {
-    it('rend le compte, ses projets, ses appartenances, ses items et ses notifications', async () => {
+    it('returns the account, its projects, its memberships, its items and its notifications', async () => {
         const exportPersonalData = exportateurSur([ALICE]);
 
         const copie = await exportPersonalData(ALICE.account.id);
@@ -30,10 +30,10 @@ describe('exportPersonalData', () => {
         expect(copie.notifications).toEqual(ALICE.notifications);
     });
 
-    // Le critere de portabilite de US-13 : un export reduit au compte est un
-    // echec de l issue. La reponse doit couvrir les tables ou l application
-    // detient de la donnee, pas seulement celle qui porte l adresse.
-    it('couvre toutes les tables qui portent une donnee du compte', async () => {
+    // The portability criterion of US-13: an export reduced to the account fails the issue. The
+    // answer must cover every table where the application holds data, not only the one that carries
+    // the address.
+    it('covers every table that holds data of the account', async () => {
         const exportPersonalData = exportateurSur([ALICE]);
 
         const copie = await exportPersonalData(ALICE.account.id);
@@ -44,10 +44,10 @@ describe('exportPersonalData', () => {
         expect(copie.notifications).not.toHaveLength(0);
     });
 
-    // Le second critere de US-13, verifie sur le document serialise et non sur
-    // ses champs un par un : c est ce fichier que la personne recoit, et c est
-    // donc lui qui ne doit contenir aucune trace d un autre compte.
-    it('ne laisse passer aucune donnee d un autre compte', async () => {
+    // The second criterion of US-13, checked on the serialised document and not field by field:
+    // that file is what the person receives, so it is the one that must hold no trace of another
+    // account.
+    it('lets no data of another account through', async () => {
         const exportPersonalData = exportateurSur([ALICE, BOB]);
 
         const document = JSON.stringify(await exportPersonalData(ALICE.account.id));
@@ -59,7 +59,7 @@ describe('exportPersonalData', () => {
         expect(document).not.toContain(BOB.notificationId);
     });
 
-    it('date la copie du moment ou elle est prise', async () => {
+    it('dates the copy from the moment it is taken', async () => {
         const exportPersonalData = exportateurSur([ALICE]);
 
         const copie = await exportPersonalData(ALICE.account.id);
@@ -67,10 +67,10 @@ describe('exportPersonalData', () => {
         expect(copie.exportedAt).toBe(MOMENT.toISOString());
     });
 
-    // Une session valide sur un compte dont il ne reste rien signale une derive
-    // entre les deux magasins. Un export vide la presenterait comme une
-    // personne qui ne possede rien, ce qui est faux et indetectable.
-    it('refuse d exporter un compte dont le magasin ne sait rien', async () => {
+    // A valid session on an account of which nothing remains signals a drift between the two
+    // stores. An empty export would present it as a person who owns nothing, which is false and
+    // undetectable.
+    it('refuses to export an account the store knows nothing about', async () => {
         const exportPersonalData = exportateurSur([BOB]);
 
         await expect(exportPersonalData(ALICE.account.id)).rejects.toBeInstanceOf(AccountNotFound);

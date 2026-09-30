@@ -15,7 +15,7 @@ describe('attentionWindow', () => {
         expect(attentionWindow(today)).toEqual({ today, tomorrow });
     });
 
-    it.each(['2026-02-30', '23/09/2026', '2026-9-3', ''])('refuse %j, qui n est pas un jour du calendrier', (today) => {
+    it.each(['2026-02-30', '23/09/2026', '2026-9-3', ''])('refuses %j, which is not a calendar day', (today) => {
         expect(() => attentionWindow(today)).toThrow(InvalidAttentionDate);
     });
 });
@@ -33,19 +33,19 @@ describe('attentionGroupOf', () => {
         expect(attentionGroupOf(anItem({ dueDate, priority }), WINDOW)).toBe(group);
     });
 
-    it('range une tache en retard et prioritaire dans le retard seulement', () => {
+    it('files an overdue priority task under overdue only', () => {
         const item = anItem({ dueDate: '2026-09-01', priority: 'high' });
 
         expect(attentionGroupOf(item, WINDOW)).toBe('overdue');
     });
 
-    it('ne retient jamais une tache terminee, meme en retard et prioritaire', () => {
+    it('never keeps a finished task, even overdue and high priority', () => {
         const item = anItem({ dueDate: '2026-09-01', priority: 'high', status: 'done' });
 
         expect(attentionGroupOf(item, WINDOW)).toBeUndefined();
     });
 
-    it('retient une tache en cours comme une tache a faire', () => {
+    it('keeps a task in progress like a task to do', () => {
         const item = anItem({ dueDate: '2026-09-23', status: 'doing' });
 
         expect(attentionGroupOf(item, WINDOW)).toBe('dueSoon');
@@ -53,7 +53,7 @@ describe('attentionGroupOf', () => {
 });
 
 describe('compareAttention', () => {
-    it('place l echeance la plus proche en premier, les taches sans echeance en dernier, puis la priorite', () => {
+    it('puts the nearest due date first, tasks without one last, then priority', () => {
         const undated = anItem({ id: 'a', dueDate: null, priority: 'high' });
         const laterHigh = anItem({ id: 'b', dueDate: '2026-09-24', priority: 'high' });
         const laterLow = anItem({ id: 'c', dueDate: '2026-09-24', priority: 'low' });

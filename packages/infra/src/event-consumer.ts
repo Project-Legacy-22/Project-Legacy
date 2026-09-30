@@ -37,9 +37,9 @@ export async function consume(
         }
 
         case MEMBERSHIP_CREATED_V1: {
-            // La personne ajoutee, et elle seule : celle qui ajoute sait ce
-            // qu elle vient de faire. `addedBy` voyage quand meme, parce que
-            // c est lui qui permettra de dire « par qui » (#349).
+            // The person added, and only them: the person who adds knows what they just did.
+            // `addedBy` travels anyway, because it is what will make it possible to say "by whom"
+            // (#349).
             const applied = await notifications.notifyMemberAdded(
                 event.id,
                 event.payload.memberId,
@@ -55,9 +55,9 @@ export async function consume(
         }
 
         case INVITATION_CREATED_V1: {
-            // La personne invitee, et elle seule : c est elle qui repond. La
-            // notification designe l invitation pour qu elle puisse accepter ou
-            // refuser depuis la notification meme (#401).
+            // The person invited, and only them: they are the one who answers. The notification
+            // designates the invitation so that they can accept or decline from the notification
+            // itself (#401).
             const applied = await notifications.notifyInvited({
                 eventId: event.id,
                 userId: event.payload.inviteeId,

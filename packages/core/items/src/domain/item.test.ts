@@ -11,13 +11,13 @@ import {
 } from './item.js';
 
 describe('itemName', () => {
-    it('refuse un nom vide', () => {
+    it('refuses an empty name', () => {
         const result = () => itemName('   ');
 
         expect(result).toThrow(InvalidItemName);
     });
 
-    it('refuse un nom de plus de 255 caracteres', () => {
+    it('refuses a name longer than 255 characters', () => {
         const tooLong = 'a'.repeat(MAX_ITEM_NAME_LENGTH + 1);
 
         const result = () => itemName(tooLong);
@@ -25,13 +25,13 @@ describe('itemName', () => {
         expect(result).toThrow(InvalidItemName);
     });
 
-    it('accepte un nom de 255 caracteres exactement', () => {
+    it('accepts a name of exactly 255 characters', () => {
         const atLimit = 'a'.repeat(MAX_ITEM_NAME_LENGTH);
 
         expect(itemName(atLimit)).toBe(atLimit);
     });
 
-    it('retire les espaces superflus', () => {
+    it('removes the surrounding spaces', () => {
         expect(itemName('  A task  ')).toBe('A task');
     });
 });
@@ -52,7 +52,7 @@ describe('itemDueDate', () => {
 });
 
 describe('createItem', () => {
-    it('cree un item non termine avec le nom valide et le proprietaire', () => {
+    it('creates an unfinished item with the valid name and the owner', () => {
         const item = createItem({
             id: 'item-1',
             name: ' A task ',
@@ -87,7 +87,7 @@ describe('createItem', () => {
         expect(item).toMatchObject({ priority: 'high', dueDate: '2020-01-02' });
     });
 
-    it('propage le rejet d un nom invalide', () => {
+    it('propagates the rejection of an invalid name', () => {
         const result = () =>
             createItem({
                 id: 'item-1',
@@ -101,7 +101,7 @@ describe('createItem', () => {
 });
 
 describe('rehydrateItem', () => {
-    it('accepte un nom nul venant du stockage et conserve le proprietaire et l attributaire', () => {
+    it('accepts a null name coming from storage and keeps the owner and the assignee', () => {
         const item = rehydrateItem({
             id: 'item-1',
             name: null,
@@ -132,7 +132,7 @@ describe('rehydrateItem', () => {
     // A shared project's tasks outlive their creator's account (US-13, #425):
     // erasure breaks the link, it does not remove the row, so a null owner
     // must rehydrate like any other value already on the row.
-    it('accepte un proprietaire nul, la tache ayant survecu a l effacement de son createur', () => {
+    it('accepts a null owner, the task having survived the erasure of its creator', () => {
         const item = rehydrateItem({
             id: 'item-1',
             name: 'Tache partagee',

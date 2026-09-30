@@ -74,7 +74,7 @@ describe('changeItem', () => {
         expect(updated.dueDate).toBeNull();
     });
 
-    it('rejette un item introuvable', async () => {
+    it('rejects an item that cannot be found', async () => {
         const repository = inMemoryItemRepository();
         const changeItem = makeChangeItem(repository);
 
@@ -88,7 +88,7 @@ describe('changeItem', () => {
         await expect(result).rejects.toBeInstanceOf(ItemNotFound);
     });
 
-    it('traite l item d un autre compte comme inexistant et le laisse intact', async () => {
+    it('treats the item of another account as absent and leaves it intact', async () => {
         const theirs = anItem({
             id: 'item-1',
             name: 'Old name',
@@ -107,14 +107,13 @@ describe('changeItem', () => {
             changes: { name: 'New name' },
         });
 
-        // Le refus est celui d un item inexistant, et rien n a bouge : une
-        // reponse differente de celle de l item inconnu confirmerait a
-        // l appelant que cet identifiant designe bien quelque chose.
+        // The refusal is the one of an absent item, and nothing moved: an answer different from the
+        // unknown item's would confirm to the caller that this identifier does designate something.
         await expect(result).rejects.toBeInstanceOf(ItemNotFound);
         expect(await repository.findByIdForMember('item-1', PROJECT_ID, OTHER_OWNER_ID)).toEqual(theirs);
     });
 
-    it('refuse un nom vide sans modifier l item existant', async () => {
+    it('refuses an empty name without changing the existing item', async () => {
         const existing = anItem({
             id: 'item-1',
             name: 'Old name',
@@ -135,7 +134,7 @@ describe('changeItem', () => {
         expect(await repository.findByIdForMember('item-1', PROJECT_ID, OWNER_ID)).toEqual(existing);
     });
 
-    it('refuse un nom trop long sans modifier l item existant', async () => {
+    it('refuses a name that is too long without changing the existing item', async () => {
         const existing = anItem({ id: 'item-1', name: 'Old name', projectId: PROJECT_ID, ownerId: OWNER_ID });
         const repository = inMemoryItemRepository([existing]);
         const changeItem = makeChangeItem(repository);

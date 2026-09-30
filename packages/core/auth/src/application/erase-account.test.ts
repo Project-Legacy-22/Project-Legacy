@@ -36,10 +36,10 @@ function contexte(seed: SeededAccount[] = [ALICE, BOB]): Contexte {
 }
 
 describe('eraseAccount', () => {
-    // Le critere central de US-13 : apres la suppression, aucune ligne ne porte
-    // plus l identifiant du compte. Il est enonce sur les tables et non sur une
-    // methode du magasin, parce que c est ce que la migration promet.
-    it('ne laisse aucune ligne portant l identifiant du compte', async () => {
+    // The central criterion of US-13: after the deletion, no row carries the account identifier any
+    // more. It is stated on the tables and not on a method of the store, because that is what the
+    // migration promises.
+    it('leaves no row carrying the account identifier', async () => {
         const { eraseAccount, store } = contexte();
 
         await eraseAccount(ALICE.account, ALICE.account.email);
@@ -47,10 +47,10 @@ describe('eraseAccount', () => {
         expect(store.rowsMentioning(ALICE.account.id)).toEqual([]);
     });
 
-    // L outbox et processed_events sont cites explicitement par l issue. La
-    // seconde ne porte aucun identifiant de compte : la seule facon de savoir
-    // si sa ligne a disparu est de la designer par l evenement qui l a creee.
-    it('efface les evenements produits par le compte et leur trace de traitement', async () => {
+    // The outbox and processed_events are named explicitly by the issue. The latter carries no
+    // account identifier: the only way to know whether its row is gone is to designate it by the
+    // event that created it.
+    it('erases the events produced by the account and the record of their processing', async () => {
         const { eraseAccount, store } = contexte();
 
         await eraseAccount(ALICE.account, ALICE.account.email);
@@ -58,7 +58,7 @@ describe('eraseAccount', () => {
         expect(store.hasProcessedEvent(ALICE.eventId)).toBe(false);
     });
 
-    it('laisse intactes les donnees des autres comptes', async () => {
+    it('leaves the data of other accounts intact', async () => {
         const { eraseAccount, store } = contexte();
 
         await eraseAccount(ALICE.account, ALICE.account.email);
@@ -73,7 +73,7 @@ describe('eraseAccount', () => {
         expect(store.hasProcessedEvent(BOB.eventId)).toBe(true);
     });
 
-    it('efface un projet dont le compte etait le dernier membre et ses items', async () => {
+    it('erases a project whose last member was the account, and its items', async () => {
         const { eraseAccount, store } = contexte();
 
         await eraseAccount(ALICE.account, ALICE.account.email);
@@ -82,7 +82,7 @@ describe('eraseAccount', () => {
         expect(store.hasItem(ALICE.itemId)).toBe(false);
     });
 
-    it('conserve un projet partage et retire seulement l appartenance du compte', async () => {
+    it('keeps a shared project and only removes the account\'s membership', async () => {
         const sharedProjectId = '01996f00-0000-7000-8000-0000000000d9';
         const sharedItemId = '01996f00-0000-7000-8000-0000000000a9';
         const project = aProject({ id: sharedProjectId, name: 'Shared project' });
@@ -113,10 +113,10 @@ describe('eraseAccount', () => {
         expect(store.hasItem(sharedItemId)).toBe(true);
     });
 
-    // La suppression revoque toutes les sessions. Le jeton est fait passer par
-    // identify() plutot que compare a une chaine : c est le comportement qui
-    // compte, pas la forme du jeton que la doublure fabrique.
-    it('revoque les sessions ouvertes par le compte', async () => {
+    // The deletion revokes every session. The token goes through identify() rather than being
+    // compared with a string: the behaviour is what matters, not the shape of the token the double
+    // builds.
+    it('revokes the sessions the account opened', async () => {
         const { eraseAccount, identity } = contexte();
         const session = await identity.authenticate(ALICE.account.email, MOT_DE_PASSE);
         const jeton = session?.accessToken ?? '';
@@ -126,7 +126,7 @@ describe('eraseAccount', () => {
         expect(await identity.identify(jeton)).toBeUndefined();
     });
 
-    it('refuse une suppression que l adresse du compte ne confirme pas', async () => {
+    it('refuses a deletion that the account\'s address does not confirm', async () => {
         const { eraseAccount } = contexte();
 
         const refus = eraseAccount(ALICE.account, BOB.account.email);
@@ -134,10 +134,9 @@ describe('eraseAccount', () => {
         await expect(refus).rejects.toBeInstanceOf(ErasureNotConfirmed);
     });
 
-    // Une confirmation refusee doit ne rien avoir efface. Sans cette assertion,
-    // un ordre d instructions inverse passerait le test precedent tout en ayant
-    // deja supprime les lignes.
-    it('n efface rien quand la confirmation ne correspond pas', async () => {
+    // A refused confirmation must have erased nothing. Without this assertion, instructions in the
+    // reverse order would pass the previous test while having already deleted the rows.
+    it('erases nothing when the confirmation does not match', async () => {
         const { eraseAccount, store } = contexte();
 
         await expect(eraseAccount(ALICE.account, BOB.account.email)).rejects.toThrow();
@@ -145,9 +144,9 @@ describe('eraseAccount', () => {
         expect(store.rowsMentioning(ALICE.account.id)).not.toEqual([]);
     });
 
-    // La confirmation prouve une intention, elle ne teste pas la frappe : la
-    // meme adresse saisie avec une majuscule ou un espace reste la meme adresse.
-    it('accepte une confirmation dont la casse ou les espaces different', async () => {
+    // The confirmation proves an intent, it does not test typing: the same address typed with a
+    // capital letter or a space is still the same address.
+    it('accepts a confirmation that differs in case or spacing', async () => {
         const { eraseAccount, store } = contexte();
 
         await eraseAccount(ALICE.account, `  ${ALICE.account.email.toUpperCase()} `);

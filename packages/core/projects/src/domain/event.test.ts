@@ -8,7 +8,7 @@ const MEMBRE = '0191f3c2-2222-7000-8000-bbbbbbbbbbbb';
 const AJOUTE_PAR = '0191f3c2-3333-7000-8000-cccccccccccc';
 
 describe('membershipCreated', () => {
-    it('porte les trois identifiants et l instant, sans rien de plus', () => {
+    it('carries the three identifiers and the instant, and nothing more', () => {
         expect(
             membershipCreated('event-id', OCCURRED_AT, {
                 projectId: PROJET,
@@ -23,12 +23,10 @@ describe('membershipCreated', () => {
         });
     });
 
-    // Le meme critere RGPD que pour la creation d une tache. L adresse est ce
-    // que la personne a tape pour trouver le compte, donc du contenu : si elle
-    // entrait dans le payload, elle sortirait du perimetre que l export et
-    // l effacement savent atteindre, et se retrouverait dans les journaux du
-    // consommateur.
-    it('ne transporte aucune adresse', () => {
+    // The same GDPR criterion as for creating a task. The address is what the person typed to find
+    // the account, hence content: if it entered the payload, it would leave the scope that export
+    // and erasure know how to reach, and end up in the consumer's logs.
+    it('carries no address', () => {
         const event = membershipCreated('event-id', OCCURRED_AT, {
             projectId: PROJET,
             memberId: MEMBRE,
@@ -39,9 +37,9 @@ describe('membershipCreated', () => {
         expect(JSON.stringify(event)).not.toContain('@');
     });
 
-    // `addedBy` est la raison pour laquelle l invitation passe par le flux :
-    // sans lui, la notification pourrait dire « ajoute » mais pas « par qui ».
-    it('nomme qui a ajoute, et pas seulement qui a ete ajoute', () => {
+    // `addedBy` is why the invitation goes through the flow: without it, the notification could say
+    // "added" but not "by whom".
+    it('names who added, not only who was added', () => {
         const event = membershipCreated('event-id', OCCURRED_AT, {
             projectId: PROJET,
             memberId: MEMBRE,
@@ -52,7 +50,7 @@ describe('membershipCreated', () => {
         expect(event.payload.addedBy).not.toBe(event.payload.memberId);
     });
 
-    it('porte un nom versionne, pour qu un consommateur s abonne a une forme precise', () => {
+    it('carries a versioned name, so that a consumer subscribes to a precise shape', () => {
         expect(
             membershipCreated('event-id', OCCURRED_AT, {
                 projectId: PROJET,

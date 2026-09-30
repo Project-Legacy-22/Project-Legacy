@@ -225,25 +225,23 @@ export const TABLES: readonly Table[] = [
         columns: [
             uuid('id'),
             uuid('user_id'),
-            // Nullable depuis que les notifications peuvent nommer un projet.
+            // Nullable since notifications can name a project.
             uuid('item_id', true),
             uuid('event_id'),
             timestamp('read_at', true),
             stamped('created_at'),
             stamped('updated_at'),
-            // En dernier, et pas par gout : PostgreSQL ajoute une colonne a la
-            // fin de la table, et le test de modele compare l ordre autant que
-            // les noms. Les placer au milieu, la ou ils se lisent le mieux,
-            // fait echouer la comparaison contre information_schema.
+            // Last, and not by taste: PostgreSQL adds a column at the end of the table, and the
+            // model test compares the order as well as the names. Placing them in the middle, where
+            // they read best, makes the comparison against information_schema fail.
             //
-            // `kind` et `project_id` sont lies : le genre decide si la ligne
-            // nomme une tache ou un projet, et un `check` refuse une ligne qui
-            // ne nommerait ni l une ni l autre. Cette verification de valeur
-            // reste en PostgreSQL, comme les autres.
+            // `kind` and `project_id` are linked: the kind decides whether the row names a task or
+            // a project, and a `check` refuses a row that would name neither. This value check
+            // stays in PostgreSQL, like the others.
             text('kind'),
             uuid('project_id', true),
-            // #401 : une notification d invitation designe l invitation, pour
-            // que la personne reponde depuis la notification.
+            // #401: an invitation notification designates the invitation, so that the person
+            // answers from the notification.
             uuid('invitation_id', true),
         ],
         primaryKey: ['id'],

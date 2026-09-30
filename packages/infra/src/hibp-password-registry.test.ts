@@ -20,7 +20,7 @@ const SUFFIX = HASH.slice(5);
 afterEach(() => vi.restoreAllMocks());
 
 describe('createHibpPasswordRegistry', () => {
-    it('n envoie que le prefixe du hash, jamais le mot de passe', async () => {
+    it('sends only the prefix of the hash, never the password', async () => {
         const fetch = vi.fn<typeof globalThis.fetch>(async () => new Response(`${SUFFIX}:3`));
         const registry = createHibpPasswordRegistry({ logger: recordingLogger(), fetch });
 
@@ -36,7 +36,7 @@ describe('createHibpPasswordRegistry', () => {
         expect(requested).not.toContain(SUFFIX);
     });
 
-    it('demande le rembourrage de la reponse', async () => {
+    it('asks for the response to be padded', async () => {
         const fetch = vi.fn<typeof globalThis.fetch>(async (_input, init) => {
             expect(new Headers(init?.headers).get('Add-Padding')).toBe('true');
             return new Response(`${SUFFIX}:1`, { status: 200 });
@@ -46,7 +46,7 @@ describe('createHibpPasswordRegistry', () => {
         await registry.isCompromised(CANDIDATE);
     });
 
-    it('signale un mot de passe dont le suffixe apparait avec un compte non nul', async () => {
+    it('flags a password whose suffix appears with a non-zero count', async () => {
         const fetch = vi.fn<typeof globalThis.fetch>(
             async () => new Response(`0000000000000000000000000000000000A:0\n${SUFFIX.toLowerCase()}:42`),
         );
@@ -55,21 +55,21 @@ describe('createHibpPasswordRegistry', () => {
         await expect(registry.isCompromised(CANDIDATE)).resolves.toBe(true);
     });
 
-    it('laisse passer un mot de passe absent de la plage', async () => {
+    it('lets through a password absent from the range', async () => {
         const fetch = vi.fn(async () => new Response('0000000000000000000000000000000000A:5'));
         const registry = createHibpPasswordRegistry({ logger: recordingLogger(), fetch });
 
         await expect(registry.isCompromised(CANDIDATE)).resolves.toBe(false);
     });
 
-    it('ignore une entree de rembourrage a compte nul portant le meme suffixe', async () => {
+    it('ignores a zero-count padding entry carrying the same suffix', async () => {
         const fetch = vi.fn(async () => new Response(`${SUFFIX}:0`));
         const registry = createHibpPasswordRegistry({ logger: recordingLogger(), fetch });
 
         await expect(registry.isCompromised(CANDIDATE)).resolves.toBe(false);
     });
 
-    it('echoue en mode ouvert sur une reponse en erreur, sans journaliser le mot de passe', async () => {
+    it('fails open on an error response, without logging the password', async () => {
         const logger = recordingLogger();
         const fetch = vi.fn<typeof globalThis.fetch>(async () => new Response('nope', { status: 503 }));
         const registry = createHibpPasswordRegistry({ logger, fetch });
@@ -79,7 +79,7 @@ describe('createHibpPasswordRegistry', () => {
         expect(JSON.stringify(logger.warn.mock.calls)).not.toContain(CANDIDATE);
     });
 
-    it('echoue en mode ouvert sur une panne reseau', async () => {
+    it('fails open on a network outage', async () => {
         const logger = recordingLogger();
         const fetch = vi.fn(async () => {
             throw new Error('network down');
@@ -90,10 +90,10 @@ describe('createHibpPasswordRegistry', () => {
         expect(logger.warn).toHaveBeenCalledOnce();
     });
 
-    // Une reponse qui ne vient jamais n est pas un rejet : sans echeance, la
-    // reinitialisation resterait bloquee le temps du defaut de la plateforme.
-    // Le service reel n est pas sollicite ici, seul le signal transmis compte.
-    it('abandonne quand la reponse ne vient pas, plutot que d attendre', async () => {
+    // An answer that never comes is not a rejection: without a deadline, the reset would stay
+    // blocked for as long as the platform's outage lasts. The real service is not called here, only
+    // the signal passed on matters.
+    it('gives up when the answer does not come, rather than waiting', async () => {
         const logger = recordingLogger();
         const fetch = vi.fn((_url: string, init?: RequestInit) => {
             return new Promise<Response>((_resolve, reject) => {

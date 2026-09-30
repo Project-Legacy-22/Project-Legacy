@@ -32,8 +32,8 @@ export interface SupabaseAuthSettings {
 // GoTrue answers one or the other depending on the call: signUp says
 // user_already_exists, admin.createUser says email_exists.
 const ALREADY_REGISTERED = new Set(['user_already_exists', 'email_exists']);
-// Deux refus, pas une panne : le second vient d un compte cree avant que
-// l inscription confirme l adresse elle-meme, et il repondait 500.
+// Two refusals, not an outage: the second comes from an account created before registration
+// confirmed the address itself, and it answered 500.
 const SIGN_IN_REFUSED = new Set(['invalid_credentials', 'email_not_confirmed']);
 const UNUSABLE_TOKEN = new Set(['bad_jwt', 'session_expired', 'session_not_found']);
 

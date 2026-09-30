@@ -4,29 +4,29 @@ import { InvalidEmailAddress } from './account.js';
 import { emailAddress, normalizeEmailAddress } from './email-address.js';
 
 describe('emailAddress', () => {
-    it('ramene une adresse a sa forme canonique', () => {
+    it('brings an address to its canonical form', () => {
         const address = emailAddress('  Alice@Example.COM ');
 
         expect(address).toBe('alice@example.com');
     });
 
-    it('refuse une adresse sans arobase', () => {
+    it('refuses an address without an at sign', () => {
         expect(() => emailAddress('alice.example.com')).toThrow(InvalidEmailAddress);
     });
 
-    it('refuse une adresse a deux arobases', () => {
+    it('refuses an address with two at signs', () => {
         expect(() => emailAddress('alice@example@com')).toThrow(InvalidEmailAddress);
     });
 
-    it('refuse une adresse sans partie locale', () => {
+    it('refuses an address without a local part', () => {
         expect(() => emailAddress('@example.com')).toThrow(InvalidEmailAddress);
     });
 
-    it('refuse un domaine sans point', () => {
+    it('refuses a domain without a dot', () => {
         expect(() => emailAddress('alice@example')).toThrow(InvalidEmailAddress);
     });
 
-    it('ne renvoie pas l adresse soumise dans le message d erreur', () => {
+    it('keeps the submitted address out of the error message', () => {
         const soumise = 'zzz-adresse-tapee-zzz';
 
         expect(() => emailAddress(soumise)).toThrow(InvalidEmailAddress);
@@ -35,9 +35,8 @@ describe('emailAddress', () => {
 });
 
 describe('normalizeEmailAddress', () => {
-    // La connexion normalise sans juger : une adresse enregistree sous des
-    // regles plus anciennes doit rester utilisable.
-    it('normalise sans refuser une adresse que la creation rejetterait', () => {
+    // Sign-in normalises without judging: an address registered under older rules must stay usable.
+    it('normalises without refusing an address that creation would reject', () => {
         expect(normalizeEmailAddress('  ALICE@example  ')).toBe('alice@example');
     });
 });

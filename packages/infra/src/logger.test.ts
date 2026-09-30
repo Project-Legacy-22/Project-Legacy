@@ -19,7 +19,7 @@ function captureLines(): { lines: string[]; stream: Writable } {
 }
 
 describe('createLogger', () => {
-    it('ecrit une ligne JSON portant le niveau et les champs fournis', () => {
+    it('writes a JSON line carrying the level and the given fields', () => {
         const { lines, stream } = captureLines();
 
         createLogger('info', stream).info({ traceId: 'trace-1', status: 200 });
@@ -30,7 +30,7 @@ describe('createLogger', () => {
         expect(line.status).toBe(200);
     });
 
-    it('masque un mot de passe plutot que de l ecrire', () => {
+    it('redacts a password rather than writing it', () => {
         const { lines, stream } = captureLines();
 
         createLogger('info', stream).warn({ password: 'secret-a-masquer' });
@@ -39,7 +39,7 @@ describe('createLogger', () => {
         expect(lines.join()).toContain('[redacted]');
     });
 
-    it('masque un en-tete d autorisation et un cookie', () => {
+    it('redacts an authorization header and a cookie', () => {
         const { lines, stream } = captureLines();
 
         createLogger('info', stream).info({
@@ -51,9 +51,9 @@ describe('createLogger', () => {
         expect(written).not.toContain('session=abc');
     });
 
-    // Le corps d une requete porterait le nom d un item, qui est du contenu
-    // utilisateur : il ne doit jamais atteindre un journal.
-    it('masque le corps d une requete', () => {
+    // A request body would carry the name of an item, which is user content: it must never reach a
+    // log.
+    it('redacts a request body', () => {
         const { lines, stream } = captureLines();
 
         createLogger('info', stream).info({ req: { body: { name: 'Acheter du pain' } } });
@@ -61,7 +61,7 @@ describe('createLogger', () => {
         expect(lines.join()).not.toContain('Acheter du pain');
     });
 
-    it('respecte le niveau demande', () => {
+    it('respects the level asked for', () => {
         const { lines, stream } = captureLines();
         const logger = createLogger('warn', stream);
 
