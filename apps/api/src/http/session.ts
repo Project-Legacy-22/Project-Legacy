@@ -108,6 +108,16 @@ export function accountOf(res: Response): Account {
     return account;
 }
 
+// Lue par le middleware d erreur, qui sert aussi bien une requete authentifiee
+// qu une requete anonyme et ne peut donc pas passer par accountOf, qui refuse
+// en l absence de compte. Un journal nomme le compte quand il y en a un et se
+// tait quand il n y en a pas -- jamais son adresse (EN-40).
+export function accountIdOf(res: Response): string | undefined {
+    const { account } = res.locals as AccountLocals;
+
+    return isAccount(account) ? account.id : undefined;
+}
+
 export function sessionTokensOf(res: Response): SessionTokens {
     const { sessionTokens } = res.locals as AccountLocals;
 
