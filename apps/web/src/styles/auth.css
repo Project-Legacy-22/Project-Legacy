@@ -60,12 +60,17 @@
     background: #e9f6f3;
 }
 
+/* Same column and inset as the header below it (issue 446), so the left edges
+   of the banner, the notifications and the header line up. It used to start
+   at the very edge of the window, 24 px left of everything else. */
 .session-banner {
     display: flex;
+    max-width: calc(1600px + 2 * var(--space-8));
     align-items: center;
     justify-content: space-between;
     gap: var(--space-5);
-    margin: 0 0 var(--space-6);
+    margin: 0 auto var(--space-6);
+    padding-inline: var(--space-8);
 }
 
 .session-banner p {
@@ -195,4 +200,10 @@
 
 .session-banner .button-quiet {
     margin-top: 0;
+}
+
+@media (max-width: 620px) {
+    .session-banner {
+        padding-inline: var(--space-6);
+    }
 }

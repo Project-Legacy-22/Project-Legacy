@@ -22,8 +22,6 @@ export const membersLabels = {
     membersTitle(projectName: string): string {
         return `Members of ${projectName}`;
     },
-    showMembers: 'Show members',
-    hideMembers: 'Hide members',
     loadingMembers: 'Loading members…',
     loadMembersFailed: 'Unable to load the members of this project.',
     invalidMemberList: 'The server returned an invalid member list.',

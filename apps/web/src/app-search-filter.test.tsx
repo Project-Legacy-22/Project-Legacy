@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ItemPageDto, ItemsApi, ListItemsRequest } from './api/items-api';
 import { App } from './app';
 import { labels } from './labels';
-import { createAuth, createProjectsApi, firstItem, itemPage } from './test/app-fixture';
+import { createAuth, createProjectsApi, firstItem, itemPage, startAt } from './test/app-fixture';
 import { click, createReactTestRoot, getElement, setInputValue, setSelectValue, waitFor } from './test/react-root';
 import type { ReactTestRoot } from './test/react-root';
 
@@ -34,6 +34,7 @@ async function renderApp(listItems: ItemsApi['listItems']): Promise<void> {
 
 beforeEach(() => {
     testRoot = createReactTestRoot();
+    startAt('projects');
 });
 
 afterEach(async () => {

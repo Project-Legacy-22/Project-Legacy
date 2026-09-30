@@ -15,6 +15,8 @@ import {
     createCredentialsApi,
     createMembersApi,
     createProjectsApi,
+    openView,
+    startAt,
 } from './test/app-fixture';
 import { click, createReactTestRoot, flushTimers, getElement, setInputValue, submitForm } from './test/react-root';
 import type { ReactTestRoot } from './test/react-root';
@@ -76,8 +78,7 @@ async function openNotifications(): Promise<void> {
 }
 
 async function openMembers(): Promise<void> {
-    await click(getElement<HTMLButtonElement>('.members-panel button[aria-controls="members-content"]'));
-    await flushTimers();
+    await openView('members');
 }
 
 function buttonNamed(name: string): HTMLButtonElement {
@@ -94,6 +95,7 @@ function politeText(): string {
 
 beforeEach(() => {
     testRoot = createReactTestRoot();
+    startAt('projects');
 });
 
 afterEach(async () => {
@@ -173,12 +175,12 @@ describe('answering an invitation from its notification', () => {
 });
 
 describe('the members of a project', () => {
-    it('are listed with their role once the panel is opened', async () => {
+    it('are listed with their role once their view is opened', async () => {
         const listMembers = vi.fn(async () => [ME, GUEST]);
         await renderApp({ members: createMembersApi({ listMembers }) });
 
         // Read once already, for the assignment choice of the tasks (US-58),
-        // but the panel shows nothing until it is opened.
+        // but nothing shows them until their view is opened.
         expect(document.querySelector('#members-list')).toBeNull();
         const readsBefore = listMembers.mock.calls.length;
         await openMembers();

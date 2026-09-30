@@ -6,6 +6,7 @@ import { itemReorderLabels } from './item-reorder-labels';
 import { itemsFilterLabels } from './items-filter-labels';
 import { itemStatusLabels } from './item-status-labels';
 import { membersLabels } from './members-labels';
+import { viewLabels } from './view-labels';
 
 export const labels = {
     // Authentication (US-11b)
@@ -123,6 +124,7 @@ export const labels = {
     ...homeLabels,
     ...failureLabels,
     ...membersLabels,
+    ...viewLabels,
 
     notificationsFailed: 'Unable to read your notifications.',
     unreadNotifications(count: number): string {
@@ -232,10 +234,6 @@ export const labels = {
         return `Remove ${name}? ${items} will be permanently deleted, along with any previously removed items.`;
     },
 
-    skipToContent: 'Skip to content',
-    productName: 'Legacy 22',
-    pageTitle: 'Todo list',
-    pageIntro: 'Keep the next useful action visible.',
     newItemKicker: 'New item',
     addSectionTitle: 'Add to the list',
     itemNameLabel: 'Item name',

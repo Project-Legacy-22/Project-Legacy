@@ -10,6 +10,7 @@ import {
     createApi,
     createAuth,
     createProjectsApi,
+    startAt,
 } from '../test/app-fixture';
 import {
     createReactTestRoot,
@@ -70,6 +71,7 @@ async function changerAdresse(nouvelle: string): Promise<void> {
 
 beforeEach(() => {
     testRoot = createReactTestRoot();
+    startAt('account');
 });
 
 afterEach(async () => {

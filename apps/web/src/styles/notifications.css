@@ -1,5 +1,7 @@
 .notifications-panel {
-    margin: 0 0 var(--space-8);
+    max-width: calc(1600px + 2 * var(--space-8));
+    margin: 0 auto var(--space-8);
+    padding-inline: var(--space-8);
 }
 
 .notifications-panel h2 {
@@ -67,5 +69,11 @@
 @media (max-width: 620px) {
     .notification-row {
         grid-auto-flow: row;
+    }
+}
+
+@media (max-width: 620px) {
+    .notifications-panel {
+        padding-inline: var(--space-6);
     }
 }

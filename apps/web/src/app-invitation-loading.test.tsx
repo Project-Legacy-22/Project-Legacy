@@ -12,6 +12,7 @@ import {
     createMembersApi,
     createProjectsApi,
     itemPage,
+    startAt,
 } from './test/app-fixture';
 import { anItem } from './test/builders/item-builder';
 import { deferred } from './test/deferred';
@@ -52,6 +53,8 @@ let root: ReactTestRoot;
 
 beforeEach(() => {
     root = createReactTestRoot();
+    // The tasks it watches are in the projects view since #446.
+    startAt('projects');
 });
 
 afterEach(async () => {

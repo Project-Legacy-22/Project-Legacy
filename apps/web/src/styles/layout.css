@@ -88,6 +88,42 @@ h2 {
     line-height: 1.2;
 }
 
+/* The navigation between views (issue 446), on the dark header. Links drawn as
+   pills with a visible outline, so they read as controls rather than text, and
+   44 px tall like every other target. The open view is filled in the light
+   brand surface: aria-current says it to a screen reader, the fill says it to
+   the eye, and neither depends on colour alone. */
+.view-nav ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    margin: var(--space-8) 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.view-nav a {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    padding: var(--space-4) var(--space-7);
+    border: 2px solid var(--text-on-brand-soft);
+    border-radius: 999px;
+    color: var(--text-on-brand);
+    font-weight: 750;
+    text-decoration: none;
+}
+
+.view-nav a:hover {
+    text-decoration: underline;
+}
+
+.view-nav a[aria-current='page'] {
+    border-color: var(--surface-brand-soft);
+    color: var(--text-brand);
+    background: var(--surface-brand-soft);
+}
+
 @media (max-width: 620px) {
     .site-header {
         padding-inline: var(--space-6);
