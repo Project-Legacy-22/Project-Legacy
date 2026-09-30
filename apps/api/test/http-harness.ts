@@ -29,20 +29,19 @@ export const testConfig: Config = {
     supabaseUrl: 'http://127.0.0.1:54321',
     supabaseServiceRoleKey: 'test-service-role-key',
     supabaseAnonKey: 'test-anon-key',
-    // Le journal est capture par un logger d essai ; le niveau ne sert
-    // qu a satisfaire le type.
+    // The log is captured by a test logger; the level only satisfies the type.
     logLevel: 'info',
-    // Le relais n est pas demarre par ce harnais : la valeur ne sert qu au type.
+    // This harness does not start the relay: the value only serves the type.
     redisUrl: 'redis://127.0.0.1:6379',
     secureCookies: false,
-    // Le front de developpement. Une suite CORS peut la surcharger.
+    // The development front. A CORS suite can override it.
     webOrigin: 'http://localhost:5173',
-    // Aucun proxy devant le harness : req.ip est l adresse de la connexion.
-    // Une suite qui exerce X-Forwarded-For remonte cette valeur.
+    // No proxy in front of the harness: req.ip is the address of the connection. A suite that
+    // exercises X-Forwarded-For raises this value.
     trustProxy: 0,
-    // Aucune passe declenchable : les suites qui en ont besoin la surchargent.
+    // No pass that can be triggered: the suites that need one override it.
     relaySecret: undefined,
-    // Nomme comme ce qu il est : ces suites ne tournent sur aucun deploiement.
+    // Named for what it is: these suites run on no deployment.
     deployment: { commit: 'unknown', ref: 'unknown', environment: 'local' },
 };
 

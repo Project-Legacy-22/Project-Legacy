@@ -41,7 +41,7 @@ describe('GET /projects/attention', () => {
 
     afterEach(() => harness.close());
 
-    it('renvoie les groupes, chaque tache avec le nom de son projet et sans son proprietaire', async () => {
+    it('returns the groups, each task with its project name and without its owner', async () => {
         await serve([anItem({ id: ITEM_ID, projectId: PROJECT_ID, ownerId: OWNER_ID, dueDate: '2026-09-20' })]);
 
         const response = await harness.request('/projects/attention?today=2026-09-23');
@@ -71,7 +71,7 @@ describe('GET /projects/attention', () => {
         });
     });
 
-    it('dit quand la personne n a encore aucune tache', async () => {
+    it('says when the person has no task yet', async () => {
         await serve([]);
 
         const response = await harness.request('/projects/attention?today=2026-09-23');
@@ -90,7 +90,7 @@ describe('GET /projects/attention', () => {
         },
     );
 
-    it('refuse une requete sans session', async () => {
+    it('refuses a request without a session', async () => {
         await serve([anItem({ projectId: PROJECT_ID, ownerId: OWNER_ID, dueDate: '2026-09-20' })], {
             signedIn: false,
         });

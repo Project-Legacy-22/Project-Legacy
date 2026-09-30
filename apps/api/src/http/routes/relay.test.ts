@@ -28,7 +28,7 @@ afterEach(async () => {
 });
 
 describe('POST /internal/relay', () => {
-    it('lance une passe de livraison et rend son compte', async () => {
+    it('starts a delivery pass and returns its count', async () => {
         const deliverPending = vi.fn(async () => ({ published: 3, consumed: 3, failed: 0 }));
         const served = await serve(SECRET, deliverPending);
 
@@ -42,7 +42,7 @@ describe('POST /internal/relay', () => {
         expect(deliverPending).toHaveBeenCalledTimes(1);
     });
 
-    it('refuse sans le secret, et ne livre rien', async () => {
+    it('refuses without the secret, and delivers nothing', async () => {
         const deliverPending = vi.fn(async () => ({ published: 0, consumed: 0, failed: 0 }));
         const served = await serve(SECRET, deliverPending);
 
@@ -52,7 +52,7 @@ describe('POST /internal/relay', () => {
         expect(deliverPending).not.toHaveBeenCalled();
     });
 
-    it('refuse un secret qui n est pas le bon', async () => {
+    it('refuses a wrong secret', async () => {
         const served = await serve(SECRET);
 
         const response = await served.request('/internal/relay', {
@@ -63,11 +63,10 @@ describe('POST /internal/relay', () => {
         expect(response.status).toBe(403);
     });
 
-    // Une cible qui fait tourner le relais en continu n a rien a declencher :
-    // la route n est alors pas montee, et le chemin devient indistinguable de
-    // n importe quel chemin inconnu -- ce qui est mieux qu un 403 qui
-    // apprendrait a un scanner que le point d entree existe.
-    it('ne se distingue pas d un chemin inconnu quand aucun secret n est configure', async () => {
+    // A target that runs the relay continuously has nothing to trigger: the route is then not
+    // mounted, and the path becomes indistinguishable from any unknown path -- which is better than
+    // a 403 that would tell a scanner the entry point exists.
+    it('cannot be told from an unknown path when no secret is configured', async () => {
         const deliverPending = vi.fn(async () => ({ published: 0, consumed: 0, failed: 0 }));
         const served = await serve(undefined, deliverPending);
 
@@ -86,7 +85,7 @@ describe('POST /internal/relay', () => {
 });
 
 describe('POST /internal/purge', () => {
-    it('lance une passe de purge et rend ce qu elle a supprime', async () => {
+    it('starts a purge pass and returns what it deleted', async () => {
         const purgeExpired = vi.fn(async () => ({ notifications: 4, processedEvents: 4, outbox: 7 }));
         const served = await serve(SECRET, undefined, purgeExpired);
 
@@ -100,7 +99,7 @@ describe('POST /internal/purge', () => {
         expect(purgeExpired).toHaveBeenCalledTimes(1);
     });
 
-    it('refuse sans le secret, et ne purge rien', async () => {
+    it('refuses without the secret, and purges nothing', async () => {
         const purgeExpired = vi.fn(async () => ({ notifications: 0, processedEvents: 0, outbox: 0 }));
         const served = await serve(SECRET, undefined, purgeExpired);
 

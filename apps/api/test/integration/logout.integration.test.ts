@@ -37,7 +37,7 @@ describe('POST /auth/logout (integration)', () => {
     // (supabase/config.toml) invalidates a refresh token the moment it is
     // exchanged, so using it once to prove it works would leave nothing
     // left to prove revoked.
-    it('rend le jeton de rafraichissement inutilisable', async () => {
+    it('makes the refresh token unusable', async () => {
         const email = `integration-logout-${randomUUID()}@example.com`;
         await app.useCases.auth.registerAccount(email, MOT_DE_PASSE, PRIVACY_POLICY_VERSION);
 

@@ -71,9 +71,9 @@ function useCasesOver(provider: InMemoryIdentityProvider, compromised: string[])
             }),
             signOut: makeSignOut(provider),
         },
-        // Aucune route exercee ici ne touche aux donnees personnelles. Le
-        // groupe est compose sur un magasin vide plutot qu omis : AppUseCases
-        // l exige, et un magasin vide rend visible toute route qui s y mettrait.
+        // No route exercised here touches personal data. The group is composed over an empty store
+        // rather than left out: AppUseCases requires it, and an empty store makes visible any route
+        // that would start using it.
         account: {
             exportPersonalData: makeExportPersonalData({
                 store: inMemoryPersonalDataStore(),
@@ -89,7 +89,7 @@ function useCasesOver(provider: InMemoryIdentityProvider, compromised: string[])
     });
 }
 
-describe('API de reinitialisation de mot de passe', () => {
+describe('password reset API', () => {
     let harness: Harness;
     let provider: InMemoryIdentityProvider;
 
@@ -108,7 +108,7 @@ describe('API de reinitialisation de mot de passe', () => {
     afterEach(() => harness.close());
 
     describe('POST /auth/password/forgot', () => {
-        it('repond a l identique sur une adresse inscrite et sur une adresse inconnue', async () => {
+        it('answers identically for a registered address and an unknown one', async () => {
             const surInscrite = await harness.request(
                 '/auth/password/forgot',
                 json('POST', { email: ADRESSE }),
@@ -125,18 +125,17 @@ describe('API de reinitialisation de mot de passe', () => {
             expect(surInconnue.headers.get('set-cookie')).toBeNull();
         });
 
-        // Express 5 laisse le corps indefini quand la requete ne porte pas de
-        // type json. Le compteur par adresse s execute avant toute validation :
-        // s il dereference ce corps, une requete malformee devient un 500 avec
-        // une ligne "unhandled failure", la ou la frontiere doit un 400.
-        it('refuse un corps absent plutot que d echouer en 500', async () => {
+        // Express 5 leaves the body undefined when the request does not carry a json type. The
+        // per-address counter runs before any validation: if it dereferences that body, a malformed
+        // request becomes a 500 with an "unhandled failure" line, where the boundary owes a 400.
+        it('refuses a missing body rather than failing with a 500', async () => {
             const reponse = await harness.request('/auth/password/forgot', { method: 'POST' });
 
             expect(reponse.status).toBe(400);
             expect(harness.logger.lines.map(ligne => ligne.level)).not.toContain('error');
         });
 
-        it('refuse une adresse qui n en est pas une', async () => {
+        it('refuses an address that is not one', async () => {
             const response = await harness.request(
                 '/auth/password/forgot',
                 json('POST', { email: 'pas-une-adresse' }),
@@ -145,8 +144,8 @@ describe('API de reinitialisation de mot de passe', () => {
             expect(response.status).toBe(400);
         });
 
-        // Trois demandes par heure et par adresse : la quatrieme est refusee.
-        it('limite les demandes par adresse', async () => {
+        // Three requests per hour and per address: the fourth is refused.
+        it('limits the requests per address', async () => {
             const demande = () =>
                 harness.request('/auth/password/forgot', json('POST', { email: ADRESSE }));
 
@@ -156,7 +155,7 @@ describe('API de reinitialisation de mot de passe', () => {
             expect(reponses[3]?.status).toBe(429);
         });
 
-        it('ne met ni l adresse ni le mot de passe dans les journaux', async () => {
+        it('keeps both the address and the password out of the logs', async () => {
             await harness.request('/auth/password/forgot', json('POST', { email: ADRESSE }));
 
             const journal = JSON.stringify(harness.logger.lines);
@@ -166,7 +165,7 @@ describe('API de reinitialisation de mot de passe', () => {
     });
 
     describe('POST /auth/password/reset', () => {
-        it('change le mot de passe et revoque les sessions du compte', async () => {
+        it('changes the password and revokes the sessions of the account', async () => {
             const connexion = await harness.request(
                 '/auth/login',
                 json('POST', { email: ADRESSE, password: ANCIEN }),
@@ -194,7 +193,7 @@ describe('API de reinitialisation de mot de passe', () => {
             expect(reconnexion.status).toBe(200);
         });
 
-        it('refuse un jeton inconnu, ou deja utilise', async () => {
+        it('refuses an unknown token, or one already used', async () => {
             const token = await jetonPour(ADRESSE);
 
             const premier = await harness.request(
@@ -218,7 +217,7 @@ describe('API de reinitialisation de mot de passe', () => {
             expect(invente.status).toBe(400);
         });
 
-        it('invalide le premier lien quand un second est demande', async () => {
+        it('invalidates the first link when a second one is requested', async () => {
             const premierJeton = await jetonPour(ADRESSE);
             await jetonPour(ADRESSE);
 
@@ -230,7 +229,7 @@ describe('API de reinitialisation de mot de passe', () => {
             expect(response.status).toBe(400);
         });
 
-        it('refuse un mot de passe trop court ou compromis', async () => {
+        it('refuses a password that is too short or compromised', async () => {
             await serve([KNOWN_BREACHED]);
             const token = await jetonPour(ADRESSE);
 
@@ -250,7 +249,7 @@ describe('API de reinitialisation de mot de passe', () => {
             });
         });
 
-        it('ne laisse ni le jeton ni le nouveau mot de passe dans les journaux ou la reponse', async () => {
+        it('keeps both the token and the new password out of the logs and the response', async () => {
             const token = await jetonPour(ADRESSE);
 
             const reset = await harness.request(
@@ -264,7 +263,7 @@ describe('API de reinitialisation de mot de passe', () => {
             expect(await reset.text()).toBe('');
         });
 
-        it('partage la limite par origine avec la demande', async () => {
+        it('shares the per-origin limit with the request', async () => {
             const tentative = () =>
                 harness.request(
                     '/auth/password/reset',
@@ -279,7 +278,7 @@ describe('API de reinitialisation de mot de passe', () => {
     });
 
     describe('GET /reset-password', () => {
-        it('sert la coquille de l application pour le lien de recuperation', async () => {
+        it('serves the application shell for the recovery link', async () => {
             const response = await harness.request('/reset-password?token_hash=abc&type=recovery');
 
             expect(response.status).toBe(200);

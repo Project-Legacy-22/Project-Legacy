@@ -94,9 +94,9 @@ function toProblem(error: unknown): Omit<ProblemDetails, 'instance' | 'traceId'>
 }
 
 export function translateErrors(logger: Logger): ErrorRequestHandler {
-    // Express type le premier parametre en `any`. L annoter en `unknown` est
-    // accepte et rend le contrat honnete : rien ne garantit ce qui est passe a
-    // next(), et toProblem le reduit deja explicitement.
+    // Express types the first parameter as `any`. Annotating it as `unknown` is accepted and makes
+    // the contract honest: nothing guarantees what is passed to next(), and toProblem already
+    // narrows it explicitly.
     return (error: unknown, req, res, _next) => {
         const problem: ProblemDetails = {
             ...toProblem(error),

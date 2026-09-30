@@ -2,19 +2,17 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { v4 as uuid } from 'uuid';
 import type { RequestHandler, Response } from 'express';
 
-// Chaque reponse qui signale une erreur porte un identifiant de correlation,
-// pour qu un signalement d utilisateur soit rattachable a une ligne de journal
-// sans rien exposer de la requete elle-meme.
+// Every response that reports an error carries a correlation identifier, so that a user's report
+// can be matched with a log line without exposing anything of the request itself.
 //
-// Express type `res.locals` comme `LocalsObj & Locals`, ou `LocalsObj` vaut
-// `Record<string, any>` par defaut. Intersecter un champ declare avec cette
-// signature d index le ramene a `any` : augmenter `Express.Locals` ne suffit
-// donc pas a typer `traceId`, et chaque lecture serait un acces non sur.
+// Express types `res.locals` as `LocalsObj & Locals`, where `LocalsObj` defaults to `Record<string,
+// any>`. Intersecting a declared field with that index signature brings it back to `any`:
+// augmenting `Express.Locals` is therefore not enough to type `traceId`, and every read would be an
+// unsafe access.
 //
-// Le passage se fait par une vue typee et un controle a l execution. Le cout
-// est de deux lignes ; le gain est que plus aucun appelant ne manipule `any`,
-// et qu un middleware oublie echoue immediatement au lieu de propager
-// `undefined` jusque dans un journal.
+// It goes through a typed view and a runtime check. The cost is two lines; the gain is that no
+// caller handles `any` any more, and that a forgotten middleware fails immediately instead of
+// carrying `undefined` into a log.
 interface TraceLocals {
     traceId?: unknown;
 }

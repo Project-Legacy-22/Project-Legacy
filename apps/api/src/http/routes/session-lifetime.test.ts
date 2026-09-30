@@ -10,8 +10,8 @@ import {
     makeSignIn,
 } from '@legacy/core-auth';
 import { makeAddItem, makeChangeItem, makeListItems, makeRemoveItem } from '@legacy/core-items';
-// Les doublures de reference vivent avec le port qu elles implementent. En
-// recopier une ici laisserait la copie deriver du contrat qu elle represente.
+// The reference doubles live with the port they implement. Copying one here would let the copy
+// drift from the contract it stands for.
 import { inMemoryCompromisedPasswords } from '../../../../../packages/core/auth/test/fakes/in-memory-compromised-passwords.js';
 import { inMemoryIdentityProvider } from '../../../../../packages/core/auth/test/fakes/in-memory-identity-provider.js';
 import type { InMemoryIdentityProvider } from '../../../../../packages/core/auth/test/fakes/in-memory-identity-provider.js';
@@ -30,15 +30,13 @@ const MOT_DE_PASSE = 'MotDePasse2026';
 const ACCOUNT_ID = '00000000-0000-7000-8000-000000000001';
 const MOMENT = new Date('2026-09-10T09:00:00.000Z');
 const HEURE_MS = 60 * 60 * 1000;
-// L intervalle de reprise du fournisseur est de dix secondes
-// (supabase/config.toml). Au-dela, un jeton deja echange est un jeton qui
-// circule en deux endroits.
+// The provider's reuse interval is ten seconds (supabase/config.toml). Beyond it, a token already
+// exchanged is a token circulating in two places.
 const APRES_L_INTERVALLE_MS = 11_000;
 const JOUR_S = 24 * 60 * 60;
 
-// Le depot d items refuse tout appel : aucune route exercee ici n a de raison
-// de l atteindre, et une requete qui y arriverait repondrait 500 la ou le test
-// attend un refus.
+// The item repository refuses every call: no route exercised here has any reason to reach it, and a
+// request getting there would answer 500 where the test expects a refusal.
 function useCasesOver(provider: InMemoryIdentityProvider): AppUseCases {
     const repository = unreachableItemRepository();
     const personalData = inMemoryPersonalDataStore();
@@ -69,9 +67,8 @@ function useCasesOver(provider: InMemoryIdentityProvider): AppUseCases {
     });
 }
 
-// Un navigateur garde ses cookies d une requete a l autre ; le harnais, non.
-// Ce bocal joue ce role : il relit les Set-Cookie d une reponse et rend
-// l en-tete Cookie de la suivante.
+// A browser keeps its cookies from one request to the next; the harness does not. This jar plays
+// that role: it reads the Set-Cookie of a response and returns the Cookie header of the next one.
 type Bocal = Record<string, string>;
 
 function recolte(response: Response, bocal: Bocal = {}): Bocal {
@@ -97,14 +94,13 @@ function poseeParLaReponse(response: Response, nom: string): string {
     return response.headers.getSetCookie().find(brut => brut.startsWith(`${nom}=`)) ?? '';
 }
 
-describe('duree de vie de la session', () => {
+describe('session lifetime', () => {
     let harness: Harness;
     let instant: number;
 
     beforeEach(async () => {
-        // L horloge est injectee dans la doublure du fournisseur : c est elle
-        // qui decide quand un jeton d acces expire, donc le test avance le
-        // temps au lieu d attendre.
+        // The clock is injected into the provider double: it decides when an access token expires,
+        // so the test moves time forward instead of waiting.
         instant = MOMENT.getTime();
         const provider = inMemoryIdentityProvider(
             [{ id: ACCOUNT_ID, email: ADRESSE, password: MOT_DE_PASSE }],
@@ -133,7 +129,7 @@ describe('duree de vie de la session', () => {
     }
 
     describe('a la connexion', () => {
-        it('pose le jeton de rafraichissement dans un cookie httpOnly, jamais lisible par la page', async () => {
+        it('sets the refresh token in an httpOnly cookie, never readable by the page', async () => {
             const response = await connexion();
 
             const refresh = poseeParLaReponse(response, 'refresh');
@@ -142,18 +138,17 @@ describe('duree de vie de la session', () => {
             expect(refresh).toContain('SameSite=Lax');
         });
 
-        // Le cookie de session dure ce que dure le jeton d acces ; celui de
-        // rafraichissement porte la borne d inactivite, et c est lui qui fait
-        // survivre la session a la fermeture de l onglet.
-        it('donne au cookie de rafraichissement la borne d inactivite d une journee', async () => {
+        // The session cookie lasts as long as the access token; the refresh one carries the
+        // inactivity bound, and it is what lets the session survive closing the tab.
+        it('gives the refresh cookie the one-day inactivity bound', async () => {
             const response = await connexion();
 
             expect(poseeParLaReponse(response, 'refresh')).toContain(`Max-Age=${String(JOUR_S)}`);
         });
     });
 
-    describe('en cours d usage', () => {
-        it('renouvelle la session sans que l appelant l ait demande quand le jeton d acces a expire', async () => {
+    describe('during use', () => {
+        it('renews the session without the caller asking when the access token has expired', async () => {
             const bocal = await seConnecter();
             const avant = bocal.session;
 
@@ -164,10 +159,9 @@ describe('duree de vie de la session', () => {
             expect(recolte(response, bocal).session).not.toBe(avant);
         });
 
-        // L etat d un onglet rouvert le lendemain : le navigateur a laisse
-        // tomber le cookie de session, dont le Max-Age est passe, et ne
-        // presente plus que celui de rafraichissement.
-        it('reprend la session quand le navigateur ne presente plus que le cookie de rafraichissement', async () => {
+        // The state of a tab reopened the next day: the browser dropped the session cookie, whose
+        // Max-Age has passed, and only presents the refresh one.
+        it('resumes the session when the browser only presents the refresh cookie', async () => {
             const bocal = await seConnecter();
 
             instant += HEURE_MS + 1;
@@ -176,9 +170,9 @@ describe('duree de vie de la session', () => {
             expect(response.status).toBe(200);
         });
 
-        // Deux requetes parties ensemble presentent le meme jeton. En refuser
-        // une ferait de la concurrence ordinaire une deconnexion.
-        it('sert deux requetes concurrentes sur un jeton expire sans terminer la session', async () => {
+        // Two requests sent together present the same token. Refusing one would turn ordinary
+        // concurrency into a sign-out.
+        it('serves two concurrent requests on an expired token without ending the session', async () => {
             const bocal = await seConnecter();
 
             instant += HEURE_MS + 1;
@@ -190,10 +184,10 @@ describe('duree de vie de la session', () => {
     });
 
     describe('a l expiration', () => {
-        // Le critere de rotation de l issue #28, verifie de bout en bout : un
-        // jeton deja echange qui revient hors de l intervalle de reprise
-        // termine la session, et ce qu elle avait ouvert cesse de valoir.
-        it('termine la session et revoque ses jetons quand un jeton deja echange revient trop tard', async () => {
+        // The rotation criterion of issue #28, checked end to end: a token already exchanged that
+        // comes back outside the reuse interval ends the session, and what it had opened stops
+        // being valid.
+        it('ends the session and revokes its tokens when an exchanged token comes back too late', async () => {
             const bocal = await seConnecter();
             instant += HEURE_MS + 1;
             const renouvele = recolte(await lire(bocal), bocal);
@@ -206,7 +200,7 @@ describe('duree de vie de la session', () => {
             expect(apres.status).toBe(401);
         });
 
-        it('dit que la session a expire, au lieu de demander une connexion sans raison', async () => {
+        it('says the session has expired, instead of asking for a sign-in for no reason', async () => {
             const response = await harness.request('/auth/me', {
                 headers: { Cookie: 'session=jeton-perime; refresh=jeton-perime' },
             });
@@ -217,9 +211,9 @@ describe('duree de vie de la session', () => {
             expect(body.detail).toContain('expired');
         });
 
-        // Sans cela le navigateur represente les deux cookies a chaque requete
-        // pendant une journee, et l interface continue de croire a une session.
-        it('fait oublier les deux cookies au navigateur', async () => {
+        // Otherwise the browser presents both cookies on every request for a day, and the interface
+        // keeps believing in a session.
+        it('makes the browser forget both cookies', async () => {
             const response = await harness.request('/auth/me', {
                 headers: { Cookie: 'session=jeton-perime; refresh=jeton-perime' },
             });
@@ -231,7 +225,7 @@ describe('duree de vie de la session', () => {
             expect(oublies).toHaveLength(2);
         });
 
-        it('demande une connexion, sans parler d expiration, quand aucune session n a ete posee', async () => {
+        it('asks for a sign-in, without mentioning expiry, when no session was set', async () => {
             const response = await harness.request('/auth/me');
             const body = (await response.json()) as { type: string };
 
@@ -240,10 +234,9 @@ describe('duree de vie de la session', () => {
         });
     });
 
-    // Critere de l issue #28 : aucun jeton dans un journal, une URL ou un
-    // message d erreur. Le renouvellement est le moment ou trois jetons
-    // circulent ensemble, donc celui ou l on verifie.
-    it('ne fait apparaitre aucun jeton dans le journal', async () => {
+    // Criterion of issue #28: no token in a log, a URL or an error message. Renewal is the moment
+    // three tokens travel together, so it is the one to check.
+    it('lets no token appear in the log', async () => {
         const bocal = await seConnecter();
         instant += HEURE_MS + 1;
         const renouvele = recolte(await lire(bocal), bocal);
