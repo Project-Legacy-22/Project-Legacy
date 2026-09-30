@@ -18,7 +18,7 @@ function provider(now?: () => number) {
 }
 
 describe('inMemoryIdentityProvider recovery flow', () => {
-    it('consomme le jeton : un second usage est rejete', async () => {
+    it('consumes the token: a second use is rejected', async () => {
         const p = provider();
         await p.requestPasswordReset(ADRESSE);
         const token = p.recoveryTokenFor(ADRESSE) ?? '';
@@ -27,7 +27,7 @@ describe('inMemoryIdentityProvider recovery flow', () => {
         await expect(p.resetPassword(token, 'EncoreUnAutre3')).resolves.toBe('token-rejected');
     });
 
-    it('n a qu un jeton vivant : une nouvelle demande invalide la precedente', async () => {
+    it('keeps a single live token: a new request invalidates the previous one', async () => {
         const p = provider();
         await p.requestPasswordReset(ADRESSE);
         const premier = p.recoveryTokenFor(ADRESSE) ?? '';
@@ -36,7 +36,7 @@ describe('inMemoryIdentityProvider recovery flow', () => {
         await expect(p.resetPassword(premier, NOUVEAU)).resolves.toBe('token-rejected');
     });
 
-    it('rejette un jeton expire', async () => {
+    it('rejects an expired token', async () => {
         let instant = 1_000_000;
         const p = provider(() => instant);
         await p.requestPasswordReset(ADRESSE);
@@ -47,7 +47,7 @@ describe('inMemoryIdentityProvider recovery flow', () => {
         await expect(p.resetPassword(token, NOUVEAU)).resolves.toBe('token-rejected');
     });
 
-    it('revoque les sessions en cours : un jeton d acces anterieur cesse d etre reconnu', async () => {
+    it('revokes the current sessions: an earlier access token stops being recognised', async () => {
         const p = provider();
         const before = await p.authenticate(ADRESSE, ANCIEN);
         await p.requestPasswordReset(ADRESSE);
@@ -59,7 +59,7 @@ describe('inMemoryIdentityProvider recovery flow', () => {
         await expect(p.identify(before?.accessToken ?? '')).resolves.toBeUndefined();
     });
 
-    it('ne pose aucun jeton pour une adresse inconnue', async () => {
+    it('sets no token for an unknown address', async () => {
         const p = provider();
 
         await p.requestPasswordReset('bob@example.com');
@@ -68,16 +68,14 @@ describe('inMemoryIdentityProvider recovery flow', () => {
     });
 });
 
-// La rotation que decrit l ADR-0008, modelisee ici pour que les suites de cas
-// d usage et d API s appuient dessus. Ce qui est fixe est le contrat du
-// fournisseur, pas la comptabilite de ce fichier : un jeton ne sert qu une
-// fois, un jeton d acces expire seul, et une reutilisation hors intervalle
-// termine la session.
+// The rotation ADR-0008 describes, modelled here so that the use case and API suites rely on it.
+// What is fixed is the provider's contract, not the bookkeeping of this file: a token is used once,
+// an access token expires on its own, and a reuse outside the interval ends the session.
 describe('inMemoryIdentityProvider session rotation', () => {
     const HEURE_MS = 60 * 60 * 1000;
     const APRES_L_INTERVALLE_MS = 11_000;
 
-    it('rend un jeton de rafraichissement different a chaque echange', async () => {
+    it('returns a different refresh token on every exchange', async () => {
         const p = provider();
         const session = await p.authenticate(ADRESSE, ANCIEN);
 
@@ -87,7 +85,7 @@ describe('inMemoryIdentityProvider session rotation', () => {
         expect(renouvelee?.refreshToken).not.toBe(session?.refreshToken);
     });
 
-    it('laisse le jeton de rafraichissement survivre a l expiration du jeton d acces', async () => {
+    it('lets the refresh token outlive the expiry of the access token', async () => {
         let instant = 1_000_000;
         const p = provider(() => instant);
         const session = await p.authenticate(ADRESSE, ANCIEN);
@@ -98,7 +96,7 @@ describe('inMemoryIdentityProvider session rotation', () => {
         await expect(p.refresh(session?.refreshToken ?? '')).resolves.toBeDefined();
     });
 
-    it('rend la meme session a un rejeu dans l intervalle de reprise', async () => {
+    it('returns the same session to a replay within the reuse interval', async () => {
         let instant = 1_000_000;
         const p = provider(() => instant);
         const session = await p.authenticate(ADRESSE, ANCIEN);
@@ -111,7 +109,7 @@ describe('inMemoryIdentityProvider session rotation', () => {
         expect(second?.refreshToken).toBe(premier?.refreshToken);
     });
 
-    it('termine la session et revoque ses jetons sur une reutilisation hors intervalle', async () => {
+    it('ends the session and revokes its tokens on a reuse outside the interval', async () => {
         let instant = 1_000_000;
         const p = provider(() => instant);
         const session = await p.authenticate(ADRESSE, ANCIEN);
@@ -125,17 +123,16 @@ describe('inMemoryIdentityProvider session rotation', () => {
         await expect(p.refresh(renouvelee?.refreshToken ?? '')).resolves.toBeUndefined();
     });
 
-    it('rejette un jeton de rafraichissement qu il n a jamais emis', async () => {
+    it('rejects a refresh token it never issued', async () => {
         const p = provider();
 
         await expect(p.refresh('refresh:account-1:999')).resolves.toBeUndefined();
     });
 });
 
-// Le changement d identifiants en etant connecte (US-36), modelise pour les
-// suites de cas d usage et d API. Ce qui est fixe : un changement de mot de
-// passe garde la session courante et revoque les autres, et un changement d
-// adresse ne prend effet qu une fois le jeton confirme.
+// Changing credentials while signed in (US-36), modelled for the use case and API suites. What is
+// fixed: a password change keeps the current session and revokes the others, and an address change
+// only takes effect once the token is confirmed.
 describe('inMemoryIdentityProvider credential change', () => {
     const AUTRE = 'AutreMotDePasse3';
     const NEUVE = 'neuf@example.com';
@@ -150,7 +147,7 @@ describe('inMemoryIdentityProvider credential change', () => {
         return session;
     }
 
-    it('garde la session qui change le mot de passe et revoque les autres', async () => {
+    it('keeps the session that changes the password and revokes the others', async () => {
         const p = provider();
         const courante = await sessionDe(p);
         const autre = await sessionDe(p);
@@ -162,7 +159,7 @@ describe('inMemoryIdentityProvider credential change', () => {
         await expect(p.refresh(autre.refreshToken)).resolves.toBeUndefined();
     });
 
-    it('applique le nouveau mot de passe', async () => {
+    it('applies the new password', async () => {
         const p = provider();
         const session = await sessionDe(p);
 
@@ -172,14 +169,14 @@ describe('inMemoryIdentityProvider credential change', () => {
         await expect(p.authenticate(ADRESSE, ANCIEN)).resolves.toBeUndefined();
     });
 
-    it('ne change l adresse qu une fois le jeton confirme', async () => {
+    it('only changes the address once the token is confirmed', async () => {
         const p = provider();
         const session = await sessionDe(p);
 
         await expect(
             p.changeEmail(session.accessToken, session.refreshToken, NEUVE),
         ).resolves.toBe('confirmation-requested');
-        // L ancienne adresse reste l identifiant tant que rien n est confirme.
+        // The old address remains the identifier as long as nothing is confirmed.
         await expect(p.authenticate(ADRESSE, ANCIEN)).resolves.toBeDefined();
 
         await p.confirmEmailChange(p.emailChangeTokenFor(ADRESSE) ?? '');
@@ -188,7 +185,7 @@ describe('inMemoryIdentityProvider credential change', () => {
         await expect(p.authenticate(ADRESSE, ANCIEN)).resolves.toBeUndefined();
     });
 
-    it('repond a l identique sur une adresse deja prise', async () => {
+    it('answers identically for an address already taken', async () => {
         const p = inMemoryIdentityProvider([
             { id: 'account-1', email: ADRESSE, password: ANCIEN },
             { id: 'account-2', email: 'bob@example.com', password: AUTRE },
@@ -200,7 +197,7 @@ describe('inMemoryIdentityProvider credential change', () => {
         ).resolves.toBe('address-unavailable');
     });
 
-    it('rejette un jeton de confirmation inconnu', async () => {
+    it('rejects an unknown confirmation token', async () => {
         const p = provider();
 
         await expect(p.confirmEmailChange('jamais-emis')).resolves.toBe('token-rejected');

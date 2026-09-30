@@ -9,7 +9,7 @@ const ACCOUNT_ID = 'account-1';
 const OTHER_ACCOUNT_ID = 'account-2';
 
 describe('markNotificationRead', () => {
-    it('marque une notification non lue comme lue', async () => {
+    it('marks an unread notification as read', async () => {
         const repository = inMemoryNotificationRepository([
             aNotification({ id: 'notif-1', userId: ACCOUNT_ID, readAt: null }),
         ]);
@@ -20,8 +20,8 @@ describe('markNotificationRead', () => {
         expect(repository.notifications.get('notif-1')?.readAt).not.toBeNull();
     });
 
-    // Critere bloquant de US-18 : rejouer l action ne doit pas echouer.
-    it('est idempotente sur une notification deja lue', async () => {
+    // Blocking criterion of US-18: replaying the action must not fail.
+    it('is idempotent on a notification already read', async () => {
         const repository = inMemoryNotificationRepository([
             aNotification({ id: 'notif-1', userId: ACCOUNT_ID, readAt: '2026-09-10T11:00:00.000Z' }),
         ]);
@@ -31,7 +31,7 @@ describe('markNotificationRead', () => {
         expect(repository.notifications.get('notif-1')?.readAt).toBe('2026-09-10T11:00:00.000Z');
     });
 
-    it('rejette une notification introuvable', async () => {
+    it('rejects a notification that cannot be found', async () => {
         const markNotificationRead = makeMarkNotificationRead(inMemoryNotificationRepository());
 
         await expect(markNotificationRead('missing', ACCOUNT_ID)).rejects.toBeInstanceOf(
@@ -39,7 +39,7 @@ describe('markNotificationRead', () => {
         );
     });
 
-    it('traite la notification d un autre compte comme inexistante et la laisse intacte', async () => {
+    it('treats the notification of another account as absent and leaves it intact', async () => {
         const theirs = aNotification({ id: 'notif-1', userId: OTHER_ACCOUNT_ID, readAt: null });
         const repository = inMemoryNotificationRepository([theirs]);
         const markNotificationRead = makeMarkNotificationRead(repository);

@@ -87,13 +87,12 @@ export function createSupabaseMembershipRepository(
             return (data ?? []).map(row => toMembership(row as MembershipRow));
         },
 
-        // Une seule requete, donc une seule transaction : la fonction ecrit
-        // l appartenance et l evenement, ou ni l un ni l autre. Deux appels
-        // PostgREST seraient deux transactions.
+        // A single request, hence a single transaction: the function writes the membership and the
+        // event, or neither. Two PostgREST calls would be two transactions.
         //
-        // L autorisation -- etre proprietaire -- a ete verifiee par le cas
-        // d usage avant d arriver ici. Le service-role n est pas contraint par
-        // RLS, donc ce controle applicatif ne doit pas etre retire.
+        // The authorisation -- being an owner -- was checked by the use case before getting here.
+        // The service role is not constrained by RLS, so this application check must not be
+        // removed.
         async addWithEvent({ projectId, memberId }, event: DomainEvent) {
             const { data, error } = await client.rpc('add_member_with_event', {
                 p_project_id: projectId,
@@ -106,9 +105,9 @@ export function createSupabaseMembershipRepository(
 
             if (error) fail('addWithEvent', error);
 
-            // La fonction rend false quand la personne etait deja membre.
-            // `?? false` couvre le cas ou PostgREST rendrait null : mieux vaut
-            // annoncer « rien ajoute » que de laisser passer un undefined.
+            // The function returns false when the person was already a member. `?? false` covers
+            // the case where PostgREST would return null: better to announce "nothing added" than
+            // to let an undefined through.
             return data ?? false;
         },
 

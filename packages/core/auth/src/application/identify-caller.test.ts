@@ -14,7 +14,7 @@ function provider() {
 }
 
 describe('identifyCaller', () => {
-    it('reconnait le porteur du jeton emis a la connexion', async () => {
+    it('recognises the bearer of the token issued at sign-in', async () => {
         const fournisseur = provider();
         const session = await makeSignIn(fournisseur)(ADRESSE, MOT_DE_PASSE);
 
@@ -23,7 +23,7 @@ describe('identifyCaller', () => {
         expect(account).toEqual({ id: 'account-1', email: ADRESSE });
     });
 
-    it('ne reconnait personne derriere un jeton inconnu', async () => {
+    it('recognises nobody behind an unknown token', async () => {
         const account = await makeIdentifyCaller(provider())('jeton-invente');
 
         expect(account).toBeUndefined();

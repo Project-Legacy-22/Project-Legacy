@@ -37,7 +37,7 @@ async function contexte(options: { compromised?: string[] } = {}) {
 }
 
 describe('changePassword', () => {
-    it('change le mot de passe quand l actuel et la politique sont bons', async () => {
+    it('changes the password when the current one and the policy are right', async () => {
         const { caller, changePassword, signIn } = await contexte();
 
         await changePassword(caller, ANCIEN, NOUVEAU);
@@ -46,7 +46,7 @@ describe('changePassword', () => {
         await expect(signIn(ADRESSE, ANCIEN)).rejects.toThrow();
     });
 
-    it('refuse un mot de passe actuel faux sans rien changer', async () => {
+    it('refuses a wrong current password without changing anything', async () => {
         const { provider, caller, changePassword, signIn } = await contexte();
         const spy = vi.spyOn(provider, 'changePassword');
 
@@ -57,7 +57,7 @@ describe('changePassword', () => {
         await expect(signIn(ADRESSE, ANCIEN)).resolves.toBeDefined();
     });
 
-    it('refuse un nouveau mot de passe trop court sans appeler le fournisseur', async () => {
+    it('refuses a new password that is too short without calling the provider', async () => {
         const { provider, caller, changePassword } = await contexte();
         const spy = vi.spyOn(provider, 'changePassword');
 
@@ -65,7 +65,7 @@ describe('changePassword', () => {
         expect(spy).not.toHaveBeenCalled();
     });
 
-    it('refuse un nouveau mot de passe compromis sans appeler le fournisseur', async () => {
+    it('refuses a compromised new password without calling the provider', async () => {
         const { provider, caller, changePassword } = await contexte({ compromised: [NOUVEAU] });
         const spy = vi.spyOn(provider, 'changePassword');
 
@@ -73,7 +73,7 @@ describe('changePassword', () => {
         expect(spy).not.toHaveBeenCalled();
     });
 
-    it('traduit un refus de politique du fournisseur en mot de passe faible', async () => {
+    it('translates a policy refusal from the provider into a weak password', async () => {
         const provider = inMemoryIdentityProvider([
             { id: 'account-1', email: ADRESSE, password: ANCIEN },
         ]);
@@ -86,7 +86,7 @@ describe('changePassword', () => {
         await expect(changePassword(caller, ANCIEN, NOUVEAU)).rejects.toBeInstanceOf(WeakPassword);
     });
 
-    it('ne laisse pas le nouveau mot de passe dans le message d erreur', async () => {
+    it('keeps the new password out of the error message', async () => {
         const provider = inMemoryIdentityProvider([
             { id: 'account-1', email: ADRESSE, password: ANCIEN },
         ]);

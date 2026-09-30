@@ -29,7 +29,7 @@ function providerReturning(outcome: PasswordResetOutcome): IdentityProvider {
 }
 
 describe('resetPassword', () => {
-    it('change le mot de passe quand le jeton et la politique sont bons', async () => {
+    it('changes the password when the token and the policy are right', async () => {
         const { provider, requestPasswordReset, resetPassword, signIn } = contexte();
         await requestPasswordReset(ADRESSE);
         const token = provider.recoveryTokenFor(ADRESSE) ?? '';
@@ -40,7 +40,7 @@ describe('resetPassword', () => {
         await expect(signIn(ADRESSE, ANCIEN)).rejects.toThrow();
     });
 
-    it('refuse un mot de passe trop court sans depenser le jeton', async () => {
+    it('refuses a password that is too short without spending the token', async () => {
         const { provider, requestPasswordReset, resetPassword } = contexte();
         await requestPasswordReset(ADRESSE);
         const token = provider.recoveryTokenFor(ADRESSE) ?? '';
@@ -48,11 +48,11 @@ describe('resetPassword', () => {
 
         await expect(resetPassword(token, 'Court1')).rejects.toBeInstanceOf(WeakPassword);
         expect(spy).not.toHaveBeenCalled();
-        // Le meme lien reste utilisable avec un meilleur mot de passe.
+        // The same link stays usable with a better password.
         await expect(resetPassword(token, NOUVEAU)).resolves.toBeUndefined();
     });
 
-    it('refuse un mot de passe compromis sans depenser le jeton', async () => {
+    it('refuses a compromised password without spending the token', async () => {
         const { provider, requestPasswordReset, resetPassword } = contexte({ compromised: [NOUVEAU] });
         await requestPasswordReset(ADRESSE);
         const token = provider.recoveryTokenFor(ADRESSE) ?? '';
@@ -62,7 +62,7 @@ describe('resetPassword', () => {
         expect(spy).not.toHaveBeenCalled();
     });
 
-    it('traduit un jeton rejete en lien invalide', async () => {
+    it('translates a rejected token into an invalid link', async () => {
         const resetPassword = makeResetPassword({
             provider: providerReturning('token-rejected'),
             compromisedPasswords: inMemoryCompromisedPasswords(),
@@ -71,7 +71,7 @@ describe('resetPassword', () => {
         await expect(resetPassword('jeton-perime', NOUVEAU)).rejects.toBeInstanceOf(InvalidResetToken);
     });
 
-    it('traduit un refus de politique du fournisseur en mot de passe faible', async () => {
+    it('translates a policy refusal from the provider into a weak password', async () => {
         const resetPassword = makeResetPassword({
             provider: providerReturning('weak-password'),
             compromisedPasswords: inMemoryCompromisedPasswords(),
@@ -80,7 +80,7 @@ describe('resetPassword', () => {
         await expect(resetPassword('jeton', NOUVEAU)).rejects.toBeInstanceOf(WeakPassword);
     });
 
-    it('ne laisse ni le jeton ni le mot de passe dans le message d erreur', async () => {
+    it('keeps both the token and the password out of the error message', async () => {
         const resetPassword = makeResetPassword({
             provider: providerReturning('token-rejected'),
             compromisedPasswords: inMemoryCompromisedPasswords(),

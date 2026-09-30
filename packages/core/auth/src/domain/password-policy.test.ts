@@ -6,41 +6,40 @@ import { checkedPassword, MAX_PASSWORD_BYTES, MIN_PASSWORD_LENGTH } from './pass
 const VALIDE = 'MotDePasse2026';
 
 describe('checkedPassword', () => {
-    it('accepte un mot de passe conforme et le rend inchange', () => {
+    it('accepts a compliant password and returns it unchanged', () => {
         expect(checkedPassword(VALIDE)).toBe(VALIDE);
     });
 
-    it('refuse un mot de passe plus court que la longueur minimale', () => {
+    it('refuses a password shorter than the minimum length', () => {
         const court = 'Abc123def';
 
         expect(court.length).toBeLessThan(MIN_PASSWORD_LENGTH);
         expect(() => checkedPassword(court)).toThrow(WeakPassword);
     });
 
-    it('refuse un mot de passe sans majuscule', () => {
+    it('refuses a password without an uppercase letter', () => {
         expect(() => checkedPassword('motdepasse2026')).toThrow(WeakPassword);
     });
 
-    it('refuse un mot de passe sans minuscule', () => {
+    it('refuses a password without a lowercase letter', () => {
         expect(() => checkedPassword('MOTDEPASSE2026')).toThrow(WeakPassword);
     });
 
-    it('refuse un mot de passe sans chiffre', () => {
+    it('refuses a password without a digit', () => {
         expect(() => checkedPassword('MotDePasseSansChiffre')).toThrow(WeakPassword);
     });
 
-    // bcrypt ignore ce qui depasse 72 octets. Un mot de passe plus long serait
-    // tronque en silence, et un prefixe suffirait alors a ouvrir le compte. La
-    // borne est comptee en octets : vingt-cinq caracteres accentues en font
-    // cinquante, mais soixante-treize octets sont refuses.
-    it('refuse un mot de passe qui depasse la limite en octets', () => {
+    // bcrypt ignores whatever goes beyond 72 bytes. A longer password would be silently truncated,
+    // and a prefix would then be enough to open the account. The bound is counted in bytes:
+    // twenty-five accented characters make fifty, but seventy-three bytes are refused.
+    it('refuses a password over the byte limit', () => {
         const accentue = `Mot2${'e'.repeat(MAX_PASSWORD_BYTES)}`;
 
         expect(accentue.length).toBeLessThan(MAX_PASSWORD_BYTES * 2);
         expect(() => checkedPassword(accentue)).toThrow(WeakPassword);
     });
 
-    it('ne renvoie pas le mot de passe soumis dans le message d erreur', () => {
+    it('keeps the submitted password out of the error message', () => {
         const soumis = 'zzzmotdepassetapezzz';
 
         expect(() => checkedPassword(soumis)).toThrow(WeakPassword);

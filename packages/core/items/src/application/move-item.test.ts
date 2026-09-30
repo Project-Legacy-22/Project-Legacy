@@ -10,7 +10,7 @@ const OTHER_OWNER_ID = 'owner-7';
 const PROJECT_ID = 'project-1';
 
 describe('moveItem', () => {
-    it('deplace la tache et incremente sa version', async () => {
+    it('moves the task and increments its version', async () => {
         const repository = inMemoryItemRepository([
             anItem({ id: 'item-1', projectId: PROJECT_ID, ownerId: OWNER_ID }),
         ]);
@@ -28,7 +28,7 @@ describe('moveItem', () => {
         expect(repository.items.get('item-1')).toEqual(moved);
     });
 
-    it('traite une tache inaccessible comme une tache inexistante', async () => {
+    it('treats an inaccessible task like an absent task', async () => {
         const theirs = anItem({ id: 'item-1', projectId: PROJECT_ID, ownerId: OTHER_OWNER_ID });
         const repository = inMemoryItemRepository([theirs]);
         const moveItem = makeMoveItem(repository);
@@ -45,7 +45,7 @@ describe('moveItem', () => {
         expect(repository.items.get('item-1')).toEqual(theirs);
     });
 
-    it('refuse une version perimee sans ecraser le dernier deplacement', async () => {
+    it('refuses a stale version without overwriting the latest move', async () => {
         const current = anItem({
             id: 'item-1',
             projectId: PROJECT_ID,

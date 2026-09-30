@@ -28,7 +28,7 @@ function storeRemoving(result: Awaited<ReturnType<RetentionStore['purgeExpired']
 }
 
 describe('purgeExpired', () => {
-    it('rend ce que la passe a supprime', async () => {
+    it('returns what the pass deleted', async () => {
         const result = await purgeExpired(
             storeRemoving({ notifications: 3, processedEvents: 2, outbox: 5 }),
             recordingLogger(),
@@ -37,9 +37,9 @@ describe('purgeExpired', () => {
         expect(result).toEqual({ notifications: 3, processedEvents: 2, outbox: 5 });
     });
 
-    // La trace exigee par US-39 : une ligne par traitement, un nom et un
-    // nombre, rien qui designe une ligne supprimee.
-    it('laisse une ligne par traitement, faite d un nom et d un nombre seulement', async () => {
+    // The trace US-39 requires: one line per processing, a name and a number, nothing that
+    // designates a deleted row.
+    it('leaves one line per processing, made of a name and a number only', async () => {
         const logger = recordingLogger();
 
         await purgeExpired(storeRemoving({ notifications: 3, processedEvents: 0, outbox: 5 }), logger);
@@ -53,7 +53,7 @@ describe('purgeExpired', () => {
 });
 
 describe('createSupabaseRetentionStore', () => {
-    it('rend un nombre par traitement a partir des lignes de la fonction', async () => {
+    it('returns one number per processing from the rows of the function', async () => {
         const store = await storeAnswering(200, [
             { treatment: 'notifications', deleted: 3 },
             { treatment: 'processed_events', deleted: 2 },
@@ -63,21 +63,21 @@ describe('createSupabaseRetentionStore', () => {
         await expect(store.purgeExpired()).resolves.toEqual({ notifications: 3, processedEvents: 2, outbox: 5 });
     });
 
-    // Un traitement que ce cote ne connait pas disparaitrait de la trace sans
-    // un mot s il etait ignore.
-    it('refuse un traitement inconnu', async () => {
+    // A processing this side does not know would vanish from the trace without a word if it were
+    // ignored.
+    it('refuses an unknown processing', async () => {
         const store = await storeAnswering(200, [{ treatment: 'items', deleted: 1 }]);
 
         await expect(store.purgeExpired()).rejects.toThrow('unknown treatment');
     });
 
-    it('refuse un resultat auquel il manque un traitement', async () => {
+    it('refuses a result that lacks a processing', async () => {
         const store = await storeAnswering(200, [{ treatment: 'outbox', deleted: 1 }]);
 
         await expect(store.purgeExpired()).rejects.toThrow('incomplete result');
     });
 
-    it('signale l echec de la fonction', async () => {
+    it('reports the failure of the function', async () => {
         const store = await storeAnswering(400, { code: '42883', message: 'function does not exist' });
 
         await expect(store.purgeExpired()).rejects.toThrow('retention: purgeExpired failed');

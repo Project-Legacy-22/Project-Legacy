@@ -11,8 +11,8 @@ const OTHER_OWNER_ID = '00000000-0000-7000-8000-000000000002';
 const PROJECT_ID = '00000000-0000-7000-8000-000000000010';
 const NOW = new Date('2026-09-04T10:00:00.000Z');
 
-// Deux identifiants distincts : celui de l item, puis celui de l evenement. Un
-// generateur constant les confondrait et masquerait une inversion.
+// Two distinct identifiers: the item's, then the event's. A constant generator would confuse them
+// and hide a swap.
 function identifiers(...values: string[]): () => string {
     const remaining = [...values];
     return () => remaining.shift() ?? 'epuise';
@@ -27,7 +27,7 @@ function addItemWith(repository: InMemoryItemRepository) {
 }
 
 describe('addItem', () => {
-    it('persiste un item avec l id injecte et le proprietaire fourni', async () => {
+    it('persists an item with the injected id and the given owner', async () => {
         const repository = inMemoryItemRepository([], [{ projectId: PROJECT_ID, userId: OWNER_ID }]);
 
         const item = await addItemWith(repository)({ name: 'Buy milk', projectId: PROJECT_ID, ownerId: OWNER_ID });
@@ -62,9 +62,9 @@ describe('addItem', () => {
         expect(repository.items.get(item.id)).toEqual(item);
     });
 
-    // Le proprietaire vient de l appelant : deux appelants differents ne
-    // produisent pas des items du meme proprietaire.
-    it('attribue l item a l appelant et pas a un compte fixe', async () => {
+    // The owner comes from the caller: two different callers do not produce items of the same
+    // owner.
+    it('gives the item to the caller and not to a fixed account', async () => {
         const repository = inMemoryItemRepository([], [{ projectId: PROJECT_ID, userId: OTHER_OWNER_ID }]);
 
         const item = await addItemWith(repository)({
@@ -76,7 +76,7 @@ describe('addItem', () => {
         expect(item.ownerId).toBe(OTHER_OWNER_ID);
     });
 
-    it('annonce la creation par un evenement versionne', async () => {
+    it('announces the creation with a versioned event', async () => {
         const repository = inMemoryItemRepository([], [{ projectId: PROJECT_ID, userId: OWNER_ID }]);
 
         await addItemWith(repository)({ name: 'Buy milk', projectId: PROJECT_ID, ownerId: OWNER_ID });
@@ -91,7 +91,7 @@ describe('addItem', () => {
         ]);
     });
 
-    it('refuse un titre vide sans toucher au depot', async () => {
+    it('refuses an empty title without touching the repository', async () => {
         const repository = inMemoryItemRepository([], [{ projectId: PROJECT_ID, userId: OWNER_ID }]);
 
         await expect(
@@ -101,10 +101,9 @@ describe('addItem', () => {
         expect(repository.recordedEvents).toHaveLength(0);
     });
 
-    // Le critere de US-10 : si l enregistrement de la tache echoue, aucun
-    // evenement n est publie. Avec un seul appel atomique, il n existe aucune
-    // fenetre pendant laquelle l evenement aurait pu partir seul.
-    it('n annonce rien quand l enregistrement echoue', async () => {
+    // The US-10 criterion: if saving the task fails, no event is published. With a single atomic
+    // call, there is no window during which the event could have left alone.
+    it('announces nothing when saving fails', async () => {
         const repository = failingItemRepository('storage unavailable', [{ projectId: PROJECT_ID, userId: OWNER_ID }]);
 
         await expect(

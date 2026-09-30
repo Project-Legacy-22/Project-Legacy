@@ -13,7 +13,7 @@ import {
 } from './auth.js';
 
 describe('RegisterAccountBody', () => {
-    it('canonicalise l adresse avant de la rendre', () => {
+    it('canonicalises the address before returning it', () => {
         const parsed = RegisterAccountBody.parse({
             email: '  Alice@Example.COM ',
             password: 'MotDePasse2026',
@@ -24,7 +24,7 @@ describe('RegisterAccountBody', () => {
         expect(parsed.email).toBe('alice@example.com');
     });
 
-    it('refuse un mot de passe plus court que la politique', () => {
+    it('refuses a password shorter than the policy', () => {
         expect(() =>
             RegisterAccountBody.parse({
                 email: 'alice@example.com',
@@ -37,19 +37,19 @@ describe('RegisterAccountBody', () => {
 });
 
 describe('RequestPasswordResetBody', () => {
-    it('n exige rien d autre qu une adresse', () => {
+    it('requires nothing but an address', () => {
         const parsed = RequestPasswordResetBody.parse({ email: 'ALICE@example.com' });
 
         expect(parsed).toEqual({ email: 'alice@example.com' });
     });
 
-    it('refuse une adresse qui n en est pas une', () => {
+    it('refuses an address that is not one', () => {
         expect(() => RequestPasswordResetBody.parse({ email: 'pas-une-adresse' })).toThrow();
     });
 });
 
 describe('ResetPasswordBody', () => {
-    it('accepte un jeton opaque et un mot de passe conforme a la politique', () => {
+    it('accepts an opaque token and a password that meets the policy', () => {
         const parsed = ResetPasswordBody.parse({
             token: 'peu-importe-la-forme',
             password: 'NouveauMotDePasse1',
@@ -61,27 +61,26 @@ describe('ResetPasswordBody', () => {
         });
     });
 
-    // Contrairement a la connexion, ce mot de passe n existe pas encore : la
-    // politique complete s applique des la frontiere.
-    it('refuse un mot de passe plus court que la politique', () => {
+    // Unlike sign-in, this password does not exist yet: the full policy applies at the boundary.
+    it('refuses a password shorter than the policy', () => {
         expect(() =>
             ResetPasswordBody.parse({ token: 'jeton', password: 'x'.repeat(PASSWORD_POLICY.minimumLength - 1) }),
         ).toThrow();
     });
 
-    it('refuse une demande sans jeton', () => {
+    it('refuses a request without a token', () => {
         expect(() => ResetPasswordBody.parse({ token: '', password: 'NouveauMotDePasse1' })).toThrow();
     });
 });
 
 describe('SignInBody', () => {
-    it('n impose pas la politique a un mot de passe deja existant', () => {
+    it('does not impose the policy on a password that already exists', () => {
         expect(() => SignInBody.parse({ email: 'alice@example.com', password: 'court' })).not.toThrow();
     });
 });
 
 describe('ChangePasswordBody (US-36)', () => {
-    it('n exige du mot de passe actuel que sa presence', () => {
+    it('only requires the current password to be present', () => {
         const parsed = ChangePasswordBody.parse({
             currentPassword: 'x',
             newPassword: 'NouveauMotDePasse1',
@@ -90,15 +89,14 @@ describe('ChangePasswordBody (US-36)', () => {
         expect(parsed.currentPassword).toBe('x');
     });
 
-    it('refuse un mot de passe actuel vide', () => {
+    it('refuses an empty current password', () => {
         expect(() =>
             ChangePasswordBody.parse({ currentPassword: '', newPassword: 'NouveauMotDePasse1' }),
         ).toThrow();
     });
 
-    // Ce mot de passe n existe pas encore : la longueur minimale s applique des
-    // la frontiere, comme pour une reinitialisation.
-    it('refuse un nouveau mot de passe plus court que la politique', () => {
+    // This password does not exist yet: the minimum length applies at the boundary, as for a reset.
+    it('refuses a new password shorter than the policy', () => {
         expect(() =>
             ChangePasswordBody.parse({
                 currentPassword: 'AncienMotDePasse1',
@@ -109,25 +107,25 @@ describe('ChangePasswordBody (US-36)', () => {
 });
 
 describe('ChangeEmailBody (US-36)', () => {
-    it('canonicalise la nouvelle adresse', () => {
+    it('canonicalises the new address', () => {
         expect(ChangeEmailBody.parse({ newEmail: '  Bob@Example.COM ' })).toEqual({
             newEmail: 'bob@example.com',
         });
     });
 
-    it('refuse une adresse qui n en est pas une', () => {
+    it('refuses an address that is not one', () => {
         expect(() => ChangeEmailBody.parse({ newEmail: 'pas-une-adresse' })).toThrow();
     });
 });
 
 describe('ConfirmEmailChangeBody (US-36)', () => {
-    it('accepte un jeton opaque', () => {
+    it('accepts an opaque token', () => {
         expect(ConfirmEmailChangeBody.parse({ token: 'peu-importe-la-forme' })).toEqual({
             token: 'peu-importe-la-forme',
         });
     });
 
-    it('refuse une confirmation sans jeton', () => {
+    it('refuses a confirmation without a token', () => {
         expect(() => ConfirmEmailChangeBody.parse({ token: '' })).toThrow();
     });
 });
@@ -140,13 +138,13 @@ describe('consentement a la politique (US-37)', () => {
         policyVersion: PRIVACY_POLICY_VERSION,
     };
 
-    it('accepte une inscription qui consent a la version publiee', () => {
+    it('accepts a registration that consents to the published version', () => {
         expect(RegisterAccountBody.parse(valide).policyVersion).toBe(PRIVACY_POLICY_VERSION);
     });
 
-    // literal(true) plutot que boolean() : false et l absence du champ sont
-    // refuses tous les deux, et le champ est nomme dans l erreur.
-    it('refuse un consentement absent ou negatif', () => {
+    // literal(true) rather than boolean(): false and a missing field are both refused, and the
+    // field is named in the error.
+    it('refuses a missing or negative consent', () => {
         expect(() =>
             RegisterAccountBody.parse({
                 email: valide.email,
@@ -159,9 +157,8 @@ describe('consentement a la politique (US-37)', () => {
         ).toThrow();
     });
 
-    // Un formulaire laisse ouvert pendant une mise a jour enregistrerait sinon
-    // un consentement a un texte que personne n a lu.
-    it('refuse une version qui n est pas celle publiee', () => {
+    // Otherwise a form left open during an update would record a consent to a text nobody read.
+    it('refuses a version that is not the published one', () => {
         expect(() => RegisterAccountBody.parse({ ...valide, policyVersion: '2020-01-01' })).toThrow();
     });
 });

@@ -64,10 +64,9 @@ export type NotificationListDto = z.infer<typeof NotificationListDto>;
 export type ListNotificationsQuery = z.infer<typeof ListNotificationsQuery>;
 export type NotificationPageDto = z.infer<typeof NotificationPageDto>;
 
-// Ce que l interface lit pour montrer l effet du flux evenementiel de US-10 en
-// dehors de la liste elle meme -- le bandeau de session (US-18). Un compte,
-// pas la liste : l ecran affiche un rappel, la liste vit derriere son propre
-// ecran.
+// What the interface reads to show the effect of the US-10 event flow outside the list itself --
+// the session banner (US-18). A count, not the list: the screen shows a reminder, the list lives
+// behind its own screen.
 export const NotificationSummaryDto = z.object({
     unread: z.number().int().nonnegative(),
 });

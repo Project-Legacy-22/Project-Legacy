@@ -32,7 +32,7 @@ function jwtDeTest(): string {
 
 const REFRESH = 'jeton-rafraichissement';
 
-describe('adaptateur Supabase Auth, changement d identifiants', () => {
+describe('Supabase Auth adapter, credentials change', () => {
     let faux: FauxFournisseur;
 
     async function adaptateur() {
@@ -52,7 +52,7 @@ describe('adaptateur Supabase Auth, changement d identifiants', () => {
     afterEach(() => faux.close());
 
     describe('changePassword', () => {
-        it('pose le nouveau mot de passe et revoque les autres sessions', async () => {
+        it('sets the new password and revokes the other sessions', async () => {
             const { provider, faux: serveur } = await adaptateur();
             serveur.quand(UPDATE_USER, { status: 200, body: UTILISATEUR });
             serveur.quand(LOGOUT, { status: 204, body: {} });
@@ -62,7 +62,7 @@ describe('adaptateur Supabase Auth, changement d identifiants', () => {
             ).resolves.toBe('password-changed');
         });
 
-        it('signale un mot de passe refuse par la politique du fournisseur', async () => {
+        it('reports a password refused by the provider\'s policy', async () => {
             const { provider, faux: serveur } = await adaptateur();
             serveur.quand(UPDATE_USER, {
                 status: 422,
@@ -74,7 +74,7 @@ describe('adaptateur Supabase Auth, changement d identifiants', () => {
             ).resolves.toBe('weak-password');
         });
 
-        it('echoue si la revocation des autres sessions tombe en panne', async () => {
+        it('fails if revoking the other sessions breaks down', async () => {
             const { provider, faux: serveur } = await adaptateur();
             serveur.quand(UPDATE_USER, { status: 200, body: UTILISATEUR });
             serveur.quand(LOGOUT, {
@@ -87,7 +87,7 @@ describe('adaptateur Supabase Auth, changement d identifiants', () => {
             ).rejects.toMatchObject({ name: 'ServiceUnavailable', operation: 'identity provider: changePassword' });
         });
 
-        it('n interpole jamais le mot de passe dans le message d une panne', async () => {
+        it('never interpolates the password in the message of an outage', async () => {
             const { provider, faux: serveur } = await adaptateur();
             serveur.quand(UPDATE_USER, {
                 status: 500,
@@ -103,7 +103,7 @@ describe('adaptateur Supabase Auth, changement d identifiants', () => {
     });
 
     describe('changeEmail', () => {
-        it('demande une confirmation quand le fournisseur accepte', async () => {
+        it('asks for a confirmation when the provider accepts', async () => {
             const { provider, faux: serveur } = await adaptateur();
             serveur.quand(UPDATE_USER, { status: 200, body: UTILISATEUR });
 
@@ -112,7 +112,7 @@ describe('adaptateur Supabase Auth, changement d identifiants', () => {
             ).resolves.toBe('confirmation-requested');
         });
 
-        it('signale une adresse deja enregistree sans la distinguer autrement', async () => {
+        it('reports an address already registered without telling it apart otherwise', async () => {
             const { provider, faux: serveur } = await adaptateur();
             serveur.quand(UPDATE_USER, {
                 status: 422,
@@ -128,7 +128,7 @@ describe('adaptateur Supabase Auth, changement d identifiants', () => {
             );
         });
 
-        it('absorbe la limite d envoi du fournisseur', async () => {
+        it('absorbs the provider\'s sending limit', async () => {
             const { provider, faux: serveur } = await adaptateur();
             serveur.quand(UPDATE_USER, {
                 status: 429,
@@ -140,7 +140,7 @@ describe('adaptateur Supabase Auth, changement d identifiants', () => {
             ).resolves.toBe('confirmation-requested');
         });
 
-        it('propage une panne inattendue du fournisseur', async () => {
+        it('propagates an unexpected provider outage', async () => {
             const { provider, faux: serveur } = await adaptateur();
             serveur.quand(UPDATE_USER, {
                 status: 500,
@@ -154,7 +154,7 @@ describe('adaptateur Supabase Auth, changement d identifiants', () => {
     });
 
     describe('confirmEmailChange', () => {
-        it('confirme un jeton valide', async () => {
+        it('confirms a valid token', async () => {
             const { provider, faux: serveur } = await adaptateur();
             serveur.quand(VERIFY, { status: 200, body: SESSION });
 
@@ -163,7 +163,7 @@ describe('adaptateur Supabase Auth, changement d identifiants', () => {
             );
         });
 
-        it('rejette un jeton expire ou inconnu', async () => {
+        it('rejects an expired or unknown token', async () => {
             const { provider, faux: serveur } = await adaptateur();
             serveur.quand(VERIFY, {
                 status: 403,
@@ -173,7 +173,7 @@ describe('adaptateur Supabase Auth, changement d identifiants', () => {
             await expect(provider.confirmEmailChange('jeton-perime')).resolves.toBe('token-rejected');
         });
 
-        it('n interpole jamais le jeton dans le message d une panne', async () => {
+        it('never interpolates the token in the message of an outage', async () => {
             const { provider, faux: serveur } = await adaptateur();
             serveur.quand(VERIFY, {
                 status: 500,

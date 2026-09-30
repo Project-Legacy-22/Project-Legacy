@@ -15,7 +15,7 @@ function provider() {
 }
 
 describe('signOut', () => {
-    it('rend le jeton de la session inutilisable', async () => {
+    it('makes the session token unusable', async () => {
         const fournisseur = provider();
         const session = await makeSignIn(fournisseur)(ADRESSE, MOT_DE_PASSE);
 
@@ -24,11 +24,11 @@ describe('signOut', () => {
         await expect(makeIdentifyCaller(fournisseur)(session.accessToken)).resolves.toBeUndefined();
     });
 
-    it('ne fait rien sans jeton, sans echouer', async () => {
+    it('does nothing without a token, without failing', async () => {
         await expect(makeSignOut(provider())(undefined)).resolves.toBeUndefined();
     });
 
-    it('reste un succes sur un jeton deja invalide', async () => {
+    it('remains a success on a token already invalid', async () => {
         await expect(makeSignOut(provider())('jeton-invente')).resolves.toBeUndefined();
     });
 });

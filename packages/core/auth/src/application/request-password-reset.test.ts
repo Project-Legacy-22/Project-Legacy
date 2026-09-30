@@ -12,7 +12,7 @@ function providerAvecCompte() {
 }
 
 describe('requestPasswordReset', () => {
-    it('demande au fournisseur d envoyer un lien pour l adresse normalisee', async () => {
+    it('asks the provider to send a link for the normalised address', async () => {
         const provider = providerAvecCompte();
         const spy = vi.spyOn(provider, 'requestPasswordReset');
         const requestPasswordReset = makeRequestPasswordReset(provider);
@@ -23,9 +23,9 @@ describe('requestPasswordReset', () => {
         expect(provider.recoveryTokenFor(ADRESSE)).toEqual(expect.any(String));
     });
 
-    // Le critere central de US-28 : la demande ne doit pas reveler si l adresse
-    // est connue. Le cas d usage ne branche pas, et ne renvoie rien.
-    it('repond de la meme facon pour une adresse connue et une adresse inconnue', async () => {
+    // The central criterion of US-28: the request must not reveal whether the address is known. The
+    // use case does not branch, and returns nothing.
+    it('answers the same way for a known address and an unknown one', async () => {
         const provider = providerAvecCompte();
         const requestPasswordReset = makeRequestPasswordReset(provider);
 
@@ -36,14 +36,14 @@ describe('requestPasswordReset', () => {
         expect(surInconnue).toBeUndefined();
     });
 
-    it('n echoue pas quand l adresse n a pas de compte', async () => {
+    it('does not fail when the address has no account', async () => {
         const provider = providerAvecCompte();
         const requestPasswordReset = makeRequestPasswordReset(provider);
 
         await expect(requestPasswordReset('bob@example.com')).resolves.toBeUndefined();
     });
 
-    it('laisse une panne du fournisseur remonter', async () => {
+    it('lets a provider outage propagate', async () => {
         const provider: IdentityProvider = {
             ...providerAvecCompte(),
             requestPasswordReset: () => Promise.reject(new Error('provider down')),

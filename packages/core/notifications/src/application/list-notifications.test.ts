@@ -17,7 +17,7 @@ function threeNotificationsOf(userId: string) {
 }
 
 describe('listNotifications', () => {
-    it('ne renvoie que les notifications du compte demande', async () => {
+    it('only returns the notifications of the requested account', async () => {
         const mine = aNotification({ id: 'notif-1', userId: ACCOUNT_ID });
         const theirs = aNotification({ id: 'notif-2', userId: OTHER_ACCOUNT_ID });
         const listNotifications = makeListNotifications(
@@ -29,7 +29,7 @@ describe('listNotifications', () => {
         expect(page.notifications).toEqual([mine]);
     });
 
-    it('distingue les notifications lues des non lues', async () => {
+    it('tells read notifications from unread ones', async () => {
         const unread = aNotification({ id: 'notif-1', userId: ACCOUNT_ID, readAt: null });
         const read = aNotification({
             id: 'notif-2',
@@ -48,7 +48,7 @@ describe('listNotifications', () => {
         ]);
     });
 
-    it('sert la liste page par page sans repeter ni sauter une notification', async () => {
+    it('serves the list page by page without repeating or skipping a notification', async () => {
         const listNotifications = makeListNotifications(
             inMemoryNotificationRepository(threeNotificationsOf(ACCOUNT_ID)),
         );

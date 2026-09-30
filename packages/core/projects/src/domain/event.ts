@@ -5,11 +5,10 @@
 // of each side pins them to the same fields -- the same arrangement the item
 // domain already uses.
 
-// `<domaine>.<fait>.v<n>`, deux segments et un participe passe : la convention
-// de docs/events/catalog.md, que la contrainte outbox_name_format_chk fait
-// respecter en base. Un premier essai nomme `project.member.added.v1` a ete
-// refuse par cette contrainte -- trois segments -- et c est le bon refus : le
-// fait qui se produit est qu une appartenance a ete creee.
+// `<domain>.<fact>.v<n>`, two segments and a past participle: the convention of
+// docs/events/catalog.md, which the outbox_name_format_chk constraint enforces in the database. A
+// first attempt named `project.member.added.v1` was refused by that constraint -- three segments --
+// and rightly so: the fact that happens is that a membership was created.
 export const MEMBERSHIP_CREATED_V1 = 'membership.created.v1';
 
 export interface MembershipCreatedV1 {

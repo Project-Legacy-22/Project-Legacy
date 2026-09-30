@@ -30,15 +30,15 @@ describe('adaptateur Supabase Auth, signOut', () => {
 
     afterEach(() => faux.close());
 
-    it('resout quand le fournisseur revoque la session', async () => {
+    it('resolves when the provider revokes the session', async () => {
         const { provider, faux: serveur } = await adaptateur();
         serveur.quand(LOGOUT, { status: 204, body: {} });
 
         await expect(provider.signOut('jeton-acces')).resolves.toBeUndefined();
     });
 
-    // Deja invalide est deja l etat vise : rien a signaler.
-    it('reste un succes sur un jeton deja invalide', async () => {
+    // Already invalid is already the target state: nothing to report.
+    it('remains a success on a token already invalid', async () => {
         const { provider, faux: serveur } = await adaptateur();
         serveur.quand(LOGOUT, {
             status: 401,
@@ -48,7 +48,7 @@ describe('adaptateur Supabase Auth, signOut', () => {
         await expect(provider.signOut('jeton-perime')).resolves.toBeUndefined();
     });
 
-    it('propage une panne inattendue du fournisseur', async () => {
+    it('propagates an unexpected provider outage', async () => {
         const { provider, faux: serveur } = await adaptateur();
         serveur.quand(LOGOUT, {
             status: 500,

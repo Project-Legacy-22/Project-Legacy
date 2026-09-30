@@ -36,8 +36,8 @@ function fakeOutbox(seed: DomainEvent[]): OutboxStore {
     };
 }
 
-// Une vraie file, pas un mock : ce qui est publie doit ressortir par take, et un
-// compteur d appels ne dirait pas si la passe boucle sur le meme evenement.
+// A real queue, not a mock: what is published must come out through take, and a call counter would
+// not say whether the pass loops on the same event.
 function fakeBus(): EventBus & { prises: number } {
     const queue: DomainEvent[] = [];
     const bus = {
@@ -71,7 +71,7 @@ function fakeNotifications(): NotificationStore & { notifies: string[] } {
 }
 
 describe('deliverPending', () => {
-    it('publie ce que l outbox retient puis le consomme', async () => {
+    it('publishes what the outbox holds and then consumes it', async () => {
         const notifications = fakeNotifications();
 
         const result = await deliverPending({
@@ -85,9 +85,9 @@ describe('deliverPending', () => {
         expect(notifications.notifies).toEqual(['event-1', 'event-2']);
     });
 
-    // Le point qui compte pour une cible sans processus long : la passe tourne
-    // dans une requete que quelqu un attend, et take() bloque sur une file vide.
-    it('ne prend rien quand la file est vide, plutot que d attendre', async () => {
+    // What matters for a target without a long-running process: the pass runs in a request somebody
+    // is waiting for, and take() blocks on an empty queue.
+    it('takes nothing when the queue is empty, rather than waiting', async () => {
         const bus = fakeBus();
 
         const result = await deliverPending({
@@ -101,11 +101,10 @@ describe('deliverPending', () => {
         expect(bus.prises).toBe(0);
     });
 
-    // Le defaut mesure sur le deploiement : une tache supprimee depuis faisait
-    // echouer sa notification sur une cle etrangere, et cette seule erreur
-    // faisait avorter la passe -- dix evenements valides restaient bloques
-    // derriere elle.
-    it('continue apres un evenement inapplicable', async () => {
+    // The defect measured on the deployment: a task deleted since made its notification fail on a
+    // foreign key, and that single error aborted the pass -- ten valid events stayed stuck behind
+    // it.
+    it('carries on after an inapplicable event', async () => {
         const notifications = fakeNotifications();
         let appels = 0;
         notifications.notifyItemCreated = () => {
@@ -124,7 +123,7 @@ describe('deliverPending', () => {
         expect(result).toEqual({ published: 2, consumed: 1, failed: 1 });
     });
 
-    it('s arrete a son budget d evenements', async () => {
+    it('stops at its event budget', async () => {
         const evenements = [anEvent('a'), anEvent('b'), anEvent('c')];
 
         const result = await deliverPending({
@@ -135,7 +134,7 @@ describe('deliverPending', () => {
             maxEvents: 2,
         });
 
-        // Le troisieme reste dans la file : la passe suivante le prendra.
+        // The third stays in the queue: the next pass will take it.
         expect(result).toEqual({ published: 3, consumed: 2, failed: 0 });
     });
 });
