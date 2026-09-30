@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import { inMemoryProjectRepository } from '../../test/fakes/in-memory-project-repository.js';
-import { InvalidProjectName, ProjectNotFound } from '../domain/project.js';
+import type { InMemoryProjectRepository } from '../../test/fakes/in-memory-project-repository.js';
+import { InvalidProjectName, MAX_PROJECT_NAME_LENGTH, ProjectNotFound } from '../domain/project.js';
 import { makeAddProject } from './add-project.js';
 import { makeListProjects } from './list-projects.js';
 import { makeRemoveProject } from './remove-project.js';
+import { makeRenameProject } from './rename-project.js';
 
 const ACCOUNT_ID = 'account-1';
 const OTHER_ACCOUNT_ID = 'account-2';
@@ -92,5 +94,67 @@ describe('projects', () => {
 
         await makeRemoveProject(repository)(PROJECT_ID, ACCOUNT_ID);
         expect(repository.projects.has(PROJECT_ID)).toBe(false);
+    });
+
+    describe('renameProject', () => {
+        function sharedProject(): InMemoryProjectRepository {
+            return inMemoryProjectRepository(
+                [{ id: PROJECT_ID, name: 'Mine', role: 'owner', itemCount: 2 }],
+                [
+                    { projectId: PROJECT_ID, userId: ACCOUNT_ID, role: 'owner' },
+                    { projectId: PROJECT_ID, userId: OTHER_ACCOUNT_ID, role: 'member' },
+                ],
+            );
+        }
+
+        it('renames a project for its owner, trimming the name', async () => {
+            const repository = sharedProject();
+
+            const renamed = await makeRenameProject(repository)({
+                projectId: PROJECT_ID,
+                ownerId: ACCOUNT_ID,
+                name: '  Roadmap  ',
+            });
+
+            expect(renamed).toEqual({ id: PROJECT_ID, name: 'Roadmap', role: 'owner', itemCount: 2 });
+            expect(repository.projects.get(PROJECT_ID)?.name).toBe('Roadmap');
+        });
+
+        it('answers a member like an unknown project and keeps the name', async () => {
+            const repository = sharedProject();
+
+            const renaming = makeRenameProject(repository)({
+                projectId: PROJECT_ID,
+                ownerId: OTHER_ACCOUNT_ID,
+                name: 'Taken over',
+            });
+
+            await expect(renaming).rejects.toBeInstanceOf(ProjectNotFound);
+            expect(repository.projects.get(PROJECT_ID)?.name).toBe('Mine');
+        });
+
+        it('refuses an unknown project', async () => {
+            const repository = sharedProject();
+
+            const renaming = makeRenameProject(repository)({
+                projectId: OTHER_PROJECT_ID,
+                ownerId: ACCOUNT_ID,
+                name: 'Roadmap',
+            });
+
+            await expect(renaming).rejects.toBeInstanceOf(ProjectNotFound);
+        });
+
+        it.each([
+            ['empty', '   '],
+            ['too long', 'x'.repeat(MAX_PROJECT_NAME_LENGTH + 1)],
+        ])('refuses an %s name before persistence', async (_case, name) => {
+            const repository = sharedProject();
+
+            const renaming = makeRenameProject(repository)({ projectId: PROJECT_ID, ownerId: ACCOUNT_ID, name });
+
+            await expect(renaming).rejects.toBeInstanceOf(InvalidProjectName);
+            expect(repository.projects.get(PROJECT_ID)?.name).toBe('Mine');
+        });
     });
 });

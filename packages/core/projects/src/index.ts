@@ -41,6 +41,8 @@ export type { InvitationRepository } from './ports/invitation-repository.js';
 export { makeListProjects } from './application/list-projects.js';
 export { makeAddProject } from './application/add-project.js';
 export { makeRemoveProject } from './application/remove-project.js';
+export { makeRenameProject } from './application/rename-project.js';
+export type { ProjectRenaming } from './application/rename-project.js';
 export { makeListProjectMembers } from './application/list-project-members.js';
 export { makeRemoveProjectMember } from './application/remove-project-member.js';
 export { makeInviteProjectMember } from './application/invite-project-member.js';

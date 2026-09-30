@@ -19,6 +19,13 @@ export function inMemoryProjectRepository(
     const projects = new Map(seed.map((project) => [project.id, project]));
     const storedMemberships = [...memberships];
 
+    function owns(projectId: string, ownerId: string): boolean {
+        return storedMemberships.some(
+            (membership) =>
+                membership.projectId === projectId && membership.userId === ownerId && membership.role === 'owner',
+        );
+    }
+
     return {
         projects,
         memberships: storedMemberships,
@@ -59,13 +66,16 @@ export function inMemoryProjectRepository(
             return Promise.resolve();
         },
         removeForOwner(projectId, ownerId) {
-            const owns = storedMemberships.some(
-                (membership) =>
-                    membership.projectId === projectId && membership.userId === ownerId && membership.role === 'owner',
-            );
-            if (!owns) return Promise.resolve(false);
+            if (!owns(projectId, ownerId)) return Promise.resolve(false);
             projects.delete(projectId);
             return Promise.resolve(true);
+        },
+        renameForOwner(projectId, ownerId, name) {
+            const project = projects.get(projectId);
+            if (project === undefined || !owns(projectId, ownerId)) return Promise.resolve(undefined);
+            const renamed = { ...project, name, role: 'owner' as const };
+            projects.set(projectId, renamed);
+            return Promise.resolve(renamed);
         },
     };
 }

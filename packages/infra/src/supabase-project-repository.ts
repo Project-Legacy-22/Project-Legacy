@@ -41,11 +41,11 @@ function beforeCursor(cursor: string): string {
     return `created_at.lt."${createdAt}",and(created_at.eq."${createdAt}",id.lt.${id})`;
 }
 
+// A project as one member sees it: their role and the number of its tasks.
+const PROJECT_FOR_MEMBER = 'id,name,created_at,project_memberships!inner(role),items(count)';
+
 async function findPage(client: ProjectClient, memberId: string, page: ProjectPageQuery): Promise<ProjectPage> {
-    const visible = client
-        .from('projects')
-        .select('id,name,created_at,project_memberships!inner(role),items(count)')
-        .eq('project_memberships.user_id', memberId);
+    const visible = client.from('projects').select(PROJECT_FOR_MEMBER).eq('project_memberships.user_id', memberId);
     const positioned = page.cursor === undefined ? visible : visible.or(beforeCursor(page.cursor));
     const { data, error } = await positioned
         .order('created_at', { ascending: false })
@@ -62,6 +62,40 @@ async function findPage(client: ProjectClient, memberId: string, page: ProjectPa
     };
 }
 
+async function isOwner(client: ProjectClient, projectId: string, ownerId: string): Promise<boolean> {
+    const { data, error } = await client
+        .from('project_memberships')
+        .select('project_id')
+        .eq('project_id', projectId)
+        .eq('user_id', ownerId)
+        .eq('role', 'owner')
+        .maybeSingle();
+    if (error) fail('owner membership check', error);
+    return data !== null;
+}
+
+interface Renaming {
+    projectId: string;
+    ownerId: string;
+    name: string;
+}
+
+async function rename(client: ProjectClient, { projectId, ownerId, name }: Renaming): Promise<Project | undefined> {
+    if (!(await isOwner(client, projectId, ownerId))) return undefined;
+
+    const { error: updateError } = await client.from('projects').update({ name }).eq('id', projectId);
+    if (updateError) fail('renameForOwner', updateError);
+
+    const { data, error } = await client
+        .from('projects')
+        .select(PROJECT_FOR_MEMBER)
+        .eq('id', projectId)
+        .eq('project_memberships.user_id', ownerId)
+        .maybeSingle();
+    if (error) fail('renameForOwner read back', error);
+    return data === null ? undefined : toProject(data);
+}
+
 export function createSupabaseProjectRepository(settings: SupabaseSettings): ProjectRepository {
     const client: ProjectClient = serviceRoleClient(settings);
 
@@ -76,15 +110,7 @@ export function createSupabaseProjectRepository(settings: SupabaseSettings): Pro
             if (error) fail('saveForOwner', error);
         },
         async removeForOwner(projectId, ownerId) {
-            const { data: membership, error: membershipError } = await client
-                .from('project_memberships')
-                .select('project_id')
-                .eq('project_id', projectId)
-                .eq('user_id', ownerId)
-                .eq('role', 'owner')
-                .maybeSingle();
-            if (membershipError) fail('removeForOwner membership check', membershipError);
-            if (membership === null) return false;
+            if (!(await isOwner(client, projectId, ownerId))) return false;
 
             const { data, error } = await client
                 .from('projects')
@@ -95,5 +121,6 @@ export function createSupabaseProjectRepository(settings: SupabaseSettings): Pro
             if (error) fail('removeForOwner', error);
             return data !== null;
         },
+        renameForOwner: (projectId, ownerId, name) => rename(client, { projectId, ownerId, name }),
     };
 }
