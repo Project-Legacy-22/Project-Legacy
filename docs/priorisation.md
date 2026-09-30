@@ -14,6 +14,12 @@ the README (#46, PR #390) and the demonstration scenario (#47, PR #391). Complet
 deployment, classified Could, has still not been started. The rest of the document keeps the
 measurement of 15 September.
 
+**Update of 30 September 2026: 26 Must items, all delivered.** Checking the backlog against section
+6.1 of the subject found a gap no item carried: projects could be created, listed and deleted, but
+not updated. US-60, "Rename a project", was added as a Must item (#461) and delivered by #464 and
+#465. The final state of the whole scope, Could items included, is in section 6 of
+[backlog.md](backlog.md).
+
 ## The classification, in figures
 
 48 items classified: **25 Must**, 16 Should, 7 Could.

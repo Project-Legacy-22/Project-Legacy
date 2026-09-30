@@ -439,3 +439,59 @@ events.
 | Git conventions | EN-02 | history and closed PRs |
 | Quality gate | EN-17 | a deliberately degraded PR, blocked |
 | Demonstration of the workflow of a US | US-11 or US-12 | issue, branch, PR, review, CI, merge, board |
+
+---
+
+## 6. State at the end of the project
+
+Measured on 30 September 2026 against the issues: an item is delivered when its issue is closed as
+completed, and not delivered when it is closed as not planned. The plan above is kept as it was
+written; this section records what became of it.
+
+### Items added after the plan
+
+| ID | Title | MoSCoW | State | Why it was added |
+|---|---|---|---|---|
+| US-33 | Sharing a project between users | Should (was Would) | Delivered, #34 | The data model already held roles and membership-based policies: the cost the plan feared no longer existed |
+| US-58 | Assign a task to project members | Should | Delivered, #348 | Follows from sharing: a shared project needs to say who does what |
+| US-59 | Know what a notification is about | Should | Not delivered, #347 | See the future work below |
+| US-60 | Rename a project | Must | Delivered, #461 | A check against section 6.1 of the subject found that projects could be created, listed and deleted but not updated |
+
+### Coverage of the subject at the end of the project
+
+| Requirement of the subject | Priority in the subject | State | Items |
+|---|---|---|---|
+| Secure authentication | Must | Delivered | US-11, US-27, US-28, EN-29, US-36, US-47 |
+| GDPR-compatible user management | Must | Delivered | US-13, US-37, EN-38, US-39, EN-40 |
+| Project and task CRUD | Must | Delivered | US-12, US-31, US-16, US-60 |
+| Basic Kanban workflow | Must | Delivered | US-15, US-49 |
+| Complete CI pipeline | Must | Delivered | EN-06, EN-07, EN-25 |
+| Docker image publication | Must | Delivered | EN-08 |
+| Demonstrable event-driven workflow | Must | Delivered | US-10, US-18 |
+| Notifications | Should | Delivered | US-18 |
+| Task priorities and due dates | Should | Delivered | US-19 |
+| Personalised home screen | Should | Delivered | US-20 |
+| Blocking code-quality gate | Should | Delivered | EN-17 |
+| Automatic project closure | Could | Not delivered | US-21 |
+| Complete Continuous Delivery | Could | Delivered | EN-22 |
+| Contract testing between components | Could | Not delivered | EN-23 |
+
+Every Must and Should requirement of the subject is delivered. Two of the three Could requirements
+are not, which section 6 of the subject allows: the effort went to a small, coherent product
+rather than to more features.
+
+### Not delivered, kept as future work
+
+Section 6.4 of the subject asks for what is left out to be documented as future work rather than
+improvised. These items were closed as not planned on 30 September 2026; each issue says why and
+carries the `wontfix` label, and stays in the Backlog column of the board.
+
+| ID | Title | MoSCoW | Where it would start |
+|---|---|---|---|
+| US-21 | Automatic closing of a finished project | Could | A second consumer of the task events, reusing the outbox and the idempotence of US-10 |
+| EN-23 | Contract tests between components | Could | The zod schemas of `packages/contracts` are already shared by producer and consumer; what is missing is the guard that fails on an incompatible change |
+| EN-26 | End-to-end tests of the critical journeys | Could | The journeys are covered at the unit and integration levels and by the `axe` passes; a browser level would add layout and real focus handling |
+| EN-35 | Event reliability: replay and dead-letter queue | Could | The trade-off on an inapplicable event is written in ADR-0013 and in `packages/infra/src/delivery-pass.ts` |
+| US-59 | Know what a notification is about | Should | Notifications already name their kind and their project; naming the task and the assigner needs a new event and a read-time label |
+
+The `Would have` items of section 3 remain out of scope, except US-33, delivered as described above.
