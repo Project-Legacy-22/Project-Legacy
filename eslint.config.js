@@ -45,7 +45,7 @@ export default tseslint.config(
                     './packages/core/auth/tsconfig.json',
                     './packages/infra/tsconfig.json',
                     './apps/api/tsconfig.json',
-                    // Le point d entree Vercel vit hors des espaces de travail.
+                    // The Vercel entry point lives outside the workspaces.
                     './api/tsconfig.json',
                     './apps/worker/tsconfig.json',
                     // apps/web carries its own project: JSX, DOM libs and the
@@ -95,21 +95,18 @@ export default tseslint.config(
         },
     },
     {
-        // Code de test et son outillage. Les trois regles desactivees ici
-        // visent des risques de production qui n existent pas en test.
+        // Test code and its tooling. The three rules turned off here target production risks that
+        // do not exist in tests.
         //
-        // require-await : `act(async () => ...)` est la facon documentee par
-        // React de demander la portee act asynchrone, qui vide les effets et
-        // la file de microtaches. Le marqueur async est un signal d API, pas
-        // un await oublie.
+        // require-await: `act(async () => ...)` is the way React documents to ask for the
+        // asynchronous act scope, which flushes effects and the microtask queue. The async marker
+        // is an API signal, not a forgotten await.
         //
-        // unbound-method : extraire le setter de HTMLInputElement puis
-        // l appeler avec `.call` est le seul moyen de declencher la detection
-        // de changement de React sur un champ controle.
+        // unbound-method: extracting the setter of HTMLInputElement and then calling it with
+        // `.call` is the only way to trigger React's change detection on a controlled field.
         //
-        // max-lines-per-function : un bloc `describe` regroupe des tests. Le
-        // plafond de 50 lignes vise une fonction de production, ou la
-        // longueur signale qu elle fait trop de choses.
+        // max-lines-per-function: a `describe` block groups tests. The 50-line ceiling targets a
+        // production function, where length signals that it does too much.
         files: ['**/*.test.ts', '**/*.test.tsx', '**/test/**/*.ts', '**/test/**/*.tsx'],
         rules: {
             '@typescript-eslint/require-await': 'off',

@@ -1,28 +1,27 @@
-# La composition locale ne tient pas dans un seul fichier, et c est voulu : la
-# pile Supabase (base, PostgREST, Studio) est orchestree par le CLI Supabase,
-# qui gere ses propres conteneurs et applique les migrations au demarrage.
-# Redeclarer ces services ici les ferait diverger de ce que le CLI attend.
+# The local composition does not fit in a single file, and that is intended: the Supabase stack
+# (database, PostgREST, Studio) is orchestrated by the Supabase CLI, which manages its own
+# containers and applies the migrations at start-up. Declaring those services again here would make
+# them drift from what the CLI expects.
 #
-# Ce fichier declare donc ce que le CLI ne fournit pas : le broker retenu par
-# l ADR-0007. `npm run up` demarre les deux, puis l application par-dessus.
+# This file therefore declares what the CLI does not provide: the broker chosen by ADR-0007. `npm
+# run up` starts both, then the application on top.
 
 services:
     redis:
         image: redis:8-alpine
         restart: unless-stopped
         ports:
-            # Expose sur la boucle locale uniquement : un broker sans
-            # authentification ne doit pas etre joignable depuis le reseau.
+            # Exposed on the loopback only: a broker without authentication must not be reachable
+            # from the network.
             #
-            # Le port hote se surcharge par REDIS_PORT. Le port par defaut est
-            # celui de Redis, mais un poste qui fait deja tourner un Redis
-            # installe en dur ne peut pas le prendre : sans cette variable, la
-            # commande unique echouerait sur ces postes et il faudrait editer
-            # un fichier versionne pour s en sortir.
+            # The host port can be overridden with REDIS_PORT. The default port is Redis's, but a
+            # computer already running a hard-installed Redis cannot take it: without this variable,
+            # the single command would fail on those computers and one would have to edit a
+            # versioned file to get out of it.
             - '127.0.0.1:${REDIS_PORT:-6379}:6379'
-        # Journal d ajout active : les evenements encore en file survivent a un
-        # redemarrage. Sans lui, arreter le poste viderait la file, et la
-        # demonstration de US-10 perdrait justement ce qu elle doit montrer.
+        # Append-only log enabled: events still in the queue survive a restart. Without it, stopping
+        # the computer would empty the queue, and the US-10 demonstration would lose exactly what it
+        # has to show.
         command: ['redis-server', '--appendonly', 'yes']
         volumes:
             - redis-data:/data
@@ -32,24 +31,20 @@ services:
             timeout: 3s
             retries: 10
 
-    # Les trois moteurs sur lesquels l epreuve de migration tourne, sous un
-    # profil : `npm run up` ne les demarre pas, et ils ne coutent rien tant
-    # qu on ne les demande pas.
+    # The three engines the migration trial runs on, under a profile: `npm run up` does not start
+    # them, and they cost nothing until they are asked for: `docker compose --profile migration up
+    # -d --wait`, then `npm run test:migration`.
     #
-    #   docker compose --profile migration up -d --wait
-    #   npm run test:migration
-    #
-    # Aucun port n est publie, et c est voulu : tout passe par
-    # `docker compose exec`, donc l epreuve ne demande ni client installe sur
-    # le poste ni port libre, et elle donne le meme resultat dans la chaine
-    # d integration.
+    # No port is published, and that is intended: everything goes through `docker compose exec`, so
+    # the trial needs neither a client installed on the computer nor a free port, and it gives the
+    # same result in the integration pipeline.
     migration-postgres:
         profiles: ['migration']
         image: postgres:17-alpine
         environment:
             POSTGRES_PASSWORD: migration
-        # Aucun volume : la base est refaite a chaque epreuve, et une epreuve
-        # qui part d un etat herite ne prouve rien.
+        # No volume: the database is rebuilt for every trial, and a trial that starts from an
+        # inherited state proves nothing.
         healthcheck:
             test: ['CMD-SHELL', 'pg_isready -U postgres']
             interval: 3s
@@ -62,9 +57,9 @@ services:
         environment:
             MYSQL_ROOT_PASSWORD: migration
         healthcheck:
-            # `mysqladmin ping` repond des l initialisation, avant que les
-            # comptes existent : une vraie requete est le seul signal qui dit
-            # que le serveur accepte une connexion authentifiee.
+            # `mysqladmin ping` answers as soon as initialisation starts, before the accounts exist:
+            # a real query is the only signal that says the server accepts an authenticated
+            # connection.
             test: ['CMD-SHELL', 'mysql -uroot -pmigration -e "select 1" >/dev/null 2>&1']
             interval: 3s
             timeout: 5s
@@ -72,9 +67,8 @@ services:
 
     migration-sqlite:
         profiles: ['migration']
-        # Construit depuis alpine plutot que tire d une image tierce : trois
-        # lignes de Dockerfile valent mieux qu une dependance a l image de
-        # quelqu un d autre pour prouver notre propre reversibilite.
+        # Built from alpine rather than pulled from a third-party image: three lines of Dockerfile
+        # are better than depending on someone else's image to prove our own reversibility.
         build:
             context: .
             dockerfile: docker/sqlite.Dockerfile
@@ -85,6 +79,6 @@ services:
             retries: 10
 
 volumes:
-    # Volume nomme, gere par Docker : aucun chemin absolu ni repertoire du poste
-    # n apparait ici, et les donnees survivent a `docker compose down`.
+    # Named volume, managed by Docker: no absolute path or directory of the computer appears here,
+    # and the data survives `docker compose down`.
     redis-data:

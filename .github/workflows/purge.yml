@@ -1,14 +1,12 @@
-# Applique les durees de conservation du registre des traitements (US-39) :
-# une passe par jour sur le deploiement, par la route interne /internal/purge.
+# Applies the retention periods of the processing register (US-39): one pass a day on the
+# deployment, through the internal route /internal/purge.
 #
-# Meme cible et meme secret que le relais (relay.yml) : l appelant est un
-# workflow dans les deux cas. Une passe quotidienne suffit, les durees se
-# comptent en jours, et un retard de quelques heures du planificateur de
-# GitHub ne change rien a ce qui est supprime. Deux passes de suite ne font
-# rien de plus qu une seule.
+# Same target and same secret as the relay (relay.yml): the caller is a workflow in both cases. A
+# daily pass is enough, the periods are counted in days, and a delay of a few hours from GitHub's
+# scheduler changes nothing to what is deleted. Two passes in a row do nothing more than one.
 #
-# Le resultat, date, traitement et nombre de lignes supprimees, est dans le
-# resume de chaque execution. Il ne contient aucune donnee personnelle.
+# The result, date, processing and number of deleted rows, is in the summary of each run. It
+# contains no personal data.
 
 name: purge
 

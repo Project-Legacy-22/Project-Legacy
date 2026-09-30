@@ -1,9 +1,8 @@
 import { spawn } from 'node:child_process';
 
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-// Le worker demarre avec le reste : le flux evenementiel de US-10 n a aucun
-// effet visible sans consommateur. Il reste un processus distinct, qu on peut
-// arreter seul pour montrer la file grossir.
+// The worker starts with the rest: the US-10 event flow has no visible effect without a consumer.
+// It stays a separate process, which can be stopped on its own to show the queue growing.
 const children = [start('dev:api'), start('dev:web'), start('dev:worker')];
 let isStopping = false;
 
