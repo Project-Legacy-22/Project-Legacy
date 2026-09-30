@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import { useDocumentTitle } from '../hooks/use-document-title';
 import { labels } from '../labels';
 import type { SubmitResult } from '../hooks/use-session';
 
@@ -15,6 +16,7 @@ export interface ConfirmEmailChangePageProps {
 // double render cannot spend the single-use token twice and then report the
 // second failure.
 export function ConfirmEmailChangePage({ token, isSubmitting, onConfirm }: ConfirmEmailChangePageProps) {
+    useDocumentTitle(labels.confirmEmailChangeTitle);
     const [outcome, setOutcome] = useState<SubmitResult | null>(null);
     const done = outcome?.status === 'success';
 
