@@ -122,11 +122,11 @@ export interface NotificationUseCases {
     listNotifications: ReturnType<typeof makeListNotifications>;
     markNotificationRead: ReturnType<typeof makeMarkNotificationRead>;
     countUnread: ReturnType<typeof makeCountUnreadNotifications>;
-    // Une passe de livraison, demandee au lieu d etre planifiee. Sur une cible
-    // sans processus long, personne ne fait tourner le relais : la route qui
-    // lit les notifications et le workflow planifie l appellent.
+    // A delivery pass, requested instead of scheduled. On a target without a long-running process,
+    // nobody runs the relay: the route that reads the notifications and the scheduled workflow call
+    // it.
     deliverPending: () => Promise<DeliveryPassResult>;
-    // La purge de conservation (US-39), declenchee comme la passe ci-dessus.
+    // The retention purge (US-39), triggered like the pass above.
     purgeExpired: () => Promise<PurgeResult>;
 }
 
@@ -161,9 +161,8 @@ interface Adapters {
     identity: ReturnType<typeof createSupabaseIdentityProvider>;
     personalData: ReturnType<typeof createSupabasePersonalDataStore>;
     projects: ReturnType<typeof createSupabaseProjectRepository>;
-    // Les appartenances ont leur propre port : project_memberships n a pas de
-    // politique de lecture des autres membres, donc c est le cas d usage qui
-    // decide qui peut lire la liste.
+    // Memberships have their own port: project_memberships has no policy for reading the other
+    // members, so the use case decides who may read the list.
     memberships: ReturnType<typeof createSupabaseMembershipRepository>;
     invitations: ReturnType<typeof createSupabaseInvitationRepository>;
     outbox: OutboxStore;
@@ -213,9 +212,8 @@ function createAdapters(config: Config): Adapters {
         retention: createSupabaseRetentionStore(supabase),
         bus,
         stateReadings: [
-            // En premier parce qu elle ne depend de rien : elle repond meme
-            // quand la base et le courtier se taisent, ce qui en fait la
-            // seule qui puisse dire quel deploiement s est tu.
+            // First because it depends on nothing: it answers even when the database and the broker
+            // are silent, which makes it the only one that can tell which deployment went silent.
             createBuildStateReading(config.deployment),
             ...createSupabaseStateReadings(supabase),
             ...(bus === undefined ? [] : createBusStateReadings(bus)),
@@ -244,8 +242,8 @@ function authUseCases(
     };
 }
 
-// Rien a livrer quand aucun courtier n est configure : servir du HTTP n en
-// demande pas, et la passe doit alors ne rien faire plutot que d echouer.
+// Nothing to deliver when no broker is configured: serving HTTP does not need one, and the pass
+// must then do nothing rather than fail.
 function makeDeliverPending(dependencies: {
     outbox: OutboxStore;
     bus: EventBus | undefined;
@@ -259,10 +257,10 @@ function makeDeliverPending(dependencies: {
     return () => deliverPending({ ...dependencies, bus });
 }
 
-// La creation d une tache et l invitation sont les producteurs d evenement : le
-// declencheur de livraison vit au plus pres du fait ecrit. Voir after-write.ts.
+// Creating a task and inviting are the event producers: the delivery trigger lives as close as
+// possible to the written fact. See after-write.ts.
 export function itemUseCases(
-    // Un depot, pas un store : ces cas d usage n ouvrent ni ne ferment rien.
+    // A repository, not a store: these use cases open and close nothing.
     store: ItemRepository,
     deliver: () => Promise<unknown>,
     logger: Logger,

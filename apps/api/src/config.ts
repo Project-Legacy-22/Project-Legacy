@@ -54,25 +54,24 @@ const EnvSchema = z.object({
     // trusts no forwarded header -- correct for a direct connection and for
     // development. Behind one reverse proxy in production, set it to 1.
     TRUST_PROXY: z.coerce.number().int().min(0).default(0),
-    // Le secret que le workflow planifie presente pour declencher une passe de
-    // livraison. Absent, la route n existe pas : une cible qui fait tourner le
-    // relais en continu n en a pas besoin.
+    // The secret the scheduled workflow presents to trigger a delivery pass. Without it, the route
+    // does not exist: a target that runs the relay continuously does not need it.
     RELAY_SECRET: z.string().min(32).optional(),
-    // Ce que Vercel pose sur chaque deploiement. Optionnels parce qu ils
-    // n existent nulle part ailleurs : en developpement, dans un conteneur et
-    // en integration continue, l application doit demarrer sans eux.
+    // What Vercel sets on every deployment. Optional because they exist nowhere else: in
+    // development, in a container and in continuous integration, the application must start without
+    // them.
     VERCEL_GIT_COMMIT_SHA: z.string().optional(),
     VERCEL_GIT_COMMIT_REF: z.string().optional(),
     VERCEL_ENV: z.enum(['production', 'preview', 'development']).optional(),
 });
 
-// Douze caracteres : de quoi retrouver le commit, pas de quoi allonger une
-// etiquette que chaque serie porterait.
+// Twelve characters: enough to find the commit, not enough to lengthen a label every series would
+// carry.
 const SHORT_COMMIT = 12;
 
-// « unknown » et non la chaine vide quand la variable manque. Une etiquette
-// vide se lit comme une valeur -- on croit lire une branche qui s appelle rien
-// -- alors qu une valeur nommee se lit comme ce qu elle est, une absence.
+// "unknown" and not the empty string when the variable is missing. An empty label reads as a value
+// -- one believes one is reading a branch called nothing -- whereas a named value reads as what it
+// is, an absence.
 const ABSENT = 'unknown';
 
 function named(value: string | undefined, length = 0): string {
@@ -84,9 +83,8 @@ function named(value: string | undefined, length = 0): string {
 
 export type LogLevel = (typeof LOG_LEVELS)[number];
 
-// Le deploiement qui repond, tel qu il s identifie. Sert d etiquettes a
-// legacy22_build_info, pour qu un creux sur un graphe puisse etre rapproche
-// d une livraison.
+// The deployment that answers, as it identifies itself. Used as labels of legacy22_build_info, so
+// that a dip on a graph can be matched with a delivery.
 export interface Deployment {
     commit: string;
     ref: string;
@@ -136,8 +134,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
         deployment: {
             commit: named(parsed.data.VERCEL_GIT_COMMIT_SHA, SHORT_COMMIT),
             ref: named(parsed.data.VERCEL_GIT_COMMIT_REF),
-            // « local » plutot que « unknown » : hors de Vercel, ce n est pas
-            // une valeur manquante, c est un endroit.
+            // "local" rather than "unknown": outside Vercel, it is not a missing value, it is a
+            // place.
             environment: parsed.data.VERCEL_ENV ?? 'local',
         },
     };

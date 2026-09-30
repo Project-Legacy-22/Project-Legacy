@@ -52,7 +52,7 @@ function useCasesOver(provider: InMemoryIdentityProvider, compromised: string[])
     });
 }
 
-describe('API de changement d identifiants', () => {
+describe('credentials change API', () => {
     let harness: Harness;
     let provider: InMemoryIdentityProvider;
 
@@ -84,7 +84,7 @@ describe('API de changement d identifiants', () => {
     afterEach(() => harness.close());
 
     describe('PUT /auth/me/password', () => {
-        it('refuse un appel sans session', async () => {
+        it('refuses a call without a session', async () => {
             const reponse = await harness.request(
                 '/auth/me/password',
                 json('PUT', { currentPassword: ANCIEN, newPassword: NOUVEAU }),
@@ -93,7 +93,7 @@ describe('API de changement d identifiants', () => {
             expect(reponse.status).toBe(401);
         });
 
-        it('refuse un mot de passe actuel faux sans rien reveler', async () => {
+        it('refuses a wrong current password without revealing anything', async () => {
             const cookie = await sessionDe(ADRESSE, ANCIEN);
 
             const reponse = await harness.request(
@@ -105,11 +105,11 @@ describe('API de changement d identifiants', () => {
             expect((await reponse.json()) as { type: string }).toMatchObject({
                 type: 'incorrect_current_password',
             });
-            // L ancien mot de passe fonctionne toujours.
+            // The old password still works.
             expect((await harness.request('/auth/login', json('POST', { email: ADRESSE, password: ANCIEN }))).status).toBe(200);
         });
 
-        it('refuse un nouveau mot de passe trop court ou compromis', async () => {
+        it('refuses a new password that is too short or compromised', async () => {
             await serve([KNOWN_BREACHED]);
             const cookie = await sessionDe(ADRESSE, ANCIEN);
 
@@ -128,7 +128,7 @@ describe('API de changement d identifiants', () => {
             });
         });
 
-        it('change le mot de passe, garde la session courante et revoque les autres', async () => {
+        it('changes the password, keeps the current session and revokes the others', async () => {
             const autreCookie = await sessionDe(ADRESSE, ANCIEN);
             const cookie = await sessionDe(ADRESSE, ANCIEN);
 
@@ -139,13 +139,13 @@ describe('API de changement d identifiants', () => {
 
             expect(reponse.status).toBe(204);
             expect(reponse.headers.get('set-cookie')).toBeNull();
-            // Un jeton emis avant le changement n est plus accepte.
+            // A token issued before the change is no longer accepted.
             expect((await harness.request('/auth/me', { headers: { Cookie: autreCookie } })).status).toBe(401);
-            // La session qui a demande le changement reste utilisable.
+            // The session that asked for the change stays usable.
             expect((await harness.request('/auth/me', { headers: { Cookie: cookie } })).status).toBe(200);
         });
 
-        it('ne met ni l adresse ni les mots de passe dans les journaux', async () => {
+        it('keeps the address and the passwords out of the logs', async () => {
             const cookie = await sessionDe(ADRESSE, ANCIEN);
             await harness.request(
                 '/auth/me/password',
@@ -158,7 +158,7 @@ describe('API de changement d identifiants', () => {
             expect(journal).not.toContain(NOUVEAU);
         });
 
-        it('refuse un corps absent plutot que d echouer en 500', async () => {
+        it('refuses a missing body rather than failing with a 500', async () => {
             const cookie = await sessionDe(ADRESSE, ANCIEN);
 
             const reponse = await harness.request('/auth/me/password', {
@@ -172,7 +172,7 @@ describe('API de changement d identifiants', () => {
     });
 
     describe('PUT /auth/me/email', () => {
-        it('refuse un appel sans session', async () => {
+        it('refuses a call without a session', async () => {
             const reponse = await harness.request(
                 '/auth/me/email',
                 json('PUT', { newEmail: NEUVE }),
@@ -181,7 +181,7 @@ describe('API de changement d identifiants', () => {
             expect(reponse.status).toBe(401);
         });
 
-        it('repond a l identique sur une adresse libre et sur une adresse deja prise', async () => {
+        it('answers identically for a free address and an address already taken', async () => {
             const cookie = await sessionDe(ADRESSE, ANCIEN);
 
             const surLibre = await harness.request(
@@ -198,7 +198,7 @@ describe('API de changement d identifiants', () => {
             expect(await surPrise.text()).toBe(await surLibre.text());
         });
 
-        it('limite les demandes par adresse cible', async () => {
+        it('limits the requests per target address', async () => {
             const cookie = await sessionDe(ADRESSE, ANCIEN);
             const demande = () =>
                 harness.request('/auth/me/email', avec(cookie, json('PUT', { newEmail: NEUVE })));
@@ -209,7 +209,7 @@ describe('API de changement d identifiants', () => {
             expect(reponses[3]?.status).toBe(429);
         });
 
-        it('ne met ni l ancienne ni la nouvelle adresse dans les journaux', async () => {
+        it('keeps both the old and the new address out of the logs', async () => {
             const cookie = await sessionDe(ADRESSE, ANCIEN);
             await harness.request('/auth/me/email', avec(cookie, json('PUT', { newEmail: NEUVE })));
 
@@ -220,7 +220,7 @@ describe('API de changement d identifiants', () => {
     });
 
     describe('POST /auth/me/email/confirm', () => {
-        it('confirme le changement : la nouvelle adresse devient l identifiant', async () => {
+        it('confirms the change: the new address becomes the identifier', async () => {
             const cookie = await sessionDe(ADRESSE, ANCIEN);
             await harness.request('/auth/me/email', avec(cookie, json('PUT', { newEmail: NEUVE })));
             const token = provider.emailChangeTokenFor(ADRESSE) ?? '';
@@ -235,7 +235,7 @@ describe('API de changement d identifiants', () => {
             expect((await harness.request('/auth/login', json('POST', { email: NEUVE, password: ANCIEN }))).status).toBe(200);
         });
 
-        it('refuse un jeton inconnu ou deja utilise', async () => {
+        it('refuses an unknown token or one already used', async () => {
             const cookie = await sessionDe(ADRESSE, ANCIEN);
             await harness.request('/auth/me/email', avec(cookie, json('PUT', { newEmail: NEUVE })));
             const token = provider.emailChangeTokenFor(ADRESSE) ?? '';
@@ -255,7 +255,7 @@ describe('API de changement d identifiants', () => {
             expect(invente.status).toBe(400);
         });
 
-        it('ne met pas le jeton dans les journaux ni dans la reponse', async () => {
+        it('keeps the token out of the logs and the response', async () => {
             const reponse = await harness.request(
                 '/auth/me/email/confirm',
                 json('POST', { token: 'jeton-tres-secret' }),
@@ -267,7 +267,7 @@ describe('API de changement d identifiants', () => {
     });
 
     describe('GET /confirm-email-change', () => {
-        it('sert la coquille de l application pour le lien de confirmation', async () => {
+        it('serves the application shell for the confirmation link', async () => {
             const reponse = await harness.request(
                 '/confirm-email-change?token_hash=abc&type=email_change',
             );

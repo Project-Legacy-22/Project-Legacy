@@ -29,7 +29,7 @@ describe('projects API (integration)', () => {
         await app.stop();
     });
 
-    it('sert le projet par defaut cree avec le compte', async () => {
+    it('serves the default project created with the account', async () => {
         const response = await asOwner.request('/projects');
         const page = (await response.json()) as {
             projects: { id: string; role: string }[];
@@ -39,7 +39,7 @@ describe('projects API (integration)', () => {
         expect(page.projects).toContainEqual(expect.objectContaining({ id: owner.projectId, role: 'owner' }));
     });
 
-    it('cree un projet et son appartenance proprietaire', async () => {
+    it('creates a project and its owner membership', async () => {
         const creation = await asOwner.request('/projects', json('POST', { name: 'Integration roadmap' }));
         const project = (await creation.json()) as { id: string; role: string };
         const page = (await (await asOwner.request('/projects')).json()) as {
@@ -51,7 +51,7 @@ describe('projects API (integration)', () => {
         expect(page.projects.map((candidate) => candidate.id)).toContain(project.id);
     });
 
-    it('cache un projet a un non-membre et refuse sa suppression', async () => {
+    it('hides a project from a non-member and refuses its deletion', async () => {
         const creation = await asOwner.request('/projects', json('POST', { name: 'Private integration project' }));
         const project = (await creation.json()) as { id: string };
 
@@ -70,7 +70,7 @@ describe('projects API (integration)', () => {
         expect(ownerList.projects.map((candidate) => candidate.id)).toContain(project.id);
     });
 
-    it('supprime un projet possede et ses items', async () => {
+    it('deletes an owned project and its items', async () => {
         const creation = await asOwner.request('/projects', json('POST', { name: 'Disposable integration project' }));
         const project = (await creation.json()) as { id: string };
         await asOwner.request(`/projects/${project.id}/items`, json('POST', { name: 'Deleted by project cascade' }));

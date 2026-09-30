@@ -30,9 +30,8 @@ import { json, listen, testConfig } from '../../../test/http-harness.js';
 import type { Harness } from '../../../test/http-harness.js';
 import { makeAppUseCases } from '../../../test/fakes/app-use-cases.js';
 
-// La boucle vit dans une fonction outillage, pas dans un test : un test ne
-// contient pas de logique, mais la limite de frequence ne se declenche qu au
-// bout de plusieurs appels successifs.
+// The loop lives in a helper function, not in a test: a test holds no logic, but the rate limit
+// only triggers after several successive calls.
 async function repeter(fois: number, tentative: () => Promise<Response>): Promise<Response[]> {
     const reponses: Response[] = [];
 
@@ -45,12 +44,12 @@ const ADRESSE = 'alice@example.com';
 const MOT_DE_PASSE = 'MotDePasse2026';
 const ACCOUNT_ID = '00000000-0000-7000-8000-000000000001';
 
-// Le depot d items refuse tout appel : une requete qui l atteindrait sans
-// session repondrait 500 au lieu du refus attendu, et le test le verrait.
+// The item repository refuses every call: a request reaching it without a session would answer 500
+// instead of the expected refusal, and the test would see it.
 function useCasesOver(provider: InMemoryIdentityProvider): AppUseCases {
     const repository = unreachableItemRepository();
-    // Aucun compte : les routes exercees ici ne touchent pas aux donnees
-    // personnelles, et un magasin vide le rend visible si l une d elles s y met.
+    // No account: the routes exercised here do not touch personal data, and an empty store makes it
+    // visible if one of them starts to.
     const personalData = inMemoryPersonalDataStore();
     const compromisedPasswords = inMemoryCompromisedPasswords();
     const projects = inMemoryProjectRepository();
@@ -99,7 +98,7 @@ function useCasesOver(provider: InMemoryIdentityProvider): AppUseCases {
     });
 }
 
-describe('API d authentification', () => {
+describe('authentication API', () => {
     let harness: Harness;
 
     async function serve(inscrits: { id: string; email: string; password: string }[] = []) {
@@ -114,7 +113,7 @@ describe('API d authentification', () => {
     afterEach(() => harness.close());
 
     describe('POST /auth/register', () => {
-        it('cree un compte utilisable pour se connecter', async () => {
+        it('creates an account that can be used to sign in', async () => {
             const inscription = await harness.request(
                 '/auth/register',
                 json('POST', { email: ADRESSE, password: MOT_DE_PASSE, acceptsPrivacyPolicy: true, policyVersion: PRIVACY_POLICY_VERSION }),
@@ -128,10 +127,9 @@ describe('API d authentification', () => {
             expect(connexion.status).toBe(200);
         });
 
-        // Le critere bloquant de US-11 : rien dans la reponse ne doit permettre
-        // de savoir si l adresse etait deja prise. Statut, corps et en-tetes
-        // sont compares, pas seulement le statut.
-        it('repond a l identique sur une adresse libre et sur une adresse prise', async () => {
+        // The blocking criterion of US-11: nothing in the response must reveal whether the address
+        // was already taken. Status, body and headers are compared, not only the status.
+        it('answers identically for a free address and a taken one', async () => {
             await serve(compteExistant);
 
             const surAdressePrise = await harness.request(
@@ -153,9 +151,9 @@ describe('API d authentification', () => {
             expect(surAdressePrise.headers.get('set-cookie')).toBe(surAdresseLibre.headers.get('set-cookie'));
         });
 
-        // Creer un compte ne connecte pas : une reponse qui poserait une session
-        // dirait, par sa seule presence, que l adresse etait libre.
-        it('n ouvre aucune session', async () => {
+        // Creating an account does not sign in: a response that set a session would say, by its
+        // mere presence, that the address was free.
+        it('opens no session', async () => {
             const response = await harness.request(
                 '/auth/register',
                 json('POST', { email: ADRESSE, password: MOT_DE_PASSE, acceptsPrivacyPolicy: true, policyVersion: PRIVACY_POLICY_VERSION }),
@@ -165,7 +163,7 @@ describe('API d authentification', () => {
             expect(await response.text()).toBe('');
         });
 
-        it('refuse un mot de passe trop court sans creer de compte', async () => {
+        it('refuses a password that is too short without creating an account', async () => {
             const inscription = await harness.request(
                 '/auth/register',
                 json('POST', { email: ADRESSE, password: 'Court1', acceptsPrivacyPolicy: true, policyVersion: PRIVACY_POLICY_VERSION }),
@@ -179,7 +177,7 @@ describe('API d authentification', () => {
             expect(connexion.status).toBe(401);
         });
 
-        it('refuse une adresse qui n en est pas une', async () => {
+        it('refuses an address that is not one', async () => {
             const response = await harness.request(
                 '/auth/register',
                 json('POST', { email: 'pas-une-adresse', password: MOT_DE_PASSE, acceptsPrivacyPolicy: true, policyVersion: PRIVACY_POLICY_VERSION }),
@@ -190,10 +188,9 @@ describe('API d authentification', () => {
     });
 
     describe('consentement a la politique (US-37)', () => {
-        // Le critere de US-37 : le refus est cote serveur, pas seulement dans
-        // le formulaire. Une requete construite a la main ne doit pas pouvoir
-        // creer un compte sans consentement.
-        it('refuse une inscription sans consentement, et ne cree pas le compte', async () => {
+        // The US-37 criterion: the refusal is on the server side, not only in the form. A request
+        // built by hand must not be able to create an account without consent.
+        it('refuses a registration without consent, and does not create the account', async () => {
             const inscription = await harness.request(
                 '/auth/register',
                 json('POST', {
@@ -211,7 +208,7 @@ describe('API d authentification', () => {
             expect(connexion.status).toBe(401);
         });
 
-        it('refuse un consentement explicitement negatif', async () => {
+        it('refuses an explicitly negative consent', async () => {
             const response = await harness.request(
                 '/auth/register',
                 json('POST', {
@@ -225,9 +222,9 @@ describe('API d authentification', () => {
             expect(response.status).toBe(400);
         });
 
-        // Un formulaire laisse ouvert pendant une mise a jour de la politique
-        // enregistrerait sinon un consentement a un texte que personne n a lu.
-        it('refuse une version de politique qui n est pas celle publiee', async () => {
+        // Otherwise a form left open during a policy update would record a consent to a text nobody
+        // read.
+        it('refuses a policy version that is not the published one', async () => {
             const response = await harness.request(
                 '/auth/register',
                 json('POST', {
@@ -243,7 +240,7 @@ describe('API d authentification', () => {
     });
 
     describe('POST /auth/login', () => {
-        it('renvoie le compte et pose la session dans un cookie httpOnly', async () => {
+        it('returns the account and sets the session in an httpOnly cookie', async () => {
             await serve(compteExistant);
 
             const response = await harness.request(
@@ -261,7 +258,7 @@ describe('API d authentification', () => {
             expect(cookie).toContain('SameSite=Lax');
         });
 
-        it('ne distingue pas un mot de passe faux d une adresse inconnue', async () => {
+        it('does not tell a wrong password from an unknown address', async () => {
             await serve(compteExistant);
 
             const motDePasseFaux = await harness.request(
@@ -280,7 +277,7 @@ describe('API d authentification', () => {
             });
         });
 
-        it('ne journalise ni l adresse ni le mot de passe', async () => {
+        it('logs neither the address nor the password', async () => {
             await serve(compteExistant);
 
             await harness.request('/auth/login', json('POST', { email: ADRESSE, password: MOT_DE_PASSE }));
@@ -290,7 +287,7 @@ describe('API d authentification', () => {
             expect(journal).not.toContain(MOT_DE_PASSE);
         });
 
-        it('ne renvoie jamais le mot de passe dans la reponse', async () => {
+        it('never returns the password in the response', async () => {
             await serve(compteExistant);
 
             const response = await harness.request(
@@ -301,9 +298,9 @@ describe('API d authentification', () => {
             expect(await response.text()).not.toContain(MOT_DE_PASSE);
         });
 
-        // Dix tentatives par fenetre, adresse d appel comprise : la onzieme est
-        // refusee sans que le fournisseur soit interroge.
-        it('refuse les tentatives au-dela de la limite de frequence', async () => {
+        // Ten attempts per window, calling address included: the eleventh is refused without the
+        // provider being asked.
+        it('refuses attempts beyond the rate limit', async () => {
             await serve(compteExistant);
             const tentative = () =>
                 harness.request('/auth/login', json('POST', { email: ADRESSE, password: 'Faux1' }));
@@ -316,13 +313,13 @@ describe('API d authentification', () => {
     });
 
     describe('GET /auth/me', () => {
-        it('refuse une requete sans session', async () => {
+        it('refuses a request without a session', async () => {
             const response = await harness.request('/auth/me');
 
             expect(response.status).toBe(401);
         });
 
-        it('refuse un cookie de session que personne ne porte', async () => {
+        it('refuses a session cookie nobody carries', async () => {
             const response = await harness.request('/auth/me', {
                 headers: { Cookie: 'session=jeton-invente' },
             });
@@ -330,7 +327,7 @@ describe('API d authentification', () => {
             expect(response.status).toBe(401);
         });
 
-        it('renvoie le compte du porteur de la session', async () => {
+        it('returns the account of the session bearer', async () => {
             await serve(compteExistant);
             const connexion = await harness.request(
                 '/auth/login',
@@ -350,14 +347,14 @@ describe('API d authentification', () => {
         });
     });
 
-    describe('acces aux items', () => {
-        it('refuse la lecture des items sans session', async () => {
+    describe('access to items', () => {
+        it('refuses to read items without a session', async () => {
             const response = await harness.request('/items');
 
             expect(response.status).toBe(401);
         });
 
-        it('refuse la creation d un item sans session', async () => {
+        it('refuses to create an item without a session', async () => {
             const response = await harness.request(
                 '/items',
                 json('POST', { name: 'Acheter du pain' }));

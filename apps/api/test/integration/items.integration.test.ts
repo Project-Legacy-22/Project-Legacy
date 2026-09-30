@@ -49,7 +49,7 @@ describe('items API (integration)', () => {
         await app.stop();
     });
 
-    it('cree un item et le renvoie sans le proprietaire', async () => {
+    it('creates an item and returns it without the owner', async () => {
         const response = await asOwner.request(itemsOf(owner), json('POST', { name: 'Depot integration' }));
         const created = (await response.json()) as Record<string, unknown>;
 
@@ -64,7 +64,7 @@ describe('items API (integration)', () => {
         });
     });
 
-    it('persiste la priorite et accepte une echeance passee', async () => {
+    it('persists the priority and accepts a past due date', async () => {
         const response = await asOwner.request(itemsOf(owner), json('POST', {
             name: 'Echeance passee',
             priority: 'high',
@@ -78,7 +78,7 @@ describe('items API (integration)', () => {
         });
     });
 
-    it('trie par priorite, echeance puis position sur plusieurs pages', async () => {
+    it('sorts by priority, due date then position across several pages', async () => {
         const database = createClient<Database>(integrationConfig().supabaseUrl, integrationConfig().supabaseServiceRoleKey, {
             auth: { persistSession: false, autoRefreshToken: false },
         });
@@ -113,7 +113,7 @@ describe('items API (integration)', () => {
         expect(second.items.map((item) => item.id)).toEqual([identifiant(3), identifiant(4)]);
     });
 
-    describe('recherche et filtres (US-32)', () => {
+    describe('search and filters (US-32)', () => {
         const database = createClient<Database>(integrationConfig().supabaseUrl, integrationConfig().supabaseServiceRoleKey, {
             auth: { persistSession: false, autoRefreshToken: false },
         });
@@ -134,28 +134,28 @@ describe('items API (integration)', () => {
         // The generated name_search column applies Postgres's own unaccent, so
         // this proves the real database behavior, not just the JS-side
         // normalization the fake and the fingerprint also use.
-        it.each(['cafe', 'CAFE', 'Café', 'CAFÉ'])('trouve un nom accentue sans distinction de casse ni d accent avec "%s"', async (search) => {
+        it.each(['cafe', 'CAFE', 'Café', 'CAFÉ'])('finds an accented name regardless of case and accents with "%s"', async (search) => {
             const response = await asOwner.request(`${itemsOf(owner)}?search=${encodeURIComponent(search)}`);
             const page = (await response.json()) as { items: { name: string | null }[] };
 
             expect(page.items.map((item) => item.name)).toEqual(['Relire le café des sponsors']);
         });
 
-        it('combine un filtre de statut et de priorite', async () => {
+        it('combines a status filter and a priority filter', async () => {
             const response = await asOwner.request(`${itemsOf(owner)}?status=doing&priority=high`);
             const page = (await response.json()) as { items: { name: string | null }[] };
 
             expect(page.items.map((item) => item.name)).toEqual(['Ecrire le rapport']);
         });
 
-        it('applique la recherche et les filtres uniquement dans le projet du compte connecte', async () => {
+        it('applies the search and the filters only within the signed-in account\'s project', async () => {
             const response = await asIntruder.request(`${itemsOf(owner)}?search=cafe&status=todo`);
 
             expect(response.status).toBe(404);
             expect((await response.json()) as object).toMatchObject({ type: 'project_not_found' });
         });
 
-        it('accepte le meme curseur sous les memes criteres et le refuse sous des criteres differents', async () => {
+        it('accepts the same cursor under the same criteria and refuses it under different ones', async () => {
             const first = (await (
                 await asOwner.request(`${itemsOf(owner)}?limit=1&status=todo`)
             ).json()) as { items: { name: string | null }[]; nextCursor: string | null };
@@ -171,7 +171,7 @@ describe('items API (integration)', () => {
         });
     });
 
-    describe('isolation entre comptes', () => {
+    describe('isolation between accounts', () => {
         let itemId: string;
 
         beforeAll(async () => {
@@ -179,7 +179,7 @@ describe('items API (integration)', () => {
             itemId = ((await response.json()) as { id: string }).id;
         });
 
-        it('le proprietaire voit son item dans la liste', async () => {
+        it('the owner sees their item in the list', async () => {
             const page = (await (await asOwner.request(itemsOf(owner))).json()) as {
                 items: { id: string }[];
             };
@@ -187,7 +187,7 @@ describe('items API (integration)', () => {
             expect(page.items.map((item) => item.id)).toContain(itemId);
         });
 
-        it('un autre compte ne voit pas cet item dans sa liste', async () => {
+        it('another account does not see this item in its list', async () => {
             const response = await asIntruder.request(itemsOf(owner));
 
             expect(response.status).toBe(404);
@@ -196,7 +196,7 @@ describe('items API (integration)', () => {
             });
         });
 
-        it('le proprietaire peut le modifier', async () => {
+        it('the owner can change it', async () => {
             const response = await asOwner.request(
                 `${itemsOf(owner)}/${itemId}`,
                 json('PUT', { name: 'A moi, renomme' }),
@@ -205,9 +205,9 @@ describe('items API (integration)', () => {
             expect(response.status).toBe(200);
         });
 
-        // Meme reponse qu un item inexistant : voir items.test.ts pour la
-        // meme regle deja exercee contre des doublures.
-        it('un autre compte ne peut pas le modifier, et ne le change pas', async () => {
+        // Same answer as an absent item: see items.test.ts for the same rule already exercised
+        // against doubles.
+        it('another account cannot change it, and does not change it', async () => {
             const before = (await (await asOwner.request(itemsOf(owner))).json()) as {
                 items: { id: string }[];
             };
@@ -233,7 +233,7 @@ describe('items API (integration)', () => {
             expect(stillMine.items.find((item) => item.id === itemId)?.name).toBe('A moi, renomme');
         });
 
-        it('un autre compte ne peut pas le supprimer, et il reste present', async () => {
+        it('another account cannot delete it, and it stays present', async () => {
             const before = (await (await asOwner.request(itemsOf(owner))).json()) as {
                 items: { id: string }[];
             };
@@ -257,7 +257,7 @@ describe('items API (integration)', () => {
             expect(stillThere.items.map((item) => item.id)).toContain(itemId);
         });
 
-        it('deplace un item sans laisser une version perimee ecraser le resultat', async () => {
+        it('moves an item without letting a stale version overwrite the result', async () => {
             const before = (await (await asOwner.request(itemsOf(owner))).json()) as {
                 items: { id: string; version: number }[];
             };
@@ -286,7 +286,7 @@ describe('items API (integration)', () => {
             });
         });
 
-        it('ne revele pas un item a un non-membre lors d un deplacement', async () => {
+        it('does not reveal an item to a non-member during a move', async () => {
             const denied = await asIntruder.request(
                 `${itemsOf(owner)}/${itemId}/status`,
                 json('PATCH', { status: 'done', version: 1 }),
@@ -302,7 +302,7 @@ describe('items API (integration)', () => {
             expect((await missing.json()) as object).toMatchObject({ type: 'item_not_found' });
         });
 
-        it('le proprietaire peut le supprimer', async () => {
+        it('the owner can delete it', async () => {
             const response = await asOwner.request(`${itemsOf(owner)}/${itemId}`, {
                 method: 'DELETE',
             });

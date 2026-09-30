@@ -20,8 +20,8 @@ let ada: RealAccount;
 
 beforeAll(async () => {
     app = realApplication();
-    // L inscription cree le projet par defaut et son appartenance owner : rien
-    // a poser a la main, c est le chemin que l application emprunte vraiment.
+    // Registration creates the default project and its owner membership: nothing to set by hand, it
+    // is the path the application really takes.
     ada = await registerAndSignIn(app, MOT_DE_PASSE);
 });
 
@@ -32,8 +32,8 @@ describe('the members of a project, against the real database', () => {
         expect(members).toEqual([{ userId: ada.id, email: ada.email, role: 'owner' }]);
     });
 
-    // La posture qui compte : un 404 et non un 403, pour ne pas confirmer
-    // l existence du projet a qui devine des identifiants.
+    // The stance that matters: a 404 and not a 403, so as not to confirm the project exists to
+    // whoever guesses identifiers.
     it('answers a stranger like a project that does not exist', async () => {
         const alan = await registerAndSignIn(app, MOT_DE_PASSE);
 

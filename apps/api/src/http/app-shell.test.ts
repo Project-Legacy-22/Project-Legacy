@@ -6,10 +6,9 @@ import { listen, testConfig } from '../../test/http-harness.js';
 import type { Harness } from '../../test/http-harness.js';
 import { createServer } from './server.js';
 
-// Le lien profond de l e-mail de reinitialisation. La coquille absente
-// disparaissait en silence : la route n etait pas montee, la requete tombait
-// dans la garde de session, et la personne recevait un 401 parlant d une
-// session dont elle n a pas besoin pour changer son mot de passe.
+// The deep link of the reset email. A missing shell used to disappear silently: the route was not
+// mounted, the request fell into the session guard, and the person got a 401 about a session they
+// do not need to change their password.
 
 let harness: Harness | undefined;
 
@@ -29,7 +28,7 @@ afterEach(async () => {
 });
 
 describe('GET /reset-password', () => {
-    it('sert la coquille quand elle est la', async () => {
+    it('serves the shell when it is there', async () => {
         const { served } = await serve(testConfig.staticDir);
 
         const response = await served.request('/reset-password');
@@ -38,7 +37,7 @@ describe('GET /reset-password', () => {
         expect(response.headers.get('content-type')).toContain('text/html');
     });
 
-    it('dit que la coquille manque, au lieu de reclamer une session', async () => {
+    it('says the shell is missing, instead of asking for a session', async () => {
         const { served } = await serve('/un/dossier/qui-n-existe-pas');
 
         const response = await served.request('/reset-password');
@@ -47,7 +46,7 @@ describe('GET /reset-password', () => {
         await expect(response.json()).resolves.toMatchObject({ type: 'app_shell_unavailable' });
     });
 
-    it('nomme le fichier cherche au demarrage', async () => {
+    it('names the file looked for at start-up', async () => {
         const { logger } = await serve('/un/dossier/qui-n-existe-pas');
 
         const avertissement = logger.lines.find(line => line.level === 'warn');

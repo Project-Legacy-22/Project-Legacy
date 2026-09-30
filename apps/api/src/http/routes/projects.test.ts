@@ -47,9 +47,9 @@ const ADRESSE = 'alice@example.com';
 const MOT_DE_PASSE = 'MotDePasse2026';
 const AUTRE_ADRESSE = 'bob@example.com';
 
-// Le projet partage de ces cas : la titulaire de la session, proprietaire, et
-// un second membre. OTHER_PROJECT_ID n appartient qu a l autre compte, ce qui
-// donne le cas du projet existant dont on n est pas membre.
+// The shared project of these cases: the session holder, as owner, and a second member.
+// OTHER_PROJECT_ID only belongs to the other account, which gives the case of an existing project
+// one is not a member of.
 const APPARTENANCES = [
     { projectId: PROJECT_ID, userId: ACCOUNT_ID, email: ADRESSE, role: 'owner' as const },
     { projectId: PROJECT_ID, userId: OTHER_ACCOUNT_ID, email: AUTRE_ADRESSE, role: 'member' as const },
@@ -298,11 +298,10 @@ describe('projects API', () => {
         });
     });
 
-    // La divulgation assumee de US-33 : les membres d un projet voient
-    // l adresse des autres. Il n existe en revanche aucune route qui liste ou
-    // cherche des comptes -- l entree unique est un identifiant de projet.
+    // The disclosure US-33 accepts: the members of a project see the others' addresses. There is,
+    // however, no route that lists or searches accounts -- the only entry is a project identifier.
     describe('GET /projects/:projectId/members', () => {
-        it('rend la liste, proprietaires en tete', async () => {
+        it('returns the list, owners first', async () => {
             const response = await harness.request(`/projects/${PROJECT_ID}/members`);
 
             expect(response.status).toBe(200);
@@ -315,9 +314,9 @@ describe('projects API', () => {
             });
         });
 
-        // La lecon de #344 : la route construisait son DTO par affectation, et
-        // seul le navigateur validait la reponse. On la valide ici.
-        it('rend une reponse que le contrat accepte', async () => {
+        // The lesson of #344: the route built its DTO by assignment, and only the browser validated
+        // the response. It is validated here.
+        it('returns a response the contract accepts', async () => {
             const body = await (await harness.request(`/projects/${PROJECT_ID}/members`)).json();
 
             const lu = ProjectMemberListDto.safeParse(body);
@@ -327,15 +326,14 @@ describe('projects API', () => {
             ).toEqual([]);
         });
 
-        // 404 et non 403 : un 403 confirmerait que le projet existe a qui
-        // devine des identifiants.
-        it('repond comme un projet inexistant quand on n en est pas membre', async () => {
+        // 404 and not 403: a 403 would confirm the project exists to whoever guesses identifiers.
+        it('answers like an absent project when the caller is not a member', async () => {
             const response = await harness.request(`/projects/${OTHER_PROJECT_ID}/members`);
 
             expect(response.status).toBe(404);
         });
 
-        it('repond de meme pour un projet que personne ne possede', async () => {
+        it('answers the same for a project nobody owns', async () => {
             const response = await harness.request(`/projects/${UNKNOWN_PROJECT_ID}/members`);
 
             expect(response.status).toBe(404);

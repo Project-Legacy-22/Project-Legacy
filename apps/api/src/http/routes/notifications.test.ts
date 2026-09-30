@@ -16,8 +16,8 @@ import {
     makeListNotifications,
     makeMarkNotificationRead,
 } from '@legacy/core-notifications';
-// Les doublures de reference vivent avec le port qu elles implementent. Les
-// recopier ici laisserait la copie deriver du contrat qu elle represente.
+// The reference doubles live with the port they implement. Copying them here would let the copy
+// drift from the contract it stands for.
 import { inMemoryCompromisedPasswords } from '../../../../../packages/core/auth/test/fakes/in-memory-compromised-passwords.js';
 import { inMemoryIdentityProvider } from '../../../../../packages/core/auth/test/fakes/in-memory-identity-provider.js';
 import { inMemoryPersonalDataStore } from '../../../../../packages/core/auth/test/fakes/in-memory-personal-data-store.js';
@@ -47,8 +47,8 @@ const SECOND_ID = '22222222-2222-4222-8222-222222222222';
 const THIRD_ID = '33333333-3333-4333-8333-333333333333';
 const UNKNOWN_ID = '44444444-4444-4444-8444-444444444444';
 
-// Le depot d items refuse tout appel : ces routes n en ont pas besoin, et un
-// appel qui l atteindrait repondrait 500 au lieu du resultat attendu.
+// The item repository refuses every call: these routes do not need it, and a call reaching it would
+// answer 500 instead of the expected result.
 function useCasesOver(
     repository: InMemoryNotificationRepository,
     provider: IdentityProvider,
@@ -112,7 +112,7 @@ describe('notifications API', () => {
     afterEach(() => harness.close());
 
     describe('GET /notifications', () => {
-        it('renvoie les notifications du compte de la session', async () => {
+        it('returns the notifications of the session\'s account', async () => {
             await reseed([aNotification({ id: FIRST_ID, userId: OWNER_ID })]);
 
             const response = await harness.request('/notifications');
@@ -122,7 +122,7 @@ describe('notifications API', () => {
             expect(body.notifications.map(n => n.id)).toEqual([FIRST_ID]);
         });
 
-        it('ne renvoie pas les notifications d un autre compte', async () => {
+        it('does not return the notifications of another account', async () => {
             await reseed([aNotification({ id: FIRST_ID, userId: OTHER_OWNER_ID })]);
 
             const response = await harness.request('/notifications');
@@ -131,7 +131,7 @@ describe('notifications API', () => {
             expect(body.notifications).toEqual([]);
         });
 
-        it('distingue les notifications lues des non lues dans la reponse', async () => {
+        it('tells read notifications from unread ones in the response', async () => {
             await reseed([
                 aNotification({ id: FIRST_ID, userId: OWNER_ID, readAt: null }),
                 aNotification({
@@ -150,7 +150,7 @@ describe('notifications API', () => {
             ]);
         });
 
-        it('borne la liste et sert la suite depuis le curseur', async () => {
+        it('bounds the list and serves the rest from the cursor', async () => {
             await reseed([
                 aNotification({ id: FIRST_ID, userId: OWNER_ID }),
                 aNotification({ id: SECOND_ID, userId: OWNER_ID }),
@@ -171,13 +171,13 @@ describe('notifications API', () => {
             expect(second.nextCursor).toBeNull();
         });
 
-        it('refuse un curseur qui n a pas ete emis par l API', async () => {
+        it('refuses a cursor not issued by the API', async () => {
             const response = await harness.request('/notifications?cursor=curseur-invente');
 
             expect(response.status).toBe(400);
         });
 
-        it('refuse une taille de page hors bornes', async () => {
+        it('refuses a page size out of bounds', async () => {
             const response = await harness.request('/notifications?limit=1000');
 
             expect(response.status).toBe(400);
@@ -185,7 +185,7 @@ describe('notifications API', () => {
     });
 
     describe('GET /notifications/unread-count', () => {
-        it('renvoie le compte de non lues du compte de la session', async () => {
+        it('returns the unread count of the session\'s account', async () => {
             await reseed([
                 aNotification({ id: FIRST_ID, userId: OWNER_ID, readAt: null }),
                 aNotification({
@@ -204,7 +204,7 @@ describe('notifications API', () => {
     });
 
     describe('PATCH /notifications/:id/read', () => {
-        it('marque une notification comme lue', async () => {
+        it('marks a notification as read', async () => {
             await reseed([aNotification({ id: FIRST_ID, userId: OWNER_ID, readAt: null })]);
 
             const response = await harness.request(`/notifications/${FIRST_ID}/read`, { method: 'PATCH' });
@@ -213,8 +213,8 @@ describe('notifications API', () => {
             expect(store.notifications.get(FIRST_ID)?.readAt).not.toBeNull();
         });
 
-        // Critere bloquant de US-18 : rejouer l action ne doit pas echouer.
-        it('est idempotente sur une notification deja lue', async () => {
+        // Blocking criterion of US-18: replaying the action must not fail.
+        it('is idempotent on a notification already read', async () => {
             await reseed([
                 aNotification({ id: FIRST_ID, userId: OWNER_ID, readAt: '2026-09-10T11:00:00.000Z' }),
             ]);
@@ -224,7 +224,7 @@ describe('notifications API', () => {
             expect(response.status).toBe(204);
         });
 
-        it('refuse un identifiant qui n est pas un uuid', async () => {
+        it('refuses an identifier that is not a uuid', async () => {
             const response = await harness.request('/notifications/pas-un-uuid/read', {
                 method: 'PATCH',
             });
@@ -232,7 +232,7 @@ describe('notifications API', () => {
             expect(response.status).toBe(400);
         });
 
-        it('repond 404 sur une notification inexistante', async () => {
+        it('answers 404 for a notification that does not exist', async () => {
             const response = await harness.request(
                 `/notifications/${UNKNOWN_ID}/read`,
                 { method: 'PATCH' },
@@ -241,9 +241,9 @@ describe('notifications API', () => {
             expect(response.status).toBe(404);
         });
 
-        // Meme reponse que pour une notification inexistante : un 403
-        // confirmerait que cet identifiant designe quelque chose.
-        it('repond 404 sur la notification d un autre compte et la laisse intacte', async () => {
+        // Same answer as for a notification that does not exist: a 403 would confirm that this
+        // identifier designates something.
+        it('answers 404 for the notification of another account and leaves it intact', async () => {
             await reseed([aNotification({ id: FIRST_ID, userId: OTHER_OWNER_ID, readAt: null })]);
 
             const response = await harness.request(`/notifications/${FIRST_ID}/read`, { method: 'PATCH' });
@@ -252,7 +252,7 @@ describe('notifications API', () => {
             expect(store.notifications.get(FIRST_ID)?.readAt).toBeNull();
         });
 
-        it('decrit l erreur au format attendu', async () => {
+        it('describes the error in the expected format', async () => {
             const response = await harness.request(
                 `/notifications/${UNKNOWN_ID}/read`,
                 { method: 'PATCH' },

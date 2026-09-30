@@ -29,7 +29,7 @@ function postgrestAs(accessToken: string) {
     });
 }
 
-describe('politiques RLS sur items (sans role de service)', () => {
+describe('RLS policies on items (without the service role)', () => {
     let app: Awaited<ReturnType<typeof realApplication>>;
     let owner: RealAccount;
     let intruder: RealAccount;
@@ -53,24 +53,23 @@ describe('politiques RLS sur items (sans role de service)', () => {
 
     afterAll(() => app.stop());
 
-    it('le proprietaire lit sa ligne directement via PostgREST', async () => {
+    it('the owner reads their row directly through PostgREST', async () => {
         const { data, error } = await postgrestAs(owner.accessToken).from('items').select('id').eq('id', itemId);
 
         expect(error).toBeNull();
         expect(data).toEqual([{ id: itemId }]);
     });
 
-    // RLS filtre les lignes plutot que de refuser la requete : une lecture
-    // sans droit ne renvoie pas une erreur, elle renvoie un ensemble vide,
-    // comme si la ligne n existait pas pour cet appelant.
-    it('un autre compte ne recoit rien pour la meme ligne', async () => {
+    // RLS filters rows rather than refusing the request: a read without the right does not return
+    // an error, it returns an empty set, as if the row did not exist for this caller.
+    it('another account receives nothing for the same row', async () => {
         const { data, error } = await postgrestAs(intruder.accessToken).from('items').select('id').eq('id', itemId);
 
         expect(error).toBeNull();
         expect(data).toEqual([]);
     });
 
-    it('un autre compte ne voit ni le projet ni son appartenance', async () => {
+    it('another account sees neither the project nor its membership', async () => {
         const client = postgrestAs(intruder.accessToken);
         const [projects, memberships] = await Promise.all([
             client.from('projects').select('id').eq('id', owner.projectId),
@@ -83,22 +82,22 @@ describe('politiques RLS sur items (sans role de service)', () => {
         expect(memberships.data).toEqual([]);
     });
 
-    it('un autre compte ne peut pas la modifier, et elle reste intacte', async () => {
+    it('another account cannot change it, and it stays intact', async () => {
         const { data } = await postgrestAs(intruder.accessToken)
             .from('items')
             .update({ name: 'Vole via PostgREST' })
             .eq('id', itemId)
             .select();
 
-        // Meme comportement de filtrage qu en lecture : zero ligne touchee,
-        // sans erreur, plutot qu un refus explicite.
+        // Same filtering behaviour as for reads: zero rows touched, without an error, rather than
+        // an explicit refusal.
         expect(data).toEqual([]);
 
         const { data: intacte } = await postgrestAs(owner.accessToken).from('items').select('name').eq('id', itemId);
         expect(intacte).toEqual([{ name: 'Vu par PostgREST' }]);
     });
 
-    it('un autre compte ne peut pas la supprimer', async () => {
+    it('another account cannot delete it', async () => {
         const { data } = await postgrestAs(intruder.accessToken).from('items').delete().eq('id', itemId).select();
 
         expect(data).toEqual([]);
@@ -107,9 +106,9 @@ describe('politiques RLS sur items (sans role de service)', () => {
         expect(toujoursLa).toEqual([{ id: itemId }]);
     });
 
-    // La politique d insertion verifie user_id = auth.uid() : un appelant ne
-    // peut pas ecrire une ligne au nom de quelqu un d autre, meme la sienne.
-    it('un compte ne peut pas creer une ligne au nom d un autre', async () => {
+    // The insert policy checks user_id = auth.uid(): a caller cannot write a row in someone else's
+    // name, even their own.
+    it('an account cannot create a row in another\'s name', async () => {
         const { data, error } = await postgrestAs(intruder.accessToken)
             .from('items')
             .insert({
@@ -123,7 +122,7 @@ describe('politiques RLS sur items (sans role de service)', () => {
         expect(error).not.toBeNull();
     });
 
-    it('un compte peut creer une ligne en son propre nom', async () => {
+    it('an account can create a row in its own name', async () => {
         const { data, error } = await postgrestAs(intruder.accessToken)
             .from('items')
             .insert({
@@ -138,16 +137,15 @@ describe('politiques RLS sur items (sans role de service)', () => {
     });
 });
 
-describe('politiques RLS sur notifications (sans role de service)', () => {
+describe('RLS policies on notifications (without the service role)', () => {
     let app: Awaited<ReturnType<typeof realApplication>>;
     let owner: RealAccount;
     let intruder: RealAccount;
     let notificationId: string;
 
-    // Seedee avec le role de service, exactement comme le worker le ferait en
-    // consommant un evenement (record_item_created_notification) : ce fichier
-    // teste qui PostgREST laisse lire ou ecrire une fois la ligne posee, pas
-    // comment elle y arrive.
+    // Seeded with the service role, exactly as the worker would when consuming an event
+    // (record_item_created_notification): this file tests whom PostgREST lets read or write once
+    // the row is there, not how it gets there.
     async function seedNotification(ownerId: string, itemId: string): Promise<string> {
         const config = integrationConfig();
         const service = createClient(config.supabaseUrl, config.supabaseServiceRoleKey, {
@@ -185,7 +183,7 @@ describe('politiques RLS sur notifications (sans role de service)', () => {
 
     afterAll(() => app.stop());
 
-    it('le proprietaire lit sa notification directement via PostgREST', async () => {
+    it('the owner reads their notification directly through PostgREST', async () => {
         const { data, error } = await postgrestAs(owner.accessToken)
             .from('notifications')
             .select('id')
@@ -195,7 +193,7 @@ describe('politiques RLS sur notifications (sans role de service)', () => {
         expect(data).toEqual([{ id: notificationId }]);
     });
 
-    it('un autre compte ne recoit rien pour la meme ligne', async () => {
+    it('another account receives nothing for the same row', async () => {
         const { data, error } = await postgrestAs(intruder.accessToken)
             .from('notifications')
             .select('id')
@@ -205,7 +203,7 @@ describe('politiques RLS sur notifications (sans role de service)', () => {
         expect(data).toEqual([]);
     });
 
-    it('le proprietaire peut la marquer comme lue directement via PostgREST', async () => {
+    it('the owner can mark it as read directly through PostgREST', async () => {
         const { data, error } = await postgrestAs(owner.accessToken)
             .from('notifications')
             .update({ read_at: new Date().toISOString() })
@@ -216,7 +214,7 @@ describe('politiques RLS sur notifications (sans role de service)', () => {
         expect(data).toHaveLength(1);
     });
 
-    it('un autre compte ne peut pas creer une notification', async () => {
+    it('another account cannot create a notification', async () => {
         const { data, error } = await postgrestAs(intruder.accessToken)
             .from('notifications')
             .insert({
@@ -227,9 +225,8 @@ describe('politiques RLS sur notifications (sans role de service)', () => {
             })
             .select();
 
-        // Aucune politique d insertion n existe pour ce role : la table
-        // n accepte une nouvelle ligne que par record_item_created_notification,
-        // en SECURITY DEFINER.
+        // No insert policy exists for this role: the table only accepts a new row through
+        // record_item_created_notification, in SECURITY DEFINER.
         expect(data).toBeNull();
         expect(error).not.toBeNull();
     });
