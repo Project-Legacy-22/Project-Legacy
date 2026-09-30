@@ -48,6 +48,7 @@ function unexercised(): AppUseCases {
             listProjects: refusing('listProjects'),
             addProject: refusing('addProject'),
             removeProject: refusing('removeProject'),
+            renameProject: refusing('renameProject'),
             listProjectMembers: refusing('listProjectMembers'),
             removeProjectMember: refusing('removeProjectMember'),
             inviteProjectMember: refusing('inviteProjectMember'),

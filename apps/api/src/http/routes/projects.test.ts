@@ -14,6 +14,7 @@ import {
     makeListProjectMembers,
     makeListProjects,
     makeRemoveProject,
+    makeRenameProject,
 } from '@legacy/core-projects';
 import type { Project } from '@legacy/core-projects';
 
@@ -27,7 +28,7 @@ import type {
     InMemoryProjectRepository,
     ProjectMembership,
 } from '../../../../../packages/core/projects/test/fakes/in-memory-project-repository.js';
-import { ProjectMemberListDto } from '@legacy/contracts';
+import { ProjectDto, ProjectMemberListDto } from '@legacy/contracts';
 
 import type { AppUseCases } from '../../composition-root.js';
 import { recordingLogger } from '../../../../../packages/contracts/test/fakes/recording-logger.js';
@@ -72,6 +73,7 @@ function useCasesOver(
                 newId: () => PROJECT_ID,
             }),
             removeProject: makeRemoveProject(projects),
+            renameProject: makeRenameProject(projects),
             listProjectMembers: makeListProjectMembers(
                 inMemoryMembershipRepository(APPARTENANCES),
             ),
@@ -250,6 +252,50 @@ describe('projects API', () => {
         expect(denied.status).toBe(404);
         expect(unknown.status).toBe(404);
         expect(repository.projects.has(PROJECT_ID)).toBe(true);
+    });
+
+    describe('PATCH /projects/:projectId', () => {
+        const OWNED = { id: PROJECT_ID, name: 'Mine', role: 'owner' as const, itemCount: 3 };
+
+        beforeEach(async () => {
+            await harness.close();
+            await serve(
+                [OWNED, { id: OTHER_PROJECT_ID, name: 'Theirs', role: 'owner', itemCount: 0 }],
+                [
+                    { projectId: PROJECT_ID, userId: ACCOUNT_ID, role: 'owner' },
+                    { projectId: OTHER_PROJECT_ID, userId: ACCOUNT_ID, role: 'member' },
+                    { projectId: OTHER_PROJECT_ID, userId: OTHER_ACCOUNT_ID, role: 'owner' },
+                ],
+            );
+        });
+
+        it('renames a project the caller owns and returns it in the contract shape', async () => {
+            const response = await harness.request(`/projects/${PROJECT_ID}`, json('PATCH', { name: ' Roadmap ' }));
+
+            const body: unknown = await response.json();
+            expect([response.status, ProjectDto.safeParse(body).success]).toEqual([200, true]);
+            expect(body).toEqual({ ...OWNED, name: 'Roadmap' });
+            expect(repository.projects.get(PROJECT_ID)?.name).toBe('Roadmap');
+        });
+
+        it('answers a member who does not own the project like an unknown project', async () => {
+            const denied = await harness.request(`/projects/${OTHER_PROJECT_ID}`, json('PATCH', { name: 'Taken' }));
+            const unknown = await harness.request(`/projects/${UNKNOWN_PROJECT_ID}`, json('PATCH', { name: 'Taken' }));
+
+            expect([denied.status, unknown.status]).toEqual([404, 404]);
+            expect(repository.projects.get(OTHER_PROJECT_ID)?.name).toBe('Theirs');
+        });
+
+        it.each([
+            ['an empty name', { name: '   ' }],
+            ['a name over the limit', { name: 'x'.repeat(256) }],
+            ['a missing name', {}],
+        ])('rejects %s and keeps the project unchanged', async (_case, body) => {
+            const response = await harness.request(`/projects/${PROJECT_ID}`, json('PATCH', body));
+
+            expect(response.status).toBe(400);
+            expect(repository.projects.get(PROJECT_ID)?.name).toBe('Mine');
+        });
     });
 
     // La divulgation assumee de US-33 : les membres d un projet voient

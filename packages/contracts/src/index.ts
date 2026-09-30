@@ -48,6 +48,7 @@ export {
     ProjectItemIdParams,
     ProjectMemberIdParams,
     CreateProjectBody,
+    RenameProjectBody,
     ListProjectsQuery,
     ProjectRole,
     ProjectDto,

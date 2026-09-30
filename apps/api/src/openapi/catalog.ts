@@ -31,6 +31,7 @@ import {
     ProjectMemberListDto,
     ProjectPageDto,
     RegisterAccountBody,
+    RenameProjectBody,
     ReorderItemBody,
     RequestPasswordResetBody,
     ResetPasswordBody,
@@ -83,6 +84,7 @@ const AUTH: readonly Operation[] = [
 const PROJECTS: readonly Operation[] = [
     { method: 'get', path: '/projects', tag: 'Projects', summary: 'The projects of the caller, a page at a time', access: 'session', query: ListProjectsQuery, success: json(ProjectPageDto) },
     { method: 'post', path: '/projects', tag: 'Projects', summary: 'Create a project owned by the caller', access: 'session', body: CreateProjectBody, success: json(ProjectDto) },
+    { method: 'patch', path: '/projects/:projectId', tag: 'Projects', summary: 'Rename a project the caller owns', access: 'session', params: ProjectIdParams, body: RenameProjectBody, success: json(ProjectDto), errors: [404] },
     { method: 'delete', path: '/projects/:projectId', tag: 'Projects', summary: 'Delete a project the caller owns', access: 'session', params: ProjectIdParams, success: { status: 200, description: 'Deleted' }, errors: [404] },
     { method: 'get', path: '/projects/:projectId/members', tag: 'Projects', summary: 'Who is in a project, and with which role', access: 'session', params: ProjectIdParams, success: json(ProjectMemberListDto), errors: [404] },
     { method: 'delete', path: '/projects/:projectId/members/:userId', tag: 'Projects', summary: 'Remove a member; their tasks stay in the project', access: 'session', params: ProjectMemberIdParams, success: noContent('Removed'), errors: [403, 404, 409] },
