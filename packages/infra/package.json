@@ -16,9 +16,9 @@
     "@legacy/core-items": "*",
     "@legacy/core-notifications": "*",
     "@legacy/core-projects": "*",
-    "@redis/client": "^6.2.1",
-    "@supabase/supabase-js": "2.117.2",
-    "pino": "^10.3.1",
+    "@redis/client": "^6.3.0",
+    "@supabase/supabase-js": "2.118.0",
+    "pino": "^10.4.0",
     "prom-client": "^15.1.3"
   }
 }
